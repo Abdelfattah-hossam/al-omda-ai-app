@@ -1,3 +1,4 @@
+// Cloudflare Worker deployment configuration.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "al-omda-ai-app",
