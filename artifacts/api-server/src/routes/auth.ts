@@ -127,11 +127,11 @@ router.post("/auth/logout", requireSameOrigin, async (req, res): Promise<void> =
       if (session) {
         const response = await supabaseFetch("/auth/v1/logout", { method: "POST" }, session.accessToken);
         if (!response.ok && response.status !== 401) {
-          req.log.warn({ status: response.status }, "Supabase sign-out did not complete remotely");
+          console.warn("Supabase sign-out did not complete remotely", response.status);
         }
       }
     } catch (error) {
-      req.log.warn({ err: error }, "Supabase sign-out could not revoke the remote session");
+      console.warn("Supabase sign-out could not revoke the remote session", error);
     }
   }
   clearSessionCookies(req, res);
