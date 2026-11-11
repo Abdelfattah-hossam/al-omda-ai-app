@@ -194,7 +194,7 @@ export function reportSupabaseError(
   error: unknown,
   fallback: string,
 ): void {
-  req.log.error({ err: error }, "Supabase operation failed");
+  console.error("Supabase operation failed", error);
   if (error instanceof SupabaseHttpError) {
     const payload = error.payload;
     const code =
