@@ -661,6 +661,34 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
+    if (wordStep && validatedWordDocument) {
+      // Independent final review for documents created from Task History, not just chat attachments.
+      try {
+        const reviewAnswer = await callProviderWithRetry(provider as "gemini" | "openrouter", [{
+          role: "user",
+          content: [
+            "Act as the final quality reviewer for this Microsoft Word deliverable. Compare it against the original customer request and the approved task step line by line.",
+            "Check every requirement, requested item, quantity, name, date, language, format, audience, and exclusion. Fix omissions, contradictions, unclear wording, unsupported assumptions, and unnecessary content.",
+            "Preserve all correct content. Do not invent facts, sample data, tables, sections, or extra files. Do not shorten required details.",
+            "Return ONLY valid JSON with exactly title, paragraphs, columns, and rows. Respect the original table/prose requirement and keep every table row aligned with its columns.",
+            "Original request: " + customerRequest,
+            "Approved step: " + step.text,
+            "Expected output: " + (step.output || ""),
+            "Acceptance criteria: " + (step.complete || ""),
+            "Draft to review: " + JSON.stringify(validatedWordDocument)
+          ].join("\n")
+        }], memory);
+        const reviewedDocument = parseWordDocument(reviewAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
+        if (reviewedDocument) {
+          validatedWordDocument = reviewedDocument;
+          answer = reviewAnswer;
+        } else {
+          console.warn("[Task Word quality review] Invalid review structure; retaining validated draft.");
+        }
+      } catch (error) {
+        console.warn("[Task Word quality review unavailable] Retaining validated draft.", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
     if (excelStep && !validatedSpreadsheet) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Excel workbook. Return ONLY valid JSON with title, columns, and rows. Every row must match the column count.",
