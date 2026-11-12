@@ -102,6 +102,56 @@ async function callOpenRouter(messages: ChatMessage[]): Promise<{ text: string; 
   return { text, model: payload?.model || model };
 }
 
+router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) {
+      res.status(401).json({ error: "Sign in to use live voice chat." });
+      return;
+    }
+    const key = process.env.GEMINI_API_KEY?.trim();
+    if (!key) {
+      res.status(503).json({ error: "Live voice is not configured. Add a Gemini API key to Cloudflare Worker secrets." });
+      return;
+    }
+    const usage = await reserveUnits(session.accessToken, 1);
+    if (!usage.allowed) {
+      res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage });
+      return;
+    }
+    const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/auth_tokens", {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({
+        uses: 1,
+        expireTime,
+        liveConnectConstraints: {
+          model: "models/gemini-3.8-live",
+          config: {
+            responseModalities: ["AUDIO"],
+            systemInstruction: {
+              parts: [{ text: "You are AL OMDA AI. Speak naturally and warmly. Respond in the same language the user speaks, especially Egyptian Arabic when the user speaks Arabic. Keep replies concise unless asked for detail. This is a voice conversation: do not read punctuation or describe that you are speaking." }]
+            },
+            inputAudioTranscription: {},
+            outputAudioTranscription: {}
+          }
+        }
+      })
+    });
+    const payload = await response.json().catch(() => null) as any;
+    if (!response.ok || typeof payload?.name !== "string") {
+      const detail = providerErrorMessage(payload);
+      console.warn("[Gemini Live token failure]", response.status, detail);
+      res.status(502).json({ error: "Gemini Live could not create a temporary voice session.", details: detail || "Provider rejected the token request." });
+      return;
+    }
+    res.json({ token: payload.name, model: "gemini-3.8-live", usage: await currentUsage(session.accessToken) });
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not start a live voice session.");
+  }
+});
+
 router.get("/ai/usage", async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
