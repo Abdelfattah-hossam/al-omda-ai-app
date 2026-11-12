@@ -6,6 +6,7 @@ import { decideSafeUpdate } from "./update-policy.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const token = process.env.OMDA_AGENT_TOKEN?.trim() || "";
+const runtimePort = Math.max(1, Math.min(65535, Number(process.env.OMDA_AGENT_PORT || 4318) || 4318));
 const autoUpdate = process.env.OMDA_AGENT_AUTO_UPDATE === "true";
 const intervalHours = Math.max(1, Math.min(168, Number(process.env.OMDA_AGENT_UPDATE_INTERVAL_HOURS || 24) || 24));
 const intervalMs = intervalHours * 60 * 60 * 1000;
@@ -104,7 +105,7 @@ async function stopRuntime(): Promise<void> {
 async function getActiveRunCount(): Promise<number | null> {
   if (!token) return null;
   try {
-    const response = await fetch("http://127.0.0.1:4318/v1/runtime/status", {
+    const response = await fetch("http://127.0.0.1:" + runtimePort + "/v1/runtime/status", {
       headers: { authorization: "Bearer " + token },
       signal: AbortSignal.timeout(2500),
       cache: "no-store",
