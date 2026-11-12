@@ -91,6 +91,31 @@ async function assertAllowedTarget(rawUrl: string): Promise<URL> {
   }
   return url;
 }
+async function readLimitedResponse(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
+  if (!response.body) return { text: "", truncated: false };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  let truncated = false;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const remaining = limit - size;
+    if (value.byteLength > remaining) {
+      if (remaining > 0) chunks.push(value.slice(0, remaining));
+      size = limit;
+      truncated = true;
+      await reader.cancel();
+      break;
+    }
+    chunks.push(value);
+    size += value.byteLength;
+  }
+  const joined = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.byteLength; }
+  return { text: new TextDecoder().decode(joined), truncated };
+}
 async function httpRequest(body: Json): Promise<Json> {
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
@@ -115,8 +140,8 @@ async function httpRequest(body: Json): Promise<Json> {
   if (!response) throw new Error("No HTTP response was received.");
   const responseHeaders: Record<string, string> = {};
   response.headers.forEach((value, key) => { responseHeaders[key] = value.slice(0, 1000); });
-  const text = method === "HEAD" ? "" : (await response.text()).slice(0, 50000);
-  return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: text, truncated: text.length >= 50000 };
+  const limitedBody = method === "HEAD" ? { text: "", truncated: false } : await readLimitedResponse(response, 50000);
+  return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated };
 }
 async function executeCommand(body: Json): Promise<Json> {
   if (EXECUTION_MODE !== "host") throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=host only on a machine where you trust the project and its dependencies.");
