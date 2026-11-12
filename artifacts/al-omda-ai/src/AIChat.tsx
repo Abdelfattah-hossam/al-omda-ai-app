@@ -272,16 +272,19 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
         if (stopped) return;
         if (Array.isArray(listData.conversations)) setConversations(listData.conversations);
+        // Compare only the visible conversation content. Server metadata (provider,
+        // generated files, task IDs) can be serialized differently and must not trigger
+        // a full conversation reload every polling cycle.
         const remote = Array.isArray(conversationData.conversation?.messages)
-          ? conversationData.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100)
+          ? conversationData.conversation.messages
+              .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+              .slice(-100)
+              .map((item: any) => ({ role: item.role, content: item.content }))
           : [];
-        const local = messagesRef.current.map(({ role, content, provider, documentData, spreadsheetData, appData, taskId, taskTitle }) => ({
-          role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}),
-          ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}),
-          ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}),
-        }));
+        const local = messagesRef.current.map(({ role, content }) => ({ role, content }));
         if (JSON.stringify(remote) !== JSON.stringify(local) && !loading && !historyLoading) {
-          // A background refresh must never pull the reader to another scroll position.
+          // A genuine cross-device message change may refresh the transcript,
+          // but metadata-only differences must never reset its layout or scroll.
           shouldAutoScrollRef.current = false;
           await loadConversation(activeConversationId);
         }
