@@ -48,7 +48,7 @@ export function decodeCtfValue(value: string, encoding: CtfEncoding, shift = 13)
       return Buffer.from(clean.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
     }
     case "hex": {
-      const clean = value.replace(/\\s+/g, "");
+      const clean = value.replace(/\s+/g, "");
       if (!/^(?:[0-9a-fA-F]{2})+$/.test(clean)) throw new Error("Hex input must contain complete byte pairs.");
       return Buffer.from(clean, "hex").toString("utf8");
     }
