@@ -54,12 +54,16 @@ function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   const asksForDownloadableDocument = /(?:ملف|مستند).{0,55}(?:تحميل|جاهز|اعمل|اعملي|عايز|عاوز|محتاج|انشئ|أنشئ)|(?:تحميل|جاهز للتحميل).{0,55}(?:ملف|مستند)/i.test(request);
   return asksForSevenFieldTable || explicitWord || asksForDownloadableDocument;
 }
+function isTableOnlyRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  return /(?:الجدول|جدول).{0,80}(?:بس|فقط|من غير|بدون).{0,40}(?:محتوى|شرح|كتابة|بيانات|تعبئة|ملء)|(?:بس|فقط).{0,40}(?:جدول|الجدول)|(?:خانات|مربعات).{0,50}(?:فاضية|فارغة|من غير بيانات|بدون بيانات)/i.test(request);
+}
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   return /7\s*(?:خانات|أعمدة|اعمدة|حقول|columns)|سبع\s*(?:خانات|أعمدة|اعمدة|حقول)|جدول.{0,45}(?:7|سبع)|(?:7|سبع).{0,30}جدول/i.test(request);
 }
 
-function parseWordDocument(text: string, forceSevenColumns: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
+function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
     let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
@@ -70,9 +74,10 @@ function parseWordDocument(text: string, forceSevenColumns: boolean): { title: s
     let columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
     if (forceSevenColumns && columns.length !== 7) return null;
     if (!columns.length || columns.length > 12) return null;
-    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => String(row[index] ?? "").slice(0, 1000)));
+    let rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => tableOnly ? "" : String(row[index] ?? "").slice(0, 1000)));
+    if (tableOnly && rows.length === 0) rows = Array.from({ length: 8 }, () => columns.map(() => ""));
     if (!rows.length) return null;
-    return { title: value.title.trim().slice(0, 180), paragraphs: (value.paragraphs ?? []).filter((item: unknown) => typeof item === "string").map((item: string) => item.slice(0, 3000)).slice(0, 12), columns, rows };
+    return { title: value.title.trim().slice(0, 180), paragraphs: tableOnly ? [] : (value.paragraphs ?? []).filter((item: unknown) => typeof item === "string").map((item: string) => item.slice(0, 3000)).slice(0, 12), columns, rows };
   } catch { return null; }
 }
 
@@ -408,14 +413,16 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const wordDocumentRequest = isWordDocumentRequest(messages);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
+    const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const modelMessages: ChatMessage[] = wordDocumentRequest ? [
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Create a real Microsoft Word document deliverable. Do not answer with source code, instructions, or a Markdown table.",
         "Return ONLY valid JSON with this exact schema: " + '{"title":"Document title","paragraphs":["optional intro or notes"],"columns":["column 1","column 2"],"rows":[["cell 1","cell 2"]]}',
-        sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings, and every row MUST contain exactly 7 cell values. Do not ask a clarifying question; infer sensible headings and sample/content rows from the user's request." : "Choose the number of columns and rows that best fulfill the user's request. Include meaningful, complete content, not placeholder rows.",
+        sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings." : "Choose the number of columns and rows that best fulfill the user's request.",
+        tableOnly ? "TABLE-ONLY BLANK TEMPLATE: return an empty paragraphs array and exactly 8 blank body rows. Every row must contain the correct number of empty strings. Do NOT fill any cells with examples, sample data, explanations, or invented content. The table headers may be inferred from the request." : "For a populated document, include meaningful complete content in rows.",
         "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
-        "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
+        tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\\n") }
     ] : messages;
@@ -449,7 +456,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const latestUsage = usage;
     if (wordDocumentRequest) {
-      const document = parseWordDocument(answer.text, sevenColumnTable);
+      const document = parseWordDocument(answer.text, sevenColumnTable, tableOnly);
       if (!document) {
         res.status(502).json({ error: "تعذر تكوين مستند Word منظم. أعد إرسال الطلب مرة واحدة." });
         return;
