@@ -134,13 +134,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     finally { setHistoryLoading(false); }
   };
 
-  const saveHistory = async (items: ChatMessage[]) => {
-    if (!activeConversationId) return false;
+  const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
+    if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
-      if (data.conversation) setConversations((current) => current.map((item) => item.id === activeConversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
+      if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
       return true;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save conversation.")); return false; }
   };
@@ -232,12 +232,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     event?.preventDefault();
     const text = input.trim();
     if (!text || loading || historyLoading || !signedIn || (usage && usage.remaining <= 0)) return;
+    const conversationId = activeConversationId || await createConversation();
+    if (!conversationId) return;
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
     setInput("");
     setLoading(true);
     setError("");
-    await saveHistory(next.slice(-100));
+    await saveHistory(next.slice(-100), conversationId);
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
@@ -253,7 +255,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }
       const completed = [...next, { role: "assistant" as const, content: data.reply, provider: data.provider }].slice(-100);
       setMessages(completed);
-      await saveHistory(completed);
+      await saveHistory(completed, conversationId);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
