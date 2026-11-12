@@ -49,7 +49,7 @@ function getLatestUserRequest(messages: ChatMessage[]): string {
 }
 function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  return /\\b(excel|xlsx|spreadsheet|workbook)\\b|إكسل|اكسيل|اكسل|ملف\\s*(?:جداول|جدول بيانات)|جدول\\s*بيانات|شيت\\s*اكسل/i.test(request);
+  return /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
 }
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   if (isExcelRequest(messages)) return false;
@@ -70,7 +70,7 @@ function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
 
 function parseExcelWorkbook(text: string): { title: string; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
@@ -459,7 +459,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Choose useful column headings and create blank rows if the user asks for a blank template. Otherwise populate the workbook with relevant, accurate data. Never return instructions for manually creating the file.",
         "Keep the workbook in the user's language. Use 1 to 30 columns and 1 to 500 rows. Each row must match the number of columns.",
         "Original user request: " + getLatestUserRequest(messages)
-      ].join("\\n") }
+      ].join("\n") }
     ] : wordDocumentRequest ? [
       ...messages,
       { role: "user", content: [
@@ -470,7 +470,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
         tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
         "Original user request: " + getLatestUserRequest(messages)
-      ].join("\\n") }
+      ].join("\n") }
     ] : messages;
     const providers = chooseProviders(modelMessages);
     if (providers.length === 0) {
