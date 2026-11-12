@@ -97,7 +97,6 @@ function cleanSubmittedRequest(value:string):string {
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
   const clean = request.trim().replace(/\s+/g,' ');
   const normalized = clean.toLocaleLowerCase();
-  const topic = clean.replace(/[.!؟?]+$/,'').slice(0,140);
   const ar = language === 'ar';
   const budget = clean.match(/(?:ميزانية|بميزانية|تكلفة|مبلغ)\s*[:：]?\s*([\d,.]+\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar)?)/i)?.[1];
   const deadlineMatch = clean.match(/(?:خلال|في خلال|قبل|لمدة|مدة|على مدار)\s*(?:(\d+)\s*)?(يوم(?:ين)?|أيام|أسبوع(?:ين)?|أسابيع|شهر(?:ين)?|شهور|ساعة(?:ين)?|ساعات|days?|weeks?|months?)/i);
@@ -155,10 +154,10 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
   const steps = flow ? (ar ? flow.ar : flow.en) : generic[specialty][ar ? 'ar' : 'en'];
   const detail = context ? (ar ? ' مع مراعاة ' : ', accounting for ') + context : '';
   return [
-    (ar ? '1. تحديد المطلوب للطلب: «' : '1. Define the outcome for: “') + topic + (ar ? '».' : '”.'),
-    '2. ' + steps[0] + detail + '.',
-    '3. ' + steps[1] + detail + '.',
-    '4. ' + steps[2] + '، ' + steps[3] + '.',
+    '1. ' + steps[0] + detail + '.',
+    '2. ' + steps[1] + detail + '.',
+    '3. ' + steps[2] + detail + '.',
+    '4. ' + steps[3] + '.',
   ];
 }
 
