@@ -128,7 +128,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const providers = chooseProviders(messages);
     if (providers.length === 0) {
-      res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini, Groq, or OpenRouter key on the Worker." });
+      res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
       return;
     }
     const characters = messages.reduce((total, message) => total + message.content.length, 0);
