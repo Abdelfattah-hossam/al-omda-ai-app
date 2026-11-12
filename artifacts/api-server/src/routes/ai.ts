@@ -56,7 +56,7 @@ function isWordDocumentRequest(messages: ChatMessage[]): boolean {
 }
 function isTableOnlyRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  return /(?:الجدول|جدول).{0,80}(?:بس|فقط|من غير|بدون).{0,40}(?:محتوى|شرح|كتابة|بيانات|تعبئة|ملء)|(?:بس|فقط).{0,40}(?:جدول|الجدول)|(?:خانات|مربعات).{0,50}(?:فاضية|فارغة|من غير بيانات|بدون بيانات)/i.test(request);
+  return /(?:الجدول|جدول).{0,20}(?:بس|فقط)|(?:الجدول|جدول).{0,80}(?:من غير|بدون).{0,40}(?:محتوى|شرح|كتابة|بيانات|تعبئة|ملء)|(?:بس|فقط).{0,40}(?:جدول|الجدول)|(?:خانات|مربعات).{0,50}(?:فاضية|فارغة|من غير بيانات|بدون بيانات)/i.test(request);
 }
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
