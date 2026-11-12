@@ -341,6 +341,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }
       const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
+      if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
       await saveHistory(completed, conversationId);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
