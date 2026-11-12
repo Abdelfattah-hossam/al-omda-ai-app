@@ -62,6 +62,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  messagesRef.current = messages;
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
@@ -231,6 +233,49 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   useEffect(() => { void loadUsage(); if (view === "chat") void loadConversations(); void loadMemory(); }, [signedIn, view]);
+
+  // Keep the same signed-in account in sync across phones, computers, and browser tabs.
+  useEffect(() => {
+    if (!signedIn || view !== "chat" || !activeConversationId) return;
+    let stopped = false;
+    const sync = async () => {
+      if (stopped || document.visibilityState !== "visible") return;
+      try {
+        const [listResponse, conversationResponse] = await Promise.all([
+          fetch("/api/ai/conversations", { credentials: "same-origin" }),
+          fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin" }),
+        ]);
+        if (!listResponse.ok || !conversationResponse.ok) return;
+        const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
+        if (stopped) return;
+        if (Array.isArray(listData.conversations)) setConversations(listData.conversations);
+        const remote = Array.isArray(conversationData.conversation?.messages)
+          ? conversationData.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100)
+          : [];
+        const local = messagesRef.current.map(({ role, content, provider, documentData, spreadsheetData, appData }) => ({
+          role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}),
+          ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}),
+        }));
+        if (JSON.stringify(remote) !== JSON.stringify(local) && !loading && !historyLoading) {
+          await loadConversation(activeConversationId);
+        }
+      } catch {
+        // A temporary sync failure must not interrupt the current conversation.
+      }
+    };
+    void sync();
+    const interval = window.setInterval(() => void sync(), 4000);
+    const onVisible = () => { if (document.visibilityState === "visible") void sync(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn, view, activeConversationId, loading, historyLoading]);
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
