@@ -295,7 +295,19 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const usage = await reserveUnits(session.accessToken, 2);
     if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
-    const prompt = [
+    const excelStep = isExcelRequest([{ role: "user", content: [task.title, task.request, step.text, step.output || "", step.complete || ""].join("\\n") }]);
+    const prompt = excelStep ? [
+      "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
+      "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
+      "Use the previously approved customer requirements and data in the project request and earlier steps. Preserve the exact approved columns and any seven approved sample products. Do not replace them with unrelated invented products or columns.",
+      "For a blank template, use empty body rows. Otherwise include the approved sample data. Every row must have exactly the same number of cells as columns.",
+      "Project: " + task.title,
+      "Original request: " + task.request,
+      "Approved step: " + step.text,
+      "Expected deliverable: " + (step.output || "A complete .xlsx workbook"),
+      "Acceptance check: " + (step.complete || "Create a real Excel workbook with the approved columns and formatting."),
+      "Return between 1 and 30 columns and 1 to 500 rows."
+    ].join("\\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
       "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
       "Project: " + task.title,
@@ -327,7 +339,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
     }
-    const result = answer.text.trim().slice(0, 12000);
+    let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
+    let result = answer.text.trim().slice(0, 12000);
+    if (excelStep) {
+      spreadsheet = parseExcelWorkbook(answer.text);
+      if (!spreadsheet) {
+        await saveExecutionFailure("The AI did not return a valid structured Excel workbook.");
+        res.status(502).json({ error: "تعذر إنشاء ملف Excel منظم. أعد تنفيذ الخطوة بعد قليل." });
+        return;
+      }
+      result = "ALOMDA_XLSX_JSON:" + JSON.stringify(spreadsheet);
+    }
     if (!result) {
       await saveExecutionFailure("The AI returned an empty deliverable.");
       res.status(502).json({ error: "The AI returned an empty deliverable." });
@@ -353,7 +375,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }, session.accessToken);
     const updatedRows = await readSupabaseJson<Array<{ id: string }>>(updateResponse);
     if (!updatedRows[0]) { res.status(409).json({ error: "Could not save the execution result. Refresh and try again." }); return; }
-    res.json({ taskId, stepId, result, executedAt, provider, model: answer.model, usage: await currentUsage(session.accessToken) });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: await currentUsage(session.accessToken) });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
