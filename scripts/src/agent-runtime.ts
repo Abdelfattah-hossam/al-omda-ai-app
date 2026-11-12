@@ -296,7 +296,7 @@ async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
   if (!child.stdin || !child.stdout) throw new Error("Could not open MCP stdio transport.");
   const connection: McpConnection = { child, buffer: "", nextId: 1, pending: new Map(), initialized: false };
   child.stdout.on("data", (chunk: Buffer) => handleMcpOutput(connection, chunk));
-  child.stderr.on("data", () => { /* MCP diagnostics stay out of the protocol channel. */ });
+  if (child.stderr) child.stderr.on("data", () => { /* MCP diagnostics stay out of the protocol channel. */ });
   child.on("close", () => {
     for (const pending of connection.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error("MCP server process exited.")); }
     connection.pending.clear();
@@ -445,7 +445,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       }
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change project files or run a terminal command.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, or call an MCP tool.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
     }
     for (const call of calls) {
       try {
