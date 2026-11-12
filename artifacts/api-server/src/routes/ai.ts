@@ -292,7 +292,7 @@ async function getOpenRouterFreeModels(): Promise<OpenRouterCatalogModel[]> {
   }
 }
 
-async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[]> {
+async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = ""): Promise<string[]> {
   const catalog = await getOpenRouterFreeModels();
   const staticFallbacks = [
     "nvidia/nemotron-3-ultra:free",
@@ -327,7 +327,7 @@ async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[
       : ["general", "writing", "reasoning"];
   const selected: string[] = [];
   for (const role of roles) {
-    const next = [...available].sort((a, b) => score(b, role) - score(a, role)).find((model) => !selected.includes(model.id));
+    const next = [...available].sort((a, b) => score(b, role) - score(a, role)).find((model) => model.id !== excludeModel && !selected.includes(model.id));
     if (next) selected.push(next.id);
     if (selected.length === 2) break;
   }
@@ -335,10 +335,10 @@ async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[
   return [...selected, "openrouter/free"];
 }
 
-async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OpenRouter is not configured.");
-  const candidates = await getOpenRouterModelOrder(messages);
+  const candidates = await getOpenRouterModelOrder(messages, excludeModel);
   const failures: string[] = [];
   for (const model of candidates) {
     try {
@@ -367,10 +367,10 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
   throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
-async function callProviderWithRetry(provider: "gemini" | "openrouter", messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callProviderWithRetry(provider: "gemini" | "openrouter", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
-  if (provider === "openrouter") return callOpenRouter(messages, memory);
+  if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -664,7 +664,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (wordStep && validatedWordDocument) {
       // Independent final review for documents created from Task History, not just chat attachments.
       try {
-        const reviewAnswer = await callProviderWithRetry(provider as "gemini" | "openrouter", [{
+        const reviewProvider = provider === "openrouter" ? "openrouter" : (providers.find((candidate) => candidate !== provider) || provider);
+        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter", [{
           role: "user",
           content: [
             "Act as the final quality reviewer for this Microsoft Word deliverable. Compare it against the original customer request and the approved task step line by line.",
@@ -982,7 +983,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (wordDocumentRequest && validatedWordDocument) {
       // Independent quality-control pass: compare the draft against the user's exact request before delivering it.
       try {
-        const reviewAnswer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", [{
+        const reviewProvider = usedProvider === "openrouter" ? "openrouter" : (providers.find((candidate) => candidate !== usedProvider) || usedProvider);
+        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter", [{
           role: "user",
           content: [
             "You are the final quality reviewer for a Microsoft Word document. Compare the draft against the original user request line by line.",
