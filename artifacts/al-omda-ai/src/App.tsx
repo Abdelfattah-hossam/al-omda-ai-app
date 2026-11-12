@@ -84,12 +84,11 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
   },
 };
 function cleanSubmittedRequest(value:string):string {
-  const clean = value.trim().replace(/\\s+/g,' ');
-  // Mobile paste can accidentally include the visible plan panel and its controls.
-  // When that UI text contains the original quoted request, keep only that request.
-  const quoted = clean.match(/تحديد المطلوب للطلب\\s*[:：]\\s*[«“"]([\\s\\S]*?)[»”"]/);
+  const clean = value.trim().replace(/\s+/g,' ');
+  // Strip accidentally pasted plan UI only when its quoted original request is present.
+  const quoted = clean.match(/تحديد المطلوب للطلب\s*[:：]\s*[«“]+([\s\S]*?)[»”]+/);
   if (quoted?.[1] && /الخطة المقترحة|معاينة محلية فقط|بانتظار موافقتك|تمت الموافقة/.test(clean)) {
-    return quoted[1].trim();
+    return quoted[1].trim().replace(/^[«“]+|[»”]+$/g,'');
   }
   return clean;
 }
