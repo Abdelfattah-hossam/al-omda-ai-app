@@ -29,7 +29,7 @@ type Language = 'ar' | 'en';
 type StepState = 'pending' | 'approved' | 'rejected';
 type TaskStatus = 'review' | 'paused' | 'approved' | 'stopped';
 type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research' | 'assistant';
-type PlanStep = { id: string; text: string; state: StepState; output?: string; complete?: string; result?: string; executedAt?: string };
+type PlanStep = { id: string; text: string; state: StepState; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
 const translations = {
@@ -582,6 +582,7 @@ function App() {
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
                <pre style={{margin:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,lineHeight:1.8,color:'var(--text-primary,#e5e7eb)'}}>{step.result}</pre>
              </div>}
+             {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
                <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
                  <Sparkles size={13}/>{executingStepId===step.id?(isAr?'جارٍ التنفيذ...':'Executing...'):(isAr?'نفّذ الخطوة بالذكاء الاصطناعي':'Execute step with AI')}
@@ -738,10 +739,10 @@ function App() {
   };
 
   const taskDetailPage = (task:Task) => {
-    const approvedSteps = task.steps.filter((step)=>step.state === 'approved').length;
-    const rejectedSteps = task.steps.filter((step)=>step.state === 'rejected').length;
-    const pendingSteps = task.steps.length - approvedSteps - rejectedSteps;
-    const marketTrend = approvedSteps > rejectedSteps ? 'up' : rejectedSteps > approvedSteps ? 'down' : 'flat';
+    const successfulExecutions = task.steps.filter((step)=>step.executionStatus === 'succeeded' && Boolean(step.result)).length;
+    const failedExecutions = task.steps.filter((step)=>step.executionStatus === 'failed').length;
+    const unexecutedSteps = task.steps.filter((step)=>step.state === 'approved' && !step.result && step.executionStatus !== 'failed').length;
+    const marketTrend = successfulExecutions > failedExecutions ? 'up' : failedExecutions > successfulExecutions ? 'down' : 'flat';
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
     const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
     return <div className="page-enter">
@@ -761,13 +762,13 @@ function App() {
                 </svg>
               </div>
               <div className="market-signals">
-                <div className="market-signal up"><TrendingUp size={23}/><span><small>{isAr?'الخطوات المعتمدة':'Approved steps'}</small><strong>{approvedSteps>0?(isAr?'صاعد':'Rising'):(isAr?'بانتظار البداية':'Awaiting')}</strong></span></div>
-                <div className={`market-signal ${rejectedSteps>0?'down':'flat'}`}>{rejectedSteps>0?<TrendingDown size={23}/>:<Minus size={23}/>}<span><small>{isAr?'الخطوات المرفوضة':'Rejected steps'}</small><strong>{rejectedSteps>0?(isAr?'هابط':'Falling'):(isAr?'لا يوجد هبوط':'No decline')}</strong></span></div>
-                <div className="market-signal flat"><Activity size={23}/><span><small>{isAr?'الخطوات المتبقية':'Pending steps'}</small><strong>{pendingSteps>0?(isAr?'قيد الانتظار':'On hold'):(isAr?'مكتملة المراجعة':'Reviewed')}</strong></span></div>
+                <div className="market-signal up"><TrendingUp size={23}/><span><small>{isAr?'التنفيذات الناجحة':'Successful runs'}</small><strong>{successfulExecutions}</strong></span></div>
+                <div className={`market-signal ${failedExecutions>0?'down':'flat'}`}>{failedExecutions>0?<TrendingDown size={23}/>:<Minus size={23}/>}<span><small>{isAr?'التنفيذات الفاشلة':'Failed runs'}</small><strong>{failedExecutions}</strong></span></div>
+                <div className="market-signal flat"><Activity size={23}/><span><small>{isAr?'بانتظار التنفيذ':'Awaiting execution'}</small><strong>{unexecutedSteps}</strong></span></div>
               </div>
             </div>
-            <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?'لم يتم تسجيل تنفيذ فعلي لهذا المشروع بعد':'No real execution has been recorded for this project yet'}</small></div><span className="status-chip paused">{isAr?'غير مسجل':'Not tracked'}</span></div>
-            <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'هذه النسبة تقيس اعتماد خطوات الخطة فقط، وليست نسبة نجاح المشروع النهائي. سيتم احتساب النجاح والفشل الفعليين بعد تسجيل نتائج التنفيذ والاختبارات لكل مرحلة.':'This percentage measures plan approval only, not final project success. Actual success/failure requires recorded execution results and tests for each stage.'}</span></div>
+            <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?`نجح ${successfulExecutions} · فشل ${failedExecutions} · متبقٍ ${unexecutedSteps}`:`${successfulExecutions} succeeded · ${failedExecutions} failed · ${unexecutedSteps} awaiting`}</small></div><span className={`status-chip ${failedExecutions>0?'stopped':successfulExecutions>0?'approved':'paused'}`}>{successfulExecutions+failedExecutions>0?(isAr?'مسجل':'Tracked'):(isAr?'لم يبدأ':'Not started')}</span></div>
+            <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'السهم يعكس نتائج تشغيل خطوات الذكاء الاصطناعي المسجلة فقط، ولا يعني اجتياز اختبارات خارجية أو اكتمال المشروع بالكامل.':'The trend reflects recorded AI step runs only; it does not certify external tests or full project completion.'}</span></div>
           </section>
           <section className="panel panel-pad">
             <div className="section-head"><h2 className="section-title">{t('taskRequest')}</h2></div>
