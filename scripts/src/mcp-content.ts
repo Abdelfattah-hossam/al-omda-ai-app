@@ -18,6 +18,7 @@ export function appendMcpToolResult(
 
   const textParts: string[] = [];
   let imageCount = 0;
+  let acceptedImageCount = 0;
   for (const raw of blocks) {
     if (!raw || typeof raw !== "object") continue;
     const block = raw as { type?: unknown; text?: unknown; data?: unknown; mimeType?: unknown };
@@ -29,12 +30,13 @@ export function appendMcpToolResult(
       const data = typeof block.data === "string" ? block.data : "";
       if (ALLOWED_IMAGE_TYPES.has(mimeType) && data.length > 0 && data.length <= MAX_IMAGE_BASE64_CHARS && /^[A-Za-z0-9+/]+={0,2}$/.test(data)) {
         imageQueue.push({ mimeType: mimeType as McpImageObservation["mimeType"], data, toolName: call.function?.name || "MCP tool" });
+        acceptedImageCount++;
       } else {
         textParts.push("[Image omitted: unsupported format or image exceeded the local Agent image size limit.]");
       }
     }
   }
-  if (imageCount > 0 && !imageQueue.length) textParts.push("[No usable screenshot image was returned to the model.]");
+  if (imageCount > 0 && acceptedImageCount === 0) textParts.push("[No usable screenshot image was returned to the model.]");
   messages.push({ role: "tool", tool_call_id: call.id, content: textParts.join("\\n").slice(0, 50000) || "MCP tool completed." });
 }
 
