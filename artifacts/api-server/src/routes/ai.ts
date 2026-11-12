@@ -822,6 +822,67 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
   }
 });
 
+router.post("/ai/speech", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to generate speech." }); return; }
+    const input = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+    if (!input || input.length > 4000) {
+      res.status(400).json({ error: "Provide speech text between 1 and 4,000 characters." });
+      return;
+    }
+    const key = process.env.OPENROUTER_API_KEY?.trim();
+    if (!key) { res.status(503).json({ error: "OpenRouter is not configured for free speech generation." }); return; }
+    const usage = await currentUsage(session.accessToken);
+    if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
+    const response = await fetch("https://openrouter.ai/api/v1/audio/speech", {
+      method: "POST",
+      signal: AbortSignal.timeout(60000),
+      headers: {
+        authorization: "Bearer " + key,
+        "content-type": "application/json",
+        "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev",
+        "X-Title": "AL OMDA AI",
+      },
+      body: JSON.stringify({
+        model: "fish-audio/s2.1-pro-free:free",
+        input,
+        response_format: "mp3",
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      let message = detail.slice(0, 300);
+      try { message = providerErrorMessage(JSON.parse(detail)) || message; } catch { /* provider returned plain text */ }
+      res.status(response.status === 429 ? 429 : 503).json({
+        error: "تعذر إنشاء الصوت المجاني حاليًا. لم يتم خصم وحداتك؛ حاول مرة أخرى لاحقًا.",
+        details: message,
+      });
+      return;
+    }
+    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!contentType.startsWith("audio/")) {
+      res.status(502).json({ error: "The speech provider returned an invalid audio format. No usage was deducted." });
+      return;
+    }
+    const audio = new Uint8Array(await response.arrayBuffer());
+    if (!audio.byteLength) {
+      res.status(502).json({ error: "The speech provider returned an empty audio file. No usage was deducted." });
+      return;
+    }
+    const chargedUsage = await reserveUnits(session.accessToken, 1);
+    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage: chargedUsage }); return; }
+    res.setHeader("content-type", contentType);
+    res.setHeader("content-disposition", 'inline; filename="al-omda-speech.mp3"');
+    res.setHeader("cache-control", "no-store");
+    res.setHeader("x-ai-usage-remaining", String(chargedUsage.remaining));
+    res.setHeader("x-ai-usage-used", String(chargedUsage.used));
+    res.status(200).send(audio);
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not generate speech.");
+  }
+});
+
 router.get("/ai/usage", async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
