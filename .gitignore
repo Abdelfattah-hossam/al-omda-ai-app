@@ -59,3 +59,4 @@ Thumbs.db
 .omda/mcp-servers.json
 .omda/*.tmp
 .omda/http-roles.json
+.omda/models.json
