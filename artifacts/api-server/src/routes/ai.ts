@@ -295,7 +295,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const usage = await reserveUnits(session.accessToken, 2);
     if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
-    const excelStep = isExcelRequest([{ role: "user", content: [task.title, task.request, step.text, step.output || "", step.complete || ""].join("\\n") }]);
+    const excelStep = isExcelRequest([{ role: "user", content: [task.title, task.request, step.text, step.output || "", step.complete || ""].join("\n") }]);
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
@@ -307,7 +307,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Expected deliverable: " + (step.output || "A complete .xlsx workbook"),
       "Acceptance check: " + (step.complete || "Create a real Excel workbook with the approved columns and formatting."),
       "Return between 1 and 30 columns and 1 to 500 rows."
-    ].join("\\n") : [
+    ].join("\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
       "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
       "Project: " + task.title,
