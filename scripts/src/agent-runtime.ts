@@ -7,6 +7,7 @@ import { isIP } from "node:net";
 import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 import { buildMcpEnvironment } from "./mcp-env.js";
+import { buildBingCompatibleSearchUrl, parseBingCompatibleSearchPayload } from "./web-search.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -17,6 +18,8 @@ const COMMAND_TIMEOUT_MS = Math.min(Number(process.env.OMDA_AGENT_COMMAND_TIMEOU
 const OUTPUT_LIMIT = 1024 * 1024;
 const BODY_LIMIT = 1024 * 1024;
 const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
+const SEARCH_BASE_URL = process.env.OMDA_AGENT_SEARCH_BASE_URL?.trim() || "";
+const SEARCH_API_KEY = process.env.OMDA_AGENT_SEARCH_API_KEY?.trim() || "";
 const ALLOWED_ORIGINS = new Set((process.env.OMDA_AGENT_APP_ORIGINS || "").split(",").map((origin) => origin.trim()).filter(Boolean));
 const ALLOW_LOCAL_LAB_TARGETS = process.env.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true";
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
@@ -165,6 +168,27 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const limitedBody = method === "HEAD" ? { text: "", truncated: false } : await readLimitedResponse(response, 50000);
   return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated, durationMs: Date.now() - startedAt };
 }
+async function searchWeb(body: Json): Promise<Json> {
+  if (!SEARCH_BASE_URL) throw new Error("Configure OMDA_AGENT_SEARCH_BASE_URL to enable Bing-compatible search.");
+  const query = typeof body.query === "string" ? body.query : "";
+  const count = typeof body.count === "number" ? body.count : 5;
+  const market = typeof body.market === "string" ? body.market : undefined;
+  const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
+  const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
+  await assertAllowedTarget(url.toString());
+  const headers = new Headers({ accept: "application/json", "user-agent": "AL-OMDA-Agent/0.1" });
+  if (SEARCH_API_KEY) headers.set("Ocp-Apim-Subscription-Key", SEARCH_API_KEY);
+  const response = await fetch(url, { method: "GET", headers, redirect: "error", signal: AbortSignal.timeout(12000) });
+  if (!response.ok) throw new Error("Search provider returned HTTP " + response.status + ".");
+  const limited = await readLimitedResponse(response, 150000);
+  if (limited.truncated) throw new Error("Search provider response exceeded the 150 KB safety limit.");
+  let payload: unknown;
+  try { payload = JSON.parse(limited.text); }
+  catch { throw new Error("Search provider did not return valid JSON."); }
+  const parsed = parseBingCompatibleSearchPayload(payload);
+  return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
+}
+
 async function loadHttpRoles(): Promise<Array<{ name: string; headersFromEnv: Record<string, string> }>> {
   const configPath = resolve(workspaceRoot, ".omda", "http-roles.json");
   try {
@@ -443,6 +467,7 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "files.write", description: "Create or update a UTF-8 file in the workspace. Requires explicit user approval for each call.", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"], additionalProperties: false } } },
   { type: "function", function: { name: "terminal.execute", description: "Run an approved project command without a shell. Requires explicit user approval and OMDA_AGENT_EXECUTION=host.", parameters: { type: "object", properties: { command: { type: "string", enum: ["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"] }, args: { type: "array", items: { type: "string" } }, cwd: { type: "string" } }, required: ["command", "args"], additionalProperties: false } } },
   { type: "function", function: { name: "http.compare_roles", description: "Compare the same authorized endpoint using configured user/role credentials. Requires explicit user approval. Credentials are loaded from environment variables and never sent to the model.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, roles: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 } }, required: ["url", "roles"], additionalProperties: false } } },
+  { type: "function", function: { name: "web.search", description: "Search the web through the configured Bing-compatible Search API. Search provider hostname must be allowlisted; the API key stays local.", parameters: { type: "object", properties: { query: { type: "string" }, count: { type: "integer", minimum: 1, maximum: 10 }, market: { type: "string" }, safeSearch: { type: "string", enum: ["Strict", "Moderate", "Off"] } }, required: ["query"], additionalProperties: false } } },
   { type: "function", function: { name: "http.request", description: "Inspect an HTTPS response from a hostname explicitly configured in the authorized target allowlist.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, headers: { type: "object", additionalProperties: { type: "string" } } }, required: ["url"], additionalProperties: false } } },
 ];
 async function saveAgentState(id: string, state: AgentState): Promise<void> {
@@ -487,6 +512,8 @@ async function runTool(call: AgentToolCall): Promise<unknown> {
     }
     case "terminal.execute":
       return await executeCommand(args);
+    case "web.search":
+      return await searchWeb(args);
     case "http.request":
       return await httpRequest(args);
     case "http.compare_roles":
