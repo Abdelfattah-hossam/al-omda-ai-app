@@ -37,15 +37,12 @@ export function isBlockedNetworkAddress(address: string): boolean {
   if (version !== 6) return true;
   const groups = expandIPv6(address);
   if (!groups) return true;
-  const allZeroPrefix = groups.slice(0, 6).every((part) => part === 0);
-  if (allZeroPrefix && groups[5] === 0 && (groups[6] === 0 || groups[6] === 0xffff)) {
-    if (groups[6] === 0xffff) {
-      const a = groups[7] >>> 8, b = groups[7] & 255;
-      const c = 0, d = 0;
-      return blockedIPv4([a, b, c, d].join("."));
-    }
-    return true;
+  const firstFiveZero = groups.slice(0, 5).every((part) => part === 0);
+  if (firstFiveZero && groups[5] === 0xffff) {
+    const octets = [groups[6] >>> 8, groups[6] & 255, groups[7] >>> 8, groups[7] & 255];
+    return blockedIPv4(octets.join("."));
   }
+  if (groups.slice(0, 6).every((part) => part === 0)) return true;
   const first = groups[0];
   return groups.every((part) => part === 0) ||
     (allZeroPrefix && groups[6] === 0 && groups[7] === 1) ||
