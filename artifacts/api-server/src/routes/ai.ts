@@ -262,7 +262,14 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
   return { text, model };
 }
 
-type OpenRouterCatalogModel = { id: string; name?: string; description?: string; pricing?: { prompt?: string; completion?: string } };
+type OpenRouterCatalogModel = {
+  id: string;
+  name?: string;
+  description?: string;
+  pricing?: { prompt?: string; completion?: string };
+  supported_parameters?: string[];
+  architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+};
 let openRouterCatalogCache: { expiresAt: number; models: OpenRouterCatalogModel[] } | null = null;
 
 async function getOpenRouterFreeModels(): Promise<OpenRouterCatalogModel[]> {
@@ -275,8 +282,8 @@ async function getOpenRouterFreeModels(): Promise<OpenRouterCatalogModel[]> {
       if (!item || typeof item.id !== "string") return false;
       const explicitFree = item.id.endsWith(":free");
       const zeroPrice = Number(item.pricing?.prompt) === 0 && Number(item.pricing?.completion) === 0;
-      return (explicitFree || zeroPrice) && !/embedding|rerank|moderation|image-generation|text-to-speech|speech-to-text/i.test(item.id);
-    }).map((item: any) => ({ id: item.id, name: item.name, description: item.description, pricing: item.pricing })) : [];
+      return (explicitFree || zeroPrice) && (Array.isArray(item.architecture?.output_modalities) ? item.architecture.output_modalities.includes("text") : true) && !/embedding|rerank|moderation|image-generation|text-to-speech|speech-to-text/i.test(item.id);
+    }).map((item: any) => ({ id: item.id, name: item.name, description: item.description, pricing: item.pricing, supported_parameters: item.supported_parameters, architecture: item.architecture })) : [];
     openRouterCatalogCache = { expiresAt: Date.now() + 10 * 60 * 1000, models };
     return models;
   } catch (error) {
@@ -293,23 +300,38 @@ async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[
     "nvidia/nemotron-3.5-lightning:free",
     "google/gemma-4-26b-a4b-it:free",
     "nvidia/nemotron-3.5-super-vl:free",
-    "nvidia/nemotron-3-nano-omni:free",
   ];
   const coding = isCodingRequest(messages);
   const structured = needsLongStructuredOutput(messages);
-  const preference = coding
-    ? /coding|code|programming|software|agent|flint|inkling|nemotron.*ultra|deepseek/
+  const describe = (model: OpenRouterCatalogModel) => [model.id, model.name, model.description].filter(Boolean).join(" ").toLowerCase();
+  const score = (model: OpenRouterCatalogModel, role: "reasoning" | "coding" | "writing" | "general") => {
+    const text = describe(model);
+    const params = model.supported_parameters || [];
+    let value = model.id.endsWith(":free") ? 3 : 0;
+    if (role === "coding") {
+      if (/coding|code|coder|programming|software|deepseek|qwen|flint|nemotron.*ultra/.test(text)) value += 12;
+      if (params.includes("tools")) value += 2;
+    } else if (role === "reasoning") {
+      if (/reason|thinking|agent|orchestrat|ultra|qwq|r1|nemotron/.test(text)) value += 12;
+      if (params.includes("structured_outputs")) value += 2;
+    } else if (role === "writing") {
+      if (/writing|creative|writer|content|llama|gemma|mistral|command/.test(text)) value += 12;
+    } else if (/instruct|general|chat|assistant|gemma|llama|nemotron/.test(text)) value += 10;
+    return value;
+  };
+  const available = catalog.length ? catalog : staticFallbacks.map((id) => ({ id }));
+  const roles: Array<"reasoning" | "coding" | "writing" | "general"> = coding
+    ? ["coding", "reasoning", "general"]
     : structured
-      ? /reasoning|agent|instruct|ultra|ernie|gemma|nemotron/
-      : /instruct|reasoning|general|chat|gemma|ernie|nemotron|inkling/;
-  const ranked = catalog
-    .map((model) => ({ model, score: (preference.test([model.id, model.name, model.description].filter(Boolean).join(" ").toLowerCase()) ? 10 : 0) + (model.id.endsWith(":free") ? 2 : 0) }))
-    .sort((a, b) => b.score - a.score)
-    .map(({ model }) => model.id);
-  const available = ranked.length ? ranked : staticFallbacks;
-  // Two explicit specialists plus the free router provide meaningful diversity without
-  // serially waiting on a long list of unavailable free endpoints.
-  const selected = [...new Set(available)].slice(0, 2);
+      ? ["reasoning", "general", "writing"]
+      : ["general", "writing", "reasoning"];
+  const selected: string[] = [];
+  for (const role of roles) {
+    const next = [...available].sort((a, b) => score(b, role) - score(a, role)).find((model) => !selected.includes(model.id));
+    if (next) selected.push(next.id);
+    if (selected.length === 2) break;
+  }
+  // Keep two different free specialists, then let OpenRouter's own free router provide a final fallback.
   return [...selected, "openrouter/free"];
 }
 
