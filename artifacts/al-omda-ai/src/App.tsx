@@ -235,12 +235,12 @@ const starterTasks: Task[] = [
   { id:'demo-research', title:'مراجعة تجربة صفحة التسجيل', request:'مراجعة تجربة التسجيل الحالية وتحديد أسئلة البحث التي تساعد على تحسينها.', specialty:'research', status:'paused', createdAt:'2025-02-17T14:05:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الأسئلة والافتراضات التي تحتاج تحققاً',state:'approved'},{id:'s2',text:'اقتراح محاور مراجعة تجربة المستخدم',state:'pending'},{id:'s3',text:'تلخيص النتائج المتوقعة للمراجعة',state:'pending'}] },
 ];
 
-function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; notices:boolean; accent:string; compact:boolean } {
+function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; notices:boolean; accent:string; compact:boolean; wallpaper:string } {
   try {
     const stored = localStorage.getItem(STORE_KEY);
-    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false }, ...JSON.parse(stored) };
+    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight' }, ...JSON.parse(stored) };
   } catch { /* use seeded local preview */ }
-  return { language:'ar', tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false };
+  return { language:'ar', tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight' };
 }
 const apiRequestOptions = { credentials:'same-origin' as const };
 function readApiError(error:unknown, fallback:string):string {
@@ -697,6 +697,15 @@ function App() {
     {id:'amber',name:isAr?'ذهبي':'Amber',color:'#e9c27b'},
     {id:'lime',name:isAr?'أخضر':'Lime',color:'#b7df8a'},
   ];
+  const wallpaperOptions = [
+    {id:'midnight',name:isAr?'ليل داكن':'Midnight',background:'linear-gradient(135deg,#080b12,#151b2a 55%,#101923)'},
+    {id:'ocean',name:isAr?'محيط':'Ocean',background:'linear-gradient(135deg,#061c2b,#0d4052 55%,#10243d)'},
+    {id:'aurora',name:isAr?'الشفق':'Aurora',background:'linear-gradient(135deg,#10152c,#26334a 48%,#183d3b)'},
+    {id:'purple',name:isAr?'بنفسجي':'Purple',background:'linear-gradient(135deg,#171126,#302044 55%,#17243a)'},
+    {id:'forest',name:isAr?'غابة':'Forest',background:'linear-gradient(135deg,#0b1b17,#1c3930 55%,#15242a)'},
+    {id:'sunset',name:isAr?'غروب':'Sunset',background:'linear-gradient(135deg,#24151a,#49302d 55%,#1c2432)'},
+    {id:'graphite',name:isAr?'جرافيت':'Graphite',background:'linear-gradient(135deg,#111315,#292d32 55%,#171b20)'},
+  ];
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <div className="profile-settings-layout">
@@ -716,6 +725,10 @@ function App() {
           <div className="setting-row"><div><strong>{isAr?'لون الواجهة':'Accent color'}</strong><small>{isAr?'سبعة ألوان زجاجية للاختيار بينها':'Seven glass-inspired colors'}</small></div></div>
           <div className="accent-picker" role="group" aria-label={isAr?'ألوان الواجهة':'Accent colors'}>
             {accentOptions.map((option)=><button type="button" key={option.id} className={'accent-choice '+(saved.accent===option.id?'selected':'')} style={{color:option.color}} onClick={()=>setSaved((prev)=>({...prev,accent:option.id}))} aria-label={option.name} aria-pressed={saved.accent===option.id}><span/><small>{option.name}</small></button>)}
+          </div>
+          <div className="wallpaper-picker" role="group" aria-label={isAr?'خلفيات التطبيق':'App backgrounds'}>
+            <div className="profile-section-heading"><div><h3>{isAr?'خلفية التطبيق':'App background'}</h3><p>{isAr?'اختر واحدة من سبع خلفيات داكنة.':'Choose from seven dark backgrounds.'}</p></div></div>
+            <div className="wallpaper-options">{wallpaperOptions.map(option=><button type="button" key={option.id} className={'wallpaper-choice '+(saved.wallpaper===option.id?'selected':'')} style={{background:option.background}} onClick={()=>setSaved(prev=>({...prev,wallpaper:option.id}))} aria-label={option.name} aria-pressed={saved.wallpaper===option.id}><span>{option.name}</span></button>)}</div>
           </div>
           <div className="setting-row"><div><strong>{isAr?'كثافة العرض':'Display density'}</strong><small>{isAr?'تحكم في المسافات داخل البطاقات والقوائم.':'Control spacing in cards and lists.'}</small></div><button type="button" role="switch" aria-checked={saved.compact} className={'toggle '+(saved.compact?'on':'')} onClick={()=>setSaved((prev)=>({...prev,compact:!prev.compact}))} aria-label={isAr?'عرض مضغوط':'Compact layout'}/></div>
         </section>
@@ -751,7 +764,7 @@ function App() {
   else if (path === '/profile') page = profilePage();
   else page = dashboardPage();
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
-  return <div className="app-shell" data-accent={saved.accent} data-density={saved.compact?"compact":"comfortable"} dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
       <div className="nav-caption">{t('workspace')}</div><nav className="nav-stack">{navItems.map((item)=>navLink(item))}</nav>
