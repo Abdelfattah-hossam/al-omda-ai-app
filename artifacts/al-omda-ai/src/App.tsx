@@ -422,9 +422,13 @@ function App() {
       const data = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       if (typeof data.result !== 'string' || !data.result.trim()) throw new Error(isAr ? 'لم يصل مخرج صالح من الذكاء الاصطناعي.' : 'The AI returned no usable deliverable.');
-      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,executedAt:data.executedAt}:current)}:item)}));
+      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
     } catch(error) {
       setExecutionError(error instanceof Error ? error.message : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
+      try {
+        const workspace = await getWorkspace(apiRequestOptions);
+        if (authUser) applyWorkspace(workspace, authUser.email);
+      } catch { /* Keep the execution error visible if refresh is unavailable. */ }
     } finally { setExecutingStepId(null); }
   };
 
