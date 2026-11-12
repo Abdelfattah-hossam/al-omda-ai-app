@@ -7,7 +7,7 @@ import { isIP } from "node:net";
 import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 import { buildMcpEnvironment } from "./mcp-env.js";
-import { buildBingCompatibleSearchUrl, parseBingCompatibleSearchPayload } from "./web-search.js";
+import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web-search.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 
 const HOST = "127.0.0.1";
@@ -178,16 +178,7 @@ async function searchWeb(body: Json): Promise<Json> {
   const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
   await assertAllowedTarget(url.toString());
-  const headers = new Headers({ accept: "application/json", "user-agent": "AL-OMDA-Agent/0.1" });
-  if (SEARCH_API_KEY) headers.set("Ocp-Apim-Subscription-Key", SEARCH_API_KEY);
-  const response = await fetch(url, { method: "GET", headers, redirect: "error", signal: AbortSignal.timeout(12000) });
-  if (!response.ok) throw new Error("Search provider returned HTTP " + response.status + ".");
-  const limited = await readLimitedResponse(response, 150000);
-  if (limited.truncated) throw new Error("Search provider response exceeded the 150 KB safety limit.");
-  let payload: unknown;
-  try { payload = JSON.parse(limited.text); }
-  catch { throw new Error("Search provider did not return valid JSON."); }
-  const parsed = parseBingCompatibleSearchPayload(payload);
+  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY);
   return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
 }
 
