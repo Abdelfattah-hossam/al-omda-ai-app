@@ -33,6 +33,14 @@ const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "pyt
 
 let workspaceRoot = "";
 
+let activeAgentRuns = 0;
+async function withActiveAgentRun<T>(operation: () => Promise<T>): Promise<T> {
+  activeAgentRuns++;
+  try { return await operation(); }
+  finally { activeAgentRuns = Math.max(0, activeAgentRuns - 1); }
+}
+
+
 type Json = Record<string, unknown>;
 function send(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
@@ -769,9 +777,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
   if (!authenticated(req)) { send(res, 401, { error: "Unauthorized local agent client." }); return; }
+  if (req.method === "GET" && url.pathname === "/v1/runtime/status") { send(res, 200, { activeRuns: activeAgentRuns }); return; }
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {
     const body = await readBody(req);
-    send(res, 200, await delegateAgent(body)); return;
+    send(res, 200, await withActiveAgentRun(() => delegateAgent(body))); return;
   }
   if (req.method === "GET" && url.pathname === "/v1/http/roles") {
     const roles = await loadHttpRoles();
@@ -779,7 +788,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   if (req.method === "POST" && url.pathname === "/v1/http/compare") {
     const body = await readBody(req);
-    send(res, 200, await compareHttpRoles(body)); return;
+    send(res, 200, await withActiveAgentRun(() => compareHttpRoles(body))); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/stream") {
     const body = await readBody(req);
@@ -791,10 +800,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       if (!res.destroyed && !res.writableEnded) res.write("data: " + JSON.stringify(event) + "\n\n");
     };
     try {
-      const result = action === "run" ? await startAgent(body, emit)
-        : action === "resume" ? await resumeAgent(body, emit)
-        : action === "continue" ? await continueAgent(body, emit)
-        : await delegateAgent(body, emit);
+      const result = await withActiveAgentRun(() => action === "run" ? startAgent(body, emit)
+        : action === "resume" ? resumeAgent(body, emit)
+        : action === "continue" ? continueAgent(body, emit)
+        : delegateAgent(body, emit));
       emit({ type: "complete", result });
     } catch (error) {
       emit({ type: "error", error: error instanceof Error ? error.message.slice(0, 300) : "Agent stream failed." });
@@ -805,15 +814,15 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/run") {
     const body = await readBody(req);
-    send(res, 200, await startAgent(body)); return;
+    send(res, 200, await withActiveAgentRun(() => startAgent(body))); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/resume") {
     const body = await readBody(req);
-    send(res, 200, await resumeAgent(body)); return;
+    send(res, 200, await withActiveAgentRun(() => resumeAgent(body))); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/continue") {
     const body = await readBody(req);
-    send(res, 200, await continueAgent(body)); return;
+    send(res, 200, await withActiveAgentRun(() => continueAgent(body))); return;
   }
   if (req.method === "GET" && url.pathname === "/v1/agent/sessions") {
     const directory = resolve(workspaceRoot, ".omda", "sessions");
