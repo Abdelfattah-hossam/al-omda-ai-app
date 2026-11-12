@@ -30,15 +30,6 @@ async function reserveUnits(accessToken: string, units: number): Promise<Usage> 
   return readSupabaseJson<Usage>(response);
 }
 
-async function refundUnits(accessToken: string, units: number): Promise<void> {
-  const response = await supabaseFetch("/rest/v1/rpc/refund_ai_units", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ p_units: units }),
-  }, accessToken);
-  await readSupabaseJson<unknown>(response);
-}
-
 function getProviders() {
   return {
     gemini: Boolean(process.env.GEMINI_API_KEY?.trim()),
@@ -111,7 +102,6 @@ router.get("/ai/usage", async (req, res): Promise<void> => {
 
 router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
   let accessToken: string | undefined;
-  let reserved = 0;
   try {
     const session = await resolveSession(req, res);
     if (!session) {
@@ -148,7 +138,6 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage });
       return;
     }
-    reserved = units;
 
     let answer: { text: string; model: string } | null = null;
     let usedProvider = "";
@@ -163,9 +152,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       }
     }
     if (!answer) {
-      await refundUnits(accessToken, reserved);
-      reserved = 0;
-      res.status(503).json({ error: "All configured free AI providers are unavailable. Your daily units were returned.", details: failures.slice(0, 3) });
+      res.status(503).json({ error: "All configured free AI providers are unavailable. This attempt remains counted in today's allowance.", details: failures.slice(0, 3) });
       return;
     }
     const latestUsage = await currentUsage(accessToken);
@@ -176,9 +163,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       usage: latestUsage,
     });
   } catch (error) {
-    if (accessToken && reserved > 0) {
-      try { await refundUnits(accessToken, reserved); } catch { /* keep the original failure */ }
-    }
+
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
   }
 });
