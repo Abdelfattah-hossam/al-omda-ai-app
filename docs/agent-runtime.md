@@ -43,7 +43,7 @@ pnpm --filter @workspace/scripts agent:runtime
 
 To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated allowlist of executable names (for example `node,npx`). Then create `.omda/mcp-servers.json` inside the workspace:
 
-\`\`\`json
+```json
 {
   "servers": [
     {
@@ -54,7 +54,7 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
     }
   ]
 }
-\`\`\`
+```
 
 Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls pause for user approval. HTTP role comparisons also require approval. Configure `.omda/http-roles.json` from `.omda/http-roles.example.json`, and place credential values only in environment variables named by `headersFromEnv`. The local role config is git-ignored. Treat installed MCP servers as trusted local programs.
 
