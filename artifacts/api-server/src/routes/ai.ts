@@ -47,8 +47,12 @@ function getProviders() {
 function getLatestUserRequest(messages: ChatMessage[]): string {
   return messages.filter((message) => message.role === "user").slice(-2).map((message) => message.content).join("\n");
 }
+function isHowToRequest(request: string): boolean {
+  return /^\\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
+}
 function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
+  if (isHowToRequest(request)) return false;
   const mentionsExcel = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
   const explicitCreation = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|إنشاء|جهز|جهزي|صمم|حوّل|حول|export|create|generate|make|build|prepare|download)/i.test(request);
   const directFileRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|جدول بيانات|مصنف|excel|xlsx|spreadsheet|workbook)/i.test(request);
@@ -61,6 +65,7 @@ function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
 }
 
 function isExplicitWordFileRequest(request: string): boolean {
+  if (isHowToRequest(request)) return false;
   return /(?:ملف|مستند|document|file)\s*.{0,45}(?:و?ورد|word|docx)|(?:و?ورد|word|docx).{0,45}(?:ملف|مستند|document|file)|(?:اعمل|اعملي|أنشئ|انشئ|جهز|create|generate|make|download).{0,40}(?:و?ورد|word|docx)/i.test(request);
 }
 function isWordTableRequest(request: string): boolean {
@@ -68,6 +73,7 @@ function isWordTableRequest(request: string): boolean {
   return /جدول|table|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
+  if (isHowToRequest(request)) return false;
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
   const desktopClock = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
   const directBuild = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?)?\s*(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|ساعة|website|web app|mobile app|application|software|project|store|platform|system|clock)/i.test(normalized);
