@@ -94,57 +94,67 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
   };
 
-  const loadHistory = async () => {
+  const loadConversation = async (id: string) => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
+      setActiveConversationId(id);
+      setMessages(Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) : []);
+      setShowConversationList(false);
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة." : "Could not load conversation.")); }
+    finally { setHistoryLoading(false); }
+  };
+
+  const createConversation = async () => {
+    if (!signedIn) return "";
+    try {
+      const response = await fetch("/api/ai/conversations", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: ar ? "محادثة جديدة" : "New chat" }) });
+      const data = await response.json();
+      if (!response.ok || !data.conversation?.id) throw new Error(data.error || (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation."));
+      const item = data.conversation as Conversation;
+      setConversations((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+      setActiveConversationId(item.id); setMessages([]); setInput(""); setError(""); setShowConversationList(false);
+      return item.id;
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation.")); return ""; }
+  };
+
+  const loadConversations = async () => {
     if (!signedIn) return;
     setHistoryLoading(true);
     try {
-      const response = await fetch("/api/ai/history", { credentials: "same-origin" });
+      const response = await fetch("/api/ai/conversations", { credentials: "same-origin" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load chat history."));
-      if (Array.isArray(data.messages)) setMessages(data.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة المحفوظة." : "Could not load saved conversation."));
-    } finally {
-      setHistoryLoading(false);
-    }
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثات." : "Could not load conversations."));
+      const items = Array.isArray(data.conversations) ? data.conversations as Conversation[] : [];
+      setConversations(items);
+      if (items.length) await loadConversation(items[0].id); else await createConversation();
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثات." : "Could not load conversations.")); }
+    finally { setHistoryLoading(false); }
   };
 
   const saveHistory = async (items: ChatMessage[]) => {
+    if (!activeConversationId) return false;
     try {
-      const response = await fetch("/api/ai/history", {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: items.slice(-100) }),
-      });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100) }) });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save chat history."));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
+      if (data.conversation) setConversations((current) => current.map((item) => item.id === activeConversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save chat history."));
-      return false;
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save conversation.")); return false; }
   };
 
-  const clearChat = async () => {
-    if (clearing || loading || messages.length === 0) return;
-    setClearing(true);
-    setError("");
+  const deleteConversation = async (id: string) => {
+    if (!window.confirm(ar ? "هل تريد حذف هذه المحادثة نهائيًا؟" : "Delete this conversation permanently?")) return;
     try {
-      const response = await fetch("/api/ai/history", { method: "DELETE", credentials: "same-origin" });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { method: "DELETE", credentials: "same-origin" });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف المحادثة." : "Could not clear chat history."));
-      setMessages([]);
-      setInput("");
-      window.speechSynthesis?.cancel?.();
-      setSpeaking(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (ar ? "تعذر حذف المحادثة." : "Could not clear chat history."));
-    } finally {
-      setClearing(false);
-    }
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف المحادثة." : "Could not delete conversation."));
+      const rest = conversations.filter((item) => item.id !== id); setConversations(rest);
+      if (activeConversationId === id) { if (rest.length) await loadConversation(rest[0].id); else await createConversation(); }
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حذف المحادثة." : "Could not delete conversation.")); }
   };
-
   const loadMemory = async () => {
     if (!signedIn) return;
     setMemoryLoading(true);
@@ -211,7 +221,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     }
   };
 
-  useEffect(() => { void loadUsage(); void loadHistory(); void loadMemory(); }, [signedIn]);
+  useEffect(() => { void loadUsage(); void loadConversations(); void loadMemory(); }, [signedIn]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
