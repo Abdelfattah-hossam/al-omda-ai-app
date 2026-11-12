@@ -54,18 +54,27 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 ## Roadmap
 
-The following are future goals, not claims of existing functionality:
+## Implemented foundation
 
-1. Extend the basic Local Agent integration in regular chat (task submission, explicit approvals, saved-session resume/listing) with retries, cancellation, and durable job status.
-2. Add native browser automation for Chromium/Firefox with explicit per-site permissions and tab management; MCP browser servers are the interim route.
-3. Add desktop control through a separately installed, permissioned companion.
-4. Expand MCP beyond local stdio transport with remote transports, server lifecycle management, and a safer install/update experience.
-5. Add write-capable specialist delegation with isolated workspaces, shared task state, and per-agent approval routing.
-6. Expand provider adapters and routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, LM Studio, and other local models.
-7. Add richer HTTPFlow history and visual response diffs, plus additional authorized recon workflows with explicit scope and audit logs.
-8. Add provider-accurate live token accounting and real-time generation speed; the current UI shows a character-based live estimate.
-9. Add background job supervision, service installation, automatic updates, and stronger crash recovery.
-10. Add container-backed execution with resource, network, and filesystem isolation.
+- Local Agent runtime integrated with the Agents workspace and regular chat, including authenticated streaming, explicit approval for sensitive actions, saved sessions, resume, and session discovery.
+- Local workspace file tools, optional terminal execution, checkpoint persistence, MCP stdio integration, and built-in Skills.
+- Optional Playwright browser and desktop Computer Use MCP setup scripts. These connect locally installed companions; they are not hosted browser or remote desktop services.
+- Read-only parallel specialist delegation (2–4 agents) with evidence traces. The lead agent retains write and terminal permissions behind the normal approval workflow.
+- Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
+- Authorized HTTP role comparison, bounded HTTP inspection, sensitive-header redaction, and DNS/IP safety checks for private IPv4/IPv6 destinations.
+- OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
+
+## Remaining roadmap
+
+1. Native browser workspace with built-in tab/profile management and per-site permissions beyond the optional Playwright MCP companion.
+2. A dedicated desktop companion installer, clear permission controls, secure remote access, and polished cross-platform UX beyond the optional Computer Use MCP integration.
+3. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing.
+4. Broader provider adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
+5. Rich HTTPFlow history, visual request/response diffs, and audit trail for authorized security research.
+6. Provider-accurate live token counts and live tokens-per-second; current UI speed while streaming is an estimate, with actual usage metrics when the provider returns them.
+7. Background job supervision, service installation, signed automatic updates, and stronger crash recovery.
+8. Container-backed execution with resource, network, and filesystem isolation.
+9. Expanded runtime integration tests, including real local model, browser, desktop, and deployment smoke tests.
 
 ## Security model
 
