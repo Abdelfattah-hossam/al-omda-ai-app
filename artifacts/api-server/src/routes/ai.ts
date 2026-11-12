@@ -111,28 +111,31 @@ function parseExcelWorkbook(text: string): { title: string; columns: string[]; r
 
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
     const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !value.title.trim()) return null;
+    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.trim().length > 180) return null;
     const rawParagraphs = value.paragraphs === undefined ? [] : value.paragraphs;
     const rawColumns = value.columns === undefined ? [] : value.columns;
     const rawRows = value.rows === undefined ? [] : value.rows;
     if (!Array.isArray(rawParagraphs) || !Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
-    const paragraphs = tableOnly ? [] : rawParagraphs.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.slice(0, 3000)).slice(0, 12);
-    const columns = rawColumns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
+    if (rawParagraphs.length > 12 || rawParagraphs.some((item: unknown) => typeof item !== "string" || item.length > 3000)) return null;
+    if (rawColumns.length > 12 || rawColumns.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 180)) return null;
+    if (rawRows.length > 100) return null;
+    const paragraphs = tableOnly ? [] : rawParagraphs.map((item: string) => item.trim()).filter(Boolean);
+    const columns = rawColumns.map((item: string) => item.trim());
     if (forceSevenColumns && columns.length !== 7) return null;
     if (requireTable && columns.length === 0) return null;
     if (!requireTable && columns.length > 0) return null;
-    if (columns.length > 12) return null;
     if (tableOnly && columns.length === 0) return null;
     if (columns.length === 0 && (rawRows.length > 0 || paragraphs.length === 0)) return null;
-    const rows = columns.length ? rawRows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => tableOnly ? "" : String(row[index] ?? "").slice(0, 2000))) : [];
+    if (columns.length > 0 && rawRows.some((row: unknown) => !Array.isArray(row) || row.length !== columns.length || row.some((cell: unknown) => (typeof cell !== "string" && typeof cell !== "number" && typeof cell !== "boolean") || String(cell).length > 2000))) return null;
+    const rows = columns.length ? (tableOnly ? [] : rawRows.map((row: unknown[]) => row.map((cell: unknown) => String(cell)))) : [];
     const finalRows = tableOnly && rows.length === 0 ? Array.from({ length: 8 }, () => columns.map(() => "")) : rows;
-    if (columns.length > 0 && finalRows.length === 0) return null;
-    return { title: value.title.trim().slice(0, 180), paragraphs, columns, rows: finalRows };
+    if (columns.length > 0 && finalRows.length === 0 && !tableOnly) return null;
+    return { title: value.title.trim(), paragraphs, columns, rows: finalRows };
   } catch { return null; }
 }
 function isCodingRequest(messages: ChatMessage[]): boolean {
@@ -426,7 +429,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseWordDocument(answer.text, false, false)) {
+      if (!parseWordDocument(answer.text, false, false, isWordTableRequest(customerRequest))) {
         await saveExecutionFailure("Word document failed structural validation after one repair attempt.");
         res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
@@ -688,7 +691,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       ].filter(Boolean).join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[Word document repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseWordDocument(answer.text, sevenColumnTable, tableOnly)) {
+      if (!parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested)) {
         res.status(502).json({ error: "لم يتم اعتماد مستند Word لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات. أعد المحاولة لاحقًا." });
         return;
       }
@@ -756,7 +759,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     if (wordDocumentRequest) {
-      const document = parseWordDocument(answer.text, sevenColumnTable, tableOnly);
+      const document = parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested);
       if (!document) {
         res.status(502).json({ error: "تعذر تكوين مستند Word منظم. أعد إرسال الطلب مرة واحدة." });
         return;
