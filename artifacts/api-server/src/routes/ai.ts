@@ -48,7 +48,7 @@ function getLatestUserRequest(messages: ChatMessage[]): string {
   return messages.filter((message) => message.role === "user").slice(-2).map((message) => message.content).join("\n");
 }
 function isHowToRequest(request: string): boolean {
-  return /^\\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
+  return /^\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
 }
 function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
