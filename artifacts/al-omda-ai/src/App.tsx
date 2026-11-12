@@ -83,6 +83,17 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
     assistant: ['Clarify the priority and deadline', 'Break the request into small actions', 'Suggest a useful order and schedule', 'Review conflicts and the next step'],
   },
 };
+function cleanSubmittedRequest(value:string):string {
+  const clean = value.trim().replace(/\\s+/g,' ');
+  // Mobile paste can accidentally include the visible plan panel and its controls.
+  // When that UI text contains the original quoted request, keep only that request.
+  const quoted = clean.match(/تحديد المطلوب للطلب\\s*[:：]\\s*[«“"]([\\s\\S]*?)[»”"]/);
+  if (quoted?.[1] && /الخطة المقترحة|معاينة محلية فقط|بانتظار موافقتك|تمت الموافقة/.test(clean)) {
+    return quoted[1].trim();
+  }
+  return clean;
+}
+
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
   const clean = request.trim().replace(/\s+/g,' ');
   const normalized = clean.toLocaleLowerCase();
@@ -305,10 +316,11 @@ function App() {
   const toggleLanguage = () => setSaved((prev) => ({ ...prev, language:prev.language === 'ar' ? 'en' : 'ar' }));
   const createPlan = async (event:FormEvent) => {
     event.preventDefault();
-    if (!request.trim()) return;
-    const title = request.trim().split(/[.!؟?]/)[0].slice(0,70) || (isAr ? 'طلب جديد' : 'New request');
-    const steps = buildLocalPlan(request.trim(), selectedSpecialty, language).map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
-    let task:Task = { id:`task-${Date.now()}`, title, request:request.trim(), specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
+    const cleanRequest = cleanSubmittedRequest(request);
+    if (!cleanRequest) return;
+    const title = cleanRequest.split(/[.!؟?]/)[0].slice(0,70) || (isAr ? 'طلب جديد' : 'New request');
+    const steps = buildLocalPlan(cleanRequest, selectedSpecialty, language).map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
+    let task:Task = { id:`task-${Date.now()}`, title, request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
     if (authUser) {
       try {
         const remote = await apiCreateTask({ title:task.title, request:task.request, specialty:task.specialty, steps:task.steps, status:task.status }, apiRequestOptions);
