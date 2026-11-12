@@ -824,3 +824,70 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   }
   .app-shell .mobile-nav a svg{width:17px!important;height:17px!important}
 }
+
+
+/* Mobile navigation dock: restore comfortable size and horizontal browsing */
+@media(max-width:650px){
+  .app-shell>.mobile-nav{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:5px!important;
+    height:auto!important;
+    min-height:76px!important;
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-x:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:none!important;
+    scroll-snap-type:x proximity!important;
+    box-sizing:border-box!important;
+  }
+  .app-shell>.mobile-nav::-webkit-scrollbar{display:none!important}
+  .app-shell>.mobile-nav>a{
+    display:flex!important;
+    flex:0 0 64px!important;
+    width:64px!important;
+    min-width:64px!important;
+    max-width:64px!important;
+    min-height:56px!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:5px!important;
+    padding:6px 3px!important;
+    border:1px solid transparent!important;
+    border-radius:13px!important;
+    overflow:visible!important;
+    white-space:nowrap!important;
+    text-align:center!important;
+    scroll-snap-align:center!important;
+    box-sizing:border-box!important;
+    font-size:9px!important;
+    line-height:1.15!important;
+  }
+  .app-shell>.mobile-nav>a span{
+    display:block!important;
+    width:auto!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+    white-space:nowrap!important;
+    overflow-wrap:normal!important;
+    word-break:keep-all!important;
+    text-overflow:clip!important;
+    font-size:8.5px!important;
+    line-height:1.15!important;
+    letter-spacing:0!important;
+  }
+  .app-shell>.mobile-nav>a svg{
+    display:block!important;
+    flex:none!important;
+    width:21px!important;
+    height:21px!important;
+  }
+  .app-shell>.main-area{padding-bottom:90px!important}
+  .main-area:has(.ai-chat-page)>.content-wrap{padding-bottom:8px!important}
+}
