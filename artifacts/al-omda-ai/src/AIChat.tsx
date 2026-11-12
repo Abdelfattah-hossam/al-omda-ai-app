@@ -4,7 +4,8 @@ import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string } };
+type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string }; documentData?: WordDocumentData };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -59,6 +60,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
+  const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
@@ -100,7 +102,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const data = await response.json();
       if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       setActiveConversationId(id);
-      setMessages(Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) : []);
+      const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
+      const withFiles = await Promise.all(restored.map(async (item) => item.documentData ? { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) } : item));
+      setMessages(withFiles);
       setShowConversationList(false);
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة." : "Could not load conversation.")); }
     finally { setHistoryLoading(false); }
@@ -136,7 +140,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider }) => ({ role, content, ...(provider ? { provider } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, documentData }) => ({ role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
@@ -302,7 +306,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.provider };
       if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
-        assistantMessage = { ...assistantMessage, attachment };
+        assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       }
       const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
@@ -490,7 +494,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
-            {message.attachment && <a className="button button-primary button-small" href={message.attachment.url} download={message.attachment.name} style={{display:"inline-flex",alignItems:"center",gap:8,width:"fit-content",textDecoration:"none"}}><FileText size={15}/>{ar ? "تحميل ملف Word" : "Download Word file"} (.docx)</a>}
+            {message.attachment && message.documentData && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}><button type="button" className="button button-primary button-small" onClick={()=>{const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{ar ? "تحميل ملف Word" : "Download Word"} (.docx)</button><button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button></div>}
+            {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.length>0 && message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"5px 0"}}>{paragraph}</p>)}<table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table></div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
