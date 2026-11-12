@@ -271,6 +271,7 @@ function App() {
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
   const [request, setRequest] = useState('');
+  const [planGenerating, setPlanGenerating] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty>('business');
   const [filter, setFilter] = useState<Specialty | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -382,40 +383,30 @@ function App() {
   const createPlan = async (event:FormEvent) => {
     event.preventDefault();
     const cleanRequest = cleanSubmittedRequest(request);
-    if (!cleanRequest) return;
-    const titleSource = cleanRequest.split(/[.!؟?]/)[0].trim();
-    const shortTitle = titleSource.length > 70
-      ? titleSource.slice(0,70).replace(/\s+\S*$/,'').trim() + '…'
-      : titleSource;
-    const title = shortTitle || (isAr ? 'طلب جديد' : 'New request');
-    const planTexts = buildLocalPlan(cleanRequest, selectedSpecialty, language);
-    // Apply explicit product quantity at task creation as a final safeguard.
-    const requestedProductCount = cleanRequest.match(/(?:بـ\s*)?(\d{1,4})\s*(?:منتجات|منتج)(?=\s|$|[،.؛!?؟])/i)?.[1];
-    if (
-      selectedSpecialty === 'business' &&
-      requestedProductCount &&
-      /ملابس|أزياء|fashion|clothing|apparel|متجر|e-?commerce|online store/i.test(cleanRequest) &&
-      planTexts[1]
-    ) {
-      planTexts[1] = planTexts[1].replace(/5\s*[–-]\s*10\s+منتجات/g, `${requestedProductCount} منتجات`);
-    }
-    const steps = planTexts.map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
-    let task:Task = { id:`task-${Date.now()}`, title, request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
-    if (authUser) {
-      try {
-        const remote = await apiCreateTask({ title:task.title, request:task.request, specialty:task.specialty, steps:task.steps, status:task.status }, apiRequestOptions);
-        task = remote as Task;
-      } catch (error) {
-        setWorkspaceError(readApiError(error, t('saveTaskFailed')));
-        return;
+    if (!cleanRequest || planGenerating) return;
+    if (!authUser) { setWorkspaceError(isAr ? 'سجّل الدخول أولاً لإنشاء خطة بالذكاء الاصطناعي.' : 'Sign in first to generate an AI project plan.'); return; }
+    setPlanGenerating(true);
+    setWorkspaceError('');
+    try {
+      const response = await fetch('/api/ai/project-plan', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify({ request:cleanRequest, specialty:selectedSpecialty, language }) });
+      const data = await response.json();
+      if (!response.ok) {
+        const details = Array.isArray(data.details) ? data.details.filter((item:unknown)=>typeof item==='string').join(' · ') : '';
+        throw new Error([data.error || (isAr ? 'تعذر إنشاء الخطة.' : 'Could not generate the plan.'),details].filter(Boolean).join(' — '));
       }
-    }
-    setSaved((prev) => ({ ...prev, tasks:[task,...prev.tasks] }));
-    setRequest('');
-    setSelectedTaskId(task.id);
-    setLocation(`/workbench?task=${task.id}`);
+      if (!data.title || !Array.isArray(data.steps) || data.steps.length < 3) throw new Error(isAr ? 'الخطة التي وصلت غير مكتملة.' : 'The returned plan is incomplete.');
+      const steps:PlanStep[] = data.steps.map((step:{text:string;output?:string;complete?:string}) => ({ id:crypto.randomUUID(), text:step.text, output:step.output || '', complete:step.complete || '', state:'pending' }));
+      const task:Task = { id:'task-'+Date.now(), title:String(data.title).slice(0,120), request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
+      const remote = await apiCreateTask({ title:task.title, request:task.request, specialty:task.specialty, steps:task.steps, status:task.status }, apiRequestOptions);
+      const savedTask = remote as Task;
+      setSaved((prev) => ({ ...prev, tasks:[savedTask,...prev.tasks] }));
+      setRequest('');
+      setSelectedTaskId(savedTask.id);
+      setLocation('/workbench?task='+savedTask.id);
+    } catch (error) { setWorkspaceError(readApiError(error, isAr ? 'تعذر إنشاء الخطة بالذكاء الاصطناعي.' : 'AI plan generation failed.')); }
+    finally { setPlanGenerating(false); }
   };
-  const handleAuthSubmit = async (event:FormEvent<HTMLFormElement>) => {
+    const handleAuthSubmit = async (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAuthWorking(true);
     setAuthError('');
@@ -545,7 +536,7 @@ function App() {
     const activeIndex = task.steps.findIndex((step) => step.state !== 'approved');
     return <section className="panel plan-card">
       <div className="plan-heading"><div><div className="eyebrow">{t('planIsDemo')}</div><h2 className="section-title" style={{marginTop:9}}>{t('yourPlan')}</h2></div><span className="section-meta">{count(task)}/{task.steps.length}</span></div>
-      <div className="notice-bar" style={{margin:'15px 0 5px'}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('planDisclaimer')}</span></div>
+      <div className="notice-bar" style={{margin:'15px 0 5px'}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{planGenerating ? (isAr ? 'العمدة بيحلل طلبك وينشئ الخطة...' : 'AL OMDA is analyzing your request...') : (isAr ? 'الخطة تُنشأ بالذكاء الاصطناعي وتُحفظ للمراجعة؛ لا يبدأ التنفيذ قبل موافقتك.' : 'AI-generated plan saved for review; execution will not start before your approval.')}</span></div>
       {task.status === 'paused' && <div className="notice-bar" style={{marginTop:12}}><Pause size={14}/><span>{t('paused')}</span></div>}
       {task.steps.map((step,index) => {
         const isCurrent = task.status === 'review' && index === activeIndex;
@@ -638,7 +629,7 @@ function App() {
           <div className="field-group"><label className="form-label" htmlFor="request-input">{t('requestLabel')}</label><textarea id="request-input" className="field" placeholder={t('requestPlaceholder')} value={request} onChange={(event)=>setRequest(event.target.value)} data-testid="input-request"/></div>
           <div className="field-group"><div className="form-label">{t('chooseSpecialty')}</div><div className="select-grid">{specialties.map(({id,icon:Icon})=><button type="button" key={id} className={`select-specialty ${selectedSpecialty===id?'selected':''}`} onClick={()=>setSelectedSpecialty(id)} data-testid={`select-specialty-${id}`}><Icon size={14}/>{label(id)}</button>)}</div></div>
           <div className="notice-bar" style={{marginBottom:17}}><ShieldCheck size={14}/><span>{t('planDisclaimer')}</span></div>
-          <button type="submit" className="button button-primary" disabled={!request.trim()} data-testid="button-propose-plan"><Sparkles size={15}/>{t('generatePlan')}<Send size={13}/></button>
+          <button type="submit" className="button button-primary" disabled={!request.trim() || planGenerating} data-testid="button-propose-plan"><Sparkles size={15}/>{planGenerating ? (isAr ? 'جارٍ إنشاء الخطة...' : 'Generating plan...') : t('generatePlan')}<Send size={13}/></button>
         </form>
         {active ? renderPlan(active) : <section className="panel plan-empty"><div><span className="empty-mark"><MessageSquareText size={22}/></span><h3>{t('planEmptyTitle')}</h3><p>{t('planEmptyText')}</p></div></section>}
       </div>
