@@ -78,6 +78,8 @@ Before use:
 - macOS: grant the launching host app the Accessibility and Screen Recording permissions requested by macOS. Input Monitoring may be needed for user-activity detection.
 - Linux: use a supported X11/Wayland session and install the platform prerequisites requested by the server.
 
+Screenshot/image results are forwarded as bounded image inputs to the configured model. Use a vision-capable model for visual desktop tasks; text-only models can still use the companion's accessibility and text tools where available.
+
 All desktop MCP calls pass through the AL OMDA runtime's explicit per-call approval gate. The desktop server also provides its own user-active pause/stop safeguards on supported platforms; use its documented emergency stop shortcut `Ctrl+Alt+Escape`. Do not expose its optional HTTP console endpoint to a network: the stdio MCP mode is the configured integration. Desktop actions can affect real applications and files, so use a dedicated, signed-in workstation and supervise the session.
 
 This integration is a local MCP companion, not yet a native AL OMDA desktop app or background service.
