@@ -31,6 +31,7 @@ A separate Node.js runtime now provides the first local tools:
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
 - Optional native desktop control through the MIT-licensed Computer Use MCP companion (screen, accessibility, mouse, keyboard, clipboard, and app/window tools), gated by local Agent MCP approvals.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
+- Optional Bing-compatible web search with HTTPS-only endpoint validation, exact hostname allowlisting, bounded results, and API keys kept in the local runtime environment.
 - OpenAI-compatible local model endpoints such as LM Studio (no provider API key required when running locally), optional fallback model endpoint, and average tokens-per-second reporting.
 - Resumable JSON session storage, including a UI action to restore the last saved local-agent session after restarting the runtime.
 - Scoped HTTPS inspection for exact authorized hostnames.
