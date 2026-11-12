@@ -752,8 +752,8 @@ function App() {
         {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
       </section>
       <div className="profile-settings-side">
-        <section className="panel panel-pad profile-setting-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'التخصيص':'PERSONALIZATION'}</span><h2>{isAr?'مظهر التطبيق':'App appearance'}</h2><p>{isAr?'اختر لون الواجهة وطريقة عرض المساحات.':'Choose your accent color and workspace density.'}</p></div><Palette size={18}/></div>
+        <details className="panel panel-pad profile-setting-card profile-accordion">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'التخصيص':'PERSONALIZATION'}</span><h2>{isAr?'مظهر التطبيق':'App appearance'}</h2><p>{isAr?'اختر لون الواجهة وطريقة عرض المساحات.':'Choose your accent color and workspace density.'}</p></div><Palette size={18}/></div></summary>
           <div className="setting-row"><div><strong>{isAr?'لون الواجهة':'Accent color'}</strong><small>{isAr?'سبعة ألوان زجاجية للاختيار بينها':'Seven glass-inspired colors'}</small></div></div>
           <div className="accent-picker" role="group" aria-label={isAr?'ألوان الواجهة':'Accent colors'}>
             {accentOptions.map((option)=><button type="button" key={option.id} className={'accent-choice '+(saved.accent===option.id?'selected':'')} style={{color:option.color}} onClick={()=>setSaved((prev)=>({...prev,accent:option.id}))} aria-label={option.name} aria-pressed={saved.accent===option.id}><span/><small>{option.name}</small></button>)}
@@ -763,25 +763,25 @@ function App() {
             <div className="wallpaper-options">{wallpaperOptions.map(option=><button type="button" key={option.id} className={'wallpaper-choice '+(saved.wallpaper===option.id?'selected':'')} style={{background:option.background}} onClick={()=>setSaved(prev=>({...prev,wallpaper:option.id}))} aria-label={option.name} aria-pressed={saved.wallpaper===option.id}><span>{option.name}</span></button>)}</div>
           </div>
           <div className="setting-row"><div><strong>{isAr?'كثافة العرض':'Display density'}</strong><small>{isAr?'تحكم في المسافات داخل البطاقات والقوائم.':'Control spacing in cards and lists.'}</small></div><button type="button" role="switch" aria-checked={saved.compact} className={'toggle '+(saved.compact?'on':'')} onClick={()=>setSaved((prev)=>({...prev,compact:!prev.compact}))} aria-label={isAr?'عرض مضغوط':'Compact layout'}/></div>
-        </section>
-        <section className="panel panel-pad profile-setting-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة والتنبيهات الخاصة بك.':'Your language and notification preferences.'}</p></div><Settings2 size={18}/></div>
+        </details>
+        <details className="panel panel-pad profile-setting-card profile-accordion">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة والتنبيهات الخاصة بك.':'Your language and notification preferences.'}</p></div><Settings2 size={18}/></div></summary>
           <div className="setting-row"><div><strong>{t('language')}</strong><small>{t('languageDesc')}</small></div><button className="button button-quiet button-small" onClick={toggleLanguage}>{isAr?'العربية':'English'} <ChevronDown size={12}/></button></div>
           <div className="setting-row"><div><strong>{t('notifications')}</strong><small>{t('notificationDesc')}</small></div><button role="switch" aria-checked={notices} className={'toggle '+(notices?'on':'')} onClick={()=>setSaved((prev)=>({...prev,notices:!prev.notices}))} aria-label={t('notifications')} data-testid="toggle-notifications"/></div>
-        </section>
-        <section className="panel panel-pad profile-setting-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
+        </details>
+        <details className="panel panel-pad profile-setting-card profile-accordion">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div></summary>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && authStatus==='unconfigured' && <div className="notice-bar"><ShieldCheck size={15}/><span>{t('authUnavailable')}</span></div>}
           {!authLoading && authStatus==='offline' && <div className="notice-bar"><ShieldCheck size={15}/><span>{authError||t('apiUnavailable')}</span></div>}
           {!authLoading && authStatus==='configured' && !authUser && <><p className="account-copy">{t('authConfigured')}</p><form className="account-form" onSubmit={handleAuthSubmit}><div className="field-group"><label className="form-label" htmlFor="auth-email">{t('email')}</label><input id="auth-email" type="email" className="field" autoComplete="email" required maxLength={254} value={authEmail} onChange={(event)=>setAuthEmail(event.target.value)} data-testid="input-auth-email"/></div><div className="field-group"><label className="form-label" htmlFor="auth-password">{t('password')}</label><input id="auth-password" type="password" className="field" autoComplete={authMode==='login'?'current-password':'new-password'} required minLength={8} maxLength={128} value={authPassword} onChange={(event)=>setAuthPassword(event.target.value)} data-testid="input-auth-password"/></div>{authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}<button className="button button-primary" type="submit" disabled={authWorking} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?t('signIn'):t('signUp')}</button></form><button type="button" className="text-button" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-mode">{authMode==='login'?t('switchToSignUp'):t('switchToSignIn')}</button></>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
-        </section>
-        <section className="panel panel-pad profile-setting-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الخصوصية والتحكم':'PRIVACY & CONTROL'}</span><h2>{isAr?'كيف يعمل حسابك':'How your account works'}</h2><p>{isAr?'معلومات واضحة عن حفظ البيانات وصلاحيات التطبيق.':'Clear information about data storage and app permissions.'}</p></div><ShieldCheck size={18}/></div>
+        </details>
+        <details className="panel panel-pad profile-setting-card profile-accordion">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الخصوصية والتحكم':'PRIVACY & CONTROL'}</span><h2>{isAr?'كيف يعمل حسابك':'How your account works'}</h2><p>{isAr?'معلومات واضحة عن حفظ البيانات وصلاحيات التطبيق.':'Clear information about data storage and app permissions.'}</p></div><ShieldCheck size={18}/></div></summary>
           {[isAr?'بيانات الملف والمهام المرتبطة بحسابك تُحفظ في مساحة حسابك عند تسجيل الدخول.':'Profile details and tasks are saved to your account when signed in.',isAr?'تفضيلات المظهر واللغة والتنبيهات تُحفظ على هذا الجهاز.':'Appearance, language, and notification preferences are saved on this device.',isAr?'لا يتم تنفيذ إجراءات خارجية دون موافقتك.':'No external action is taken without your approval.'].map((item,index)=><div className="setting-row profile-trust-row" key={index}><span className="specialty-icon"><Check size={14}/></span><strong>{item}</strong></div>)}
-        </section>
+        </details>
       </div>
     </div>
   </div>;
