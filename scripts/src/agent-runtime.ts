@@ -16,6 +16,7 @@ const OUTPUT_LIMIT = 1024 * 1024;
 const BODY_LIMIT = 1024 * 1024;
 const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
 const ALLOWED_ORIGINS = new Set((process.env.OMDA_AGENT_APP_ORIGINS || "").split(",").map((origin) => origin.trim()).filter(Boolean));
+const ALLOW_LOCAL_LAB_TARGETS = process.env.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true";
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
 
 let workspaceRoot = "";
@@ -81,13 +82,13 @@ function privateAddress(address: string): boolean {
 }
 async function assertAllowedTarget(rawUrl: string): Promise<URL> {
   const url = new URL(rawUrl);
-  if (url.protocol !== "https:" || url.username || url.password) throw new Error("Only HTTPS URLs without embedded credentials are allowed.");
+  if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
   const hostname = url.hostname.toLowerCase();
   if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
-  if (isIP(hostname) && privateAddress(hostname)) throw new Error("Private and loopback targets are blocked.");
+  if (isIP(hostname) && privateAddress(hostname) && !ALLOW_LOCAL_LAB_TARGETS) throw new Error("Private and loopback targets are blocked.");
   if (!isIP(hostname)) {
     const addresses = await lookup(hostname, { all: true, verbatim: true });
-    if (!addresses.length || addresses.some((entry) => privateAddress(entry.address))) throw new Error("Target resolves to a private or local network address.");
+    if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => privateAddress(entry.address)))) throw new Error("Target resolves to a private or local network address.");
   }
   return url;
 }
@@ -116,7 +117,8 @@ async function readLimitedResponse(response: Response, limit: number): Promise<{
   for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.byteLength; }
   return { text: new TextDecoder().decode(joined), truncated };
 }
-async function httpRequest(body: Json): Promise<Json> {
+async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<Json> {
+  const startedAt = Date.now();
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
   let url = await assertAllowedTarget(String(body.url || ""));
@@ -124,7 +126,7 @@ async function httpRequest(body: Json): Promise<Json> {
   const headers = new Headers();
   for (const [key, value] of Object.entries(inputHeaders)) {
     if (!/^[a-z0-9-]{1,64}$/i.test(key) || typeof value !== "string" || value.length > 1000) continue;
-    if (/^(authorization|cookie|proxy-authorization|host|connection|content-length)$/i.test(key)) continue;
+    if (/^(host|connection|content-length)$/i.test(key) || (!allowCredentialHeaders && /^(authorization|cookie|proxy-authorization)$/i.test(key))) continue;
     headers.set(key, value);
   }
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
@@ -141,7 +143,67 @@ async function httpRequest(body: Json): Promise<Json> {
   const responseHeaders: Record<string, string> = {};
   response.headers.forEach((value, key) => { responseHeaders[key] = value.slice(0, 1000); });
   const limitedBody = method === "HEAD" ? { text: "", truncated: false } : await readLimitedResponse(response, 50000);
-  return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated };
+  return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated, durationMs: Date.now() - startedAt };
+}
+async function loadHttpRoles(): Promise<Array<{ name: string; headersFromEnv: Record<string, string> }>> {
+  const configPath = resolve(workspaceRoot, ".omda", "http-roles.json");
+  try {
+    const actual = await realpath(configPath);
+    if (!isInside(workspaceRoot, actual)) throw new Error("HTTP roles config escapes the workspace.");
+    const info = await stat(actual);
+    if (!info.isFile() || info.size > 20000) throw new Error("HTTP roles config must be a JSON file up to 20 KB.");
+    const parsed = JSON.parse(await readFile(actual, "utf8")) as { roles?: unknown };
+    if (!Array.isArray(parsed.roles)) throw new Error("HTTP roles config must contain a roles array.");
+    return parsed.roles.slice(0, 6).map((item: any) => {
+      if (!item || typeof item.name !== "string" || !/^[a-zA-Z0-9_-]{1,40}$/.test(item.name)) throw new Error("Invalid HTTP role name.");
+      const headersFromEnv: Record<string, string> = {};
+      if (item.headersFromEnv && typeof item.headersFromEnv === "object") {
+        for (const [header, envName] of Object.entries(item.headersFromEnv)) {
+          if (!/^[a-z0-9-]{1,64}$/i.test(header) || /^(host|connection|content-length)$/i.test(header) ||
+              typeof envName !== "string" || !/^[A-Z_][A-Z0-9_]{0,80}$/.test(envName)) continue;
+          headersFromEnv[header] = envName;
+        }
+      }
+      return { name: item.name, headersFromEnv };
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+async function compareHttpRoles(body: Json): Promise<Json> {
+  const url = typeof body.url === "string" ? body.url : "";
+  const method = typeof body.method === "string" ? body.method.toUpperCase() : "GET";
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("HTTP role comparison supports GET, HEAD, and OPTIONS only.");
+  const requested = Array.isArray(body.roles) ? body.roles.filter((value): value is string => typeof value === "string").slice(0, 4) : [];
+  if (requested.length < 2) throw new Error("Select at least two configured HTTP roles to compare.");
+  const configs = await loadHttpRoles();
+  const roles = requested.map((name) => {
+    const config = configs.find((item) => item.name === name);
+    if (!config) throw new Error("HTTP role is not configured: " + name);
+    const headers: Record<string, string> = {};
+    for (const [header, envName] of Object.entries(config.headersFromEnv)) {
+      const value = process.env[envName];
+      if (value) headers[header] = value;
+    }
+    return { name, headers };
+  });
+  const responses = await Promise.all(roles.map(async (role) => ({
+    role: role.name,
+    ...(await httpRequest({ url, method, headers: role.headers }, true)),
+  })));
+  const first = responses[0];
+  return {
+    url,
+    method,
+    responses,
+    comparison: {
+      sameStatus: responses.every((item) => item.status === first.status),
+      sameBody: responses.every((item) => item.body === first.body),
+      statuses: responses.map((item) => ({ role: item.role, status: item.status })),
+      bodyLengths: responses.map((item) => ({ role: item.role, length: item.body.length })),
+    },
+  };
 }
 async function executeCommand(body: Json): Promise<Json> {
   if (EXECUTION_MODE !== "host") throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=host only on a machine where you trust the project and its dependencies.");
@@ -349,6 +411,7 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "files.read", description: "Read a UTF-8 source or project file inside the workspace.", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } } },
   { type: "function", function: { name: "files.write", description: "Create or update a UTF-8 file in the workspace. Requires explicit user approval for each call.", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"], additionalProperties: false } } },
   { type: "function", function: { name: "terminal.execute", description: "Run an approved project command without a shell. Requires explicit user approval and OMDA_AGENT_EXECUTION=host.", parameters: { type: "object", properties: { command: { type: "string", enum: ["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"] }, args: { type: "array", items: { type: "string" } }, cwd: { type: "string" } }, required: ["command", "args"], additionalProperties: false } } },
+  { type: "function", function: { name: "http.compare_roles", description: "Compare the same authorized endpoint using configured user/role credentials. Requires explicit user approval. Credentials are loaded from environment variables and never sent to the model.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, roles: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 } }, required: ["url", "roles"], additionalProperties: false } } },
   { type: "function", function: { name: "http.request", description: "Inspect an HTTPS response from a hostname explicitly configured in the authorized target allowlist.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, headers: { type: "object", additionalProperties: { type: "string" } } }, required: ["url"], additionalProperties: false } } },
 ];
 async function saveAgentState(id: string, state: AgentState): Promise<void> {
@@ -395,6 +458,8 @@ async function runTool(call: AgentToolCall): Promise<unknown> {
       return await executeCommand(args);
     case "http.request":
       return await httpRequest(args);
+    case "http.compare_roles":
+      return await compareHttpRoles(args);
     default:
       throw new Error("Unknown agent tool.");
   }
@@ -431,7 +496,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
     }
-    const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool"].includes(call.function?.name || ""));
+    const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || ""));
     if (approvalCalls.length) {
       // Execute read-only/allowlisted research calls now, but pause all writes and
       // terminal work until the user approves the exact pending call IDs.
@@ -565,6 +630,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = await readBody(req);
     send(res, 200, await delegateAgent(body)); return;
   }
+  if (req.method === "POST" && url.pathname === "/v1/http/compare") {
+    const body = await readBody(req);
+    send(res, 200, await compareHttpRoles(body)); return;
+  }
   if (req.method === "POST" && url.pathname === "/v1/agent/run") {
     const body = await readBody(req);
     send(res, 200, await startAgent(body)); return;
@@ -591,6 +660,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       { name: "files.read", description: "Read a UTF-8 file inside the configured workspace." },
       { name: "files.write", description: "Create or replace a UTF-8 file inside the configured workspace." },
       { name: "terminal.execute", description: "Run an approved command without a shell; disabled unless host execution is explicitly enabled." },
+      { name: "http.compare_roles", description: "Compare authorized endpoint responses for configured user roles; requires approval." },
       { name: "http.request", description: "Inspect HTTPS responses from explicitly allowlisted authorized targets (GET/HEAD/OPTIONS)." },
       { name: "sessions.save", description: "Persist agent session state in the workspace." },
       { name: "sessions.load", description: "Restore persisted agent session state." },
