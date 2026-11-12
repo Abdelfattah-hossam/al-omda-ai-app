@@ -281,6 +281,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}),
         }));
         if (JSON.stringify(remote) !== JSON.stringify(local) && !loading && !historyLoading) {
+          // A background refresh must never pull the reader to another scroll position.
+          shouldAutoScrollRef.current = false;
           await loadConversation(activeConversationId);
         }
       } catch {
