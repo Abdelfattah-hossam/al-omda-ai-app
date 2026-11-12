@@ -76,6 +76,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [agentRuntimeUrl, setAgentRuntimeUrl] = useState("http://127.0.0.1:4318");
   const [agentToken, setAgentToken] = useState("");
   const [agentSessionId, setAgentSessionId] = useState(() => { try { return window.localStorage.getItem("omda-agent-session") || ""; } catch { return ""; } });
+  const [agentConnectionStatus, setAgentConnectionStatus] = useState("");
+  const [agentSessions, setAgentSessions] = useState<Array<{ id: string; updatedAt: string; lastMessage: string; pending: boolean }>>([]);
   const [memory, setMemory] = useState("");
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
@@ -434,6 +436,30 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     finally { setLoading(false); }
   };
 
+  const checkLocalAgentConnection = async () => {
+    setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
+    try {
+      const response = await fetch(agentRuntimeUrl.replace(/\\/+$/, "") + "/health", { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
+      setAgentConnectionStatus(ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready"));
+    } catch (err) {
+      setAgentConnectionStatus((ar ? "غير متصل: " : "Not connected: ") + (err instanceof Error ? err.message : "connection failed"));
+    }
+  };
+
+  const loadAgentSessions = async () => {
+    if (!agentToken.trim()) { setError(ar ? "أدخل رمز الاتصال أولًا." : "Enter the access token first."); return; }
+    try {
+      const response = await fetch(agentRuntimeUrl.replace(/\\/+$/, "") + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل الجلسات." : "Could not load sessions."));
+      const items = Array.isArray(data.sessions) ? data.sessions : [];
+      setAgentSessions(items);
+      if (!items.length) setAgentConnectionStatus(ar ? "لا توجد جلسات محفوظة." : "No saved sessions.");
+    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الجلسات." : "Could not load sessions.")); }
+  };
+
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const imageForRequest = pendingImage;
@@ -786,7 +812,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
 
-        <div className="panel" style={{padding:12,marginBottom:10,borderColor:agentMode?"rgba(198,167,108,.65)":undefined}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><small className="muted" style={{display:"block",marginTop:3}}>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك." : "Inspect project files, edit them and run commands with your approval."}</small></div><button type="button" className={"button button-small " + (agentMode?"button-primary":"button-quiet")} onClick={()=>setAgentMode((value)=>!value)}>{agentMode?(ar?"مفعّل":"Enabled"):(ar?"تفعيل Agent":"Enable Agent")}</button></div>{agentMode && <div style={{display:"grid",gap:8,marginTop:10}}><input className="field" value={agentRuntimeUrl} onChange={(event)=>setAgentRuntimeUrl(event.target.value)} placeholder="http://127.0.0.1:4318" aria-label={ar?"عنوان الوكيل المحلي":"Local runtime URL"}/><input className="field" type="password" autoComplete="off" value={agentToken} onChange={(event)=>setAgentToken(event.target.value)} placeholder={ar?"رمز الاتصال المحلي (32 حرفًا على الأقل)":"Local access token (at least 32 characters)"} aria-label={ar?"رمز الاتصال":"Access token"}/><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><small className="muted">{agentSessionId ? (ar?"جلسة محفوظة: ":"Saved session: ")+agentSessionId.slice(0,12) : (ar?"لا توجد جلسة Agent محفوظة بعد.":"No saved Agent session yet.")}</small><button type="button" className="button button-quiet button-small" onClick={()=>{setAgentSessionId("");try{window.localStorage.removeItem("omda-agent-session");}catch{}}}>{ar?"جلسة جديدة":"New agent session"}</button></div><small className="muted">{ar?"يعمل الوكيل على الكمبيوتر الذي يشغّل Runtime فقط. من الهاتف لن يصل إلى ملفات الكمبيوتر إلا عبر ربط آمن منفصل. الرمز يبقى في ذاكرة الصفحة ولا يُحفظ بالحساب.":"The agent runs on the computer hosting the runtime. A phone cannot access that computer's files without a separate secure bridge. The token stays in page memory and is not saved to your account."}</small></div>}</div>
+        <div className="panel" style={{padding:12,marginBottom:10,borderColor:agentMode?"rgba(198,167,108,.65)":undefined}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><small className="muted" style={{display:"block",marginTop:3}}>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك." : "Inspect project files, edit them and run commands with your approval."}</small></div><button type="button" className={"button button-small " + (agentMode?"button-primary":"button-quiet")} onClick={()=>setAgentMode((value)=>!value)}>{agentMode?(ar?"مفعّل":"Enabled"):(ar?"تفعيل Agent":"Enable Agent")}</button></div>{agentMode && <div style={{display:"grid",gap:8,marginTop:10}}><input className="field" value={agentRuntimeUrl} onChange={(event)=>setAgentRuntimeUrl(event.target.value)} placeholder="http://127.0.0.1:4318" aria-label={ar?"عنوان الوكيل المحلي":"Local runtime URL"}/><input className="field" type="password" autoComplete="off" value={agentToken} onChange={(event)=>setAgentToken(event.target.value)} placeholder={ar?"رمز الاتصال المحلي (32 حرفًا على الأقل)":"Local access token (at least 32 characters)"} aria-label={ar?"رمز الاتصال":"Access token"}/><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><small className="muted">{agentSessionId ? (ar?"جلسة محفوظة: ":"Saved session: ")+agentSessionId.slice(0,12) : (ar?"لا توجد جلسة Agent محفوظة بعد.":"No saved Agent session yet.")}</small><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button type="button" className="button button-quiet button-small" onClick={()=>void checkLocalAgentConnection()}>{ar?"اختبار الاتصال":"Test connection"}</button><button type="button" className="button button-quiet button-small" onClick={()=>void loadAgentSessions()}>{ar?"الجلسات المحفوظة":"Saved sessions"}</button><button type="button" className="button button-quiet button-small" onClick={()=>{setAgentSessionId("");try{window.localStorage.removeItem("omda-agent-session");}catch{}}}>{ar?"جلسة جديدة":"New agent session"}</button></div></div>{agentConnectionStatus && <small className="muted">{agentConnectionStatus}</small>}{agentSessions.length>0 && <select className="field" value={agentSessionId} onChange={(event)=>{setAgentSessionId(event.target.value);try{window.localStorage.setItem("omda-agent-session",event.target.value);}catch{}}}><option value="">{ar?"اختر جلسة محفوظة":"Select a saved session"}</option>{agentSessions.map((session)=><option key={session.id} value={session.id}>{session.pending?"● ":""}{session.lastMessage || session.id} · {session.id.slice(0,8)}</option>)}</select>}<small className="muted">{ar?"يعمل الوكيل على الكمبيوتر الذي يشغّل Runtime فقط. من الهاتف لن يصل إلى ملفات الكمبيوتر إلا عبر ربط آمن منفصل. الرمز يبقى في ذاكرة الصفحة ولا يُحفظ بالحساب.":"The agent runs on the computer hosting the runtime. A phone cannot access that computer's files without a separate secure bridge. The token stays in page memory and is not saved to your account."}</small></div>}</div>
         <form onSubmit={sendMessage} className="ai-composer">
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:"none"}} onChange={(event)=>{
             const file=event.currentTarget.files?.[0];
