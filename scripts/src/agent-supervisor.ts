@@ -15,6 +15,8 @@ let updating = false;
 let restartTimer: NodeJS.Timeout | null = null;
 let restartAttempts = 0;
 let updateInProgress = false;
+let initialUpdateTimer: NodeJS.Timeout | null = null;
+let updateIntervalTimer: NodeJS.Timeout | null = null;
 
 function runCommand(command: string, args: string[], timeoutMs = 120000): Promise<string> {
   return new Promise((resolveResult, reject) => {
@@ -169,6 +171,8 @@ async function shutdown(): Promise<void> {
   if (stopping) return;
   stopping = true;
   if (restartTimer) clearTimeout(restartTimer);
+  if (initialUpdateTimer) clearTimeout(initialUpdateTimer);
+  if (updateIntervalTimer) clearInterval(updateIntervalTimer);
   await stopRuntime();
   process.exitCode = 0;
 }
@@ -181,6 +185,6 @@ if (autoUpdate) console.info("[AL OMDA supervisor] Safe auto-update is enabled; 
 else console.info("[AL OMDA supervisor] Auto-update is disabled. Set OMDA_AGENT_AUTO_UPDATE=true to enable it.");
 startRuntime();
 if (autoUpdate) {
-  setTimeout(() => { void checkAndApplyUpdate(); }, 120000);
-  setInterval(() => { void checkAndApplyUpdate(); }, intervalMs);
+  initialUpdateTimer = setTimeout(() => { void checkAndApplyUpdate(); }, 120000);
+  updateIntervalTimer = setInterval(() => { void checkAndApplyUpdate(); }, intervalMs);
 }
