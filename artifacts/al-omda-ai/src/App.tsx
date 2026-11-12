@@ -408,10 +408,17 @@ function App() {
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
     const remoteName = workspace.profile.displayName.trim() || email;
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
-    setSaved((prev) => ({ ...prev, name:remoteName, org:remoteOrg, tasks:workspace.tasks as Task[] }));
-    setProfileName(remoteName);
-    setProfileOrg(remoteOrg);
-    setAvatarPath(workspace.profile.avatarPath);
+    const remoteTasks = workspace.tasks as Task[];
+    // Workspace polling runs in the background. Do not replace React state with
+    // freshly parsed but identical API data, which needlessly re-renders the whole app.
+    setSaved((prev) => {
+      const sameTasks = JSON.stringify(prev.tasks) === JSON.stringify(remoteTasks);
+      if (prev.name === remoteName && prev.org === remoteOrg && sameTasks) return prev;
+      return { ...prev, name:remoteName, org:remoteOrg, tasks:remoteTasks };
+    });
+    setProfileName((current) => current === remoteName ? current : remoteName);
+    setProfileOrg((current) => current === remoteOrg ? current : remoteOrg);
+    setAvatarPath((current) => current === workspace.profile.avatarPath ? current : workspace.profile.avatarPath);
   };
   useEffect(() => {
     let cancelled = false;
