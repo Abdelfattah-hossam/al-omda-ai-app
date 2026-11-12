@@ -26,6 +26,7 @@ A separate Node.js runtime now provides the first local tools:
 - Workspace file listing, reading, and writing with path and symlink checks.
 - Tool discovery through `GET /v1/tools` and project Skills from `.omda/skills/`.
 - A model-driven tool loop with saved sessions and approval gates for file writes and terminal commands.
+- Automatic parallel delegation to 2–4 read-only specialist agents; the lead Agent synthesizes findings and owns all approved writes.
 - Streaming local Agent responses in the main chat and Agents workspace, with a live estimated tokens-per-second indicator and final provider usage when available.
 - Parallel read-only delegation to 2–4 specialist agents.
 - Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
