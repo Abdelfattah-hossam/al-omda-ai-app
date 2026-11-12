@@ -352,4 +352,37 @@ router.put("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> => {
   }
 });
 
+
+router.delete("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> => {
+  const params = UpdateTaskParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Task ID is invalid." });
+    return;
+  }
+  const session = await sessionOrReport(req, res);
+  if (session === false) return;
+  if (!session) {
+    res.status(401).json({ error: "Sign in to delete a task." });
+    return;
+  }
+  try {
+    const query = new URLSearchParams({
+      id: `eq.${params.data.id}`,
+      user_id: `eq.${session.user.id}`,
+    });
+    const response = await supabaseFetch(`/rest/v1/tasks?${query}`, {
+      method: "DELETE",
+      headers: { prefer: "return=representation" },
+    }, session.accessToken);
+    const deleted = await readSupabaseJson<DbTask[]>(response);
+    if (!deleted.length) {
+      res.status(404).json({ error: "Task not found or you do not have permission to delete it." });
+      return;
+    }
+    res.json({ ok: true, id: params.data.id });
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not delete the task.");
+  }
+});
+
 export default router;
