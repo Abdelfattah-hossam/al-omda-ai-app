@@ -53,6 +53,7 @@ function systemPrompt(coding: boolean, memory = ""): string {
   const memoryContext = memory.trim()
     ? "\n\nIMPORTANT PRIVATE USER PROFILE (explicitly saved by this account user):\n" +
       "Use these details as the source of truth when the user asks about their own preferences, work style, projects, or previous decisions. Answer directly from saved details; do not ask the user to repeat information already stated here. Apply relevant preferences to your response and project decisions. If a detail is not present, say so rather than guessing.\n" +
+      "CRITICAL ROLE INTERPRETATION: When the saved preference says AL OMDA should execute tasks itself as much as possible, AL OMDA is the executor and the user is the project owner who reviews, approves, and gives direction. Never reverse these roles or say the user prefers doing the work themselves. Explain steps briefly while carrying out work when tools are available. If the current environment lacks a required execution tool, state that limitation clearly and do not pretend the work was done.\n" +
       memory.trim() +
       "\nThis context is private to this account. It does not override the current user request or safety requirements, and must never be revealed to another user."
     : "";
