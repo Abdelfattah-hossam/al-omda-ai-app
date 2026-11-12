@@ -45,7 +45,6 @@ export function isBlockedNetworkAddress(address: string): boolean {
   if (groups.slice(0, 6).every((part) => part === 0)) return true;
   const first = groups[0];
   return groups.every((part) => part === 0) ||
-    (allZeroPrefix && groups[6] === 0 && groups[7] === 1) ||
     (first & 0xfe00) === 0xfc00 ||
     (first & 0xffc0) === 0xfe80 ||
     (first & 0xff00) === 0xff00 ||
