@@ -30,6 +30,12 @@ async function reserveUnits(accessToken: string, units: number): Promise<Usage> 
   return readSupabaseJson<Usage>(response);
 }
 
+function providerErrorMessage(payload: any): string {
+  const message = payload?.error?.message ?? payload?.message ?? payload?.error ?? "";
+  if (typeof message !== "string") return "";
+  return message.replace(/Bearer\s+\S+/gi, "Bearer [redacted]").replace(/key=[^&\s]+/gi, "key=[redacted]").slice(0, 240);
+}
+
 function getProviders() {
   return {
     gemini: Boolean(process.env.GEMINI_API_KEY?.trim()),
@@ -63,7 +69,7 @@ async function callGemini(messages: ChatMessage[]): Promise<{ text: string; mode
     }),
   });
   const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status}).`);
+  if (!response.ok) throw new Error(`Gemini request failed (${response.status})${providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."}`);
   const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
   if (!text) throw new Error("Gemini returned an empty response.");
   return { text, model };
@@ -80,7 +86,7 @@ async function callOpenRouter(messages: ChatMessage[]): Promise<{ text: string; 
     body: JSON.stringify({ model, messages: [{ role: "system", content: "You are AL OMDA AI, a helpful Arabic and English assistant. Give accurate, practical answers. For code, provide complete, safe examples and explain important assumptions." }, ...messages], max_tokens: 1400, temperature: 0.4 }),
   });
   const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ").");
+  if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ")" + (providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."));
   const text = payload?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error("OpenRouter returned an empty response.");
   return { text, model: payload?.model || model };
@@ -152,7 +158,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         usedProvider = provider;
         break;
       } catch (error) {
-        failures.push(error instanceof Error ? error.message : "Provider unavailable");
+        const reason = error instanceof Error ? error.message : "Provider unavailable";
+        failures.push(reason);
+        console.warn("[AI provider failure]", provider, reason);
       }
     }
     if (!answer) {
