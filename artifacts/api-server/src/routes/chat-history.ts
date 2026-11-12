@@ -121,10 +121,11 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
     if (item.documentData !== undefined) {
       const doc = item.documentData;
       if (!doc || typeof doc !== "object" || typeof doc.title !== "string" || doc.title.length > 180 ||
-        !Array.isArray(doc.paragraphs) || doc.paragraphs.length > 12 || doc.paragraphs.some((value: unknown) => typeof value !== "string" || value.length > 3000) ||
+        !Array.isArray(doc.paragraphs) || doc.paragraphs.length > 12 || doc.paragraphs.some((value: unknown) => typeof value !== "string" || value.length > 8000) ||
         !Array.isArray(doc.columns) || doc.columns.length > 12 || doc.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
         !Array.isArray(doc.rows) || doc.rows.length > 100 || (doc.columns.length === 0 && (doc.rows.length > 0 || doc.paragraphs.length === 0)) ||
-        doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 1000))) return null;
+        doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 2000))) return null;
+      if (JSON.stringify(doc).length > 70000) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
     }
     if (item.spreadsheetData !== undefined) {
