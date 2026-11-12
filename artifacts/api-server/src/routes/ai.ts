@@ -156,6 +156,22 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
   return { text, model: payload?.model || model };
 }
 
+async function callProviderWithRetry(provider: "gemini" | "openrouter", messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return provider === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory);
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const temporary = /\\b(?:429|500|502|503|504)\\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
+      if (!temporary || attempt === 1) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("AI provider temporarily unavailable.");
+}
+
 router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
@@ -183,7 +199,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     let answer: { text: string; model: string } | null = null;
     let provider = "";
     for (const candidate of providers) {
-      try { answer = candidate === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory); provider = candidate; break; }
+      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter", messages, memory); provider = candidate; break; }
       catch (error) { const reason = error instanceof Error ? error.message : "Provider unavailable"; failures.push(reason); console.warn("[AI project plan provider failure]", candidate, reason); }
     }
     if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. The attempt remains counted in today allowance.", details: failures.slice(0, 2) }); return; }
@@ -441,7 +457,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        answer = provider === "gemini" ? await callGemini(modelMessages, userMemory) : await callOpenRouter(modelMessages, userMemory);
+        answer = await callProviderWithRetry(provider as "gemini" | "openrouter", modelMessages, userMemory);
         usedProvider = provider;
         break;
       } catch (error) {
