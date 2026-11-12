@@ -57,7 +57,7 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
   const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
-  const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+  const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
   const link = document.createElement("a");
   link.href = url; link.download = safeName + ".xlsx"; document.body.appendChild(link); link.click(); link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -79,7 +79,7 @@ function getTaskHtmlApp(result?: string): string | null {
   return result?.startsWith("ALOMDA_HTML_APP:") ? result.slice("ALOMDA_HTML_APP:".length) : null;
 }
 function safeArtifactName(value: string, fallback: string): string {
-  return value.replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
+  return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
 }
 function downloadTaskHtml(data: { title: string; html: string }): void {
   const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
