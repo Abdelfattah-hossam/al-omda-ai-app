@@ -12,6 +12,7 @@ import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js"
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
+import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -144,8 +145,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const inputHeaders = body.headers && typeof body.headers === "object" ? body.headers as Record<string, unknown> : {};
   const headers = new Headers();
   for (const [key, value] of Object.entries(inputHeaders)) {
-    if (!/^[a-z0-9-]{1,64}$/i.test(key) || typeof value !== "string" || value.length > 1000) continue;
-    if (/^(host|connection|content-length|proxy-authorization)$/i.test(key) || (!allowCredentialHeaders && /^(authorization|cookie)$/i.test(key))) continue;
+    if (!shouldForwardHttpHeader(key, allowCredentialHeaders) || typeof value !== "string" || value.length > 1000) continue;
     headers.set(key, value);
   }
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
@@ -156,7 +156,9 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
     const location = response.headers.get("location");
     if (!location) break;
     await response.body?.cancel();
-    url = await assertAllowedTarget(new URL(location, url).toString());
+    const nextUrl = await assertAllowedTarget(new URL(location, url).toString());
+    assertCredentialRedirectAllowed(url, nextUrl, allowCredentialHeaders);
+    url = nextUrl;
   }
   if (!response) throw new Error("No HTTP response was received.");
   const responseHeaders: Record<string, string> = {};
