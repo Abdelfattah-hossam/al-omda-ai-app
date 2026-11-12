@@ -868,7 +868,9 @@ function App() {
       const result = await callLocalAgentRuntime("/v1/agent/run", "POST", { goal: localAgentGoal.trim() });
       setLocalAgentSessionId(String(result.sessionId || ""));
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
-      setLocalAgentMessage(String(result.message || (result.status === "approval_required" ? (isAr ? "الوكيل محتاج موافقتك على إجراءات." : "The agent needs your approval for actions.") : "")));
+      const speed = Number(result.usage?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الوكيل محتاج موافقتك على إجراءات." : "The agent needs your approval for actions.") : ""));
+      setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
       setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
     } catch (error) {
       setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Agent run failed.");
@@ -883,7 +885,9 @@ function App() {
         approvedCallIds: approve ? localAgentPending.map((item) => item.id) : [],
       });
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
-      setLocalAgentMessage(String(result.message || (result.status === "approval_required" ? (isAr ? "هناك إجراء آخر ينتظر موافقتك." : "Another action needs your approval.") : "")));
+      const speed = Number(result.usage?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "هناك إجراء آخر ينتظر موافقتك." : "Another action needs your approval.") : ""));
+      setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
       setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
     } catch (error) {
       setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Could not resume agent session.");
