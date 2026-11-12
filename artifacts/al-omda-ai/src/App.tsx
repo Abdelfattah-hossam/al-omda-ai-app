@@ -112,9 +112,10 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
     try { lib = await import(/* @vite-ignore */ fallback); }
     catch {
       const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+      const rtl = /[\\u0590-\\u08ff]/.test([data.title, ...data.paragraphs].join(" "));
       const paragraphs = data.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\\n/g, "<br>") + "</p>").join("");
       const table = data.columns.length ? "<table><thead><tr>" + data.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + data.rows.map((row) => "<tr>" + data.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
-      const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:rtl;line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
+      const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (rtl ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
       const blob = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
