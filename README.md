@@ -32,7 +32,7 @@ A separate Node.js runtime now provides the first local tools:
 - Scoped HTTPS inspection for exact authorized hostnames.
 - Optional terminal command execution, disabled by default.
 
-See [Local Agent Runtime](docs/agent-runtime.md) for setup, endpoints, local model configuration, and security boundaries.
+The Agents workspace includes a local-runtime connection panel for testing the connection, submitting a task, and approving or denying requested file/terminal actions. See [Local Agent Runtime](docs/agent-runtime.md) for setup, endpoints, local model configuration, and security boundaries.
 
 ## Architecture
 
