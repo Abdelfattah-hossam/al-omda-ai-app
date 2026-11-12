@@ -15,7 +15,7 @@ export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
 export OMDA_AGENT_ALLOWED_HOSTS="example.com"
-export OMDA_AGENT_APP_ORIGINS="https://your-al-omda-app.example"
+export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
@@ -30,7 +30,7 @@ $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
 $env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
-$env:OMDA_AGENT_APP_ORIGINS = "https://your-al-omda-app.example"
+$env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
