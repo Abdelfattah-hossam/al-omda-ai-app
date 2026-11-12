@@ -112,7 +112,7 @@ This integration is a local MCP companion, not yet a native AL OMDA desktop app 
 }
 ```
 
-Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls pause for user approval. HTTP role comparisons also require approval. Configure `.omda/http-roles.json` from `.omda/http-roles.example.json`, and place credential values only in environment variables named by `headersFromEnv`. The local role config is git-ignored. Treat installed MCP servers as trusted local programs.
+Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls pause for user approval. HTTP role comparisons also require approval. Configure `.omda/http-roles.json` from `.omda/http-roles.example.json`, and place credential values only in environment variables named by `headersFromEnv`. The local role config is git-ignored. The Agents workspace HTTPFlow panel loads only role names, lets you compare selected roles, and displays status, body length, first body difference, and differing response headers. Authentication/session-related response headers are redacted before returning results. Comparison remains limited to GET, HEAD, and OPTIONS. Treat installed MCP servers as trusted local programs.
 
 The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. An optional second endpoint can be configured with `OMDA_AGENT_FALLBACK_MODEL_BASE_URL`, `OMDA_AGENT_FALLBACK_MODEL_NAME`, and `OMDA_AGENT_FALLBACK_MODEL_API_KEY`. The Agents panel displays average generated tokens per second for completed model requests; this is not a live streaming counter. Local models do not require a provider API key.
 
@@ -132,6 +132,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 
 - `GET /health` — local runtime status.
 - `GET /v1/tools` — tool discovery, including available Skills.
+- `GET /v1/http/roles` — list configured role names without exposing credential environment variables.
 - `POST /v1/http/compare` — compare an allowlisted endpoint across two or more named roles configured in `.omda/http-roles.json`.
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
 - `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
