@@ -126,7 +126,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const headers = new Headers();
   for (const [key, value] of Object.entries(inputHeaders)) {
     if (!/^[a-z0-9-]{1,64}$/i.test(key) || typeof value !== "string" || value.length > 1000) continue;
-    if (/^(host|connection|content-length)$/i.test(key) || (!allowCredentialHeaders && /^(authorization|cookie|proxy-authorization)$/i.test(key))) continue;
+    if (/^(host|connection|content-length|proxy-authorization)$/i.test(key) || (!allowCredentialHeaders && /^(authorization|cookie)$/i.test(key))) continue;
     headers.set(key, value);
   }
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
