@@ -14,11 +14,14 @@ export async function consumeOpenAIChatStream(
   let content = "";
   let usage: Record<string, unknown> | null = null;
   let finishReason: unknown;
+  let seenEvent = false;
   const toolCalls = new Map<number, { id: string; type: "function"; function: { name: string; arguments: string } }>();
 
   const consumeEvent = (event: string) => {
     const data = event.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n");
-    if (!data || data === "[DONE]") return;
+    if (!data) return;
+    seenEvent = true;
+    if (data === "[DONE]") return;
     let chunk: any;
     try { chunk = JSON.parse(data); }
     catch { throw new Error("Model provider returned a malformed streaming event."); }
@@ -57,6 +60,7 @@ export async function consumeOpenAIChatStream(
   }
   buffer += decoder.decode();
   if (buffer.trim()) consumeEvent(buffer);
+  if (!seenEvent) throw new Error("Model provider returned no streaming events.");
 
   const message: Record<string, unknown> = { role: "assistant", content };
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
