@@ -720,7 +720,7 @@ function App() {
       <p class="muted">AL OMDA AI · ${new Date().toISOString()}</p></body></html>`;
   };
   const exportTaskWord = (task:Task) => {
-    const blob = new Blob(['\\uFEFF',buildTaskReportHtml(task)],{type:'application/msword;charset=utf-8'});
+    const blob = new Blob(['\uFEFF',buildTaskReportHtml(task)],{type:'application/msword;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -729,7 +729,7 @@ function App() {
     window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   const printTaskReport = (task:Task) => {
-    const reportWindow = window.open('','_blank','noopener,noreferrer');
+    const reportWindow = window.open('','_blank');
     if (!reportWindow) { window.alert(isAr?'اسمح بفتح النوافذ المنبثقة لطباعة التقرير.':'Allow pop-ups to print the report.'); return; }
     reportWindow.document.open();
     reportWindow.document.write(buildTaskReportHtml(task));
