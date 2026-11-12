@@ -55,7 +55,7 @@ function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
-  return /(?:ساعة.{0,45}(?:سطح المكتب|desktop)|(?:سطح المكتب|desktop).{0,45}ساعة|(?:تطبيق|برنامج|app|application|موقع|website).{0,55}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,55}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
+  return /(?:ساعة.{0,55}(?:سطح المكتب|desktop|نافذة|الشاشة)|(?:سطح المكتب|desktop|نافذة سطح المكتب).{0,55}ساعة|(?:تطبيق|برنامج|app|application|موقع|website).{0,55}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,55}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
@@ -520,9 +520,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
+    const latestCustomerRequest = messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
+    const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
-    const modelMessages: ChatMessage[] = excelRequest ? [
+    const modelMessages: ChatMessage[] = desktopAppRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Build the actual requested application now. Return ONLY one complete, self-contained HTML document. Do not return a tutorial, source-code instructions, PowerShell, or steps for the user.",
+        "Use inline CSS and JavaScript only. No external libraries, network requests, or external assets. The HTML must work immediately in a sandboxed iframe and when downloaded and opened in a browser.",
+        "Create a polished, responsive interface matching the exact request. If it is a desktop clock, make a live clock that updates every second, show a clear readable time, and include the date where useful.",
+        "Return the complete HTML document beginning with <!doctype html> or <html> and ending with </html>.",
+        "Original customer request: " + latestCustomerRequest
+      ].join("\n") }
+    ] : excelRequest ? [
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Create a real Excel workbook deliverable. Return ONLY valid JSON with this exact schema: " + '{"title":"Workbook title","columns":["Column 1","Column 2"],"rows":[["",""]]}',
@@ -571,6 +582,21 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     const latestUsage = usage;
+    if (desktopAppRequest) {
+      const html = parseHtmlApp(answer.text);
+      if (!html) {
+        res.status(502).json({ error: "تعذر إنشاء التطبيق كملف HTML صالح. أعد إرسال الطلب مرة واحدة." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء التطبيق وتجهيز معاينته وملف HTML للتحميل.",
+        app: { title: latestCustomerRequest.slice(0, 100) || "AL OMDA App", html },
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
+      return;
+    }
     if (excelRequest) {
       const spreadsheet = parseExcelWorkbook(answer.text);
       if (!spreadsheet) {
