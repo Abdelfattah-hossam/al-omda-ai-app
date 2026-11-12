@@ -1045,7 +1045,7 @@ function App() {
       </div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}}>
         <button type="button" className="button button-primary" onClick={runLocalAgent} disabled={localAgentBusy || localAgentStatus!=='ready' || !localAgentGoal.trim()}><Bot size={15}/>{localAgentBusy?(isAr?'جارٍ التنفيذ...':'Working...'):(isAr?'ابدأ تنفيذ المهمة':'Run agent task')}<ArrowLeft size={13}/></button>
-        {localAgentMessage&&<span className="section-meta" role="status">{localAgentMessage}</span>}
+        {localAgentMessage&&<div className="section-meta" role="status" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",maxHeight:240,overflow:"auto",flex:"1 1 280px"}}>{localAgentMessage}</div>}
       </div>
       {localAgentSessionId&&<p className="section-meta" style={{marginTop:8}}>{isAr?'رقم الجلسة المحفوظة: ':'Saved session: '}{localAgentSessionId}</p>}
       {localAgentPending.length>0&&<div className="panel panel-pad" style={{marginTop:16,borderColor:'rgba(190,155,91,.45)'}}>
