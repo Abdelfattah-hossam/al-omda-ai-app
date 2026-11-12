@@ -657,6 +657,37 @@ function App() {
     } finally { setDeletingTaskId(null); }
   };
 
+  const exportTasksSheet = (items:Task[]) => {
+    const headers = isAr
+      ? ['اسم المشروع','الطلب الأصلي','التخصص','حالة المشروع','رقم الخطوة','الخطوة','حالة الخطوة','المخرج المتوقع','معيار الاكتمال','تاريخ الإنشاء']
+      : ['Project','Original request','Specialty','Project status','Step number','Step','Step status','Expected output','Completion check','Created at'];
+    const rows = items.flatMap((task) => task.steps.length
+      ? task.steps.map((step,index) => [
+          task.title,
+          task.request,
+          label(task.specialty),
+          statusLabel(task.status),
+          index + 1,
+          step.text,
+          step.state === 'approved' ? (isAr ? 'معتمدة' : 'Approved') : step.state === 'rejected' ? (isAr ? 'مرفوضة' : 'Rejected') : (isAr ? 'بانتظار المراجعة' : 'Pending review'),
+          step.output ?? '',
+          step.complete ?? '',
+          task.createdAt,
+        ])
+      : [[task.title,task.request,label(task.specialty),statusLabel(task.status),'','','','','',task.createdAt]]);
+    const escapeCell = (value:unknown) => '"' + String(value ?? '').replace(/"/g,'""') + '"';
+    const csv = [headers,...rows].map((row) => row.map(escapeCell).join(',')).join('\\r\\n');
+    const blob = new Blob(['\\uFEFF',csv], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'al-omda-projects-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const historyPage = () => {
     const statusFilter = new URLSearchParams(window.location.search).get('status');
     const filtered = tasks.filter((task)=>
@@ -664,7 +695,7 @@ function App() {
       `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
     );
     return <div className="page-enter">
-      {pageHeading(t('history'),t('history'),t('historySub'),<Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link>)}
+      {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length}><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link></div>)}
       <div className="field-group" style={{maxWidth:460}}><div style={{position:'relative'}}><Search size={15} style={{position:'absolute',insetInlineStart:13,top:13,color:'#818891'}}/><input className="field" style={{paddingInlineStart:38}} placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
       <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
         <Link href={`/history/${task.id}`} className="history-item-open">
