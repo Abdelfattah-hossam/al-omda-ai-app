@@ -244,7 +244,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       "Language: " + (language === "ar" ? "Arabic" : "English"),
       "Return ONLY valid JSON, no Markdown fences, with this exact shape:",
       '{ "title": "short project title", "steps": [{ "text": "actionable step", "output": "specific deliverable", "complete": "objective acceptance check" }] }',
-      "Include 4 to 7 sequential, specific steps tailored to the actual request. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. This is a proposed plan only; do not claim execution has happened.",
+      "Include 4 to 7 sequential, specific steps tailored to the actual request. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. Only create downloadable files when the customer explicitly requested them; avoid duplicate or unrelated files and use the fewest deliverables that fully satisfy the request. Other steps should produce the actual work or a clear, understandable result. This is a proposed plan only; do not claim execution has happened.",
       "User request: " + request
     ].join("\n") }];
     const providers = chooseProviders(messages);
@@ -360,6 +360,10 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
+    const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
+    const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
+    const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
+    const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
@@ -375,7 +379,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     ].join("\n") : wordStep ? [
       "You are AL OMDA. Create the actual Word document content for this approved task. Return ONLY valid JSON, no Markdown.",
       "Schema: " + '{"title":"Document title","paragraphs":["paragraph"],"columns":["Column 1"],"rows":[["value"]]}',
-      "Use the original customer request and the previously approved steps. Include useful complete content, not instructions for the user.",
+      wordTaskSevenColumnTable ? "The customer explicitly requested a seven-column table. Return exactly seven meaningful columns." : wordTaskTableRequested ? "The customer explicitly requested a table. Include only the relevant columns and rows." : "PROSE DOCUMENT ONLY: put the complete document in paragraphs and return empty columns and rows. Do not invent a table.",
+      wordTaskTableOnly ? "BLANK TABLE ONLY: return no paragraphs and exactly eight empty body rows. Keep all cells empty; infer only useful column headings from the original request." : "",
+      "Use the original customer request and previously approved steps. Include complete, understandable content, not instructions for the user. Never add unrelated sample files, duplicate deliverables, or invented data.",
       "Original request: " + customerRequest,
       "Approved step: " + step.text,
       "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
@@ -421,15 +427,16 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (wordStep && !parseWordDocument(answer.text, false, false, isWordTableRequest(customerRequest))) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
-        "A normal written document may contain paragraphs only, with empty columns and rows. Create a table only if the customer explicitly asked for one.",
-        "Preserve the full original request and all approved requirements. Do not invent unrelated content.",
+        wordTaskSevenColumnTable ? "The customer requires exactly seven table columns." : wordTaskTableRequested ? "The customer explicitly requested a table; keep the relevant table." : "The customer did not request a table; return paragraphs only and empty columns and rows.",
+        wordTaskTableOnly ? "Return no paragraphs and exactly eight empty table rows, with no sample data." : "",
+        "Preserve the full original request and all approved requirements. Do not invent unrelated content or extra files.",
         "Original request: " + customerRequest,
         "Approved step: " + step.text,
         "Invalid output: " + answer.text.slice(0, 12000)
       ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseWordDocument(answer.text, false, false, isWordTableRequest(customerRequest))) {
+      if (!parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested)) {
         await saveExecutionFailure("Word document failed structural validation after one repair attempt.");
         res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
