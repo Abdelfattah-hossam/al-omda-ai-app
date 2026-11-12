@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
+import AIChatPage from './AIChat';
 import {
   createTask as apiCreateTask,
   getAuthSession,
@@ -33,7 +34,7 @@ type Task = { id: string; title: string; request: string; specialty: Specialty; 
 
 const translations = {
   ar: {
-    overview:'الرئيسية', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
+    overview:'الرئيسية', aiChat:'الشات الذكي', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
     workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'فوّض المهام بثقة. واحتفظ بزمام كل خطوة.', heroText:'اختر اختصاصاً، راجع الخطة المقترحة، ثم قرر بنفسك ما الذي يتقدم.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشأ تصور محلي واضح للمراجعة — وليس نتيجة ذكاء اصطناعي.', planDisclaimer:'معاينة محلية فقط — لم يتم تشغيل وكيل أو إجراء أي تنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة على الخطوة', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'تم اعتماد التصور فقط. لا يوجد تنفيذ فعلي أو إجراء خارجي.',
@@ -46,7 +47,7 @@ const translations = {
     confirmStop:'هل تريد إيقاف هذه المهمة؟', active:'نشط', availableFor:'اختصاص متاح', privacy:'خصوصية وتحكم', assistantLabel:'موجّه AL OMDA', noMore:'هذا العرض لا يتصل بأي خدمة خارجية.', chatWelcome:'أهلاً بك. صف المهمة التي تريد تفويضها، وسأعرض لك تصوراً محلياً لتراجعه.', localResponse:'هذا تصور توضيحي مبني على قالب محلي. لا يتصل بذكاء اصطناعي ولا ينفّذ أي خطوة.',
   },
   en: {
-    overview:'Overview', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', profile:'Profile',
+    overview:'Overview', aiChat:'AI Chat', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', profile:'Profile',
     workspace:'WORKSPACE', account:'ACCOUNT', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
     developerTitle:'Developer console', developerSub:'A technical view of your workspace', dashboard:'Dashboard', welcome:'Your workspace, in full view.', hello:'Welcome back,', hero:'Delegate with confidence. Keep every decision yours.', heroText:'Choose a specialty, review the proposed plan, then decide what moves forward.', newRequest:'New request', activeTasks:'Awaiting review', approvedPlans:'Plans approved', specialists:'Specialties available', totalTasks:'Total tasks', preview:'LOCAL PREVIEW', recent:'Recent tasks', seeHistory:'View history', specialties:'Agent specialties', allSix:'All six specialties', demoNotice:'Seeded demo data. Plans are deterministic local previews—not AI output and not real execution.',
     marketplace:'Agent marketplace', marketplaceSub:'Specialists for focused work, always under your oversight.', all:'All', available:'Available now', useAgent:'Start a request', request:'Request help', workbenchSub:'Describe what you need, then review every proposed step.', requestLabel:'What would you like to delegate?', requestPlaceholder:'Example: Outline a launch plan for a subscription service for small businesses in Riyadh...', chooseSpecialty:'Choose a specialty', generatePlan:'Propose a plan', yourPlan:'Proposed plan', planEmptyTitle:'Your plan starts here', planEmptyText:'Describe your request and choose a specialty. A clear local outline will appear for review—not AI output.', planDisclaimer:'Local preview only — no agent ran and nothing was executed.', edit:'Edit', save:'Save changes', stepDetails:'Step details', expectedOutput:'Expected output', completionCheck:'Completion check', approve:'Approve step', reject:'Reject step', approvedStep:'Approved', rejectedStep:'Rejected — edit or approve to continue', pendingStep:'Awaiting your approval', step:'Step', pause:'Pause task', resume:'Resume review', stop:'Stop task', paused:'Paused', stopped:'Stopped', completed:'Plan approved', reviewStatus:'Awaiting review', progress:'Plan progress', allApproved:'All proposed steps have been approved.', noExecution:'Only the outline was approved. No real execution or external action took place.',
@@ -224,7 +225,7 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 }
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
-  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/agents', key:'agents', icon:Compass },
+  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
   { path:'/workbench', key:'workbench', icon:MessageSquareText }, { path:'/history', key:'history', icon:History },
 ];
 const STORE_KEY = 'al-omda-demo-v1';
@@ -715,12 +716,13 @@ function App() {
 
   let page:ReactNode;
   if (detailMatch && currentTask) page = taskDetailPage(currentTask);
+  else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
   else page = dashboardPage();
-  const pageTitleKey = path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitleKey = path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   return <div className="app-shell" dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
