@@ -1,6 +1,6 @@
 # Local Agent Runtime (experimental)
 
-The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating-system processes or control a user's desktop. Those capabilities belong in a separate local runtime on the user's own computer. This first runtime is a small, opt-in foundation; it is not yet a complete autonomous agent and is not connected to the chat UI.
+The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating-system processes or control a user's desktop. Those capabilities belong in a separate local runtime on the user's own computer. This runtime is an opt-in execution companion. It is connected to the Agents workspace controls, while the regular AI chat still uses its existing hosted provider flow.
 
 ## Requirements
 
@@ -75,7 +75,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `POST /v1/http/request` — make a bounded HTTPS GET, HEAD, or OPTIONS request to an exact allowlisted hostname.
 - `POST /v1/terminal/execute` — run an approved executable with an argument array; disabled unless explicitly enabled.
 
-All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`; private/local DNS results and non-HTTPS targets are rejected. Redirects are revalidated.
+All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` is an explicit exception for isolated local CTF labs; exact allowlisting is still required. Redirects are revalidated.
 
 ## Terminal execution warning
 
@@ -83,15 +83,14 @@ Terminal execution is disabled by default. To opt in, set `OMDA_AGENT_EXECUTION=
 
 ## Not implemented yet
 
-The runtime is an early execution foundation. The following integrations remain planned and must not be considered available yet:
+The following are still planned and must not be considered available:
 
-- Chat-connected agent loop with tool selection, approvals, retries, and progress streaming.
-- Browser automation and desktop control.
-- MCP client/server support and installable Skills.
-- Multi-agent delegation and parallel specialist runs.
-- LM Studio and other OpenAI-compatible local model adapters.
-- Background job supervisor and crash recovery beyond the JSON session store.
-- HTTPFlow response comparison for different identities/roles and richer authorized recon workflows.
+- Native browser automation and desktop control. A trusted browser MCP server can be connected as an interim integration.
+- Write-capable multi-agent delegation with isolated workspaces and shared task state; current parallel specialists are read-only.
+- Live streaming token output and real-time tokens-per-second display.
+- HTTPFlow history and visual response-diff interface; the runtime comparison endpoint currently returns role-by-role status, headers, and bounded response bodies.
+- Automatic model fallback across providers when a local model or free provider is unavailable.
+- Background daemon/service installation, automatic app updates, and crash recovery beyond saved JSON agent sessions.
 - Container-backed execution with resource, network, and filesystem isolation.
 
 These capabilities will be added as separately testable modules rather than simulated in the chat interface.
