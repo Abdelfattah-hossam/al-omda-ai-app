@@ -281,15 +281,15 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const spoken = text
-      .replace(/```[\\s\\S]*?```/g, ar ? " كود برمجي. " : " Code block. ")
-      .replace(/\\bAPI\\b/gi, ar ? "إيه بي آي" : "A P I")
-      .replace(/\\bAI\\b/gi, ar ? "إيه آي" : "A I")
-      .replace(/\\bChatGPT\\b/gi, ar ? "شات جي بي تي" : "Chat G P T")
-      .replace(/\\bOpenRouter\\b/gi, ar ? "أوبن راوتر" : "Open Router")
-      .replace(/\\bGemini\\b/gi, ar ? "جيمناي" : "Gemini")
-      .replace(/\\bCloudflare\\b/gi, ar ? "كلاود فلير" : "Cloudflare")
+      .replace(/```[\s\S]*?```/g, ar ? " كود برمجي. " : " Code block. ")
+      .replace(/\bAPI\b/gi, ar ? "إيه بي آي" : "A P I")
+      .replace(/\bAI\b/gi, ar ? "إيه آي" : "A I")
+      .replace(/\bChatGPT\b/gi, ar ? "شات جي بي تي" : "Chat G P T")
+      .replace(/\bOpenRouter\b/gi, ar ? "أوبن راوتر" : "Open Router")
+      .replace(/\bGemini\b/gi, ar ? "جيمناي" : "Gemini")
+      .replace(/\bCloudflare\b/gi, ar ? "كلاود فلير" : "Cloudflare")
       .replace(/شات/g, "تشات")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = ar ? "ar-EG" : "en-US";
