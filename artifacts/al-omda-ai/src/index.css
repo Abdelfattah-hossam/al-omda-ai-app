@@ -529,3 +529,68 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 @keyframes curtainSlide{from{opacity:.6;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
 @media(max-width:800px){.curtain-trigger{display:inline-flex}.topbar{gap:10px}.crumb{margin-inline-end:auto}}
 @media(prefers-reduced-motion:reduce){.app-curtain,.curtain-backdrop,.app-shell::before{animation:none;transition:none}}
+
+
+/* AL OMDA 2026 — luminous adaptive controls and modern mobile dock */
+.app-shell{--omda-glow:120,169,255;--omda-accent:#78a9ff;--omda-accent-2:#a78bfa}
+.app-shell[data-accent="blue"]{--omda-glow:86,153,255;--omda-accent:#78a9ff;--omda-accent-2:#8b9cff}
+.app-shell[data-accent="violet"]{--omda-glow:167,139,250;--omda-accent:#b39aff;--omda-accent-2:#e0a2ff}
+.app-shell[data-accent="cyan"]{--omda-glow:76,218,239;--omda-accent:#67d8ef;--omda-accent-2:#78f0e3}
+.app-shell[data-accent="teal"]{--omda-glow:77,218,185;--omda-accent:#62d6c2;--omda-accent-2:#a4edc8}
+.app-shell[data-accent="pink"]{--omda-glow:242,154,199;--omda-accent:#f29ac7;--omda-accent-2:#c9a0ff}
+.app-shell[data-accent="amber"]{--omda-glow:233,194,123;--omda-accent:#e9c27b;--omda-accent-2:#ffe0a1}
+.app-shell[data-accent="lime"]{--omda-glow:183,223,138;--omda-accent:#b7df8a;--omda-accent-2:#74e3bd}
+.app-shell button:not(.toggle),.app-shell a.button,.app-shell [role="button"]:not(.toggle){
+  position:relative;isolation:isolate;transition:transform .2s cubic-bezier(.2,.8,.2,1),color .2s,border-color .2s,background .2s,box-shadow .2s,filter .2s;
+}
+.app-shell button:not(:disabled):not(.toggle):hover,.app-shell a.button:hover,.app-shell [role="button"]:not(:disabled):not(.toggle):hover{
+  border-color:rgba(var(--omda-glow),.72)!important;
+  box-shadow:0 0 0 1px rgba(var(--omda-glow),.12),0 0 13px rgba(var(--omda-glow),.28),0 0 30px rgba(var(--omda-glow),.16),inset 0 0 18px rgba(var(--omda-glow),.08);
+  filter:brightness(1.12);transform:translateY(-2px);
+}
+.app-shell button:not(:disabled):not(.toggle):active,.app-shell a.button:active{transform:translateY(0) scale(.97)}
+.app-shell button:focus-visible,.app-shell a:focus-visible{outline:2px solid var(--omda-accent)!important;outline-offset:3px;box-shadow:0 0 0 5px rgba(var(--omda-glow),.17),0 0 24px rgba(var(--omda-glow),.3)}
+.app-shell .button-primary,.app-shell .ai-send-button{
+  color:#fff!important;border:1px solid rgba(var(--omda-glow),.72)!important;
+  background:linear-gradient(115deg,var(--omda-accent),var(--omda-accent-2))!important;
+  box-shadow:0 5px 18px rgba(var(--omda-glow),.22),0 0 18px rgba(var(--omda-glow),.18),inset 0 1px 0 rgba(255,255,255,.35)!important;
+  text-shadow:0 1px 8px rgba(0,0,0,.18)
+}
+.app-shell .button-quiet,.app-shell .icon-button,.app-shell .ai-plus-button,.app-shell .ai-chat-actions .button{
+  color:var(--omda-accent)!important;border:1px solid rgba(var(--omda-glow),.34)!important;
+  background:linear-gradient(135deg,rgba(var(--omda-glow),.13),rgba(255,255,255,.035))!important;
+  box-shadow:0 0 12px rgba(var(--omda-glow),.08),inset 0 1px 0 rgba(255,255,255,.08)
+}
+.app-shell .button-danger{color:#ff9eae!important;border-color:rgba(255,112,143,.45)!important;background:linear-gradient(120deg,rgba(170,45,75,.2),rgba(75,25,48,.28))!important;box-shadow:0 0 14px rgba(255,75,115,.1)}
+.app-shell .filter-pill,.app-shell .select-specialty,.app-shell .accent-choice,.app-shell .wallpaper-choice{
+  border:1px solid rgba(var(--omda-glow),.24);border-radius:14px;
+  background:linear-gradient(145deg,rgba(var(--omda-glow),.1),rgba(255,255,255,.025));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);backdrop-filter:blur(14px)
+}
+.app-shell .filter-pill.active,.app-shell .select-specialty.selected,.app-shell .accent-choice.selected,.app-shell .wallpaper-choice.selected{
+  border-color:rgba(var(--omda-glow),.8)!important;box-shadow:0 0 0 1px rgba(var(--omda-glow),.18),0 0 22px rgba(var(--omda-glow),.22),inset 0 0 20px rgba(var(--omda-glow),.12)
+}
+.app-shell .mobile-nav{
+  inset-inline:12px;bottom:calc(9px + env(safe-area-inset-bottom));padding:8px 9px calc(8px + env(safe-area-inset-bottom));
+  border:1px solid rgba(var(--omda-glow),.28);border-radius:23px;
+  background:linear-gradient(115deg,rgba(9,14,29,.88),rgba(22,20,43,.86),rgba(9,27,38,.88));
+  box-shadow:0 12px 38px rgba(0,0,0,.42),0 0 24px rgba(var(--omda-glow),.13),inset 0 1px 0 rgba(255,255,255,.12);
+  backdrop-filter:blur(28px) saturate(175%);-webkit-backdrop-filter:blur(28px) saturate(175%)
+}
+.app-shell .mobile-nav a{position:relative;min-width:48px;min-height:43px;justify-content:center;padding:6px 10px;border:1px solid transparent;border-radius:15px;color:#a5b0ca;font-size:9px;font-weight:700;transition:all .22s}
+.app-shell .mobile-nav a.active{color:var(--omda-accent)!important;border-color:rgba(var(--omda-glow),.36);background:linear-gradient(145deg,rgba(var(--omda-glow),.2),rgba(var(--omda-glow),.06));box-shadow:0 0 18px rgba(var(--omda-glow),.2),inset 0 0 14px rgba(var(--omda-glow),.1);text-shadow:0 0 12px rgba(var(--omda-glow),.45)}
+.app-shell .mobile-nav a.active svg{filter:drop-shadow(0 0 6px rgba(var(--omda-glow),.8))}
+.app-shell .curtain-backdrop{backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);background:rgba(2,5,13,.68)}
+.app-shell .app-curtain{border-inline-end:1px solid rgba(var(--omda-glow),.3);background:linear-gradient(155deg,rgba(14,22,43,.98),rgba(15,14,32,.98));box-shadow:0 0 55px rgba(var(--omda-glow),.16),24px 0 70px rgba(0,0,0,.35)}
+.app-shell .ai-composer{border-color:rgba(var(--omda-glow),.48)!important;box-shadow:0 14px 42px rgba(0,0,0,.42),0 0 28px rgba(var(--omda-glow),.16),inset 0 1px 0 rgba(255,255,255,.14)!important}
+@media(max-width:650px){
+ .app-shell .mobile-nav{gap:2px}
+ .app-shell .mobile-nav a{flex:1;min-width:0;padding-inline:4px;font-size:8px}
+ .app-shell .mobile-nav a svg{width:19px;height:19px}
+ .app-shell .ai-chat-page .ai-composer{bottom:calc(82px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:no-preference){
+ .app-shell .button-primary,.app-shell .ai-send-button{animation:omdaButtonAura 3.8s ease-in-out infinite}
+ @keyframes omdaButtonAura{0%,100%{box-shadow:0 5px 18px rgba(var(--omda-glow),.2),0 0 12px rgba(var(--omda-glow),.12),inset 0 1px 0 rgba(255,255,255,.3)}50%{box-shadow:0 7px 25px rgba(var(--omda-glow),.32),0 0 25px rgba(var(--omda-glow),.28),inset 0 1px 0 rgba(255,255,255,.4)}}
+}
+@media(prefers-reduced-motion:reduce){.app-shell button,.app-shell a{animation:none!important;transition:none!important}}
