@@ -529,7 +529,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       }
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, or call an MCP tool.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (const call of calls) {
       try {
@@ -541,7 +541,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
     }
   }
   await saveAgentState(id, state);
-  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
+  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
 }
 const READ_ONLY_TOOLS = AGENT_TOOLS.filter((tool: any) => ["skills.list", "files.list", "files.read", "http.request"].includes(tool.function.name));
 async function runReadOnlySubagent(role: string, goal: string): Promise<Json> {
