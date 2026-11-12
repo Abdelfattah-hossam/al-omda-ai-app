@@ -117,7 +117,7 @@ async function readLimitedResponse(response: Response, limit: number): Promise<{
   for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.byteLength; }
   return { text: new TextDecoder().decode(joined), truncated };
 }
-async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<Json> {
+async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<{ url: string; method: string; status: number; statusText: string; headers: Record<string, string>; body: string; truncated: boolean; durationMs: number }> {
   const startedAt = Date.now();
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
