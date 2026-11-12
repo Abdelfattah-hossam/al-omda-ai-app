@@ -138,7 +138,6 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
   const clean = request.trim().replace(/\s+/g,' ');
   const normalized = clean.toLocaleLowerCase()
     .replace(/[\u064B-\u065F\u0670]/g,'')
-    .replace(/[إأآ]/g,'ا')
     .replace(/ـ/g,'');
   const ar = language === 'ar';
   // Extract practical constraints before choosing a specialty-specific workflow.
