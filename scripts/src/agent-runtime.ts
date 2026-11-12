@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { lookup } from "node:dns/promises";
 import { realpath, mkdir, readFile, writeFile, readdir, stat, rename } from "node:fs/promises";
 import { isIP } from "node:net";
-import { dirname, extname, relative, resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -26,7 +26,7 @@ function send(res: ServerResponse, status: number, value: unknown): void {
 }
 function isInside(root: string, target: string): boolean {
   const rel = relative(root, target);
-  return rel === "" || (!rel.startsWith("..") && !resolve(rel).startsWith(sep));
+  return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep));
 }
 async function resolveExistingPath(input: unknown): Promise<string> {
   if (typeof input !== "string" || !input.trim() || input.includes("\\0")) throw new Error("A valid workspace-relative path is required.");
