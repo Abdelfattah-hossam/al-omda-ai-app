@@ -372,3 +372,49 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .project-progress-track{height:8px;margin:12px 0 16px;border-radius:99px;overflow:hidden;background:rgba(128,148,190,.16)}
 .project-progress-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--glass-blue),var(--glass-violet),var(--glass-teal));box-shadow:0 0 16px rgba(120,169,255,.35);transition:width .3s ease}
 @media(max-width:650px){.project-kpi-grid{gap:7px}.project-kpi{padding:10px}.project-kpi strong{font-size:20px}}
+
+/* Profile and settings center */
+.profile-settings-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:16px;align-items:start}
+.profile-settings-side{display:grid;gap:14px;min-width:0}
+.profile-main-card,.profile-setting-card{min-width:0}
+.profile-section-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px;color:var(--glass-blue)}
+.profile-section-heading>div{min-width:0}
+.profile-section-heading h2{margin:5px 0 6px;color:#eef2ff;font-size:16px;font-weight:750}
+.profile-section-heading p{margin:0;color:#9ca9c5;font-size:10px;line-height:1.8}
+.profile-summary-large{padding:16px;border:1px solid var(--glass-line);border-radius:15px;background:linear-gradient(125deg,rgba(53,83,139,.22),rgba(35,29,70,.28));margin:8px 0 20px}
+.profile-summary-large h2{margin:0 0 5px;font-size:15px}
+.profile-summary-large span{color:#a9b5cf;font-size:10px;overflow-wrap:anywhere}
+.profile-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.profile-actions-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.accent-picker{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;margin:10px 0 18px}
+.accent-choice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:0;padding:9px 3px;border:1px solid transparent;border-radius:11px;background:rgba(255,255,255,.025);color:#78a9ff;cursor:pointer;transition:.18s}
+.accent-choice span{width:22px;height:22px;border-radius:50%;background:currentColor;box-shadow:0 0 16px currentColor}
+.accent-choice small{font-size:9px;color:#b8c3da}
+.accent-choice.selected{border-color:currentColor;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px currentColor}
+.profile-setting-row{border-bottom:0;padding-bottom:0}
+.profile-trust-row{justify-content:flex-start;align-items:flex-start;gap:10px}
+.profile-trust-row strong{font-size:10px;line-height:1.8;white-space:normal;overflow-wrap:anywhere}
+.app-shell[data-accent="blue"]{--profile-accent:#78a9ff}
+.app-shell[data-accent="violet"]{--profile-accent:#a78bfa}
+.app-shell[data-accent="cyan"]{--profile-accent:#67d8ef}
+.app-shell[data-accent="teal"]{--profile-accent:#62d6c2}
+.app-shell[data-accent="pink"]{--profile-accent:#f29ac7}
+.app-shell[data-accent="amber"]{--profile-accent:#e9c27b}
+.app-shell[data-accent="lime"]{--profile-accent:#b7df8a}
+.app-shell[data-accent] .button-primary{background:linear-gradient(135deg,var(--profile-accent),color-mix(in srgb,var(--profile-accent) 62%,#4b3e80));border-color:var(--profile-accent);color:#0c1220}
+.app-shell[data-accent] .eyebrow,.app-shell[data-accent] .profile-section-heading>svg{color:var(--profile-accent)}
+.app-shell[data-accent] .online-dot{box-shadow:0 0 10px var(--profile-accent)}
+.app-shell[data-density="compact"] .panel-pad{padding:15px}
+.app-shell[data-density="compact"] .setting-row{padding-block:9px}
+.app-shell[data-density="compact"] .task-row{padding-block:9px}
+.app-shell[data-density="compact"] .content-wrap{row-gap:12px}
+@media(max-width:1050px){.profile-settings-layout{grid-template-columns:minmax(0,1fr)}.profile-settings-side{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-settings-side>section:last-child{grid-column:1/-1}}
+@media(max-width:650px){
+ .profile-settings-side{grid-template-columns:minmax(0,1fr)}
+ .profile-settings-side>section:last-child{grid-column:auto}
+ .profile-fields-grid{grid-template-columns:minmax(0,1fr)}
+ .accent-picker{gap:3px}
+ .accent-choice{padding:8px 1px}
+ .accent-choice small{font-size:8px}
+ .profile-section-heading h2{font-size:14px}
+}
