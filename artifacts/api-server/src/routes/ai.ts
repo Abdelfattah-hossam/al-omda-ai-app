@@ -46,15 +46,15 @@ function getProviders() {
 
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
-  return /\\b(word|docx|\\.docx)\\b|ملف\\s*(?:وورد|word)|مستند\\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:وورد|word).{0,45}جدول/i.test(last);
+  return /\b(word|docx|\.docx)\b|ملف\s*(?:وورد|word)|مستند\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:وورد|word).{0,45}جدول/i.test(last);
 }
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
-  return /7\\s*(?:خانات|أعمدة|اعمدة|columns)|سبع\\s*(?:خانات|أعمدة|اعمدة)|جدول.{0,35}7|7.{0,25}جدول/i.test(last);
+  return /7\s*(?:خانات|أعمدة|اعمدة|columns)|سبع\s*(?:خانات|أعمدة|اعمدة)|جدول.{0,35}7|7.{0,25}جدول/i.test(last);
 }
 function parseWordDocument(text: string, forceSevenColumns: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
