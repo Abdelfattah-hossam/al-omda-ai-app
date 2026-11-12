@@ -15,6 +15,7 @@ const COMMAND_TIMEOUT_MS = Math.min(Number(process.env.OMDA_AGENT_COMMAND_TIMEOU
 const OUTPUT_LIMIT = 1024 * 1024;
 const BODY_LIMIT = 1024 * 1024;
 const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
+const ALLOWED_ORIGINS = new Set((process.env.OMDA_AGENT_APP_ORIGINS || "").split(",").map((origin) => origin.trim()).filter(Boolean));
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
 
 let workspaceRoot = "";
@@ -344,6 +345,19 @@ async function continueAgent(body: Json): Promise<Json> {
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const origin = req.headers.origin;
+  if (origin) {
+    if (!ALLOWED_ORIGINS.has(origin)) { send(res, 403, { error: "This browser origin is not allowed to connect to the local agent runtime." }); return; }
+    res.setHeader("access-control-allow-origin", origin);
+    res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+    res.setHeader("access-control-allow-headers", "authorization, content-type");
+    res.setHeader("access-control-max-age", "600");
+    res.setHeader("vary", "Origin");
+  }
+  if (req.method === "OPTIONS") {
+    if (!origin || !ALLOWED_ORIGINS.has(origin)) { send(res, 403, { error: "Browser origin is not allowed." }); return; }
+    res.writeHead(204, { "cache-control": "no-store" }); res.end(); return;
+  }
   const url = new URL(req.url || "/", "http://127.0.0.1");
   if (req.method === "GET" && url.pathname === "/health") {
     send(res, 200, { ok: true, name: "AL OMDA Agent Runtime", version: "0.1.0", execution: EXECUTION_MODE, workspace: relative(process.cwd(), workspaceRoot) || "." });
