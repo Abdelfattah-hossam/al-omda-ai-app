@@ -389,14 +389,14 @@ function App() {
     const title = shortTitle || (isAr ? 'طلب جديد' : 'New request');
     const planTexts = buildLocalPlan(cleanRequest, selectedSpecialty, language);
     // Apply explicit product quantity at task creation as a final safeguard.
-    const requestedProductCount = cleanRequest.match(/(?:بـ\\s*)?(\\d{1,4})\\s*(?:منتجات|منتج)(?=\\s|$|[،.؛!?؟])/i)?.[1];
+    const requestedProductCount = cleanRequest.match(/(?:بـ\s*)?(\d{1,4})\s*(?:منتجات|منتج)(?=\s|$|[،.؛!?؟])/i)?.[1];
     if (
       selectedSpecialty === 'business' &&
       requestedProductCount &&
       /ملابس|أزياء|fashion|clothing|apparel|متجر|e-?commerce|online store/i.test(cleanRequest) &&
       planTexts[1]
     ) {
-      planTexts[1] = planTexts[1].replace(/5\\s*[–-]\\s*10\\s+منتجات/g, `${requestedProductCount} منتجات`);
+      planTexts[1] = planTexts[1].replace(/5\s*[–-]\s*10\s+منتجات/g, `${requestedProductCount} منتجات`);
     }
     const steps = planTexts.map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
     let task:Task = { id:`task-${Date.now()}`, title, request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
