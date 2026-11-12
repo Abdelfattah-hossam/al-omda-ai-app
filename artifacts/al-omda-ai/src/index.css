@@ -216,3 +216,25 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .code-divider{color:#596b91;padding:0 5px}
 @media(max-width:650px){.developer-console{padding:16px;border-radius:16px}.developer-code{padding:12px;grid-template-columns:25px minmax(0,1fr);gap:8px}.developer-code code{font-size:10px}}
 @media(prefers-reduced-motion:no-preference){.panel,.button,.nav-link,.icon-button,.agent-card{transition:background .22s,border-color .22s,box-shadow .22s,transform .22s,color .22s}.panel:hover{box-shadow:0 20px 55px rgba(0,0,0,.27),0 0 26px rgba(82,119,255,.055),inset 0 1px 0 rgba(255,255,255,.06)}}
+
+
+/* AL OMDA chat navigation and dedicated usage page */
+.ai-chat-heading{position:sticky;top:0;z-index:55;padding:12px 0;margin:0 0 12px;background:rgba(10,14,27,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(198,167,108,.18)}
+.ai-chat-actions{gap:6px;flex-wrap:wrap}
+.ai-chat-actions .button{white-space:nowrap}
+.ai-conversations-panel{position:relative;z-index:8;padding:14px;margin-bottom:14px}
+.ai-conversation-item{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--border,#343a44)}
+.ai-conversation-item:last-child{border-bottom:0}
+.ai-conversation-item.active{background:rgba(198,167,108,.08);border-radius:9px}
+.ai-conversation-open{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding:8px;border:0;background:transparent;color:var(--text,#eee);text-align:start;cursor:pointer}
+.ai-conversation-open span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.ai-usage-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:14px;align-items:start}
+.ai-usage-grid>.panel{min-width:0}
+@media(max-width:650px){
+ .ai-chat-heading{top:0;padding:10px 0;background:rgba(10,14,27,.98)}
+ .ai-chat-heading .page-title{font-size:19px}
+ .ai-chat-actions{justify-content:flex-start}
+ .ai-chat-actions .button{font-size:10px;padding:7px 9px}
+ .ai-usage-grid{grid-template-columns:1fr}
+ .ai-conversations-panel{padding:11px}
+}
