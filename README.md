@@ -65,6 +65,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 - Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
 - Authorized HTTP role comparison, bounded HTTP inspection, sensitive-header redaction, and DNS/IP safety checks for private IPv4/IPv6 destinations.
 - OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
+- Optional local supervisor with crash-restart backoff and safe auto-update checks; updates are deferred for dirty worktrees or active Agent runs and rolled back if the build fails.
 
 ## Remaining roadmap
 
@@ -72,9 +73,9 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 2. A dedicated desktop companion installer, clear permission controls, secure remote access, and polished cross-platform UX beyond the optional Computer Use MCP integration.
 3. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing.
 4. Broader provider adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
-5. Rich HTTPFlow history, visual request/response diffs, and audit trail for authorized security research.
+5. Persistent HTTPFlow history, export, and audit trail; the current Agents workspace already provides visual role/body/header diffs.
 6. Provider-accurate live token counts and live tokens-per-second; current UI speed while streaming is an estimate, with actual usage metrics when the provider returns them.
-7. Background job supervision, service installation, signed automatic updates, and stronger crash recovery.
+7. Platform service/Task Scheduler installation, signed update verification, and recovery if the supervisor itself exits; the current local supervisor supports opt-in fast-forward updates and runtime crash restarts.
 8. Container-backed execution with resource, network, and filesystem isolation.
 9. Expanded runtime integration tests, including real local model, browser, desktop, and deployment smoke tests.
 
@@ -103,6 +104,8 @@ Run the local runtime separately:
 
 ```sh
 pnpm --filter @workspace/scripts agent:runtime
+# Or run the supervisor with crash recovery:
+pnpm --filter @workspace/scripts agent:supervisor
 ```
 
 ## Configuration
