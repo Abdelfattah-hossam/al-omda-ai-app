@@ -41,7 +41,14 @@ $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
 ```
 
-To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated allowlist of executable names (for example `node,npx`). Then create `.omda/mcp-servers.json` inside the workspace:
+To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated allowlist of executable names (for example `node,npx`).
+
+### Optional browser automation through Playwright MCP
+
+The local runtime can connect to a Playwright browser MCP server over stdio. Copy `.omda/mcp-servers.browser.example.json` into the workspace as `.omda/mcp-servers.json`, then allow `npx` in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`). The example launches Chromium through `@playwright/mcp`; the first launch may download the package and browser runtime. Restart the local Agent runtime, then inspect the advertised MCP tools from the Agents panel or chat.
+
+Browser actions are executed on the computer running the local runtime, not in the hosted Cloudflare Worker. MCP tool calls require explicit approval in the current runtime policy. Use a dedicated browser profile and test only accounts and sites you own or are authorized to access. The example is optional and does not install or launch a browser until you configure it.
+ Then create `.omda/mcp-servers.json` inside the workspace:
 
 ```json
 {
