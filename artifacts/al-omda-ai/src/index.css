@@ -664,3 +664,58 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
  .profile-accordion-summary::after{margin-top:-32px}
 }
 @media(prefers-reduced-motion:reduce){.profile-accordion-summary::after{transition:none}}
+
+
+/* FINAL OVERRIDES — real wallpaper visibility, full-height chat, readable navigation */
+.app-shell{background:var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important;background-attachment:fixed!important}
+.app-shell::before{z-index:-1!important;background:var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important}
+.app-shell>.main-area{background:transparent!important}
+.app-shell .content-wrap{background:transparent!important}
+.app-shell[data-wallpaper="midnight"]{--app-wallpaper:linear-gradient(135deg,#080b12 0%,#151b2a 52%,#101923 100%)}
+.app-shell[data-wallpaper="ocean"]{--app-wallpaper:linear-gradient(135deg,#031724 0%,#07506a 52%,#102d4a 100%)}
+.app-shell[data-wallpaper="aurora"]{--app-wallpaper:linear-gradient(135deg,#10152c 0%,#34466a 48%,#15594e 100%)}
+.app-shell[data-wallpaper="purple"]{--app-wallpaper:linear-gradient(135deg,#170d2a 0%,#49265f 55%,#182d4b 100%)}
+.app-shell[data-wallpaper="forest"]{--app-wallpaper:linear-gradient(135deg,#071c15 0%,#20533b 55%,#183c46 100%)}
+.app-shell[data-wallpaper="sunset"]{--app-wallpaper:linear-gradient(135deg,#32121e 0%,#70402f 55%,#292b50 100%)}
+.app-shell[data-wallpaper="graphite"]{--app-wallpaper:linear-gradient(135deg,#111315 0%,#383e47 55%,#1b2028 100%)}
+.app-shell[data-wallpaper] .main-area{background:transparent!important}
+.app-shell[data-wallpaper] .content-wrap{background:transparent!important}
+
+/* Chat gets the full usable viewport; only the transcript scrolls */
+.main-area:has(.ai-chat-page){height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.main-area:has(.ai-chat-page)>.topbar{flex:none}
+.main-area:has(.ai-chat-page)>.content-wrap{flex:1 1 0;height:calc(100dvh - 72px);min-height:0;max-width:none;width:100%;padding:12px 24px 14px;overflow:hidden}
+.ai-chat-page{height:100%!important;min-height:0!important;max-height:none!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;padding:0!important;gap:10px!important}
+.ai-chat-page .ai-chat-heading{flex:none!important;min-height:0!important}
+.ai-chat-page>.panel{flex:1 1 0!important;min-height:0!important;height:auto!important;max-height:none!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;padding:12px 18px 12px!important}
+.ai-chat-page>.panel .chat-messages{flex:1 1 0!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+.ai-chat-page>.panel .ai-composer{position:relative!important;inset:auto!important;bottom:auto!important;flex:none!important;margin-top:8px!important;width:100%!important;max-width:none!important}
+.ai-chat-page>.panel .ai-composer-input{height:auto!important;min-height:44px!important;max-height:130px!important}
+.ai-chat-page .ai-routing-note,.ai-chat-page .ai-voice-panel,.ai-chat-page .ai-conversations-panel{flex:none!important;max-height:20vh!important;overflow:auto!important}
+@media(max-width:650px){
+ .main-area:has(.ai-chat-page){height:100dvh;overflow:hidden}
+ .main-area:has(.ai-chat-page)>.content-wrap{height:calc(100dvh - 60px - 88px);padding:7px 9px 8px;overflow:hidden}
+ .ai-chat-page{height:100%!important;min-height:0!important;gap:7px!important}
+ .ai-chat-page .ai-chat-heading{padding:8px 10px!important;gap:7px!important}
+ .ai-chat-page .ai-chat-heading .page-title{font-size:18px!important;line-height:1.35!important}
+ .ai-chat-page .ai-chat-heading .page-subtitle{font-size:10px!important;line-height:1.55!important}
+ .ai-chat-page .ai-chat-actions{width:100%;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;justify-content:flex-start!important;overflow-x:auto!important;overscroll-behavior-x:contain;padding:2px 0 5px!important}
+ .ai-chat-page .ai-chat-actions .button{flex:0 0 auto!important;white-space:nowrap!important}
+ .ai-chat-page>.panel{padding:8px!important}
+ .ai-chat-page>.panel .chat-messages{min-height:0!important;padding:8px 3px 12px!important}
+ .ai-chat-page>.panel .chat-message{max-width:96%!important;min-width:0!important;padding:11px!important}
+ .ai-chat-page>.panel .chat-message p{font-size:13px!important;line-height:1.85!important}
+ .ai-chat-page>.panel .ai-composer{position:relative!important;bottom:auto!important;inset:auto!important;padding:7px!important;margin-top:5px!important}
+ .ai-chat-page>.panel .ai-composer-input{height:auto!important;min-height:40px!important;max-height:100px!important}
+ .ai-chat-page .ai-routing-note,.ai-chat-page .ai-voice-panel,.ai-chat-page .ai-conversations-panel{max-height:17vh!important}
+ /* Six equal navigation slots: icons and labels never collide */
+ .app-shell .mobile-nav{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;align-items:stretch!important;justify-items:stretch!important;gap:3px!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom))!important}
+ .app-shell .mobile-nav a{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:5px 2px!important;overflow:hidden!important;white-space:normal!important;text-align:center!important;line-height:1.2!important;font-size:8px!important}
+ .app-shell .mobile-nav a span{display:block!important;width:100%!important;min-width:0!important;overflow-wrap:anywhere!important;word-break:normal!important;white-space:normal!important;text-overflow:clip!important;line-height:1.2!important;font-size:8px!important}
+ .app-shell .mobile-nav a svg{display:block!important;flex:none!important;width:18px!important;height:18px!important}
+}
+@media(min-width:651px) and (max-width:900px){
+ .main-area:has(.ai-chat-page)>.content-wrap{padding-inline:14px}
+ .ai-chat-page .ai-chat-heading{grid-template-columns:minmax(0,1fr)!important}
+ .ai-chat-page .ai-chat-actions{flex-direction:row!important;flex-wrap:wrap!important;border:0!important;padding:0!important}
+}
