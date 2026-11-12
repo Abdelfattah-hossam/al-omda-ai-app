@@ -123,31 +123,77 @@ function parseExcelWorkbook(text: string): { title: string; columns: string[]; r
 
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
-    const start = source.indexOf("{");
-    const end = source.lastIndexOf("}");
-    if (start < 0 || end <= start) return null;
-    const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.trim().length > 180) return null;
-    const rawParagraphs = value.paragraphs === undefined ? [] : value.paragraphs;
-    const rawColumns = value.columns === undefined ? [] : value.columns;
-    const rawRows = value.rows === undefined ? [] : value.rows;
-    if (!Array.isArray(rawParagraphs) || !Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
-    if (rawParagraphs.length > 12 || rawParagraphs.some((item: unknown) => typeof item !== "string" || item.length > 3000)) return null;
-    if (rawColumns.length > 12 || rawColumns.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 180)) return null;
-    if (rawRows.length > 100) return null;
-    const paragraphs = tableOnly ? [] : rawParagraphs.map((item: string) => item.trim()).filter(Boolean);
-    const columns = rawColumns.map((item: string) => item.trim());
+    const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    let value: any = null;
+    try { value = JSON.parse(source); }
+    catch {
+      // Providers sometimes wrap JSON in a short explanation. Extract the first complete JSON object safely.
+      const first = source.indexOf("{");
+      if (first < 0) return null;
+      let depth = 0;
+      let quoted = false;
+      let escaped = false;
+      for (let index = first; index < source.length; index++) {
+        const char = source[index];
+        if (quoted) {
+          if (escaped) escaped = false;
+          else if (char === "\\") escaped = true;
+          else if (char === '"') quoted = false;
+          continue;
+        }
+        if (char === '"') quoted = true;
+        else if (char === "{") depth++;
+        else if (char === "}" && --depth === 0) {
+          value = JSON.parse(source.slice(first, index + 1));
+          break;
+        }
+      }
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const rawTitle = value.title ?? value.name ?? value.documentTitle;
+    const rawParagraphs = value.paragraphs ?? value.content ?? value.body ?? value.sections ?? value.text ?? [];
+    const rawTable = value.table && typeof value.table === "object" ? value.table : value;
+    const rawColumns = value.columns ?? value.headers ?? rawTable.headers ?? rawTable.columns ?? [];
+    const rawRows = value.rows ?? rawTable.rows ?? [];
+    const toText = (item: any): string => {
+      if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") return String(item).trim();
+      if (item && typeof item === "object") {
+        const heading = typeof item.heading === "string" ? item.heading.trim() : typeof item.title === "string" ? item.title.trim() : "";
+        const body = typeof item.content === "string" ? item.content.trim() : typeof item.text === "string" ? item.text.trim() : "";
+        return [heading, body].filter(Boolean).join("\\n\\n");
+      }
+      return "";
+    };
+    if (!Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
+    const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle.trim().slice(0, 180) : "مستند جديد";
+    let paragraphs: string[] = [];
+    if (typeof rawParagraphs === "string") paragraphs = rawParagraphs.split(/\\n\\s*\\n/).map((part: string) => part.trim()).filter(Boolean);
+    else if (Array.isArray(rawParagraphs)) paragraphs = rawParagraphs.map(toText).filter(Boolean);
+    else return null;
+    // Preserve long documents instead of rejecting them for having many small sections.
+    if (paragraphs.length > 12) {
+      const grouped: string[] = [];
+      for (let index = 0; index < paragraphs.length; index += Math.ceil(paragraphs.length / 12)) grouped.push(paragraphs.slice(index, index + Math.ceil(paragraphs.length / 12)).join("\\n\\n"));
+      paragraphs = grouped;
+    }
+    if (paragraphs.some((item) => item.length > 12000)) return null;
+    const columns = rawColumns.map(toText);
+    if (columns.some((item: string) => !item || item.length > 180)) return null;
+    if (columns.length > 12 || rawRows.length > 200) return null;
     if (forceSevenColumns && columns.length !== 7) return null;
     if (requireTable && columns.length === 0) return null;
     if (!requireTable && columns.length > 0) return null;
     if (tableOnly && columns.length === 0) return null;
     if (columns.length === 0 && (rawRows.length > 0 || paragraphs.length === 0)) return null;
-    if (columns.length > 0 && rawRows.some((row: unknown) => !Array.isArray(row) || row.length !== columns.length || row.some((cell: unknown) => (typeof cell !== "string" && typeof cell !== "number" && typeof cell !== "boolean") || String(cell).length > 2000))) return null;
-    const rows = columns.length ? (tableOnly ? [] : rawRows.map((row: unknown[]) => row.map((cell: unknown) => String(cell)))) : [];
-    const finalRows = tableOnly && rows.length === 0 ? Array.from({ length: 8 }, () => columns.map(() => "")) : rows;
+    const rows = columns.length ? rawRows.map((row: any) => {
+      if (Array.isArray(row)) return row.map((cell: any) => toText(cell));
+      if (row && typeof row === "object") return columns.map((column: string, index: number) => toText(row[column] ?? Object.values(row)[index]));
+      return [];
+    }) : [];
+    if (rows.some((row: string[]) => row.length !== columns.length || row.some((cell) => cell.length > 3000))) return null;
+    const finalRows = tableOnly ? Array.from({ length: 8 }, () => columns.map(() => "")) : rows;
     if (columns.length > 0 && finalRows.length === 0 && !tableOnly) return null;
-    return { title: value.title.trim(), paragraphs, columns, rows: finalRows };
+    return { title, paragraphs: tableOnly ? [] : paragraphs, columns, rows: finalRows };
   } catch { return null; }
 }
 function isCodingRequest(messages: ChatMessage[]): boolean {
@@ -197,7 +243,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
       contents,
-      generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 6000 : 1800, temperature: 0.4 },
+      generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -216,7 +262,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
     method: "POST",
     signal: AbortSignal.timeout(25000),
     headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 6000 : 1800, temperature: 0.4 }),
+    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
   });
   const payload = await response.json().catch(() => null) as any;
   if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ")" + (providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."));
