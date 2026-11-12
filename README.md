@@ -1,66 +1,68 @@
 # AL OMDA AI
 
-An Arabic-first marketplace and workspace for reviewing work plans from specialist agents. The current MVP is a browser-only preview: it includes Business, Development, Design, Marketing, Research, and Personal Assistant specialties, with per-step approval controls and local task history.
+Arabic-first AI workspace for chat, project planning, specialist workflows, account memory, and user-owned task tracking.
 
-## Current MVP boundaries
+## Current capabilities
 
-- Arabic is the default language; English is available from the language switch.
-- Requests create specialty-specific example plans in the browser.
-- Users can edit, approve, or reject each step, and pause, resume, or stop a task.
-- Tasks and profile preferences are stored in that browser's `localStorage`.
-- No AI provider, external actions, sign-in, shared database, or remote persistence is connected. Plan approval is not task execution.
-- No API keys or credentials are needed to run the current preview.
+- Supabase email/password authentication with HTTP-only session cookies.
+- User-scoped profiles, tasks, independent AI conversations, and private account memory protected by Supabase Row Level Security.
+- AI chat routed between configured Gemini and OpenRouter providers.
+- Gemini Live voice sessions (requires the server-side Gemini key).
+- AI-generated project plans saved to the user's workspace, with per-step approval, pause, resume, and stop controls.
+- Shared daily AI allowance enforced by Supabase RPC.
+- Profile preferences, avatar storage, and private user data.
+- GitHub Actions CI runs typecheck and production build on pushes and pull requests.
+- Installable web-app metadata and a service worker that caches the static app shell for offline launch.
 
-## Run locally
+## Important boundaries
 
-Use Node.js 24 and pnpm from the repository root:
+- Project planning and approval are implemented; autonomous end-to-end execution of arbitrary web/mobile projects is not yet implemented. Approving a plan does not itself create or deploy a project.
+- Offline support currently covers launching the cached app shell and cached static assets. Sign-in, AI providers, Supabase reads/writes, voice, and other server-backed actions require an internet connection.
+- The service worker deliberately does not cache API responses, authentication data, private conversations, or secrets.
+- Account memory is private context supplied to AI requests; it is not model training.
+- Claude is not currently integrated as a provider.
+- Dedicated document generation/export (DOCX, XLSX, PDF, and PPTX) and automated project execution still require implementation.
+
+## Architecture
+
+- `artifacts/al-omda-ai/` — React/Vite frontend and Cloudflare Worker configuration.
+- `artifacts/api-server/` — Express-compatible API running inside the Cloudflare Worker.
+- `supabase/setup.sql` and `supabase/migrations/` — user data, chat, memory, and quota schema.
+- `.github/workflows/ci.yml` — automated typecheck and build validation.
+
+The frontend calls the same-origin `/api` endpoints. Supabase credentials and AI provider keys remain server-side in Cloudflare Worker secrets; do not place secrets in the browser bundle.
+
+## Local development
+
+Use Node.js 22+ and pnpm 9:
 
 ```sh
 pnpm install
 pnpm --filter @workspace/al-omda-ai run dev
 ```
 
-Create a static production build:
+Run validation and production build:
 
 ```sh
-pnpm --filter @workspace/al-omda-ai run build
+pnpm run typecheck
+pnpm run build
 ```
 
-Build output: `artifacts/al-omda-ai/dist/public`.
+## Cloudflare deployment
 
-## GitHub and Cloudflare Pages
+The application Worker configuration is `artifacts/al-omda-ai/wrangler.jsonc`. The Worker serves the built frontend assets and routes `/api/*` requests through the API server.
 
-The repository is already initialized for Git. To publish it through GitHub and Cloudflare:
+Required server-side configuration includes:
 
-1. Create or choose a GitHub repository and connect it through Replit's Git controls. Review the staged files before the first push; do not commit credentials or generated build output.
-2. In Cloudflare Pages, create a project connected to that repository. The repository root is the project root.
-3. Set the build command to `pnpm --filter @workspace/al-omda-ai run build`.
-4. Set the output directory to `artifacts/al-omda-ai/dist/public` and use Node.js 24 with pnpm.
-5. Deploy the static site. No application secrets are needed for this preview.
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `GEMINI_API_KEY` (chat fallback and live voice)
+- `OPENROUTER_API_KEY` (free-model chat routing)
 
-The Vite build defaults to the domain root when `BASE_PATH` is not supplied, which matches the current Cloudflare Pages setup. The Pages deployment hosts the UI only; it does not deploy this workspace's separate API server or provide shared user data.
+Set these as Worker secrets/variables in Cloudflare. Never commit their values.
 
-## Supabase authentication and storage
+## Supabase setup
 
-The API server now supports email/password Supabase Auth, user-owned profile/task records, and private profile-avatar storage. The browser calls the same-origin `/api` service; Supabase credentials and session tokens stay on the server in Replit Secrets / HTTP-only cookies. The server uses the signed-in user's access token with Supabase RLS; it does not use a service-role key.
+For a new Supabase project, run `supabase/setup.sql` in the SQL Editor. For an existing project, apply any unapplied migration files in `supabase/migrations/` in chronological order. Configure the Supabase Auth Site URL and allowed redirect URLs for the deployed app origin.
 
-### One-time Supabase setup
-
-1. In the Supabase project, open **SQL Editor** and run `supabase/setup.sql`. It creates the profile and task tables, the new-user profile trigger, user-scoped RLS policies, and a private `user-avatars` bucket. The script does not delete user records.
-2. In Supabase **Authentication → URL Configuration**, set the Site URL to the app address used for email confirmation. Add any development or production app addresses to the allowed redirect URLs before testing email confirmation.
-3. In **Project Settings → API Keys**, copy the Project URL and the publishable key. Add `SUPABASE_URL` as a shared environment variable and `SUPABASE_PUBLISHABLE_KEY` as a Replit Secret for the API server. Do not use the `service_role` or secret key.
-4. Restart the API server and open the app's **Profile → Supabase account** panel. Create an account or sign in; if email confirmation is enabled, confirm the address and then sign in.
-5. Test with a profile edit, a proposed task, one approval, and an avatar upload. The account should only see its own records and image. The plan itself remains a local deterministic preview—not AI output or task execution.
-
-No paid service is required by this integration code. Supabase plan limits and email delivery options are controlled by Supabase and can change; check the project dashboard before scaling usage.
-
-### Hosting boundary
-
-The Replit preview routes `/api` to `artifacts/api-server`. Cloudflare Pages currently serves only the static UI and does not host that API. For a Cloudflare deployment, the API must also be deployed to a server-side runtime and `/api` routed to it; the browser bundle must not receive Supabase keys or session tokens. The static preview still works locally when Supabase settings are absent, and clearly remains local-only.
-
-## Project structure
-
-- `artifacts/al-omda-ai/` — AL OMDA AI web app
-- `artifacts/api-server/` — same-origin API for Supabase auth, user-scoped data, and private avatars
-- `lib/` — shared API, database, and validation packages from the workspace scaffold
-
+The database policies scope user-owned rows to the authenticated user. Do not use a service-role key in the browser or expose it to the Worker unless a separately reviewed server-side requirement is introduced.
