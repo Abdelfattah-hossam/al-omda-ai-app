@@ -252,40 +252,7 @@ begin
 end;
 $$;
 
-create or replace function public.refund_ai_units(p_units integer)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user uuid := auth.uid();
-  v_today date := (now() at time zone 'utc')::date;
-  v_used integer := 0;
-  v_reset timestamptz := ((v_today + 1)::timestamp at time zone 'utc');
-begin
-  if v_user is null then
-    raise exception 'Authentication required';
-  end if;
-  if p_units is null or p_units < 1 or p_units > 5 then
-    raise exception 'Invalid AI quota refund';
-  end if;
-  update public.ai_daily_usage
-    set units = greatest(0, units - p_units), updated_at = now()
-    where user_id = v_user and usage_date = v_today
-    returning units into v_used;
-  return jsonb_build_object(
-    'used', coalesce(v_used, 0),
-    'remaining', greatest(0, 100 - coalesce(v_used, 0)),
-    'limit', 100,
-    'resetAt', v_reset
-  );
-end;
-$$;
-
 revoke all on function public.get_ai_daily_usage() from public;
 revoke all on function public.consume_ai_units(integer, integer) from public;
-revoke all on function public.refund_ai_units(integer) from public;
 grant execute on function public.get_ai_daily_usage() to authenticated;
 grant execute on function public.consume_ai_units(integer, integer) to authenticated;
-grant execute on function public.refund_ai_units(integer) to authenticated;
