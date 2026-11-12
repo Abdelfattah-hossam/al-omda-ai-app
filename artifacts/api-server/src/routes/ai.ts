@@ -178,7 +178,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const taskResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
     const taskRows = await readSupabaseJson<Array<{
       id: string; title: string; request: string; specialty: string; status: string;
-      steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; executedAt?: string }>;
+      steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string }>;
     }>>(taskResponse);
     const task = taskRows[0];
     if (!task) { res.status(404).json({ error: "Project not found in your account." }); return; }
@@ -188,6 +188,27 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const stepIndex = task.steps.findIndex((step) => step.id === stepId);
     if (stepIndex < 0) { res.status(404).json({ error: "Project step not found." }); return; }
     const step = task.steps[stepIndex];
+    const saveExecutionFailure = async (message: string): Promise<void> => {
+      try {
+        const latestResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
+        const latestRows = await readSupabaseJson<typeof taskRows>(latestResponse);
+        const latest = latestRows[0];
+        if (!latest || latest.status === "paused" || latest.status === "stopped") return;
+        const latestStep = latest.steps.find((item) => item.id === stepId);
+        if (!latestStep || latestStep.state !== "approved" || latestStep.result) return;
+        const updatedSteps = latest.steps.map((item) => item.id === stepId
+          ? { ...item, executionStatus: "failed" as const, executionError: message.slice(0, 500) }
+          : item);
+        const failureQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id });
+        await supabaseFetch("/rest/v1/tasks?" + failureQuery.toString(), {
+          method: "PATCH",
+          headers: { "content-type": "application/json", prefer: "return=minimal" },
+          body: JSON.stringify({ steps: updatedSteps }),
+        }, session.accessToken);
+      } catch (failure) {
+        console.warn("[AI step failure status could not be saved]", failure instanceof Error ? failure.message : "Unknown error");
+      }
+    };
     if (step.state !== "approved" || task.steps.slice(0, stepIndex).some((item) => item.state !== "approved")) {
       res.status(409).json({ error: "Approve this step and all earlier steps before execution." }); return;
     }
@@ -224,9 +245,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         console.warn("[AI step execution provider failure]", candidate, reason);
       }
     }
-    if (!answer) { res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) }); return; }
+    if (!answer) {
+      await saveExecutionFailure(failures.slice(0, 2).join("; ") || "AI provider unavailable.");
+      res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
+      return;
+    }
     const result = answer.text.trim().slice(0, 12000);
-    if (!result) { res.status(502).json({ error: "The AI returned an empty deliverable." }); return; }
+    if (!result) {
+      await saveExecutionFailure("The AI returned an empty deliverable.");
+      res.status(502).json({ error: "The AI returned an empty deliverable." });
+      return;
+    }
     const verifyResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
     const verifyRows = await readSupabaseJson<typeof taskRows>(verifyResponse);
     const latest = verifyRows[0];
@@ -238,7 +267,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(409).json({ error: "This step changed or was already executed. Refresh the project." }); return;
     }
     const executedAt = new Date().toISOString();
-    const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, result, executedAt } : item);
+    const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, result, executedAt, executionStatus: "succeeded" as const, executionError: undefined } : item);
     const updateQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id, select: "id" });
     const updateResponse = await supabaseFetch("/rest/v1/tasks?" + updateQuery.toString(), {
       method: "PATCH",
