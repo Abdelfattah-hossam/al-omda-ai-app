@@ -805,6 +805,31 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         return;
       }
     }
+    if (wordDocumentRequest && validatedWordDocument) {
+      // Independent quality-control pass: compare the draft against the user's exact request before delivering it.
+      try {
+        const reviewAnswer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", [{
+          role: "user",
+          content: [
+            "You are the final quality reviewer for a Microsoft Word document. Compare the draft against the original user request line by line.",
+            "Check that every explicit requirement, requested item, number, name, language, audience, format, and exclusion is satisfied. Identify omissions, contradictions, unsupported assumptions, confusing wording, and unnecessary sections.",
+            "Correct any issue you find. Preserve all correct content. Do not add unrequested tables, sample data, sections, or deliverables. Do not shorten or omit required details.",
+            "Return ONLY valid JSON with exactly these keys: title, paragraphs, columns, rows. For a prose-only document, columns and rows must be empty arrays. For a requested table, preserve the required columns and matching rows.",
+            "Original user request: " + latestCustomerRequest,
+            "Draft to review: " + JSON.stringify(validatedWordDocument)
+          ].join("\n")
+        }], userMemory);
+        const reviewedDocument = parseWordDocument(reviewAnswer.text, sevenColumnTable, tableOnly, wordTableRequested);
+        if (reviewedDocument) {
+          validatedWordDocument = reviewedDocument;
+          answer = reviewAnswer;
+        } else {
+          console.warn("[Word quality review] Reviewer returned invalid structure; retaining the validated draft.");
+        }
+      } catch (error) {
+        console.warn("[Word quality review unavailable] Retaining the validated draft.", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
     let validatedSpreadsheet = excelRequest ? parseExcelWorkbook(answer.text) : null;
     if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
