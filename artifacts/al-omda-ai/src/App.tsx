@@ -22,7 +22,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Palette, Megaphone, UserRoundCog, type LucideIcon,
+  X, Palette, Megaphone, UserRoundCog, Trash2, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -293,6 +293,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
   const [workspaceError, setWorkspaceError] = useState('');
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [avatarWorking, setAvatarWorking] = useState(false);
@@ -638,6 +639,23 @@ function App() {
     </div>;
   };
 
+  const handleDeleteTask = async (task:Task) => {
+    const confirmed = window.confirm(isAr ? `هل أنت متأكد من حذف مشروع «${task.title}»؟ لا يمكن التراجع عن الحذف.` : `Delete “${task.title}”? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeletingTaskId(task.id);
+    setWorkspaceError('');
+    try {
+      const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, { method:'DELETE', credentials:'same-origin', headers:{'x-requested-with':'XMLHttpRequest'} });
+      const result = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(typeof result.error === 'string' ? result.error : (isAr ? 'تعذر حذف المشروع.' : 'Could not delete project.'));
+      setSaved(prev=>({...prev,tasks:prev.tasks.filter(item=>item.id!==task.id)}));
+      if (selectedTaskId===task.id) setSelectedTaskId(null);
+      if (path===`/history/${task.id}`) setLocation('/history');
+    } catch(error) {
+      window.alert(error instanceof Error ? error.message : (isAr ? 'تعذر حذف المشروع.' : 'Could not delete project.'));
+    } finally { setDeletingTaskId(null); }
+  };
+
   const historyPage = () => {
     const statusFilter = new URLSearchParams(window.location.search).get('status');
     const filtered = tasks.filter((task)=>
@@ -647,9 +665,12 @@ function App() {
     return <div className="page-enter">
       {pageHeading(t('history'),t('history'),t('historySub'),<Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link>)}
       <div className="field-group" style={{maxWidth:460}}><div style={{position:'relative'}}><Search size={15} style={{position:'absolute',insetInlineStart:13,top:13,color:'#818891'}}/><input className="field" style={{paddingInlineStart:38}} placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
-      <div className="history-layout">{filtered.map((task)=><Link href={`/history/${task.id}`} className="panel history-item" key={task.id} data-testid={`history-task-${task.id}`}>
-        <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
-      </Link>)}
+      <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
+        <Link href={`/history/${task.id}`} className="history-item-open">
+          <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
+        </Link>
+        <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>void handleDeleteTask(task)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
+      </div>)}
       {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><Search size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href="/workbench" className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
     </div>;
   };
