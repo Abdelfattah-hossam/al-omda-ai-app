@@ -603,7 +603,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
-    const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || "") || (call.function?.name || "").startsWith("mcp.tool."));
+    const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || "") || (call.function?.name || "").startsWith("mcp_tool_"));
     if (approvalCalls.length) {
       // Execute read-only/allowlisted research calls now, but pause all writes and
       // terminal work until the user approves the exact pending call IDs.
