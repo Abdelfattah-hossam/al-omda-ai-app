@@ -135,7 +135,7 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
       res.status(502).json({ error: "Gemini Live could not create a temporary voice session.", details: detail || "Provider rejected the token request." });
       return;
     }
-    res.json({ token: payload.name, model: "gemini-3.8-live", usage: await currentUsage(session.accessToken) });
+    res.json({ token: payload.name, model: "gemini-3.1-flash-live-preview", usage: await currentUsage(session.accessToken) });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not start a live voice session.");
   }
