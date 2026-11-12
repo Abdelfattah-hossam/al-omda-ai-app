@@ -365,6 +365,12 @@ components:
         executedAt:
           type: string
           format: date-time
+        executionStatus:
+          type: string
+          enum: [succeeded, failed]
+        executionError:
+          type: string
+          maxLength: 500
         state:
           type: string
           enum: [pending, approved, rejected]
