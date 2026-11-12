@@ -524,7 +524,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const [userMemory, usage] = await Promise.all([
       loadUserMemory(accessToken, session.user.id),
-      reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000)))),
+      currentUsage(accessToken),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const excelRequest = isExcelRequest(messages);
@@ -587,10 +587,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       }
     }
     if (!answer) {
-      res.status(503).json({ error: "All configured free AI providers are unavailable. This attempt remains counted in today's allowance.", details: failures.slice(0, 3) });
+      res.status(503).json({ error: "All configured free AI providers are temporarily unavailable. No AI usage was deducted; please retry shortly.", details: failures.slice(0, 3), usage });
       return;
     }
-    const latestUsage = usage;
+    const latestUsage = await reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000))));
+    if (!latestUsage.allowed) {
+      res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: latestUsage });
+      return;
+    }
     if (desktopAppRequest) {
       const html = parseHtmlApp(answer.text);
       if (!html) {
