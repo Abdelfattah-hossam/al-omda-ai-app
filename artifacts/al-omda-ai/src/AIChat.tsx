@@ -6,7 +6,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; appData?: { title: string; html: string } };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -15,6 +15,20 @@ type Usage = {
   resetAt: string;
   providers?: { gemini: boolean; openrouter: boolean };
 };
+
+function detectProjectSpecialty(request: string): "business" | "development" | "design" | "marketing" | "research" | "assistant" | null {
+  const value = request.normalize("NFKC").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "").trim();
+  const hasAction = /(?:عايز|عاوز|محتاج|اريد|أريد|اعمل|اعملي|أنشئ|انشئ|ابني|ابنيلي|نفذ|نفّذ|صمم|صمّم|طور|برمج|ابدأ|اشتغل على|كمل بناء|build|create|develop|make|implement|start|build me|create me)/i.test(value);
+  const hasProject = /(?:مشروع|تطبيق|ابلكيشن|موقع|برنامج|متجر|نظام|منصة|لعبة|website|web app|mobile app|application|software|project|store|platform|system)/i.test(value);
+  const fromScratch = /(?:من الصفر للنهاية|من البداية للنهاية|من الصفر|from scratch|end.to.end)/i.test(value);
+  if (!(hasAction && hasProject) && !(fromScratch && hasProject)) return null;
+  if (/(?:موقع|ويب|تطبيق|ابلكيشن|برنامج|نظام|منصة|website|web app|mobile app|application|software|code|برمج|كود)/i.test(value)) return "development";
+  if (/(?:شعار|لوجو|هوية|تصميم|واجهة|بوستر|logo|brand|design|ui|ux)/i.test(value)) return "design";
+  if (/(?:تيك.?توك|تسويق|حملة|إعلان|محتوى|فيديو|marketing|campaign|content|social)/i.test(value)) return "marketing";
+  if (/(?:بحث|دراسة|مقارنة|تحليل|research|study|compare|analysis)/i.test(value)) return "research";
+  if (/(?:جدول|تنظيم|مواعيد|أولويات|schedule|organize|calendar)/i.test(value)) return "assistant";
+  return "business";
+}
 
 function MessageContent({ content }: { content: string }) {
   const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
@@ -148,7 +162,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, documentData, spreadsheetData, appData }) => ({ role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, documentData, spreadsheetData, appData, taskId, taskTitle }) => ({ role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
@@ -287,11 +301,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const primaryModuleUrl = "https://esm.sh/docx@9.5.1";
     const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
     let lib: any;
-    try {
-      lib = await import(/* @vite-ignore */ primaryModuleUrl);
-    } catch {
-      lib = await import(/* @vite-ignore */ fallbackModuleUrl);
-    }
+    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
+    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
@@ -300,32 +311,30 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
       bidirectional: rtl,
       children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })],
-      spacing: { after: 100 },
+      spacing: { after: 120 },
     });
-    const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
-      shading: { fill: "E8EDF5" }, verticalAlign: "center",
-      children: [makeParagraph(column, true)],
-    })) });
-    const bodyRows = documentData.rows.map((row) => new TableRow({
-      children: documentData.columns.map((_, index) => new TableCell({
-        verticalAlign: "center",
-        children: [makeParagraph(String(row[index] ?? ""))],
-      })),
-    }));
-    const table = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: documentData.columns.map(() => Math.floor(9000 / documentData.columns.length)),
-      borders,
-      rows: [header, ...bodyRows],
-    });
-    const children = [
+    const children: any[] = [
       new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: rtl, children: [new TextRun({ text: documentData.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
       ...documentData.paragraphs.map((paragraph) => makeParagraph(paragraph)),
-      table,
     ];
+    if (documentData.columns.length > 0) {
+      const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
+        shading: { fill: "E8EDF5" }, verticalAlign: "center", children: [makeParagraph(column, true)],
+      })) });
+      const bodyRows = documentData.rows.map((row) => new TableRow({
+        children: documentData.columns.map((_, index) => new TableCell({
+          verticalAlign: "center", children: [makeParagraph(String(row[index] ?? ""))],
+        })),
+      }));
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: documentData.columns.map(() => Math.floor(9000 / documentData.columns.length)),
+        borders, rows: [header, ...bodyRows],
+      }));
+    }
     const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
     const url = URL.createObjectURL(file);
-    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
   };
 
@@ -383,6 +392,36 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
+      }
+      const projectSpecialty = detectProjectSpecialty(text);
+      if (projectSpecialty) {
+        try {
+          const planResponse = await fetch("/api/ai/project-plan", {
+            method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ request: text.slice(0, 5000), specialty: projectSpecialty, language: ar ? "ar" : "en" }),
+          });
+          const plan = await planResponse.json().catch(() => ({}));
+          if (!planResponse.ok || !Array.isArray(plan.steps) || !plan.title) throw new Error(plan.error || "تعذر تجهيز خطة المشروع.");
+          const taskResponse = await fetch("/api/tasks", {
+            method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              title: String(plan.title).slice(0, 160), request: text.slice(0, 10000), specialty: projectSpecialty, status: "review",
+              steps: plan.steps.map((step: any) => ({ id: crypto.randomUUID(), text: String(step.text || "").slice(0, 1200), output: String(step.output || "").slice(0, 1200), complete: String(step.complete || "").slice(0, 1200), state: "pending" })),
+            }),
+          });
+          const taskData = await taskResponse.json().catch(() => ({}));
+          if (!taskResponse.ok || !taskData.id) throw new Error(taskData.error || "تعذر حفظ المشروع في سجل المهام.");
+          assistantMessage = {
+            ...assistantMessage,
+            content: assistantMessage.content + (ar ? "\\n\\nتم تسجيل المشروع تلقائيًا في **سجل المهام** بعنوان: " : "\\n\\nThis project was automatically added to **Task History**: ") + taskData.title,
+            taskId: taskData.id,
+            taskTitle: taskData.title,
+          };
+          if (plan.usage) setUsage(plan.usage);
+        } catch (taskError) {
+          const detail = taskError instanceof Error ? taskError.message : "تعذر تسجيل المشروع.";
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\\n\\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\\n\\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
+        }
       }
       const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
@@ -571,6 +610,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
+            {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId)} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
             {message.attachment && (message.documentData || message.spreadsheetData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
               <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>
@@ -581,7 +621,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{message.spreadsheetData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
               <tbody>{message.spreadsheetData.rows.map((row,i)=><tr key={i}>{message.spreadsheetData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{row[j] ?? ""}</td>)}</tr>)}</tbody></table>
             </div>}
-            {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.length>0 && message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"5px 0"}}>{paragraph}</p>)}<table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table></div>}
+            {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
