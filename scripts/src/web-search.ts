@@ -51,3 +51,40 @@ export function parseBingCompatibleSearchPayload(value: unknown): BingSearchPayl
     ...(typeof total === "number" && Number.isFinite(total) && total >= 0 ? { totalEstimatedMatches: total } : {}),
   };
 }
+
+export async function requestBingCompatibleSearch(
+  url: URL,
+  apiKey: string,
+  fetcher: typeof fetch = fetch,
+): Promise<BingSearchPayload> {
+  const headers = new Headers({ accept: "application/json", "user-agent": "AL-OMDA-Agent/0.1" });
+  if (apiKey) headers.set("Ocp-Apim-Subscription-Key", apiKey);
+  const response = await fetcher(url, {
+    method: "GET",
+    headers,
+    redirect: "error",
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok) throw new Error("Search provider returned HTTP " + response.status + ".");
+  if (!response.body) throw new Error("Search provider returned an empty response.");
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (size + value.byteLength > 150000) {
+      await reader.cancel();
+      throw new Error("Search provider response exceeded the 150 KB safety limit.");
+    }
+    chunks.push(value);
+    size += value.byteLength;
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  let payload: unknown;
+  try { payload = JSON.parse(new TextDecoder().decode(bytes)); }
+  catch { throw new Error("Search provider did not return valid JSON."); }
+  return parseBingCompatibleSearchPayload(payload);
+}
