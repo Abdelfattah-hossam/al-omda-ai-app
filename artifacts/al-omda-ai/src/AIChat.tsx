@@ -11,6 +11,29 @@ type Usage = {
   providers?: { gemini: boolean; openrouter: boolean };
 };
 
+function MessageContent({ content }: { content: string }) {
+  const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
+  const pattern = /```([a-zA-Z0-9_+#.-]*)\n([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(content)) !== null) {
+    if (match.index > lastIndex) parts.push({ type: "text", value: content.slice(lastIndex, match.index) });
+    parts.push({ type: "code", value: match[2], language: match[1] || "code" });
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < content.length) parts.push({ type: "text", value: content.slice(lastIndex) });
+  if (parts.length === 0) parts.push({ type: "text", value: content });
+
+  return <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+    {parts.map((part, index) => part.type === "code"
+      ? <div key={index} style={{ minWidth: 0, border: "1px solid var(--border,#343a44)", borderRadius: 10, overflow: "hidden", background: "#11151b" }}>
+          <div style={{ padding: "6px 10px", color: "#c6a76c", fontSize: 11, borderBottom: "1px solid #343a44" }}>{part.language}</div>
+          <pre dir="ltr" style={{ margin: 0, padding: 12, overflowX: "auto", color: "#e8edf4", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre" }}><code>{part.value.replace(/\n$/, "")}</code></pre>
+        </div>
+      : <p key={index} style={{ margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{part.value}</p>)}
+  </div>;
+}
+
 export default function AIChatPage({ language, signedIn }: { language: Language; signedIn: boolean }) {
   const ar = language === "ar";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -178,7 +201,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
-            <p style={{whiteSpace:"pre-wrap"}}>{message.content}</p>
+            <MessageContent content={message.content} />
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
