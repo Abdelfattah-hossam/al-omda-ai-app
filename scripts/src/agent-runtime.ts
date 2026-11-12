@@ -574,7 +574,6 @@ async function loadAdditionalModelProviders(): Promise<Array<{ base: string; mod
   return parseModelProviderConfig(parsed, process.env);
 }
 
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
 function isLocalModelProvider(base: string): boolean {
   try {
     const hostname = new URL(base).hostname.toLowerCase().replace("[", "").replace("]", "");
@@ -591,6 +590,7 @@ async function getModelProviders(): Promise<Array<{ base: string; model: string;
   ].filter((item, index, all) => item.base && item.model && all.findIndex((other) => other.base === item.base && other.model === item.model) === index);
 }
 
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
   const providers = await getModelProviders();
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
