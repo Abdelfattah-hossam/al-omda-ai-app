@@ -191,7 +191,7 @@ async function safeDnsQuery<T>(query: () => Promise<T>): Promise<T | []> {
 
 async function dnsRecords(body: Json): Promise<Json> {
   const raw = typeof body.hostname === "string" ? body.hostname.trim() : "";
-  if (!raw || raw.length > 253 || /[\\/\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
+  if (!raw || raw.length > 253 || /[\/\\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
   const target = await assertAllowedTarget("https://" + raw);
   const hostname = target.hostname;
   const [a, aaaa, cname, mx, ns, txt] = await Promise.all([
@@ -221,7 +221,7 @@ async function dnsRecords(body: Json): Promise<Json> {
 
 async function tlsCertificate(body: Json): Promise<Json> {
   const raw = typeof body.hostname === "string" ? body.hostname.trim() : "";
-  if (!raw || raw.length > 253 || /[\\/\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
+  if (!raw || raw.length > 253 || /[\/\\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
   const target = await assertAllowedTarget("https://" + raw);
   const hostname = target.hostname;
   const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await lookup(hostname, { all: true, verbatim: true });
