@@ -60,6 +60,16 @@ Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values a
 
 The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. An optional second endpoint can be configured with `OMDA_AGENT_FALLBACK_MODEL_BASE_URL`, `OMDA_AGENT_FALLBACK_MODEL_NAME`, and `OMDA_AGENT_FALLBACK_MODEL_API_KEY`. The Agents panel displays average generated tokens per second for completed model requests; this is not a live streaming counter. Local models do not require a provider API key.
 
+### Use the local Agent from the main chat
+
+1. Start the runtime on the same computer that contains the project workspace.
+2. Set `OMDA_AGENT_APP_ORIGINS` to the exact origin of the deployed AL OMDA app (the default deployment origin is shown below); do not use a wildcard.
+3. Open AL OMDA AI on that same computer, open Chat, enable **Local Agent mode**, enter `http://127.0.0.1:4318`, and paste the runtime token.
+4. Send a task. The local Agent can inspect the configured workspace and use its enabled tools. File writes, terminal commands, MCP calls, and authenticated HTTP role comparisons pause for explicit approval in the chat.
+5. The chat remembers the last Agent session ID in this browser so a later message can resume it. The secret token remains only in page memory and must be entered again after a reload.
+
+This browser bridge is intentionally local-first: a browser on a phone talks to the phone's own loopback address, not the desktop running the runtime. To use a desktop workspace from a phone or another device, a separately authenticated and encrypted remote companion/tunnel is still required. Image attachments are currently handled by hosted chat, not local Agent mode.
+
 The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGENT_APP_ORIGINS` to an exact comma-separated list of trusted AL OMDA app origins; no wildcard is supported. Command-line clients do not need an Origin header. Every endpoint except `GET /health` requires `Authorization: Bearer <OMDA_AGENT_TOKEN>`. The token must contain at least 32 characters.
 
 ## Available endpoints
