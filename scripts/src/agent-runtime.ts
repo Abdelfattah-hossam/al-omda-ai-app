@@ -29,7 +29,7 @@ function isInside(root: string, target: string): boolean {
   return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep));
 }
 async function resolveExistingPath(input: unknown): Promise<string> {
-  if (typeof input !== "string" || !input.trim() || input.includes("\\0")) throw new Error("A valid workspace-relative path is required.");
+  if (typeof input !== "string" || !input.trim() || input.includes("\0")) throw new Error("A valid workspace-relative path is required.");
   const candidate = resolve(workspaceRoot, input);
   if (!isInside(workspaceRoot, candidate)) throw new Error("Path is outside the configured workspace.");
   const actual = await realpath(candidate);
@@ -37,7 +37,7 @@ async function resolveExistingPath(input: unknown): Promise<string> {
   return actual;
 }
 async function resolveWritePath(input: unknown): Promise<string> {
-  if (typeof input !== "string" || !input.trim() || input.includes("\\0")) throw new Error("A valid workspace-relative path is required.");
+  if (typeof input !== "string" || !input.trim() || input.includes("\0")) throw new Error("A valid workspace-relative path is required.");
   const candidate = resolve(workspaceRoot, input);
   if (!isInside(workspaceRoot, candidate) || candidate === workspaceRoot) throw new Error("Path is outside the configured workspace.");
   const parent = await realpath(dirname(candidate));
@@ -121,7 +121,7 @@ async function executeCommand(body: Json): Promise<Json> {
   if (EXECUTION_MODE !== "host") throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=host only on a machine where you trust the project and its dependencies.");
   const command = typeof body.command === "string" ? body.command : "";
   const args = Array.isArray(body.args) ? body.args : [];
-  if (!ALLOWED_COMMANDS.has(command) || args.length > 40 || args.some((arg) => typeof arg !== "string" || arg.length > 2000 || arg.includes("\\0"))) {
+  if (!ALLOWED_COMMANDS.has(command) || args.length > 40 || args.some((arg) => typeof arg !== "string" || arg.length > 2000 || arg.includes("\0"))) {
     throw new Error("Command is not permitted. Use an approved executable and an array of arguments.");
   }
   const cwdInput = typeof body.cwd === "string" ? body.cwd : ".";
@@ -209,12 +209,12 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (url.pathname === "/v1/http/request") { send(res, 200, await httpRequest(body)); return; }
   if (url.pathname === "/v1/sessions/save") {
     const path = await sessionPath(body.id || randomUUID());
-    const state = JSON.stringify({ id: body.id || path.split(sep).pop()?.replace(/\\.json$/, ""), updatedAt: new Date().toISOString(), state: body.state ?? null });
+    const state = JSON.stringify({ id: body.id || path.split(sep).pop()?.replace(/\.json$/, ""), updatedAt: new Date().toISOString(), state: body.state ?? null });
     if (state.length > 2 * 1024 * 1024) throw new Error("Session state is too large.");
     const temp = path + ".tmp";
     await writeFile(temp, state, { encoding: "utf8", mode: 0o600 });
     await rename(temp, path);
-    send(res, 200, { ok: true, id: path.split(sep).pop()?.replace(/\\.json$/, "") }); return;
+    send(res, 200, { ok: true, id: path.split(sep).pop()?.replace(/\.json$/, "") }); return;
   }
   if (url.pathname === "/v1/sessions/load") {
     const path = await sessionPath(body.id);
@@ -232,10 +232,10 @@ async function main(): Promise<void> {
     });
   });
   server.listen(PORT, HOST, () => {
-    process.stdout.write("AL OMDA Agent Runtime listening on http://" + HOST + ":" + PORT + "\\n");
-    process.stdout.write("Workspace: " + workspaceRoot + "\\n");
-    process.stdout.write("Terminal execution: " + EXECUTION_MODE + "\\n");
-    process.stdout.write("Authorized HTTP targets: " + ALLOWED_HOSTS.size + "\\n");
+    process.stdout.write("AL OMDA Agent Runtime listening on http://" + HOST + ":" + PORT + "\n");
+    process.stdout.write("Workspace: " + workspaceRoot + "\n");
+    process.stdout.write("Terminal execution: " + EXECUTION_MODE + "\n");
+    process.stdout.write("Authorized HTTP targets: " + ALLOWED_HOSTS.size + "\n");
   });
 }
-void main().catch((error: unknown) => { process.stderr.write((error instanceof Error ? error.message : String(error)) + "\\n"); process.exitCode = 1; });
+void main().catch((error: unknown) => { process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n"); process.exitCode = 1; });
