@@ -116,6 +116,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
   }));
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
     method: "POST",
+    signal: AbortSignal.timeout(25000),
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
@@ -137,6 +138,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
   const model = "openrouter/free";
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
+    signal: AbortSignal.timeout(25000),
     headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
     body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) ? 3000 : 1400, temperature: 0.4 }),
   });
@@ -397,7 +399,10 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(400).json({ error: "Keep the conversation context under 30,000 characters per request." });
       return;
     }
-    const userMemory = await loadUserMemory(accessToken, session.user.id);
+    const [userMemory, usage] = await Promise.all([
+      loadUserMemory(accessToken, session.user.id),
+      reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000)))),
+    ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const wordDocumentRequest = isWordDocumentRequest(messages);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
@@ -417,8 +422,6 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
       return;
     }
-    const units = Math.min(5, Math.max(1, Math.ceil(characters / 6000)));
-    const usage = await reserveUnits(accessToken, units);
     if (!usage.allowed) {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage });
       return;
@@ -442,7 +445,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(503).json({ error: "All configured free AI providers are unavailable. This attempt remains counted in today's allowance.", details: failures.slice(0, 3) });
       return;
     }
-    const latestUsage = await currentUsage(accessToken);
+    const latestUsage = usage;
     if (wordDocumentRequest) {
       const document = parseWordDocument(answer.text, sevenColumnTable);
       if (!document) {
