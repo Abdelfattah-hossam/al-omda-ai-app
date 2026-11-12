@@ -869,9 +869,9 @@ function App() {
     return result;
   };
   const streamLocalAgent = async (
-    action: "run" | "resume" | "continue",
+    action: "run" | "resume" | "continue" | "delegate",
     body: Record<string, unknown>,
-    onEvent: (event: { type: string; text?: string; status?: string }) => void,
+    onEvent: (event: { type: string; text?: string; status?: string; role?: string; agentCount?: number }) => void,
   ) => {
     const base = new URL(localAgentUrl.trim());
     if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
@@ -933,7 +933,15 @@ function App() {
     if (tasks.some((task) => !task.goal) || delegateBusy || !localAgentToken.trim()) return;
     setDelegateBusy(true); setDelegateError(""); setDelegateResults([]);
     try {
-      const result = await callLocalAgentRuntime("/v1/agent/delegate", "POST", { tasks });
+      const result = await streamLocalAgent("delegate", { tasks }, (event) => {
+        if (event.type === "status" && event.status === "delegating") {
+          setLocalAgentMessage(isAr ? "جارٍ تشغيل " + (event.agentCount || 2) + " وكلاء متخصصين بالتوازي..." : "Launching " + (event.agentCount || 2) + " specialist agents in parallel...");
+        } else if (event.type === "status" && event.status === "specialist_started") {
+          setLocalAgentMessage((isAr ? "بدأ الوكيل: " : "Started specialist: ") + (event.role || ""));
+        } else if (event.type === "status" && event.status === "specialist_completed") {
+          setLocalAgentMessage((isAr ? "اكتمل تحليل: " : "Completed review: ") + (event.role || ""));
+        }
+      });
       const agents = Array.isArray(result.agents) ? result.agents.map((item: any) => ({
         role: String(item.role || "Specialist"),
         result: String(item.result || ""),
