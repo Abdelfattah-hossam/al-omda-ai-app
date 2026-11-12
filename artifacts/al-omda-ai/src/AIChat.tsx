@@ -78,6 +78,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
+  const [generatedSpeech, setGeneratedSpeech] = useState<Record<number, string>>({});
+  const [speechLoadingIndex, setSpeechLoadingIndex] = useState<number | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
   const recognitionRef = useRef<any>(null);
@@ -86,6 +88,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const voiceStoppedByUserRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const speechUrlsRef = useRef<string[]>([]);
+  useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
 
   const copy = {
     title: ar ? "شات العمدة الذكي" : "AL OMDA AI Chat",
@@ -566,6 +570,36 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     window.speechSynthesis.speak(utterance);
   };
 
+  const generateSpeech = async (text: string, index: number) => {
+    setSpeechLoadingIndex(index);
+    setError("");
+    try {
+      const response = await fetch("/api/ai/speech", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: text.slice(0, 4000) }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const detail = typeof data.details === "string" ? " — " + data.details : "";
+        throw new Error((data.error || (ar ? "تعذر إنشاء الملف الصوتي." : "Could not generate the audio file.")) + detail);
+      }
+      const blob = await response.blob();
+      if (!blob.size || !blob.type.toLowerCase().startsWith("audio/")) throw new Error(ar ? "ملف الصوت المستلم غير صالح." : "The returned audio file is invalid.");
+      const url = URL.createObjectURL(blob);
+      const previous = generatedSpeech[index];
+      if (previous) URL.revokeObjectURL(previous);
+      speechUrlsRef.current.push(url);
+      setGeneratedSpeech((current) => ({ ...current, [index]: url }));
+      void loadUsage();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : (ar ? "تعذر إنشاء الصوت." : "Could not generate speech."));
+    } finally {
+      setSpeechLoadingIndex(null);
+    }
+  };
+
   const providerNames = usage?.providers
     ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : "OpenRouter Free Models")
     : [];
@@ -642,7 +676,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
+              {usage?.providers?.openrouter && <button type="button" className="button button-quiet button-small" onClick={()=>void generateSpeech(message.content,index)} disabled={speechLoadingIndex===index || !message.content.trim()}><Volume2 size={13}/>{speechLoadingIndex===index ? (ar ? "جارٍ إنشاء MP3..." : "Generating MP3...") : (ar ? "إنشاء صوت MP3" : "Generate MP3 audio")}</button>}
               <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
+              {generatedSpeech[index] && <audio controls preload="none" src={generatedSpeech[index]} style={{width:"100%",marginTop:6}} />}
             </div>}
           </div>)}
           {loading && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.loading}</p></div>}
