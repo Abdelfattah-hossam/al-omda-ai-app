@@ -65,6 +65,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 - Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
 - Authorized HTTP role comparison, bounded HTTP inspection, sensitive-header redaction, and DNS/IP safety checks for private IPv4/IPv6 destinations.
 - OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
+- Multi-provider model routing through `.omda/models.json`, including HTTPS remote providers, LM Studio/Ollama loopback models, and environment-only API key references.
 - Optional local supervisor with crash-restart backoff and safe auto-update checks; updates are deferred for dirty worktrees or active Agent runs and rolled back if the build fails.
 
 ## Remaining roadmap
