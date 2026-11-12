@@ -29,7 +29,7 @@ type DbTask = {
   title: string;
   request: string;
   specialty: "business" | "development" | "design" | "marketing" | "research" | "assistant";
-  steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; state: "pending" | "approved" | "rejected" }>;
+  steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string; state: "pending" | "approved" | "rejected" }>;
   status: "review" | "paused" | "approved" | "stopped";
   created_at: string;
 };
@@ -91,7 +91,7 @@ function mapTask(row: DbTask) {
 }
 
 function sameStep(left: DbTask["steps"][number], right: DbTask["steps"][number]): boolean {
-  return left.id === right.id && left.text === right.text && left.state === right.state;
+  return left.id === right.id && left.text === right.text && left.output === right.output && left.complete === right.complete && left.state === right.state && left.result === right.result && left.executedAt === right.executedAt && left.executionStatus === right.executionStatus && left.executionError === right.executionError;
 }
 
 function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
@@ -103,6 +103,7 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   ) return false;
   if (previous.steps.length !== next.steps.length) return false;
   if (previous.steps.some((step, index) => step.id !== next.steps[index]?.id)) return false;
+  if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || step.executedAt !== next.steps[index]?.executedAt || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
 
   const changedIndices = previous.steps
     .map((step, index) => (sameStep(step, next.steps[index]) ? -1 : index))
