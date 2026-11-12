@@ -221,7 +221,7 @@ async function compareHttpRoles(body: Json): Promise<Json> {
   const url = typeof body.url === "string" ? body.url : "";
   const method = typeof body.method === "string" ? body.method.toUpperCase() : "GET";
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("HTTP role comparison supports GET, HEAD, and OPTIONS only.");
-  const requested = Array.isArray(body.roles) ? body.roles.filter((value): value is string => typeof value === "string").slice(0, 4) : [];
+  const requested = Array.isArray(body.roles) ? [...new Set(body.roles.filter((value): value is string => typeof value === "string"))].slice(0, 4) : [];
   if (requested.length < 2) throw new Error("Select at least two configured HTTP roles to compare.");
   const configs = await loadHttpRoles();
   const roles = requested.map((name) => {
