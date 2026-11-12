@@ -22,7 +22,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Palette, Megaphone, UserRoundCog, Trash2, type LucideIcon,
+  X, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -679,7 +679,9 @@ function App() {
     const approvedSteps = task.steps.filter((step)=>step.state === 'approved').length;
     const rejectedSteps = task.steps.filter((step)=>step.state === 'rejected').length;
     const pendingSteps = task.steps.length - approvedSteps - rejectedSteps;
-    const planApproval = task.steps.length ? Math.round(approvedSteps / task.steps.length * 100) : 0;
+    const marketTrend = approvedSteps > rejectedSteps ? 'up' : rejectedSteps > approvedSteps ? 'down' : 'flat';
+    const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
+    const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
     return <div className="page-enter">
       {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
       <div className="history-detail">
@@ -687,13 +689,21 @@ function App() {
         <aside className="project-tracking">
           <section className="panel panel-pad">
             <div className="section-head"><h2 className="section-title">{isAr?'مؤشرات المشروع':'Project indicators'}</h2>{statusBadge(task.status)}</div>
-            <div className="project-kpi-grid">
-              <div className="project-kpi"><small>{isAr?'اعتماد الخطة':'Plan approval'}</small><strong>{planApproval}%</strong></div>
-              <div className="project-kpi"><small>{isAr?'خطوات معتمدة':'Approved steps'}</small><strong>{approvedSteps}/{task.steps.length}</strong></div>
-              <div className="project-kpi"><small>{isAr?'خطوات مرفوضة':'Rejected steps'}</small><strong>{rejectedSteps}</strong></div>
-              <div className="project-kpi"><small>{isAr?'خطوات متبقية':'Pending steps'}</small><strong>{pendingSteps}</strong></div>
+            <div className="market-trend-board">
+              <div className={`market-main-trend ${marketTrend}`}>
+                <div className="market-trend-heading"><small>{isAr?'مؤشر حركة المشروع':'Project market signal'}</small><span className="market-live-dot"/></div>
+                <div className="market-trend-main"><TrendIcon size={34} strokeWidth={2.6}/><strong>{trendLabel}</strong></div>
+                <svg className="market-sparkline" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><linearGradient id="marketLineGlow" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stopColor="currentColor" stopOpacity=".25"/><stop offset="100%" stopColor="currentColor" stopOpacity="1"/></linearGradient></defs>
+                  <path d={marketTrend==='up'?'M2 52 L38 45 L72 48 L108 30 L145 36 L182 22 L218 27 L258 9 L298 4':marketTrend==='down'?'M2 8 L38 15 L72 12 L108 29 L145 24 L182 39 L218 34 L258 51 L298 57':'M2 31 L38 27 L72 34 L108 29 L145 33 L182 28 L218 32 L258 27 L298 30'} fill="none" stroke="url(#marketLineGlow)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="market-signals">
+                <div className="market-signal up"><TrendingUp size={23}/><span><small>{isAr?'الخطوات المعتمدة':'Approved steps'}</small><strong>{approvedSteps>0?(isAr?'صاعد':'Rising'):(isAr?'بانتظار البداية':'Awaiting')}</strong></span></div>
+                <div className={`market-signal ${rejectedSteps>0?'down':'flat'}`}>{rejectedSteps>0?<TrendingDown size={23}/>:<Minus size={23}/>}<span><small>{isAr?'الخطوات المرفوضة':'Rejected steps'}</small><strong>{rejectedSteps>0?(isAr?'هابط':'Falling'):(isAr?'لا يوجد هبوط':'No decline')}</strong></span></div>
+                <div className="market-signal flat"><Activity size={23}/><span><small>{isAr?'الخطوات المتبقية':'Pending steps'}</small><strong>{pendingSteps>0?(isAr?'قيد الانتظار':'On hold'):(isAr?'مكتملة المراجعة':'Reviewed')}</strong></span></div>
+              </div>
             </div>
-            <div className="project-progress-track"><span style={{width:`${planApproval}%`}}/></div>
             <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?'لم يتم تسجيل تنفيذ فعلي لهذا المشروع بعد':'No real execution has been recorded for this project yet'}</small></div><span className="status-chip paused">{isAr?'غير مسجل':'Not tracked'}</span></div>
             <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'هذه النسبة تقيس اعتماد خطوات الخطة فقط، وليست نسبة نجاح المشروع النهائي. سيتم احتساب النجاح والفشل الفعليين بعد تسجيل نتائج التنفيذ والاختبارات لكل مرحلة.':'This percentage measures plan approval only, not final project success. Actual success/failure requires recorded execution results and tests for each stage.'}</span></div>
           </section>
