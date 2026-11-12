@@ -133,7 +133,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           opened = true;
           socket.send(JSON.stringify({
             setup: {
-              model: "models/gemini-3.8-live",
+              model: "models/gemini-3.1-flash-live-preview",
               generationConfig: {
                 responseModalities: ["AUDIO"],
                 speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } },
