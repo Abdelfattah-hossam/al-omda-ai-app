@@ -83,6 +83,60 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
     assistant: ['Clarify the priority and deadline', 'Break the request into small actions', 'Suggest a useful order and schedule', 'Review conflicts and the next step'],
   },
 };
+function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
+  const normalized = request.toLocaleLowerCase();
+  const topic = request.trim().replace(/[.!؟?]+$/,'').slice(0,76);
+  const arabic = language === 'ar';
+  const focusRules:Record<Specialty,Array<{pattern:RegExp; ar:string; en:string}>> = {
+    business:[
+      {pattern:/إطلاق|ابدأ|تأسيس|مشروع|شركة|متجر|منتج|launch|start|business|store|product/i,ar:'إطلاق المشروع وتحويل الفكرة إلى عرض واضح',en:'turning the idea into a clear project launch'},
+      {pattern:/بيع|مبيعات|عميل|عملاء|ربح|إيراد|sales|customer|revenue|profit/i,ar:'زيادة المبيعات وفهم العملاء',en:'improving sales and understanding customers'},
+      {pattern:/فريق|موظف|تشغيل|إدارة|operations|team|staff|manage/i,ar:'تنظيم التشغيل وتوزيع المسؤوليات',en:'organizing operations and responsibilities'},
+    ],
+    development:[
+      {pattern:/تطبيق|ابلكيشن|موبايل|app|mobile/i,ar:'تطوير التطبيق وتجربة استخدامه',en:'building the app and its user experience'},
+      {pattern:/موقع|ويب|website|web|صفحة/i,ar:'بناء الموقع وهيكل صفحاته',en:'building the website and its page structure'},
+      {pattern:/خطأ|مشكلة|إصلاح|bug|error|fix/i,ar:'تشخيص المشكلة وإصلاحها واختبار الحل',en:'diagnosing the issue, fixing it, and testing the solution'},
+    ],
+    design:[
+      {pattern:/شعار|لوجو|هوية|brand|logo|identity/i,ar:'تصميم الهوية والشعار',en:'designing the brand identity and logo'},
+      {pattern:/واجهة|تطبيق|موقع|ui|ux|interface|website|app/i,ar:'تصميم الواجهة وتجربة المستخدم',en:'designing the interface and user experience'},
+      {pattern:/صورة|بوستر|منشور|تصميم|image|poster|social post|graphic/i,ar:'إنتاج التصميم والمادة البصرية',en:'creating the visual asset and design'},
+    ],
+    marketing:[
+      {pattern:/تيك.?توك|فيديو|ريلز|محتوى|tiktok|video|reels|content/i,ar:'تخطيط المحتوى والفيديوهات',en:'planning content and short-form videos'},
+      {pattern:/إعلان|حملة|ترويج|ads|campaign|promot/i,ar:'إعداد الحملة الإعلانية والترويج',en:'building the advertising and promotion campaign'},
+      {pattern:/بيع|عملاء|جمهور|sales|customers|audience/i,ar:'الوصول للجمهور وتحويل الاهتمام إلى نتائج',en:'reaching the audience and converting interest into results'},
+    ],
+    research:[
+      {pattern:/مقارنة|أفضل|اختيار|compare|best|choose/i,ar:'مقارنة الخيارات ومعايير الاختيار',en:'comparing options and decision criteria'},
+      {pattern:/سوق|منافس|منافسين|market|competitor/i,ar:'تحليل السوق والمنافسين',en:'analyzing the market and competitors'},
+      {pattern:/دراسة|بحث|معلومات|مصادر|study|research|sources/i,ar:'جمع المعلومات والتحقق من المصادر',en:'gathering information and checking sources'},
+    ],
+    assistant:[
+      {pattern:/جدول|وقت|موعد|أسبوع|يوم|schedule|time|calendar|week|day/i,ar:'تنظيم الوقت والمواعيد',en:'organizing time and appointments'},
+      {pattern:/أولوية|مهام|ترتيب|إنجاز|priority|tasks|organize|productivity/i,ar:'ترتيب الأولويات والمهام',en:'prioritizing and organizing tasks'},
+      {pattern:/هدف|خطة|عادة|تطوير|goal|plan|habit|improve/i,ar:'تحويل الهدف إلى خطوات يومية',en:'turning the goal into daily actions'},
+    ],
+  };
+  const focus = focusRules[specialty].find((rule)=>rule.pattern.test(normalized));
+  const focusText = focus ? (arabic ? focus.ar : focus.en) : (arabic ? 'تنفيذ طلبك وتحقيق النتيجة التي تقصدها' : 'delivering the outcome described in your request');
+  const base = localPlanTemplates[language][specialty];
+  return arabic
+    ? [
+        `فهم طلبك «${topic}» وتحديد معيار نجاح واضح`,
+        `${focusText}: حصر المتطلبات والموارد والقيود`,
+        `${base[2]} مع ترتيب الأولويات والمخرجات`,
+        `${base[3]} وتحديد ما يحتاج موافقتك قبل أي تنفيذ`,
+      ]
+    : [
+        `Understand “${topic}” and define a clear success measure`,
+        `Focus on ${focusText}: identify requirements, resources, and constraints`,
+        `${base[2]} with priorities and concrete deliverables`,
+        `${base[3]} and identify what needs your approval before any execution`,
+      ];
+}
+
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/agents', key:'agents', icon:Compass },
   { path:'/workbench', key:'workbench', icon:MessageSquareText }, { path:'/history', key:'history', icon:History },
@@ -240,7 +294,7 @@ function App() {
     event.preventDefault();
     if (!request.trim()) return;
     const title = request.trim().split(/[.!؟?]/)[0].slice(0,70) || (isAr ? 'طلب جديد' : 'New request');
-    const steps = localPlanTemplates[language][selectedSpecialty].map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
+    const steps = buildLocalPlan(request.trim(), selectedSpecialty, language).map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
     let task:Task = { id:`task-${Date.now()}`, title, request:request.trim(), specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
     if (authUser) {
       try {
