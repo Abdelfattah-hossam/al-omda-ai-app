@@ -598,7 +598,8 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 
 /* Final layout correction: readable chat, live themes, and compact profile accordions */
 .app-shell::before{z-index:0!important}
-.app-shell>.sidebar,.app-shell>.main-area,.app-shell>.mobile-nav,.app-shell>.curtain-backdrop{z-index:1}
+.app-shell>.sidebar,.app-shell>.main-area,.app-shell>.mobile-nav{z-index:1}
+.app-shell>.curtain-backdrop{z-index:3000}
 .app-shell>.main-area{position:relative;z-index:1;min-width:0}
 .app-shell[data-wallpaper="midnight"]{--app-wallpaper:linear-gradient(135deg,#080b12 0%,#151b2a 52%,#101923 100%)}
 .app-shell[data-wallpaper="ocean"]{--app-wallpaper:linear-gradient(135deg,#061c2b 0%,#0d4052 52%,#10243d 100%)}
