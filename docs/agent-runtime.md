@@ -60,6 +60,12 @@ The agent exposes `web.search` to the lead agent and read-only specialists. It a
 Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
 
 
+### Passive Web Recon and security research
+
+The Agent includes read-only tools for DNS A/AAAA/CNAME/MX/NS/TXT lookups, validated TLS certificate inspection, common HTTP security-header analysis, and `robots.txt` retrieval. Each hostname/URL must be explicitly allowlisted. DNS results containing private or reserved addresses are rejected by default; TLS inspection pins the connection to a validated resolved address and verifies the certificate. HTTP checks remain bounded and use the existing request allowlist.
+
+These are passive reconnaissance and configuration-review helpers for authorized bug bounty and lab work. They do not perform port scanning, brute-force discovery, exploitation, or out-of-scope testing. The user remains responsible for confirming program scope and authorization before adding a target to the allowlist.
+
 ### Dynamic MCP tool discovery
 
 The runtime advertises configured MCP tools directly to the model as function tools when their input schemas are valid and within size limits. This lets the Agent choose a specific browser or desktop action without a separate discovery round-trip. Every direct MCP tool call still pauses for explicit user approval; the generic `mcp.call_tool` remains available as a fallback. MCP servers are local programs, so configure only servers you trust.
