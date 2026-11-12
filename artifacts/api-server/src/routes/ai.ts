@@ -199,7 +199,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(400).json({ error: "Keep the conversation context under 30,000 characters per request." });
       return;
     }
-    const userMemory = await loadUserMemory(accessToken);
+    const userMemory = await loadUserMemory(accessToken, session.user.id);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const providers = chooseProviders(messages);
     if (providers.length === 0) {
