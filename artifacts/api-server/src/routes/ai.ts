@@ -303,6 +303,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "For a blank template, use empty body rows. Otherwise include the approved sample data. Every row must have exactly the same number of cells as columns.",
       "Project: " + task.title,
       "Original request: " + task.request,
+      "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
       "Approved step: " + step.text,
       "Expected deliverable: " + (step.output || "A complete .xlsx workbook"),
       "Acceptance check: " + (step.complete || "Create a real Excel workbook with the approved columns and formatting."),
