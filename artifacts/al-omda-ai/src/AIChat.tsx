@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import * as Docx from "docx";
+import * as XLSXModule from "xlsx";
 import { useLocation } from "wouter";
 import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
@@ -330,11 +332,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
 
   const createWordAttachment = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }) => {
-    const primaryModuleUrl = "https://esm.sh/docx@9.5.1";
-    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
-    let lib: any;
-    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+    const lib: any = Docx;
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
@@ -371,12 +369,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const createExcelAttachment = async (data: SpreadsheetData) => {
-    const primaryModuleUrl = "https://esm.sh/xlsx@0.18.5";
-    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
-    let lib: any;
-    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
-    const XLSX = (lib as any).default ?? lib;
+    const XLSX = (XLSXModule as any).default ?? XLSXModule;
     const worksheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
     worksheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
     const workbook = XLSX.utils.book_new();
