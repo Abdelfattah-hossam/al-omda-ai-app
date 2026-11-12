@@ -396,7 +396,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       }
       const projectSpecialty = detectProjectSpecialty(text);
-      const projectRequestContext = next.filter((message) => message.role === "user").slice(-6).map((message) => message.content).join("\\n\\n").slice(-5000);
+      const projectRequestContext = next.filter((message) => message.role === "user").slice(-6).map((message) => message.content).join("\n\n").slice(-5000);
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
