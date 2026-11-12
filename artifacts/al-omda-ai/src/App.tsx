@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
+import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
   getAuthSession,
@@ -867,6 +868,21 @@ function App() {
     if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Local agent runtime request failed.");
     return result;
   };
+  const streamLocalAgent = async (
+    action: "run" | "resume" | "continue",
+    body: Record<string, unknown>,
+    onEvent: (event: { type: string; text?: string; status?: string }) => void,
+  ) => {
+    const base = new URL(localAgentUrl.trim());
+    if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
+    if (!localAgentToken.trim()) throw new Error(isAr ? "أدخل مفتاح الاتصال المحلي." : "Enter the local runtime token.");
+    const response = await fetch(base.origin + "/v1/agent/stream", {
+      method: "POST",
+      headers: { authorization: "Bearer " + localAgentToken.trim(), "content-type": "application/json" },
+      body: JSON.stringify({ action, ...body }),
+    });
+    return await readAgentEventStream(response, onEvent);
+  };
   const checkLocalAgent = async () => {
     setLocalAgentBusy(true); setLocalAgentStatus("checking"); setLocalAgentMessage("");
     try {
@@ -887,11 +903,22 @@ function App() {
     if (!localAgentGoal.trim() || localAgentBusy) return;
     setLocalAgentBusy(true); setLocalAgentStatus("running"); setLocalAgentMessage("");
     try {
-      const result = await callLocalAgentRuntime("/v1/agent/run", "POST", { goal: localAgentGoal.trim() });
+      let streamedText = "";
+      const startedAt = Date.now();
+      const result = await streamLocalAgent("run", { goal: localAgentGoal.trim() }, (event) => {
+        if (event.type === "token" && event.text) {
+          streamedText += event.text;
+          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+          const estimated = Math.round((streamedText.length / 4) / seconds);
+          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s");
+        } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
+          setLocalAgentMessage(isAr ? "الوكيل يجهّز الأدوات وينفّذ الخطوات..." : "Agent is selecting tools and executing steps...");
+        }
+      });
       setLocalAgentSessionId(String(result.sessionId || ""));
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
-      const speed = Number(result.usage?.averageTokensPerSecond || 0);
-      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الوكيل محتاج موافقتك على إجراءات." : "The agent needs your approval for actions.") : ""));
+      const speed = Number((result.usage as any)?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الوكيل محتاج موافقتك على إجراءات." : "The agent needs your approval for actions.") : streamedText));
       setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
       setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
     } catch (error) {
@@ -925,10 +952,18 @@ function App() {
     if (!localAgentSessionId || localAgentBusy) return;
     setLocalAgentBusy(true); setLocalAgentStatus("running"); setLocalAgentMessage("");
     try {
-      const result = await callLocalAgentRuntime("/v1/agent/resume", "POST", { sessionId: localAgentSessionId });
+      let streamedText = "";
+      const startedAt = Date.now();
+      const result = await streamLocalAgent("resume", { sessionId: localAgentSessionId }, (event) => {
+        if (event.type === "token" && event.text) {
+          streamedText += event.text;
+          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
+        }
+      });
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
-      const speed = Number(result.usage?.averageTokensPerSecond || 0);
-      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الجلسة المحفوظة تنتظر موافقتك." : "Saved session is waiting for your approval.") : ""));
+      const speed = Number((result.usage as any)?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الجلسة المحفوظة تنتظر موافقتك." : "Saved session is waiting for your approval.") : streamedText));
       setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
       setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
     } catch (error) {
@@ -939,13 +974,21 @@ function App() {
     if (!localAgentSessionId || localAgentBusy) return;
     setLocalAgentBusy(true); setLocalAgentStatus("running");
     try {
-      const result = await callLocalAgentRuntime("/v1/agent/continue", "POST", {
+      let streamedText = "";
+      const startedAt = Date.now();
+      const result = await streamLocalAgent("continue", {
         sessionId: localAgentSessionId,
         approvedCallIds: approve ? localAgentPending.map((item) => item.id) : [],
+      }, (event) => {
+        if (event.type === "token" && event.text) {
+          streamedText += event.text;
+          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
+        }
       });
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
-      const speed = Number(result.usage?.averageTokensPerSecond || 0);
-      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "هناك إجراء آخر ينتظر موافقتك." : "Another action needs your approval.") : ""));
+      const speed = Number((result.usage as any)?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "هناك إجراء آخر ينتظر موافقتك." : "Another action needs your approval.") : streamedText));
       setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
       setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
     } catch (error) {
