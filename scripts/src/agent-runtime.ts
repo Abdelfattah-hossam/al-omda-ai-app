@@ -10,6 +10,7 @@ import { buildMcpEnvironment } from "./mcp-env.js";
 import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web-search.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
+import { isBlockedNetworkAddress } from "./network-safety.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -97,23 +98,15 @@ function authenticated(req: IncomingMessage): boolean {
   const b = Buffer.from(TOKEN);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-function privateAddress(address: string): boolean {
-  if (address === "::1" || address.startsWith("fc") || address.startsWith("fd") || address.startsWith("fe80:")) return true;
-  if (address.startsWith("::ffff:")) return privateAddress(address.slice(7));
-  const parts = address.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
-  return parts[0] === 10 || parts[0] === 127 || (parts[0] === 192 && parts[1] === 168) ||
-    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 169 && parts[1] === 254) || parts[0] === 0;
-}
 async function assertAllowedTarget(rawUrl: string): Promise<URL> {
   const url = new URL(rawUrl);
   if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
   const hostname = url.hostname.toLowerCase();
   if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
-  if (isIP(hostname) && privateAddress(hostname) && !ALLOW_LOCAL_LAB_TARGETS) throw new Error("Private and loopback targets are blocked.");
+  if (isIP(hostname) && isBlockedNetworkAddress(hostname) && !ALLOW_LOCAL_LAB_TARGETS) throw new Error("Private and loopback targets are blocked.");
   if (!isIP(hostname)) {
     const addresses = await lookup(hostname, { all: true, verbatim: true });
-    if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => privateAddress(entry.address)))) throw new Error("Target resolves to a private or local network address.");
+    if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) throw new Error("Target resolves to a private or local network address.");
   }
   return url;
 }
