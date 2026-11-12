@@ -83,6 +83,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [speechLoadingIndex, setSpeechLoadingIndex] = useState<number | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+  const conversationsRef = useRef<Conversation[]>([]);
+  conversationsRef.current = conversations;
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+  const historyLoadingRef = useRef(historyLoading);
+  historyLoadingRef.current = historyLoading;
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
@@ -262,8 +268,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   useEffect(() => {
     if (!signedIn || view !== "chat" || !activeConversationId) return;
     let stopped = false;
+    let syncing = false;
     const sync = async () => {
-      if (stopped || document.visibilityState !== "visible") return;
+      // Never poll while a send or conversation restore is in progress. Keep the
+      // polling effect stable instead of restarting it for every loading-state change.
+      if (stopped || syncing || document.visibilityState !== "visible" || loadingRef.current || historyLoadingRef.current) return;
+      syncing = true;
       try {
         const [listResponse, conversationResponse] = await Promise.all([
           fetch("/api/ai/conversations", { credentials: "same-origin" }),
@@ -272,10 +282,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (!listResponse.ok || !conversationResponse.ok) return;
         const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
         if (stopped) return;
-        if (Array.isArray(listData.conversations)) setConversations(listData.conversations);
-        // Compare only the visible conversation content. Server metadata (provider,
-        // generated files, task IDs) can be serialized differently and must not trigger
-        // a full conversation reload every polling cycle.
+        if (Array.isArray(listData.conversations) && JSON.stringify(conversationsRef.current) !== JSON.stringify(listData.conversations)) {
+          setConversations(listData.conversations);
+        }
+        // Compare only visible content; metadata-only differences must never reload the transcript.
         const remote = Array.isArray(conversationData.conversation?.messages)
           ? conversationData.conversation.messages
               .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
@@ -283,14 +293,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               .map((item: any) => ({ role: item.role, content: item.content }))
           : [];
         const local = messagesRef.current.map(({ role, content }) => ({ role, content }));
-        if (JSON.stringify(remote) !== JSON.stringify(local) && !loading && !historyLoading) {
-          // A genuine cross-device message change may refresh the transcript,
-          // but metadata-only differences must never reset its layout or scroll.
+        if (JSON.stringify(remote) !== JSON.stringify(local) && !loadingRef.current && !historyLoadingRef.current) {
           shouldAutoScrollRef.current = false;
           await loadConversation(activeConversationId);
         }
       } catch {
         // A temporary sync failure must not interrupt the current conversation.
+      } finally {
+        syncing = false;
       }
     };
     void sync();
@@ -304,7 +314,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       window.removeEventListener("focus", onVisible);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [signedIn, view, activeConversationId, loading, historyLoading]);
+  }, [signedIn, view, activeConversationId]);
 
   useEffect(() => {
     const container = chatScrollRef.current;
