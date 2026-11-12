@@ -267,7 +267,16 @@ async function sessionPath(id: unknown): Promise<string> {
   await mkdir(directory, { recursive: true });
   const actual = await realpath(directory);
   if (!isInside(workspaceRoot, actual)) throw new Error("Session directory escapes the workspace.");
-  return resolve(actual, id + ".json");
+  const path = resolve(actual, id + ".json");
+  try {
+    const existing = await realpath(path);
+    if (!isInside(actual, existing)) throw new Error("Saved session symlink escapes the workspace.");
+    const info = await stat(existing);
+    if (!info.isFile() || info.size > 2 * 1024 * 1024) throw new Error("Saved session must be a JSON file up to 2 MB.");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  return path;
 }
 
 async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions: string }>> {
