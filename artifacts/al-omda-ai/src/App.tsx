@@ -692,10 +692,56 @@ function App() {
     } finally { setDeletingTaskId(null); }
   };
 
+  const escapeReportHtml = (value:unknown) => String(value ?? '').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char] ?? char));
+  const buildTaskReportHtml = (task:Task) => {
+    const direction = isAr ? 'rtl' : 'ltr';
+    const title = escapeReportHtml(task.title);
+    const rows = task.steps.map((step,index)=>`
+      <section class="step">
+        <h2>${isAr?'الخطوة':'Step'} ${index+1}: ${escapeReportHtml(step.text)}</h2>
+        <p><strong>${isAr?'الحالة':'Status'}:</strong> ${escapeReportHtml(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review'))}</p>
+        <p><strong>${isAr?'المخرج المتوقع':'Expected output'}:</strong> ${escapeReportHtml(step.output || '—')}</p>
+        <p><strong>${isAr?'معيار الاكتمال':'Completion check'}:</strong> ${escapeReportHtml(step.complete || '—')}</p>
+        ${step.result ? `<h3>${isAr?'المخرج المنفذ':'Executed deliverable'}</h3><pre>${escapeReportHtml(step.result)}</pre><p class="muted">${isAr?'تاريخ التنفيذ':'Executed at'}: ${escapeReportHtml(step.executedAt || '—')}</p>` : ''}
+        ${step.executionStatus==='failed' ? `<p class="failure"><strong>${isAr?'فشل التنفيذ':'Execution failed'}:</strong> ${escapeReportHtml(step.executionError || '—')}</p>` : ''}
+      </section>`).join('');
+    return `<!doctype html><html lang="${isAr?'ar':'en'}" dir="${direction}"><head><meta charset="utf-8"><title>${title}</title><style>
+      body{font-family:Arial,Tahoma,sans-serif;color:#20242a;line-height:1.8;margin:32px;direction:${direction}}
+      h1{font-size:24px;border-bottom:2px solid #b89a61;padding-bottom:12px}
+      h2{font-size:17px;color:#6d552b;margin-bottom:8px}h3{font-size:15px;margin-bottom:4px}
+      .meta{color:#555;font-size:12px;margin-bottom:22px}.step{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}
+      pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:12px;border:1px solid #ddd;font:13px/1.7 Arial,Tahoma,sans-serif}
+      .muted{color:#666;font-size:11px}.failure{color:#a32626;background:#fff2f2;padding:8px}
+      @media print{body{margin:15mm}.step{break-inside:avoid}}
+    </style></head><body><h1>${title}</h1>
+      <p class="meta">${isAr?'التخصص':'Specialty'}: ${escapeReportHtml(label(task.specialty))} · ${isAr?'الحالة':'Status'}: ${escapeReportHtml(statusLabel(task.status))} · ${isAr?'تاريخ الإنشاء':'Created'}: ${escapeReportHtml(task.createdAt)}</p>
+      <h2>${isAr?'الطلب الأصلي':'Original request'}</h2><p>${escapeReportHtml(task.request)}</p>
+      <h2>${isAr?'خطة المشروع ونتائج التنفيذ':'Project plan and execution results'}</h2>${rows}
+      <p class="muted">AL OMDA AI · ${new Date().toISOString()}</p></body></html>`;
+  };
+  const exportTaskWord = (task:Task) => {
+    const blob = new Blob(['\\uFEFF',buildTaskReportHtml(task)],{type:'application/msword;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'al-omda-' + task.id.replace(/[^a-zA-Z0-9_-]/g,'-') + '.doc';
+    document.body.appendChild(link);link.click();link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  const printTaskReport = (task:Task) => {
+    const reportWindow = window.open('','_blank','noopener,noreferrer');
+    if (!reportWindow) { window.alert(isAr?'اسمح بفتح النوافذ المنبثقة لطباعة التقرير.':'Allow pop-ups to print the report.'); return; }
+    reportWindow.document.open();
+    reportWindow.document.write(buildTaskReportHtml(task));
+    reportWindow.document.close();
+    reportWindow.focus();
+    reportWindow.print();
+  };
+
   const exportTasksSheet = (items:Task[]) => {
     const headers = isAr
-      ? ['اسم المشروع','الطلب الأصلي','التخصص','حالة المشروع','رقم الخطوة','الخطوة','حالة الخطوة','المخرج المتوقع','معيار الاكتمال','تاريخ الإنشاء']
-      : ['Project','Original request','Specialty','Project status','Step number','Step','Step status','Expected output','Completion check','Created at'];
+      ? ['اسم المشروع','الطلب الأصلي','التخصص','حالة المشروع','رقم الخطوة','الخطوة','حالة الخطوة','المخرج المتوقع','معيار الاكتمال','نتيجة التنفيذ','حالة التنفيذ','سبب الفشل','تاريخ الإنشاء']
+      : ['Project','Original request','Specialty','Project status','Step number','Step','Step status','Expected output','Completion check','Execution result','Execution status','Failure reason','Created at'];
     const rows = items.flatMap((task) => task.steps.length
       ? task.steps.map((step,index) => [
           task.title,
@@ -707,9 +753,12 @@ function App() {
           step.state === 'approved' ? (isAr ? 'معتمدة' : 'Approved') : step.state === 'rejected' ? (isAr ? 'مرفوضة' : 'Rejected') : (isAr ? 'بانتظار المراجعة' : 'Pending review'),
           step.output ?? '',
           step.complete ?? '',
+          step.result ?? '',
+          step.executionStatus ?? '',
+          step.executionError ?? '',
           task.createdAt,
         ])
-      : [[task.title,task.request,label(task.specialty),statusLabel(task.status),'','','','','',task.createdAt]]);
+      : [[task.title,task.request,label(task.specialty),statusLabel(task.status),'','','','','','','','',task.createdAt]]);
     const escapeCell = (value:unknown) => '"' + String(value ?? '').replace(/"/g,'""') + '"';
     const csv = [headers,...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
     const blob = new Blob(['\uFEFF',csv], { type:'text/csv;charset=utf-8;' });
@@ -750,7 +799,7 @@ function App() {
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
     const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
     return <div className="page-enter">
-      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
+      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTaskWord(task)}><FileText size={14}/>{isAr?'تصدير Word':'Export Word'}</button><button type="button" className="button button-quiet" onClick={()=>printTaskReport(task)}><FileText size={14}/>{isAr?'طباعة / PDF':'Print / PDF'}</button><Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link></div>)}
       <div className="history-detail">
         <div>{renderPlan(task)}</div>
         <aside className="project-tracking">
