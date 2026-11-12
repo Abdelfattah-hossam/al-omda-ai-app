@@ -51,6 +51,18 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   return /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
 }
+function isExplicitWordFileRequest(request: string): boolean {
+  return /\\b(?:word|docx)\\b|ملف\\s*(?:و?ورد|word)|مستند\\s*(?:و?ورد|word)|صيغة\\s*(?:و?ورد|word)/i.test(request);
+}
+function isDesktopAppRequest(request: string): boolean {
+  return /(?:ساعة.{0,45}(?:سطح المكتب|desktop)|(?:سطح المكتب|desktop).{0,45}ساعة|(?:تطبيق|برنامج|app|application|موقع|website).{0,55}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,55}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
+}
+function parseHtmlApp(text: string): string | null {
+  const source = text.trim().replace(/^\\s*```(?:html)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+  if (!/<html[\\s>]|<!doctype\\s+html|<body[\\s>]/i.test(source) || !/<script[\\s>]/i.test(source) && !/<main[\\s>]|<div[\\s>]/i.test(source)) return null;
+  if (source.length > 90000) return null;
+  return source;
+}
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   if (isExcelRequest(messages)) return false;
   const request = getLatestUserRequest(messages);
@@ -296,7 +308,11 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
     // Select the file format from the customer's original request only. Planner-generated titles, steps, and acceptance text must never turn an unrelated task into Excel.
-    const excelStep = isExcelRequest([{ role: "user", content: task.request }]);
+    const customerRequest = task.request || "";
+    const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
+    const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
+    const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
+    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
@@ -309,6 +325,20 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Expected deliverable: " + (step.output || "A complete .xlsx workbook"),
       "Acceptance check: " + (step.complete || "Create a real Excel workbook with the approved columns and formatting."),
       "Return between 1 and 30 columns and 1 to 500 rows."
+    ].join("\n") : wordStep ? [
+      "You are AL OMDA. Create the actual Word document content for this approved task. Return ONLY valid JSON, no Markdown.",
+      "Schema: " + '{"title":"Document title","paragraphs":["paragraph"],"columns":["Column 1"],"rows":[["value"]]}',
+      "Use the original customer request and the previously approved steps. Include useful complete content, not instructions for the user.",
+      "Original request: " + customerRequest,
+      "Approved step: " + step.text,
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000)
+    ].join("\n") : htmlAppStep ? [
+      "You are AL OMDA, building the requested small browser-based app as a deliverable. Return ONLY one complete, self-contained HTML document, with inline CSS and JavaScript. No Markdown fences and no instructions.",
+      "The app must work immediately when opened as an .html file and inside a sandboxed preview iframe. Do not use external libraries, network requests, or external assets. Make the UI polished, responsive, and match the customer's exact request.",
+      "For a desktop clock, build a working live clock that updates every second, with clear readable time and useful controls if appropriate. Do not return a tutorial or PowerShell instructions.",
+      "Original customer request: " + customerRequest,
+      "Approved step: " + step.text,
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000)
     ].join("\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
       "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
@@ -343,7 +373,23 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }
     let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
     let result = answer.text.trim().slice(0, 12000);
-    if (excelStep) {
+    if (htmlAppStep) {
+      const html = parseHtmlApp(answer.text);
+      if (!html) {
+        await saveExecutionFailure("The AI did not return a complete HTML application.");
+        res.status(502).json({ error: "تعذر إنشاء التطبيق كملف HTML صالح. أعد تنفيذ الخطوة." });
+        return;
+      }
+      result = "ALOMDA_HTML_APP:" + html;
+    } else if (wordStep) {
+      const document = parseWordDocument(answer.text, false, false);
+      if (!document) {
+        await saveExecutionFailure("The AI did not return a valid structured Word document.");
+        res.status(502).json({ error: "تعذر إنشاء مستند Word منظم. أعد تنفيذ الخطوة." });
+        return;
+      }
+      result = "ALOMDA_DOCX_JSON:" + JSON.stringify(document);
+    } else if (excelStep) {
       spreadsheet = parseExcelWorkbook(answer.text);
       if (!spreadsheet) {
         await saveExecutionFailure("The AI did not return a valid structured Excel workbook.");
