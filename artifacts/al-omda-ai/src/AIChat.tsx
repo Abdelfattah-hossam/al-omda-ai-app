@@ -220,7 +220,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     }
   };
 
-  useEffect(() => { void loadUsage(); void loadConversations(); void loadMemory(); }, [signedIn]);
+  useEffect(() => { void loadUsage(); if (view === "chat") void loadConversations(); void loadMemory(); }, [signedIn, view]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
