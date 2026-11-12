@@ -29,7 +29,7 @@ type DbTask = {
   title: string;
   request: string;
   specialty: "business" | "development" | "design" | "marketing" | "research" | "assistant";
-  steps: Array<{ id: string; text: string; output?: string; complete?: string; state: "pending" | "approved" | "rejected" }>;
+  steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; state: "pending" | "approved" | "rejected" }>;
   status: "review" | "paused" | "approved" | "stopped";
   created_at: string;
 };
