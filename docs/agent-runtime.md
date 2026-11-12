@@ -49,6 +49,15 @@ pnpm --filter @workspace/scripts agent:runtime
 
 To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated allowlist of executable names (for example `node,npx`).
 
+### Web search (Bing-compatible API)
+
+Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add only that endpoint hostname to `OMDA_AGENT_ALLOWED_HOSTS`. If the provider uses the standard Bing Web Search authentication header, set `OMDA_AGENT_SEARCH_API_KEY`; the key is read only by the local runtime and is never included in model prompts or tool output.
+
+The agent exposes `web.search` to the lead agent and read-only specialists. It accepts `query`, optional `count` (clamped to 1–10), optional locale `market` (for example `en-US`), and `safeSearch` (`Strict` by default). Results are normalized to title, URL, snippet, and optional publication date.
+
+Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
+
+
 ### Browser automation through Playwright MCP
 
 A setup helper creates or updates the Playwright MCP entry without deleting other MCP servers already configured in your workspace.
@@ -159,7 +168,7 @@ Terminal execution is disabled by default. To opt in, set `OMDA_AGENT_EXECUTION=
 
 The following are still planned and must not be considered available:
 
-- Native browser automation and desktop control. A trusted browser MCP server can be connected as an interim integration.
+- Native browser/desktop panels, built-in profile and tab management, and remote cross-device desktop control. Optional Playwright and Computer Use MCP companions are available as local integrations.
 - Write-capable multi-agent delegation with isolated workspaces and shared task state; current parallel specialists are read-only.
 - Live streaming token output and real-time tokens-per-second display.
 - HTTPFlow history and visual response-diff interface; the runtime comparison endpoint currently returns role-by-role status, headers, and bounded response bodies.
