@@ -334,7 +334,20 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
     let lib: any;
     try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+    catch {
+      try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+      catch {
+        // Offline-safe Word fallback: Word opens this HTML-based .doc file directly.
+        const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+        const paragraphs = documentData.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\n/g, "<br>") + "</p>").join("");
+        const table = documentData.columns.length ? "<table><thead><tr>" + documentData.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + documentData.rows.map((row) => "<tr>" + documentData.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
+        const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (ar ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(documentData.title) + "</h1>" + paragraphs + table + "</body></html>";
+        const file = new Blob(["\\ufeff", html], { type: "application/msword;charset=utf-8" });
+        const url = URL.createObjectURL(file);
+        const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+        return { name: safeName + ".doc", url };
+      }
+    }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
@@ -375,7 +388,18 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
     let lib: any;
     try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+    catch {
+      try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+      catch {
+        // Excel-compatible CSV fallback keeps the deliverable available without a CDN.
+        const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+        const csv = "\\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\\r\\n");
+        const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(file);
+        const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+        return { name: safeName + ".csv", url };
+      }
+    }
     const XLSX = (lib as any).default ?? lib;
     const worksheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
     worksheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
