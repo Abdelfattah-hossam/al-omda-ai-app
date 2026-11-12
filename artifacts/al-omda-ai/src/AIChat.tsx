@@ -267,9 +267,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const remote = Array.isArray(conversationData.conversation?.messages)
           ? conversationData.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100)
           : [];
-        const local = messagesRef.current.map(({ role, content, provider, documentData, spreadsheetData, appData }) => ({
+        const local = messagesRef.current.map(({ role, content, provider, documentData, spreadsheetData, appData, taskId, taskTitle }) => ({
           role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}),
           ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}),
+          ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}),
         }));
         if (JSON.stringify(remote) !== JSON.stringify(local) && !loading && !historyLoading) {
           await loadConversation(activeConversationId);
