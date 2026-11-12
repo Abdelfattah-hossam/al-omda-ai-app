@@ -512,7 +512,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Excel task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseExcelWorkbook(answer.text)) {
+      validatedSpreadsheet = parseExcelWorkbook(answer.text);
+      if (!validatedSpreadsheet) {
         await saveExecutionFailure("Excel workbook failed structural validation after one repair attempt.");
         res.status(502).json({ error: "تعذر اعتماد ملف Excel بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
@@ -526,7 +527,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[HTML task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseHtmlApp(answer.text)) {
+      validatedHtmlApp = parseHtmlApp(answer.text);
+      if (!validatedHtmlApp) {
         await saveExecutionFailure("HTML application failed validation after one repair attempt.");
         res.status(502).json({ error: "تعذر اعتماد التطبيق بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
@@ -535,7 +537,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
     let result = answer.text.trim().slice(0, 12000);
     if (htmlAppStep) {
-      const html = parseHtmlApp(answer.text);
+      const html = validatedHtmlApp;
       if (!html) {
         await saveExecutionFailure("The AI did not return a complete HTML application.");
         res.status(502).json({ error: "تعذر إنشاء التطبيق كملف HTML صالح. أعد تنفيذ الخطوة." });
@@ -747,7 +749,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(503).json({ error: "All configured free AI providers are temporarily unavailable. No AI usage was deducted; please retry shortly.", details: failures.slice(0, 3), usage });
       return;
     }
-    if (wordDocumentRequest && !parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested)) {
+    let validatedWordDocument = wordDocumentRequest ? parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested) : null;
+    if (wordDocumentRequest && !validatedWordDocument) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the Word document output. Return ONLY valid JSON: " + '{"title":"...","paragraphs":["..."],"columns":[],"rows":[]}',
         "A normal written document may use paragraphs only. Use an empty columns and rows array unless the customer explicitly requested a table. If a table is requested, each row must match its column count.",
@@ -759,12 +762,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       ].filter(Boolean).join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[Word document repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested)) {
+      validatedWordDocument = parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested);
+      if (!validatedWordDocument) {
         res.status(502).json({ error: "لم يتم اعتماد مستند Word لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات. أعد المحاولة لاحقًا." });
         return;
       }
     }
-    if (excelRequest && !parseExcelWorkbook(answer.text)) {
+    let validatedSpreadsheet = excelRequest ? parseExcelWorkbook(answer.text) : null;
+    if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the Excel workbook. Return ONLY valid JSON: " + '{"title":"...","columns":["..."],"rows":[["..."]]}',
         "Use relevant columns and rows of equal width. Preserve the original request and never add unrelated sample data.",
@@ -778,7 +783,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         return;
       }
     }
-    if (desktopAppRequest && !parseHtmlApp(answer.text)) {
+    let validatedHtmlApp = desktopAppRequest ? parseHtmlApp(answer.text) : null;
+    if (desktopAppRequest && !validatedHtmlApp) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the app output. Return ONLY one complete self-contained HTML document. No Markdown or external dependencies.",
         "Original request: " + latestCustomerRequest,
@@ -812,7 +818,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     if (excelRequest) {
-      const spreadsheet = parseExcelWorkbook(answer.text);
+      const spreadsheet = validatedSpreadsheet;
       if (!spreadsheet) {
         res.status(502).json({ error: "تعذر تكوين ملف Excel منظم. أعد إرسال الطلب مرة واحدة." });
         return;
@@ -827,7 +833,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     if (wordDocumentRequest) {
-      const document = parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested);
+      const document = validatedWordDocument;
       if (!document) {
         res.status(502).json({ error: "تعذر تكوين مستند Word منظم. أعد إرسال الطلب مرة واحدة." });
         return;
