@@ -70,7 +70,8 @@ function getTaskWordDocument(result?: string): TaskWordDocument | null {
   try {
     const value = JSON.parse(result.slice("ALOMDA_DOCX_JSON:".length));
     if (typeof value.title !== "string" || !Array.isArray(value.paragraphs) || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
-    if (!value.columns.length || value.columns.length > 12 || value.rows.length > 100) return null;
+    if (value.columns.length > 12 || value.rows.length > 100) return null;
+    if (value.columns.length === 0 && (value.rows.length > 0 || value.paragraphs.length === 0)) return null;
     if (value.rows.some((row: unknown) => !Array.isArray(row) || row.length !== value.columns.length)) return null;
     return value as TaskWordDocument;
   } catch { return null; }
@@ -98,13 +99,18 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
   const border = { style: "single", size: 1, color: "B8C2D2" };
   const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
-  const para = (value: string, bold = false) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })], spacing: { after: 100 } });
-  const rows = [
-    new TableRow({ tableHeader: true, children: data.columns.map((column) => new TableCell({ shading: { fill: "E8EDF5" }, children: [para(column, true)] })) }),
-    ...data.rows.map((row) => new TableRow({ children: data.columns.map((_, index) => new TableCell({ children: [para(String(row[index] ?? ""))] })) })),
+  const para = (value: string, bold = false) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })], spacing: { after: 120 } });
+  const children: any[] = [
+    new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: data.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
+    ...data.paragraphs.map((p) => para(p)),
   ];
-  const table = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows });
-  const children = [new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: data.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }), ...data.paragraphs.map((p) => para(p)), table];
+  if (data.columns.length > 0) {
+    const rows = [
+      new TableRow({ tableHeader: true, children: data.columns.map((column) => new TableCell({ shading: { fill: "E8EDF5" }, children: [para(column, true)] })) }),
+      ...data.rows.map((row) => new TableRow({ children: data.columns.map((_, index) => new TableCell({ children: [para(String(row[index] ?? ""))] })) })),
+    ];
+    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows }));
+  }
   const blob = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -442,6 +448,31 @@ function App() {
     void initializeAccount();
     return () => { cancelled = true; };
   }, []);
+  // Refresh the signed-in workspace so tasks created in chat appear without a manual page reload.
+  useEffect(() => {
+    if (!authUser || authLoading) return;
+    let cancelled = false;
+    const refreshWorkspace = async () => {
+      if (cancelled || document.visibilityState !== "visible" || taskWriteQueue.current.size > 0) return;
+      try {
+        const workspace = await getWorkspace(apiRequestOptions);
+        if (!cancelled) applyWorkspace(workspace, authUser.email);
+      } catch {
+        // Keep the current task list visible if a background refresh is temporarily unavailable.
+      }
+    };
+    const interval = window.setInterval(() => void refreshWorkspace(), 7000);
+    const onVisible = () => { if (document.visibilityState === "visible") void refreshWorkspace(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [authUser?.id, authLoading]);
+
   useEffect(() => {
     if (requestedSpecialty && specialties.some(({id})=>id===requestedSpecialty)) setSelectedSpecialty(requestedSpecialty as Specialty);
   }, [requestedSpecialty]);
