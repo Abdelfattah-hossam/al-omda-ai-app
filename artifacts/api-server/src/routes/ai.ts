@@ -246,6 +246,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const session = await resolveSession(req, res);
     if (!session) { res.status(401).json({ error: "Sign in to generate an AI project plan." }); return; }
     const request = typeof req.body?.request === "string" ? req.body.request.trim() : "";
+    const context = typeof req.body?.context === "string" ? req.body.context.trim().slice(0, 5000) : "";
     const specialty = req.body?.specialty;
     const language = req.body?.language === "en" ? "en" : "ar";
     const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant"];
@@ -257,7 +258,8 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       "Return ONLY valid JSON, no Markdown fences, with this exact shape:",
       '{ "title": "short project title", "steps": [{ "text": "actionable step", "output": "specific deliverable", "complete": "objective acceptance check" }] }',
       "Include 4 to 7 sequential, specific steps tailored to the actual request. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. Only create downloadable files when the customer explicitly requested them; avoid duplicate or unrelated files and use the fewest deliverables that fully satisfy the request. Other steps should produce the actual work or a clear, understandable result. This is a proposed plan only; do not claim execution has happened.",
-      "User request: " + request
+      "Current project request: " + request,
+      "Earlier conversation context (use only details that clearly belong to this same project; ignore unrelated topics): " + context
     ].join("\n") }];
     const providers = chooseProviders(messages);
     if (providers.length === 0) { res.status(503).json({ error: "No AI provider is configured." }); return; }
