@@ -87,10 +87,11 @@ function cleanSubmittedRequest(value:string):string {
   const clean = value.trim().replace(/\s+/g,' ');
   // Strip accidentally pasted plan UI only when its quoted original request is present.
   const quoted = clean.match(/تحديد المطلوب للطلب\s*[:：]\s*[«“]+([\s\S]*?)[»”]+/);
-  if (quoted?.[1] && /الخطة المقترحة|معاينة محلية فقط|بانتظار موافقتك|تمت الموافقة/.test(clean)) {
-    return quoted[1].trim().replace(/^[«“]+|[»”]+$/g,'');
-  }
-  return clean;
+  const extracted = quoted?.[1] && /الخطة المقترحة|معاينة محلية فقط|بانتظار موافقتك|تمت الموافقة/.test(clean)
+    ? quoted[1].trim()
+    : clean;
+  // Remove quotation marks accidentally included around the submitted request.
+  return extracted.replace(/^[«“"']+|[»”"']+$/g,'').trim();
 }
 
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
@@ -317,7 +318,11 @@ function App() {
     event.preventDefault();
     const cleanRequest = cleanSubmittedRequest(request);
     if (!cleanRequest) return;
-    const title = cleanRequest.split(/[.!؟?]/)[0].slice(0,70) || (isAr ? 'طلب جديد' : 'New request');
+    const titleSource = cleanRequest.split(/[.!؟?]/)[0].trim();
+    const shortTitle = titleSource.length > 70
+      ? titleSource.slice(0,70).replace(/\s+\S*$/,'').trim() + '…'
+      : titleSource;
+    const title = shortTitle || (isAr ? 'طلب جديد' : 'New request');
     const steps = buildLocalPlan(cleanRequest, selectedSpecialty, language).map((text) => ({ id:crypto.randomUUID(), text, state:'pending' as StepState }));
     let task:Task = { id:`task-${Date.now()}`, title, request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
     if (authUser) {
