@@ -324,7 +324,7 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
     } else if (/instruct|general|chat|assistant|gemma|llama|nemotron/.test(text)) value += 10;
     return value;
   };
-  const available = (catalog.length ? catalog : staticFallbacks.map((id) => ({ id })))
+  const available: OpenRouterCatalogModel[] = (catalog.length ? catalog : staticFallbacks.map((id): OpenRouterCatalogModel => ({ id })))
     .filter((model) => !hasImage || model.architecture?.input_modalities?.includes("image") || /vision|vl:/i.test(model.id));
   const roles: Array<"reasoning" | "coding" | "writing" | "general"> = coding
     ? ["coding", "reasoning", "general"]
@@ -390,7 +390,9 @@ async function callProviderWithRetry(provider: "gemini" | "openrouter", messages
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
-      const temporary = /\b(?:429|500|502|503|504)\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
+      // A 429 quota/rate-limit response is not helped by immediately repeating
+      // the same request; let the next configured provider handle the fallback.
+      const temporary = /\b(?:500|502|503|504)\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
       if (!temporary || attempt === 1) throw error;
       await new Promise((resolve) => setTimeout(resolve, 900));
     }
@@ -1016,7 +1018,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       }
     }
     if (!answer) {
-      res.status(503).json({ error: "All configured free AI providers are temporarily unavailable. No AI usage was deducted; please retry shortly.", details: failures.slice(0, 3), usage });
+      const quotaExhausted = failures.some((failure) => /\b429\b|quota|rate limit|free-models-per-day|requests per day/i.test(failure));
+      res.status(503).json({
+        error: quotaExhausted
+          ? "وصلنا إلى حدود الاستخدام المجاني لدى مزوّدي الذكاء الاصطناعي حاليًا (Gemini وOpenRouter). لم يتم خصم أي وحدات من رصيد العمدة. جرّب بعد تجدد الحصة المجانية، أو أضف رصيدًا لدى المزوّد إذا رغبت؛ العمدة لن يستخدم خدمة مدفوعة دون موافقتك."
+          : "خدمات الذكاء الاصطناعي المجانية غير متاحة مؤقتًا. لم يتم خصم أي وحدات من رصيد العمدة؛ حاول مرة أخرى لاحقًا.",
+        details: failures.slice(0, 3),
+        usage
+      });
       return;
     }
     let validatedWordDocument = wordDocumentRequest ? parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested) : null;
