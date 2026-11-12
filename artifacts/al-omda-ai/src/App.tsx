@@ -719,14 +719,113 @@ function App() {
       <h2>${isAr?'خطة المشروع ونتائج التنفيذ':'Project plan and execution results'}</h2>${rows}
       <p class="muted">AL OMDA AI · ${new Date().toISOString()}</p></body></html>`;
   };
-  const exportTaskWord = (task:Task) => {
-    const blob = new Blob(['\uFEFF',buildTaskReportHtml(task)],{type:'application/msword;charset=utf-8'});
+  const reportFileBase = (task:Task) => 'al-omda-' + task.id.replace(/[^a-zA-Z0-9_-]/g,'-');
+  const downloadReportBlob = (blob:Blob, filename:string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = 'al-omda-' + task.id.replace(/[^a-zA-Z0-9_-]/g,'-') + '.doc';
-    document.body.appendChild(link);link.click();link.remove();
-    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+  const loadReportLibrary = async (url:string) => import(/* @vite-ignore */ url);
+  const reportParagraphs = (task:Task) => {
+    const lines:{text:string;kind:'title'|'heading'|'body'}[] = [
+      {text:task.title,kind:'title'},
+      {text:(isAr?'التخصص: ':'Specialty: ')+label(task.specialty)+' · '+(isAr?'الحالة: ':'Status: ')+statusLabel(task.status)+' · '+(isAr?'تاريخ الإنشاء: ':'Created: ')+task.createdAt,kind:'body'},
+      {text:isAr?'الطلب الأصلي':'Original request',kind:'heading'},
+      {text:task.request,kind:'body'},
+      {text:isAr?'خطة المشروع ونتائج التنفيذ':'Project plan and execution results',kind:'heading'},
+    ];
+    task.steps.forEach((step,index)=>{
+      lines.push({text:(isAr?'الخطوة ':'Step ')+(index+1)+': '+step.text,kind:'heading'});
+      lines.push({text:(isAr?'الحالة: ':'Status: ')+(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review')),kind:'body'});
+      lines.push({text:(isAr?'المخرج المتوقع: ':'Expected output: ')+(step.output||'—'),kind:'body'});
+      lines.push({text:(isAr?'معيار الاكتمال: ':'Completion check: ')+(step.complete||'—'),kind:'body'});
+      if(step.result) lines.push({text:(isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\\n'+step.result,kind:'body'});
+      if(step.executedAt) lines.push({text:(isAr?'تاريخ التنفيذ: ':'Executed at: ')+step.executedAt,kind:'body'});
+      if(step.executionStatus==='failed') lines.push({text:(isAr?'سبب الفشل: ':'Failure reason: ')+(step.executionError||'—'),kind:'body'});
+    });
+    return lines;
+  };
+  const exportTaskWord = async (task:Task) => {
+    try {
+      const lib = await loadReportLibrary('https://esm.sh/docx@9.5.1');
+      const {Document,Packer,Paragraph,TextRun,HeadingLevel,AlignmentType} = lib;
+      const children = reportParagraphs(task).map(line=>new Paragraph({
+        heading:line.kind==='title'?HeadingLevel.TITLE:line.kind==='heading'?HeadingLevel.HEADING_2:undefined,
+        alignment:isAr?AlignmentType.RIGHT:AlignmentType.LEFT,
+        bidirectional:isAr,
+        children:[new TextRun({text:line.text,bold:line.kind!=='body',font:'Arial'})],
+        spacing:{after:line.kind==='heading'?140:90},
+      }));
+      const doc = new Document({sections:[{properties:{},children}]});
+      const blob = await Packer.toBlob(doc);
+      downloadReportBlob(blob,reportFileBase(task)+'.docx');
+    } catch(error) {
+      console.error('DOCX export failed',error);
+      window.alert(isAr?'تعذر إنشاء ملف DOCX. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.':'Could not create the DOCX file. Check your internet connection and try again.');
+    }
+  };
+  const exportTaskPdf = async (task:Task) => {
+    let container:HTMLDivElement|undefined;
+    try {
+      const lib = await loadReportLibrary('https://esm.sh/html2pdf.js@0.10.3');
+      const html2pdf = lib.default ?? lib;
+      container=document.createElement('div');
+      container.style.cssText='position:fixed;left:-10000px;top:0;width:780px;background:#fff;color:#20242a;padding:36px;font-family:Arial,Tahoma,sans-serif;line-height:1.8;direction:'+(isAr?'rtl':'ltr');
+      container.innerHTML=buildTaskReportHtml(task).replace(/^<!doctype html>[\\s\\S]*?<body>/i,'').replace(/<\\/body>[\\s\\S]*$/i,'');
+      document.body.appendChild(container);
+      await html2pdf().set({margin:10,filename:reportFileBase(task)+'.pdf',image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(container).save();
+    } catch(error) {
+      console.error('PDF export failed',error);
+      window.alert(isAr?'تعذر إنشاء PDF مباشرة. يمكنك استخدام خيار الطباعة ثم حفظ PDF.':'Direct PDF export failed. You can use Print and choose Save as PDF.');
+    } finally { container?.remove(); }
+  };
+  const exportTaskPowerPoint = async (task:Task) => {
+    try {
+      const lib = await loadReportLibrary('https://esm.sh/pptxgenjs@3.12.0');
+      const PptxGenJS = lib.default ?? lib;
+      const pptx = new PptxGenJS();
+      pptx.layout='LAYOUT_WIDE'; pptx.author='AL OMDA AI'; pptx.subject=task.request; pptx.title=task.title;
+      pptx.theme={headFontFace:'Arial',bodyFontFace:'Arial',lang:isAr?'ar-SA':'en-US'};
+      const addSlide=(title:string,body:string)=>{
+        const page=pptx.addSlide(); page.background={color:'101114'};
+        page.addText(title,{x:0.65,y:0.45,w:12,h:0.7,fontFace:'Arial',fontSize:25,bold:true,color:'D6B978',align:isAr?'right':'left',rtlMode:isAr});
+        page.addText(body,{x:0.75,y:1.45,w:11.8,h:5.3,fontFace:'Arial',fontSize:17,color:'F1F1EF',margin:0.12,fit:'shrink',valign:'top',align:isAr?'right':'left',rtlMode:isAr,paraSpaceAfterPt:12});
+        page.addText('AL OMDA AI',{x:0.7,y:7.05,w:12,h:0.2,fontSize:8,color:'8E9299',align:'center'});
+      };
+      addSlide(isAr?'ملخص المشروع':'Project overview',task.title+'\\n\\n'+(isAr?'الطلب: ':'Request: ')+task.request+'\\n\\n'+(isAr?'التخصص: ':'Specialty: ')+label(task.specialty)+' · '+(isAr?'الحالة: ':'Status: ')+statusLabel(task.status));
+      task.steps.forEach((step,index)=>{
+        const body=[(isAr?'الحالة: ':'Status: ')+(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review')),(isAr?'المخرج المتوقع: ':'Expected output: ')+(step.output||'—'),(isAr?'معيار الاكتمال: ':'Completion check: ')+(step.complete||'—'),step.result?((isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\\n'+step.result):'',step.executionStatus==='failed'?((isAr?'سبب الفشل: ':'Failure reason: ')+(step.executionError||'—')):''].filter(Boolean).join('\\n\\n');
+        addSlide((isAr?'الخطوة ':'Step ')+(index+1)+': '+step.text,body);
+      });
+      await pptx.writeFile({fileName:reportFileBase(task)+'.pptx'});
+    } catch(error) {
+      console.error('PowerPoint export failed',error);
+      window.alert(isAr?'تعذر إنشاء ملف PowerPoint. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.':'Could not create the PowerPoint file. Check your internet connection and try again.');
+    }
+  };
+  const exportTaskExcel = async (task:Task) => {
+    try {
+      const lib = await loadReportLibrary('https://esm.sh/xlsx@0.18.5');
+      const XLSX = lib.default ?? lib;
+      const rows = [
+        [isAr?'اسم المشروع':'Project',task.title],
+        [isAr?'الطلب الأصلي':'Original request',task.request],
+        [isAr?'التخصص':'Specialty',label(task.specialty)],
+        [isAr?'الحالة':'Status',statusLabel(task.status)],
+        [],
+        [isAr?'رقم الخطوة':'Step','',isAr?'الخطوة':'Description',isAr?'الحالة':'Status',isAr?'المخرج المتوقع':'Expected output',isAr?'معيار الاكتمال':'Completion check',isAr?'نتيجة التنفيذ':'Execution result',isAr?'حالة التنفيذ':'Execution status',isAr?'سبب الفشل':'Failure reason'],
+        ...task.steps.map((step,index)=>[index+1,'',step.text,step.state,step.output||'',step.complete||'',step.result||'',step.executionStatus||'',step.executionError||''])
+      ];
+      const sheet=XLSX.utils.aoa_to_sheet(rows);
+      sheet['!cols']=[{wch:14},{wch:4},{wch:42},{wch:18},{wch:38},{wch:38},{wch:55},{wch:18},{wch:45}];
+      const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,isAr?'تقرير المشروع':'Project report');
+      XLSX.writeFile(book,reportFileBase(task)+'.xlsx');
+    } catch(error) {
+      console.error('XLSX export failed',error);
+      window.alert(isAr?'تعذر إنشاء ملف Excel. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.':'Could not create the Excel file. Check your internet connection and try again.');
+    }
   };
   const printTaskReport = (task:Task) => {
     const reportWindow = window.open('','_blank');
@@ -799,7 +898,7 @@ function App() {
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
     const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
     return <div className="page-enter">
-      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTaskWord(task)}><FileText size={14}/>{isAr?'تصدير Word':'Export Word'}</button><button type="button" className="button button-quiet" onClick={()=>printTaskReport(task)}><FileText size={14}/>{isAr?'طباعة / PDF':'Print / PDF'}</button><Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link></div>)}
+      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>void exportTaskWord(task)}><FileText size={14}/>Word DOCX</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskPdf(task)}><FileText size={14}/>PDF</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskPowerPoint(task)}><FileText size={14}/>PowerPoint</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskExcel(task)}><FileText size={14}/>Excel XLSX</button><Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link></div>)}
       <div className="history-detail">
         <div>{renderPlan(task)}</div>
         <aside className="project-tracking">
