@@ -617,7 +617,7 @@ function App() {
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
                {getTaskSpreadsheet(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskSpreadsheet(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!)}><Sheet size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!)}><FileText size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
                  <div style={{overflowX:'auto',maxWidth:'100%'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:560,width:'100%',fontSize:12}}>
                    <thead><tr>{getTaskSpreadsheet(step.result)!.columns.map((column,index)=><th key={index} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead>
                    <tbody>{getTaskSpreadsheet(step.result)!.rows.map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,cellIndex)=><td key={cellIndex} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody>
