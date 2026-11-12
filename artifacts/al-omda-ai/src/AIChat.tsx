@@ -401,12 +401,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       // the user has just described, instead of losing them because the last sentence is short.
       const projectRequestContext = next.filter((message) => message.role === "user").slice(-6, -1).map((message) => message.content).join("\n\n").slice(-5000);
       const currentProjectSpecialty = detectProjectSpecialty(text);
-      const recentAssistantAlreadyLinkedProject = next.slice(-8).some((message) => message.role === "assistant" && Boolean(message.taskId));
-      // A short follow-up to a project already linked in this chat must not create a duplicate task.
-      // If no task exists yet, use the preceding user messages to recognize "ابدأ/نفّذ" follow-ups.
-      const projectSpecialty = currentProjectSpecialty ?? (recentAssistantAlreadyLinkedProject
-        ? null
-        : detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n")));
+      const linkedProjectMessage = [...next].reverse().find((message) => message.role === "assistant" && Boolean(message.taskId));
+      const explicitlyNewProject = /(?:مشروع جديد|ابدأ مشروع جديد|انشئ مشروع جديد|new project|start a new project)/i.test(text);
+      // Keep follow-up chat messages attached to the existing task. Only an explicit new-project request creates another task.
+      if (linkedProjectMessage?.taskId && !explicitlyNewProject) {
+        assistantMessage = { ...assistantMessage, taskId: linkedProjectMessage.taskId, taskTitle: linkedProjectMessage.taskTitle };
+      }
+      const projectSpecialty = currentProjectSpecialty && (!linkedProjectMessage?.taskId || explicitlyNewProject)
+        ? currentProjectSpecialty
+        : linkedProjectMessage?.taskId
+          ? null
+          : detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n"));
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
