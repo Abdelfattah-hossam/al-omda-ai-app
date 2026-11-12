@@ -229,7 +229,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
 
   const createWordAttachment = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }) => {
-    const lib = await import(/* @vite-ignore */ "https://esm.sh/docx@9.5.1");
+    const moduleUrl = "https://esm.sh/docx@9.5.1";
+    const lib = await import(/* @vite-ignore */ moduleUrl);
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
@@ -263,7 +264,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     ];
     const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
     const url = URL.createObjectURL(file);
-    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
   };
 
