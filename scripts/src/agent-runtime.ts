@@ -519,6 +519,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
   const failures: string[] = [];
   for (const provider of providers) {
     const started = Date.now();
+    let emitted = false;
     try {
       const headers = new Headers({ "content-type": "application/json" });
       if (provider.key) headers.set("authorization", "Bearer " + provider.key);
@@ -533,7 +534,6 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
         try { const payload = JSON.parse(detailText); if (typeof payload?.error?.message === "string") detail = payload.error.message.slice(0, 240); } catch { /* use bounded status fallback */ }
         throw new Error("HTTP " + response.status + ": " + detail);
       }
-      let emitted = false;
       const streamed = await consumeOpenAIChatStream(response, (token) => {
         emitted = true;
         onProgress?.({ type: "token", text: token, provider: provider.name });
@@ -543,7 +543,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
     } catch (error) {
       const message = error instanceof Error ? error.message : "request failed";
       failures.push(provider.name + ": " + message);
-      if (message.includes("stream") && onProgress) throw error;
+      if (emitted) throw error;
     }
   }
   throw new Error("All configured model endpoints failed. " + failures.join(" | ").slice(0, 500));
@@ -743,7 +743,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (action !== "run" && action !== "resume" && action !== "continue") throw new Error("Stream action must be run, resume, or continue.");
     res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-store", connection: "keep-alive", "x-accel-buffering": "no" });
     const emit = (event: Json) => {
-      if (!res.destroyed && !res.writableEnded) res.write("data: " + JSON.stringify(event) + "\\n\\n");
+      if (!res.destroyed && !res.writableEnded) res.write("data: " + JSON.stringify(event) + "\n\n");
     };
     try {
       const result = action === "run" ? await startAgent(body, emit)
