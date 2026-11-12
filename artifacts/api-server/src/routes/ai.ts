@@ -107,20 +107,20 @@ function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
 
 function parseExcelWorkbook(text: string): { title: string; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
     const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
-    const columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 30);
-    if (!columns.length) return null;
-    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 500).map((row: unknown[]) => columns.map((_: string, index: number) => String(row[index] ?? "").slice(0, 2000)));
-    if (!rows.length) return null;
-    return { title: value.title.trim().slice(0, 180) || "Excel workbook", columns, rows };
+    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.trim().length > 180 || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
+    if (value.columns.length < 1 || value.columns.length > 30 || value.rows.length < 1 || value.rows.length > 500) return null;
+    if (value.columns.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 180)) return null;
+    const columns = value.columns.map((item: string) => item.trim());
+    if (value.rows.some((row: unknown) => !Array.isArray(row) || row.length !== columns.length || row.some((cell: unknown) => (typeof cell !== "string" && typeof cell !== "number" && typeof cell !== "boolean") || String(cell).length > 2000))) return null;
+    const rows = value.rows.map((row: unknown[]) => row.map((cell: unknown) => String(cell)));
+    return { title: value.title.trim(), columns, rows };
   } catch { return null; }
 }
-
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
     const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
