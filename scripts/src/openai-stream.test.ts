@@ -26,10 +26,9 @@ test("streams assistant text incrementally and collects usage", async () => {
 });
 
 test("reassembles streamed function tool calls", async () => {
-  const argsJson = JSON.stringify({ path: "a.txt", content: "ok" });
   const result = await consumeOpenAIChatStream(streamResponse([
-    { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_", type: "function", function: { name: "files.", arguments: argsJson.slice(0, 9) } }] } }] },
-    { choices: [{ delta: { tool_calls: [{ index: 0, id: "abc", function: { name: "write", arguments: argsJson.slice(9) } }] }, finish_reason: "tool_calls" }] },
+    { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_", type: "function", function: { name: "files.", arguments: '{"path":' } }] } }] },
+    { choices: [{ delta: { tool_calls: [{ index: 0, id: "abc", function: { name: "write", arguments: '"a.txt","content":"ok"}' } }] }, finish_reason: "tool_calls" }] },
   ]));
   const calls = result.message.tool_calls as any[];
   assert.equal(calls.length, 1);
@@ -37,6 +36,7 @@ test("reassembles streamed function tool calls", async () => {
   assert.equal(calls[0].function.name, "files.write");
   assert.deepEqual(JSON.parse(calls[0].function.arguments), { path: "a.txt", content: "ok" });
 });
+
 test("rejects malformed stream events", async () => {
   const response = new Response("data: not-json\n\n", { status: 200 });
   await assert.rejects(() => consumeOpenAIChatStream(response), /malformed streaming event/);
