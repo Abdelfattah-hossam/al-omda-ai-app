@@ -578,8 +578,38 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
       if (!validatedWordDocument) {
-        await saveExecutionFailure("Word document failed structural validation after one repair attempt.");
-        res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        // A malformed structured response from one engine must not end the task.
+        // Ask the other configured engine to rebuild the deliverable from the original request.
+        const alternateProvider = providers.find((candidate) => candidate !== provider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter", [{
+              role: "user",
+              content: [
+                "Create the final Microsoft Word document content. Return ONLY valid JSON with exactly title, paragraphs, columns, and rows.",
+                "Read the original request and approved step carefully. Satisfy every requirement, number, format, language, and exclusion.",
+                wordTaskSevenColumnTable ? "The user requires exactly seven meaningful table columns." : wordTaskTableRequested ? "The user explicitly requested a table; include only relevant columns and rows." : "The user did not request a table. Return the complete document in paragraphs and empty columns and rows.",
+                wordTaskTableOnly ? "Blank table only: no paragraphs, exactly eight empty body rows, and no sample data." : "",
+                "Do not return an explanation, Markdown fence, code, or unrelated files.",
+                "Original request: " + customerRequest,
+                "Approved step: " + step.text,
+                "Previously approved work: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+              ].filter(Boolean).join("\n")
+            }], memory);
+            const alternateDocument = parseWordDocument(alternateAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
+            if (alternateDocument) {
+              answer = alternateAnswer;
+              validatedWordDocument = alternateDocument;
+              provider = alternateProvider;
+            }
+          } catch (error) {
+            console.warn("[Alternate Word task engine failed]", error instanceof Error ? error.message : "Unknown error");
+          }
+        }
+      }
+      if (!validatedWordDocument) {
+        await saveExecutionFailure("Word document failed structural validation after repair and alternate-engine attempts.");
+        res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته بمحركين. لم يتم خصم وحدات؛ احتفظنا بطلبك ومحتوى المشروع، ويمكنك إعادة تنفيذ الخطوة دون كتابة الطلب من جديد." });
         return;
       }
     }
