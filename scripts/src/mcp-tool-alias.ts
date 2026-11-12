@@ -3,7 +3,7 @@ export function createMcpToolAlias(serverName: string, toolName: string): string
     throw new Error("Invalid MCP server or tool name.");
   }
   const encoded = Buffer.from(JSON.stringify([serverName, toolName]), "utf8").toString("base64url");
-  if (encoded.length > 48) throw new Error("MCP server and tool names are too long for direct model tool advertisement.");
+  if (encoded.length > 55) throw new Error("MCP server and tool names are too long for direct model tool advertisement.");
   return "mcp_tool_" + encoded;
 }
 
