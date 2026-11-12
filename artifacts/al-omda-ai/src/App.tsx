@@ -892,6 +892,39 @@ function App() {
 
   const agentsPage = () => <div className="page-enter">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
+    <section className="panel panel-pad" style={{marginBottom:20}}>
+      <div className="section-head">
+        <div><span className="eyebrow">LOCAL EXECUTION</span><h2 className="section-title">{isAr?'الوكيل الذكي المحلي':'Local AI Agent'}</h2><p className="section-meta">{isAr?'وصّل بيئة التنفيذ على جهازك ليقرأ المشروع وينفذ المهام بموافقتك.':'Connect the runtime on your computer to inspect projects and execute approved tasks.'}</p></div>
+        <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'online-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:14}}>
+        <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} onChange={event=>setLocalAgentUrl(event.target.value)} placeholder="http://127.0.0.1:4318"/></label>
+        <label className="field-group"><span className="form-label">{isAr?'مفتاح الاتصال المحلي':'Local runtime token'}</span><input className="field" type="password" autoComplete="off" value={localAgentToken} onChange={event=>setLocalAgentToken(event.target.value)} placeholder={isAr?'أدخل المفتاح من إعدادات التشغيل':'Paste OMDA_AGENT_TOKEN'}/></label>
+      </div>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
+        <button type="button" className="button button-quiet button-small" onClick={checkLocalAgent} disabled={localAgentBusy || !localAgentToken.trim()}>{isAr?'اختبار الاتصال':'Test connection'}</button>
+        <span className="section-meta">{isAr?'الموديل المحلي يُضبط من إعدادات LM Studio أو مزود OpenAI-compatible.':'Configure the local model in LM Studio or another OpenAI-compatible provider.'}</span>
+      </div>
+      <div className="field-group" style={{marginTop:18}}>
+        <label className="form-label" htmlFor="local-agent-goal">{isAr?'المهمة التي تريد من الوكيل تنفيذها':'Task for the agent'}</label>
+        <textarea id="local-agent-goal" className="field" rows={4} value={localAgentGoal} onChange={event=>setLocalAgentGoal(event.target.value)} placeholder={isAr?'مثال: افحص ملفات المشروع، شغّل الاختبارات، وحدد الأخطاء قبل تعديل أي ملف.':'Example: Inspect this project, run its tests, and identify bugs before changing any files.'}/>
+      </div>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}}>
+        <button type="button" className="button button-primary" onClick={runLocalAgent} disabled={localAgentBusy || localAgentStatus!=='ready' || !localAgentGoal.trim()}><Bot size={15}/>{localAgentBusy?(isAr?'جارٍ التنفيذ...':'Working...'):(isAr?'ابدأ تنفيذ المهمة':'Run agent task')}<ArrowLeft size={13}/></button>
+        {localAgentMessage&&<span className="section-meta" role="status">{localAgentMessage}</span>}
+      </div>
+      {localAgentPending.length>0&&<div className="panel panel-pad" style={{marginTop:16,borderColor:'rgba(190,155,91,.45)'}}>
+        <h3 className="section-title">{isAr?'إجراءات تنتظر موافقتك':'Actions awaiting your approval'}</h3>
+        {localAgentPending.map(item=><div key={item.id} style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+          <strong>{item.tool}</strong><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,marginTop:6}}>{JSON.stringify(item.arguments,null,2)}</pre>
+        </div>)}
+        <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:12}}>
+          <button type="button" className="button button-primary button-small" onClick={()=>continueLocalAgent(true)} disabled={localAgentBusy}>{isAr?'موافقة على الإجراءات المعروضة':'Approve displayed actions'}</button>
+          <button type="button" className="button button-quiet button-small" onClick={()=>continueLocalAgent(false)} disabled={localAgentBusy}>{isAr?'رفض الإجراءات':'Deny actions'}</button>
+        </div>
+      </div>}
+      <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
+    </section>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
     <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
     <div className="market-grid">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
