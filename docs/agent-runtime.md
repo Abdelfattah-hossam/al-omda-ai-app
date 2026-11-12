@@ -14,7 +14,10 @@ The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating
 export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
-export OMDA_AGENT_ALLOWED_HOSTS="example.com"
+export OMDA_AGENT_ALLOWED_HOSTS="example.com,search-provider.example"
+# Optional Bing-compatible Search API (the endpoint host must be in the allowlist above):
+# export OMDA_AGENT_SEARCH_BASE_URL="https://search-provider.example/v7.0/search"
+# export OMDA_AGENT_SEARCH_API_KEY="keep-this-secret-in-your-shell"
 export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
@@ -33,7 +36,10 @@ $bytes = New-Object byte[] 32
 $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
-$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
+$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com,search-provider.example"
+# Optional Bing-compatible Search API (the endpoint host must be allowlisted above):
+# $env:OMDA_AGENT_SEARCH_BASE_URL = "https://search-provider.example/v7.0/search"
+# $env:OMDA_AGENT_SEARCH_API_KEY = "keep-this-secret-in-your-shell"
 $env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
@@ -128,6 +134,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `POST /v1/files/read` — read a UTF-8 workspace file (2 MB maximum).
 - `POST /v1/files/write` — write a UTF-8 workspace file (2 MB maximum).
 - `POST /v1/sessions/save` and `POST /v1/sessions/load` — persist and restore JSON session state under `.omda/sessions/`.
+- `web.search` agent tool — query a configured Bing-compatible Search API over HTTPS; the endpoint hostname must be allowlisted and the API key remains in the local runtime environment.
 - `POST /v1/http/request` — make a bounded HTTPS GET, HEAD, or OPTIONS request to an exact allowlisted hostname.
 - `POST /v1/terminal/execute` — run an approved executable with an argument array; disabled unless explicitly enabled.
 
