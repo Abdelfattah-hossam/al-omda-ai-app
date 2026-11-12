@@ -152,9 +152,9 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
   const location = locationMatch?.[1]?.trim();
   const platformMatch = clean.match(/\b(tiktok|instagram|facebook|youtube|linkedin|snapchat|web|ios|android)\b|تيك.?توك|انستجرام|انستغرام|فيسبوك|يوتيوب|لينكد.?ان|سناب(?: شات)?/i);
   const platform = platformMatch?.[0]?.trim();
-  const exactProductCountMatch = clean.match(/(?:بـ\s*)?(\d{1,4})\s*(منتج|منتجات)\b/i);
+  const exactProductCountMatch = clean.match(/(?:بـ\s*)?(\d{1,4})\s*(منتجات|منتج)(?=\s|$|[،.؛!?؟])/i);
   const exactProductCount = exactProductCountMatch?.[1];
-  const scaleMatch = clean.match(/(?:عدد|بواقع|حوالي|تقريبا|بـ)\s*(\d{1,6})\s*(منتج|منتجات|عميل|عملاء|موظف|موظفين|صفحة|صفحات|فيديو|فيديوهات|قطعة|قطع|users?|customers?|products?|pages?|videos?)/i);
+  const scaleMatch = clean.match(/(?:عدد|بواقع|حوالي|تقريبا|بـ)\s*(\d{1,6})\s*(منتجات|منتج|عملاء|عميل|موظفين|موظف|صفحات|صفحة|فيديوهات|فيديو|قطع|قطعة|users?|customers?|products?|pages?|videos?)(?=\s|$|[،.؛!?؟])/i);
   const scale = exactProductCount ? exactProductCount + ' منتجات' : scaleMatch ? scaleMatch[1] + ' ' + scaleMatch[2] : undefined;
   const context = [
     budget ? (ar ? 'الميزانية: ' : 'Budget: ') + budget : '',
