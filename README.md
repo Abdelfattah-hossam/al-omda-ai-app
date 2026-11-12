@@ -48,25 +48,25 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 ## Roadmap
 
-The following are goals, not claims of existing functionality:
+The following are future goals, not claims of existing functionality:
 
-1. Connect the local runtime to an agent loop with validated tool calls, approval gates, streaming progress, retries, and cancellation.
-2. Add browser automation for Chromium/Firefox with explicit per-site permissions and tab management.
+1. Connect the local execution runtime directly to regular chat conversations, with streaming progress, retries, cancellation, and durable job status.
+2. Add native browser automation for Chromium/Firefox with explicit per-site permissions and tab management; MCP browser servers are the interim route.
 3. Add desktop control through a separately installed, permissioned companion.
-4. Add MCP client support and a versioned Skills format.
-5. Add specialist agents for coding, testing, project analysis, documentation, and authorized security research.
-6. Add parallel multi-agent orchestration with shared task state and isolated workspaces.
-7. Add provider adapters for Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, LM Studio, and local models.
-8. Add scoped HTTPFlow comparison, authorized web recon, and CTF workflows with audit logs and safety limits.
-9. Add background job supervision, durable checkpoints, and restart recovery.
-10. Add release/update channels, migration checks, and signed update verification.
+4. Expand MCP beyond local stdio transport with remote transports, server lifecycle management, and a safer install/update experience.
+5. Add write-capable specialist delegation with isolated workspaces, shared task state, and per-agent approval routing.
+6. Expand provider adapters and routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, LM Studio, and other local models.
+7. Add richer HTTPFlow history and visual response diffs, plus additional authorized recon workflows with explicit scope and audit logs.
+8. Add live streaming token output and real-time generation speed.
+9. Add background job supervision, service installation, automatic updates, and stronger crash recovery.
+10. Add container-backed execution with resource, network, and filesystem isolation.
 
 ## Security model
 
 - Never commit API keys, access tokens, Supabase secrets, or local runtime tokens.
 - The local runtime binds to `127.0.0.1` and requires a bearer token.
 - Terminal execution is disabled unless the operator explicitly opts in.
-- HTTP inspection is limited to HTTPS hostnames explicitly allowlisted by the operator.
+- HTTP inspection is limited to explicitly allowlisted hostnames; HTTP/private targets require a separate local-CTF opt-in.
 - Security research features are for assets you own or are explicitly authorized to test.
 - Use a disposable account or VM when running untrusted code; host execution is not a sandbox.
 
