@@ -15,6 +15,7 @@ import { isBlockedNetworkAddress } from "./network-safety.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
+import { parseModelProviderConfig } from "./model-providers.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -556,11 +557,30 @@ async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void):
       throw new Error("Unknown agent tool.");
   }
 }
+async function loadAdditionalModelProviders(): Promise<Array<{ base: string; model: string; key: string; name: string }>> {
+  const configPath = resolve(workspaceRoot, ".omda", "models.json");
+  let actualPath: string;
+  try { actualPath = await realpath(configPath); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  if (!isInside(workspaceRoot, actualPath)) throw new Error("Model provider configuration escapes the workspace.");
+  const info = await stat(actualPath);
+  if (!info.isFile() || info.size > 32768) throw new Error("Model provider configuration must be a regular file no larger than 32 KB.");
+  let parsed: unknown;
+  try { parsed = JSON.parse(await readFile(actualPath, "utf8")); }
+  catch { throw new Error("Could not parse .omda/models.json as valid JSON."); }
+  return parseModelProviderConfig(parsed, process.env);
+}
+
 async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+  const configuredProviders = await loadAdditionalModelProviders();
   const providers = [
     { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary" },
+    ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback" },
-  ].filter((item) => item.base && item.model);
+  ].filter((item, index, all) => item.base && item.model && all.findIndex((other) => other.base === item.base && other.model === item.model) === index);
   if (!providers.length) throw new Error("Configure OMDA_AGENT_MODEL_NAME or OMDA_AGENT_FALLBACK_MODEL_NAME.");
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
