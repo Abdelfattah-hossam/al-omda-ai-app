@@ -147,7 +147,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const text = input.trim();
-    if (!text || loading || !signedIn || (usage && usage.remaining <= 0)) return;
+    if (!text || loading || historyLoading || !signedIn || (usage && usage.remaining <= 0)) return;
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
     setInput("");
@@ -271,12 +271,12 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
         <form onSubmit={sendMessage} style={{display:"grid",gap:10}}>
-          <textarea className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || !signedIn || usage?.remaining === 0}/>
+          <textarea className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between"}}>
             <button type="button" className={`button ${listening ? "button-primary" : "button-quiet"} button-small`} onClick={toggleVoiceInput} disabled={loading || !signedIn}><Mic size={14}/>{listening ? copy.stop : copy.mic}</button>
             <div style={{display:"flex",gap:8}}>
               {speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}
-              <button type="submit" className="button button-primary" disabled={!input.trim() || loading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={14} className="animate-spin"/> : <Send size={14}/>} {copy.send}</button>
+              <button type="submit" className="button button-primary" disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={14} className="animate-spin"/> : <Send size={14}/>} {copy.send}</button>
             </div>
           </div>
         </form>
