@@ -295,7 +295,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const usage = await reserveUnits(session.accessToken, 2);
     if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
-    const excelStep = isExcelRequest([{ role: "user", content: [task.title, task.request, step.text, step.output || "", step.complete || ""].join("\n") }]);
+    // Select the file format from the customer's original request only. Planner-generated titles, steps, and acceptance text must never turn an unrelated task into Excel.
+    const excelStep = isExcelRequest([{ role: "user", content: task.request }]);
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
