@@ -400,7 +400,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
       // the user has just described, instead of losing them because the last sentence is short.
       const projectRequestContext = next.filter((message) => message.role === "user").slice(-6, -1).map((message) => message.content).join("\n\n").slice(-5000);
-      const projectSpecialty = detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n"));
+      const currentProjectSpecialty = detectProjectSpecialty(text);
+      const recentAssistantAlreadyLinkedProject = next.slice(-8).some((message) => message.role === "assistant" && Boolean(message.taskId));
+      // A short follow-up to a project already linked in this chat must not create a duplicate task.
+      // If no task exists yet, use the preceding user messages to recognize "ابدأ/نفّذ" follow-ups.
+      const projectSpecialty = currentProjectSpecialty ?? (recentAssistantAlreadyLinkedProject
+        ? null
+        : detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n")));
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
