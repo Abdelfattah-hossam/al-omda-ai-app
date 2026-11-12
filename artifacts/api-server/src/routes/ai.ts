@@ -280,9 +280,9 @@ async function getOpenRouterFreeModels(): Promise<OpenRouterCatalogModel[]> {
     const payload = await response.json().catch(() => null) as any;
     const models = Array.isArray(payload?.data) ? payload.data.filter((item: any) => {
       if (!item || typeof item.id !== "string") return false;
+      // Only use explicitly free variants: some $0-priced catalog entries still require funded credits.
       const explicitFree = item.id.endsWith(":free");
-      const zeroPrice = Number(item.pricing?.prompt) === 0 && Number(item.pricing?.completion) === 0;
-      return (explicitFree || zeroPrice) && (Array.isArray(item.architecture?.output_modalities) ? item.architecture.output_modalities.includes("text") : true) && !/embedding|rerank|moderation|image-generation|text-to-speech|speech-to-text/i.test(item.id);
+      return explicitFree && (Array.isArray(item.architecture?.output_modalities) ? item.architecture.output_modalities.includes("text") : true) && !/embedding|rerank|moderation|image-generation|text-to-speech|speech-to-text/i.test(item.id);
     }).map((item: any) => ({ id: item.id, name: item.name, description: item.description, pricing: item.pricing, supported_parameters: item.supported_parameters, architecture: item.architecture })) : [];
     openRouterCatalogCache = { expiresAt: Date.now() + 10 * 60 * 1000, models };
     return models;
