@@ -1,6 +1,6 @@
 # Local Agent Runtime (experimental)
 
-The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating-system processes or control a user's desktop. Those capabilities belong in a separate local runtime on the user's own computer. This runtime is an opt-in execution companion. It is connected to the Agents workspace controls, while the regular AI chat still uses its existing hosted provider flow.
+The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating-system processes or control a user's desktop. Those capabilities belong in a separate local runtime on the user's own computer. This runtime is an opt-in execution companion. It is available from both the Agents workspace controls and the regular chat's Local Agent mode; hosted chat remains the default when Local Agent mode is off.
 
 ## Requirements
 
