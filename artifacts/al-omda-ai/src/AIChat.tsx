@@ -408,7 +408,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           const taskResponse = await fetch("/api/tasks", {
             method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
             body: JSON.stringify({
-              title: String(plan.title).slice(0, 160), request: [text, projectRequestContext ? "Relevant earlier project context (only details that apply):\\n" + projectRequestContext : ""].filter(Boolean).join("\\n\\n").slice(0, 10000), specialty: projectSpecialty, status: "review",
+              title: String(plan.title).slice(0, 160), request: [text, projectRequestContext ? "Relevant earlier project context (only details that apply):\n" + projectRequestContext : ""].filter(Boolean).join("\n\n").slice(0, 10000), specialty: projectSpecialty, status: "review",
               steps: plan.steps.map((step: any) => ({ id: crypto.randomUUID(), text: String(step.text || "").slice(0, 1200), output: String(step.output || "").slice(0, 1200), complete: String(step.complete || "").slice(0, 1200), state: "pending" })),
             }),
           });
