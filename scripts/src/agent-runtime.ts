@@ -577,7 +577,7 @@ async function loadAdditionalModelProviders(): Promise<Array<{ base: string; mod
 async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
 function isLocalModelProvider(base: string): boolean {
   try {
-    const hostname = new URL(base).hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+    const hostname = new URL(base).hostname.toLowerCase().replace("[", "").replace("]", "");
     return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
   } catch { return false; }
 }
