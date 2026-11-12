@@ -17,7 +17,7 @@ type Usage = {
 };
 
 function detectProjectSpecialty(request: string): "business" | "development" | "design" | "marketing" | "research" | "assistant" | null {
-  const value = request.normalize("NFKC").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "").trim();
+  const value = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
   const hasAction = /(?:عايز|عاوز|محتاج|اريد|أريد|اعمل|اعملي|أنشئ|انشئ|ابني|ابنيلي|نفذ|نفّذ|صمم|صمّم|طور|برمج|ابدأ|اشتغل على|كمل بناء|build|create|develop|make|implement|start|build me|create me)/i.test(value);
   const hasProject = /(?:مشروع|تطبيق|ابلكيشن|موقع|برنامج|متجر|نظام|منصة|لعبة|website|web app|mobile app|application|software|project|store|platform|system)/i.test(value);
   const fromScratch = /(?:من الصفر للنهاية|من البداية للنهاية|من الصفر|from scratch|end.to.end)/i.test(value);
@@ -413,14 +413,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           if (!taskResponse.ok || !taskData.id) throw new Error(taskData.error || "تعذر حفظ المشروع في سجل المهام.");
           assistantMessage = {
             ...assistantMessage,
-            content: assistantMessage.content + (ar ? "\\n\\nتم تسجيل المشروع تلقائيًا في **سجل المهام** بعنوان: " : "\\n\\nThis project was automatically added to **Task History**: ") + taskData.title,
+            content: assistantMessage.content + (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام** بعنوان: " : "\n\nThis project was automatically added to **Task History**: ") + taskData.title,
             taskId: taskData.id,
             taskTitle: taskData.title,
           };
           if (plan.usage) setUsage(plan.usage);
         } catch (taskError) {
           const detail = taskError instanceof Error ? taskError.message : "تعذر تسجيل المشروع.";
-          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\\n\\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\\n\\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\n\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
         }
       }
       const completed = [...next, assistantMessage].slice(-100);
