@@ -32,6 +32,37 @@ type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research
 type PlanStep = { id: string; text: string; state: StepState; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
+type TaskSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
+  if (!result?.startsWith("ALOMDA_XLSX_JSON:")) return null;
+  try {
+    const value = JSON.parse(result.slice("ALOMDA_XLSX_JSON:".length));
+    if (typeof value.title !== "string" || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
+    if (!value.columns.length || value.columns.length > 30 || value.rows.length > 500) return null;
+    if (value.rows.some((row: unknown) => !Array.isArray(row) || row.length !== value.columns.length)) return null;
+    return value as TaskSpreadsheet;
+  } catch { return null; }
+}
+async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
+  const primary = "https://esm.sh/xlsx@0.18.5";
+  const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+  let module: any;
+  try { module = await import(/* @vite-ignore */ primary); }
+  catch { module = await import(/* @vite-ignore */ fallback); }
+  const XLSX = module.default ?? module;
+  const sheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
+  sheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Products");
+  const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+  const link = document.createElement("a");
+  link.href = url; link.download = safeName + ".xlsx"; document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const translations = {
   ar: {
     overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
