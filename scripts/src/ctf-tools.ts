@@ -20,7 +20,7 @@ function caesar(value: string, shift: number): string {
 }
 
 function decodeHtml(value: string): string {
-  return value.replace(/&(#x[0-9a-f]+|#\\d+|amp|lt|gt|quot|apos|nbsp);/gi, (match, entity: string) => {
+  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (match, entity: string) => {
     const key = entity.toLowerCase();
     if (key === "amp") return "&";
     if (key === "lt") return "<";
@@ -53,14 +53,14 @@ export function decodeCtfValue(value: string, encoding: CtfEncoding, shift = 13)
       return Buffer.from(clean, "hex").toString("utf8");
     }
     case "url":
-      try { return decodeURIComponent(value.replace(/\\+/g, " ")); }
+      try { return decodeURIComponent(value.replace(/\+/g, " ")); }
       catch { throw new Error("Invalid percent-encoded URL text."); }
     case "rot13": return rot13(value);
     case "caesar":
       if (!Number.isInteger(shift) || shift < 0 || shift > 25) throw new Error("Caesar shift must be an integer from 0 to 25.");
       return caesar(value, shift);
     case "binary": {
-      const clean = value.replace(/\\s+/g, "").replace(/^(?:0b)/i, "");
+      const clean = value.replace(/\s+/g, "").replace(/^(?:0b)/i, "");
       if (!clean || clean.length % 8 !== 0 || !/^[01]+$/.test(clean)) throw new Error("Binary input must contain groups of eight bits.");
       return Buffer.from(clean.match(/.{8}/g)!.map((part) => Number.parseInt(part, 2))).toString("utf8");
     }
@@ -80,8 +80,8 @@ export function identifyHash(value: string): { candidates: string[]; length: num
   assertInput(value);
   const hash = value.trim();
   const candidates: string[] = [];
-  if (/^\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}$/.test(hash)) candidates.push("bcrypt");
-  if (/^\\$argon2(id|i|d)\\$/.test(hash)) candidates.push("Argon2");
+  if (/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(hash)) candidates.push("bcrypt");
+  if (/^\$argon2(id|i|d)\$/.test(hash)) candidates.push("Argon2");
   if (/^[a-fA-F0-9]{32}$/.test(hash)) candidates.push("MD5", "NTLM", "MD4 (possible)");
   if (/^[a-fA-F0-9]{40}$/.test(hash)) candidates.push("SHA-1");
   if (/^[a-fA-F0-9]{64}$/.test(hash)) candidates.push("SHA-256");
