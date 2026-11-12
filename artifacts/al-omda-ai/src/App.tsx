@@ -84,57 +84,68 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
   },
 };
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
-  const normalized = request.toLocaleLowerCase();
-  const topic = request.trim().replace(/[.!؟?]+$/,'').slice(0,76);
-  const arabic = language === 'ar';
-  const focusRules:Record<Specialty,Array<{pattern:RegExp; ar:string; en:string}>> = {
+  const clean = request.trim().replace(/\s+/g,' ');
+  const normalized = clean.toLocaleLowerCase();
+  const topic = clean.replace(/[.!؟?]+$/,'').slice(0,90);
+  const ar = language === 'ar';
+  const budget = clean.match(/(?:ميزانية|بميزانية|تكلفة|مبلغ)\s*[:：]?\s*([\d,.]+\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar)?)/i)?.[1];
+  const deadline = clean.match(/(?:خلال|قبل|مدة|في خلال)\s*([\d]+\s*(?:يوم|أيام|أسبوع|أسابيع|شهر|شهور|ساعة|ساعات|days?|weeks?|months?))/i)?.[1];
+  const audience = clean.match(/(?:يستهدف|استهداف|جمهور|عملاء)\s*([^،.؛!?؟]{3,36})/i)?.[1]?.trim();
+  const context = [
+    budget ? (ar ? 'الميزانية: ' : 'Budget: ') + budget : '',
+    deadline ? (ar ? 'المدة: ' : 'Timeline: ') + deadline : '',
+    audience ? (ar ? 'الفئة: ' : 'Audience: ') + audience : '',
+  ].filter(Boolean).join('؛ ');
+  type Flow = { pattern:RegExp; ar:string[]; en:string[] };
+  const flows:Record<Specialty,Flow[]> = {
     business:[
-      {pattern:/إطلاق|ابدأ|تأسيس|مشروع|شركة|متجر|منتج|launch|start|business|store|product/i,ar:'إطلاق المشروع وتحويل الفكرة إلى عرض واضح',en:'turning the idea into a clear project launch'},
-      {pattern:/بيع|مبيعات|عميل|عملاء|ربح|إيراد|sales|customer|revenue|profit/i,ar:'زيادة المبيعات وفهم العملاء',en:'improving sales and understanding customers'},
-      {pattern:/فريق|موظف|تشغيل|إدارة|operations|team|staff|manage/i,ar:'تنظيم التشغيل وتوزيع المسؤوليات',en:'organizing operations and responsibilities'},
+      {pattern:/متجر|تجارة إلكترونية|بيع أونلاين|e-?commerce|online store/i,ar:['تحديد المنتج والفئة المستهدفة والقيمة التي يقدمها المتجر','اختيار الموردين والتسعير وطريقة الدفع والتوصيل','رسم رحلة العميل من اكتشاف المنتج حتى إتمام الطلب','إعداد قائمة الإطلاق ومؤشرات المبيعات والمخزون'],en:['Define products, target buyers, and store value proposition','Choose suppliers, pricing, payment, and delivery','Map the customer journey from discovery to checkout','Prepare launch checklist and sales/inventory metrics']},
+      {pattern:/مطعم|كافيه|مقهى|café|cafe|restaurant/i,ar:['تحديد مفهوم المكان والعملاء والموقع المناسب','بناء قائمة المنتجات وحساب تكلفة وسعر كل منتج','تخطيط التشغيل والعمالة والموردين وتجربة العميل','إعداد ميزانية الافتتاح ومؤشرات المبيعات والهدر'],en:['Define the concept, customers, and location','Build the menu and calculate unit costs and prices','Plan operations, staffing, suppliers, and customer experience','Prepare opening budget and sales/waste metrics']},
+      {pattern:/مبيعات|بيع|عملاء|زبائن|sales|customer|revenue/i,ar:['تحديد العميل المحتمل واحتياجه وسبب الشراء','مراجعة العرض والسعر والاعتراضات المتوقعة','بناء مسار متابعة من أول تواصل حتى إتمام البيع','تحديد أهداف ومؤشرات التحويل والاحتفاظ بالعملاء'],en:['Identify likely buyers, needs, and purchase triggers','Review the offer, pricing, and likely objections','Build follow-up from first contact through closing','Set targets and conversion/retention metrics']},
     ],
     development:[
-      {pattern:/تطبيق|ابلكيشن|موبايل|app|mobile/i,ar:'تطوير التطبيق وتجربة استخدامه',en:'building the app and its user experience'},
-      {pattern:/موقع|ويب|website|web|صفحة/i,ar:'بناء الموقع وهيكل صفحاته',en:'building the website and its page structure'},
-      {pattern:/خطأ|مشكلة|إصلاح|bug|error|fix/i,ar:'تشخيص المشكلة وإصلاحها واختبار الحل',en:'diagnosing the issue, fixing it, and testing the solution'},
+      {pattern:/تطبيق|ابلكيشن|موبايل|app|mobile/i,ar:['تحديد المستخدمين والوظائف الأساسية للتطبيق','رسم الشاشات ومسارات الاستخدام وحالات الخطأ','تقسيم البناء إلى واجهة وخلفية وبيانات وتكاملات','وضع اختبارات القبول والأمان وخطة إصدار أول نسخة'],en:['Define users and core app features','Map screens, user flows, and error states','Split work into frontend, backend, data, and integrations','Set acceptance/security tests and first-release plan']},
+      {pattern:/موقع|ويب|صفحة|website|web page/i,ar:['تحديد هدف الموقع وصفحاته والجمهور المستهدف','ترتيب المحتوى والتنقل وأزرار اتخاذ الإجراء','تحديد متطلبات الواجهة والخادم والاستضافة والنطاق','اختبار الهاتف والسرعة والنماذج قبل النشر'],en:['Define website goals, pages, and audience','Organize content, navigation, and calls to action','Specify frontend, server, hosting, and domain needs','Test mobile layout, speed, and forms before release']},
+      {pattern:/خطأ|مشكلة|إصلاح|bug|error|fix/i,ar:['تسجيل الخطأ وخطوات إعادة ظهوره','تحديد الجزء المتأثر ورسائل الخطأ المرتبطة','اقتراح إصلاح محدد واختبار يمنع تكرار المشكلة','التحقق من عدم تأثر الوظائف الأخرى وتوثيق النتيجة'],en:['Record the bug and reproduction steps','Identify affected components and related errors','Propose a focused fix and regression test','Check for side effects and document the result']},
     ],
     design:[
-      {pattern:/شعار|لوجو|هوية|brand|logo|identity/i,ar:'تصميم الهوية والشعار',en:'designing the brand identity and logo'},
-      {pattern:/واجهة|تطبيق|موقع|ui|ux|interface|website|app/i,ar:'تصميم الواجهة وتجربة المستخدم',en:'designing the interface and user experience'},
-      {pattern:/صورة|بوستر|منشور|تصميم|image|poster|social post|graphic/i,ar:'إنتاج التصميم والمادة البصرية',en:'creating the visual asset and design'},
+      {pattern:/شعار|لوجو|هوية|brand|logo|identity/i,ar:['تحديد شخصية العلامة والجمهور والانطباع المطلوب','اختيار اتجاه بصري وألوان وخطوط مناسبة','إعداد نسخ الشعار وقواعد استخدام الهوية','اختبار الهوية على التطبيقات وتجهيز ملفات التسليم'],en:['Define brand personality, audience, and intended impression','Choose visual direction, colors, and typography','Prepare logo variations and identity usage rules','Test applications and package final assets']},
+      {pattern:/واجهة|تطبيق|موقع|ui|ux|interface|website|app/i,ar:['تحديد المستخدم والهدف والمهام الأساسية','رسم هيكل الصفحات ومسار المستخدم','تصميم المكونات وحالات الهاتف وسطح المكتب','مراجعة سهولة الاستخدام والتباين وتجهيز المواصفات'],en:['Define users, goals, and key tasks','Map page structure and user journeys','Design components and responsive states','Review usability/contrast and prepare specifications']},
+      {pattern:/صورة|بوستر|منشور|تصميم|image|poster|social post|graphic/i,ar:['تحديد رسالة التصميم والمنصة ومقاس النشر','اختيار فكرة بصرية مرتبطة مباشرة بالرسالة','تنفيذ التكوين والنصوص والتسلسل البصري','مراجعة المقروئية والمقاس وإخراج النسخة النهائية'],en:['Define message, platform, and output dimensions','Choose a visual concept tied directly to the message','Build composition, copy, and visual hierarchy','Check legibility and dimensions, then export']},
     ],
     marketing:[
-      {pattern:/تيك.?توك|فيديو|ريلز|محتوى|tiktok|video|reels|content/i,ar:'تخطيط المحتوى والفيديوهات',en:'planning content and short-form videos'},
-      {pattern:/إعلان|حملة|ترويج|ads|campaign|promot/i,ar:'إعداد الحملة الإعلانية والترويج',en:'building the advertising and promotion campaign'},
-      {pattern:/بيع|عملاء|جمهور|sales|customers|audience/i,ar:'الوصول للجمهور وتحويل الاهتمام إلى نتائج',en:'reaching the audience and converting interest into results'},
+      {pattern:/تيك.?توك|فيديو|ريلز|محتوى|tiktok|video|reels|content/i,ar:['تحديد الجمهور وهدف المحتوى ونبرة الحساب','بناء أفكار وسيناريوهات بخطاف واضح لكل فيديو','إعداد جدول نشر وعناوين وصيغ تصوير ودعوات للتفاعل','قياس الاحتفاظ بالمشاهدة والتفاعل وتحسين المحتوى التالي'],en:['Define audience, content goal, and account voice','Create ideas and scripts with a clear hook per video','Prepare publishing calendar, captions, formats, and CTAs','Measure retention and engagement to improve next content']},
+      {pattern:/إعلان|حملة|ترويج|ads|campaign|promot/i,ar:['تحديد هدف الحملة والجمهور والعرض','صياغة الرسالة والمواد الإعلانية ونسخ الاختبار','اختيار القنوات وتوزيع الميزانية وهيكل الحملة','تحديد تكلفة النتيجة ومؤشرات التحويل وقواعد الإيقاف'],en:['Define campaign objective, audience, and offer','Create messaging, ad assets, and test variations','Select channels, budget allocation, and campaign structure','Set cost/conversion metrics and stop rules']},
+      {pattern:/بيع|عملاء|جمهور|sales|customers|audience/i,ar:['تحديد شريحة الجمهور ومشكلتها الأساسية','صياغة عرض ورسالة تناسب مرحلة العميل','اختيار قنوات الوصول وطريقة جمع العملاء المحتملين','متابعة التحويل وتكلفة اكتساب العميل وجودة العملاء'],en:['Define audience segment and core problem','Craft an offer and message for the customer stage','Choose acquisition channels and lead-capture flow','Track conversion, acquisition cost, and lead quality']},
     ],
     research:[
-      {pattern:/مقارنة|أفضل|اختيار|compare|best|choose/i,ar:'مقارنة الخيارات ومعايير الاختيار',en:'comparing options and decision criteria'},
-      {pattern:/سوق|منافس|منافسين|market|competitor/i,ar:'تحليل السوق والمنافسين',en:'analyzing the market and competitors'},
-      {pattern:/دراسة|بحث|معلومات|مصادر|study|research|sources/i,ar:'جمع المعلومات والتحقق من المصادر',en:'gathering information and checking sources'},
+      {pattern:/مقارنة|أفضل|اختيار|compare|best|choose/i,ar:['تحديد الخيارات ومعايير القرار وأوزانها','جمع بيانات قابلة للمقارنة من مصادر موثوقة','تحليل الفروق ورصد المعلومات الناقصة والمتعارضة','عرض مقارنة وتوصية مرتبطة بالأدلة وحدودها'],en:['Define options, decision criteria, and weights','Collect comparable data from reliable sources','Analyze differences and flag missing/conflicting evidence','Present an evidence-based comparison and qualified recommendation']},
+      {pattern:/سوق|منافس|منافسين|market|competitor/i,ar:['تحديد السوق والنطاق الجغرافي وشرائح العملاء','حصر المنافسين وعروضهم وأسعارهم وقنواتهم','تحليل الفجوات والفرص ومخاطر الدخول','تلخيص النتائج والافتراضات وما يحتاج تحققاً ميدانياً'],en:['Define market, geography, and customer segments','Map competitors, offers, pricing, and channels','Analyze gaps, opportunities, and entry risks','Summarize findings, assumptions, and field checks']},
+      {pattern:/دراسة|بحث|معلومات|مصادر|study|research|sources/i,ar:['صياغة سؤال بحث محدد وحدود الموضوع','تحديد المصادر ومعايير قبول المعلومات','جمع الأدلة ومقارنة النتائج المتعارضة','فصل الحقائق عن الافتراضات والفجوات في الخلاصة'],en:['Frame a focused research question and scope','Set sources and evidence-quality criteria','Collect evidence and compare conflicting findings','Separate facts, assumptions, and gaps in the synthesis']},
     ],
     assistant:[
-      {pattern:/جدول|وقت|موعد|أسبوع|يوم|schedule|time|calendar|week|day/i,ar:'تنظيم الوقت والمواعيد',en:'organizing time and appointments'},
-      {pattern:/أولوية|مهام|ترتيب|إنجاز|priority|tasks|organize|productivity/i,ar:'ترتيب الأولويات والمهام',en:'prioritizing and organizing tasks'},
-      {pattern:/هدف|خطة|عادة|تطوير|goal|plan|habit|improve/i,ar:'تحويل الهدف إلى خطوات يومية',en:'turning the goal into daily actions'},
+      {pattern:/جدول|وقت|موعد|أسبوع|يوم|schedule|time|calendar|week|day/i,ar:['حصر الالتزامات والمواعيد والوقت المتاح','تقسيم المطلوب إلى فترات ومهام واقعية','ترتيب الجدول حسب الأولوية والطاقة والمدة','إضافة وقت احتياطي ومراجعة يومية للتقدم'],en:['List commitments, deadlines, and available time','Break work into realistic time blocks and tasks','Prioritize by importance, energy, and duration','Add buffer time and a daily progress review']},
+      {pattern:/أولوية|مهام|ترتيب|إنجاز|priority|tasks|organize|productivity/i,ar:['جمع المهام وتحديد موعد وأثر كل مهمة','تمييز العاجل والمهم وما يمكن تأجيله أو تفويضه','ترتيب قائمة تنفيذ قصيرة وواضحة','تحديد أول خطوة ومراجعة الإنجاز يومياً'],en:['Capture tasks and define each deadline and impact','Separate urgent, important, deferrable, and delegable work','Create a short actionable priority list','Choose the first action and review progress daily']},
+      {pattern:/هدف|خطة|عادة|تطوير|goal|plan|habit|improve/i,ar:['تحويل الهدف إلى نتيجة محددة قابلة للقياس','تحديد نقطة البداية والعوائق والموارد','تقسيم الهدف إلى خطوات صغيرة ومواعيد متابعة','اختيار مؤشر تقدم ومراجعة أسبوعية للتعديل'],en:['Turn the goal into a specific measurable outcome','Identify starting point, obstacles, and resources','Break it into small steps and check-in dates','Choose a progress measure and weekly review']},
     ],
   };
-  const focus = focusRules[specialty].find((rule)=>rule.pattern.test(normalized));
-  const focusText = focus ? (arabic ? focus.ar : focus.en) : (arabic ? 'تنفيذ طلبك وتحقيق النتيجة التي تقصدها' : 'delivering the outcome described in your request');
-  const base = localPlanTemplates[language][specialty];
-  return arabic
-    ? [
-        `فهم طلبك «${topic}» وتحديد معيار نجاح واضح`,
-        `${focusText}: حصر المتطلبات والموارد والقيود`,
-        `${base[2]} مع ترتيب الأولويات والمخرجات`,
-        `${base[3]} وتحديد ما يحتاج موافقتك قبل أي تنفيذ`,
-      ]
-    : [
-        `Understand “${topic}” and define a clear success measure`,
-        `Focus on ${focusText}: identify requirements, resources, and constraints`,
-        `${base[2]} with priorities and concrete deliverables`,
-        `${base[3]} and identify what needs your approval before any execution`,
-      ];
+  const generic:Record<Specialty,{ar:string[];en:string[]}> = {
+    business:{ar:['تحديد النتيجة التجارية والعميل المستهدف','حصر الموارد والتكاليف والقيود','اختيار مسار عمل ومخرجات قابلة للقياس','تحديد مؤشرات الأداء والمخاطر'],en:['Define business outcome and target customer','List resources, costs, and constraints','Choose a work path and measurable deliverables','Set performance metrics and risks']},
+    development:{ar:['تحديد المتطلبات والمستخدمين ومعيار القبول','تقسيم النظام إلى مكونات وبيانات وتكاملات','ترتيب البناء والاختبارات حسب الأولوية','مراجعة الأمان والأداء وخطة الإصدار'],en:['Define requirements, users, and acceptance criteria','Break system into components, data, and integrations','Sequence implementation and tests by priority','Review security, performance, and release plan']},
+    design:{ar:['تحديد الجمهور والرسالة والهدف البصري','اختيار اتجاه بصري وهيكل مناسب للمحتوى','إعداد التصميم ومراجعة نسخه','اختبار الوضوح والتناسق وتجهيز التسليم'],en:['Define audience, message, and visual objective','Choose visual direction and content structure','Create design and review variations','Check clarity and consistency, then prepare handoff']},
+    marketing:{ar:['تحديد الجمهور والهدف والرسالة','اختيار الفكرة والقنوات والمواد المطلوبة','بناء جدول نشر أو حملة بمخرجات واضحة','قياس النتائج وتحديد التحسينات'],en:['Define audience, objective, and message','Choose concept, channels, and required assets','Build a publishing or campaign schedule','Measure results and identify improvements']},
+    research:{ar:['تحديد سؤال البحث ونطاقه','اختيار المصادر وطريقة جمع الأدلة','تحليل المعلومات والتحقق من موثوقيتها','عرض النتائج والقيود والتوصيات'],en:['Define research question and scope','Select sources and evidence methods','Analyze information and verify reliability','Present findings, limitations, and recommendations']},
+    assistant:{ar:['تحديد النتيجة والموعد والأولوية','حصر المهام والموارد والعوائق','ترتيب خطوات عملية بوقت واقعي','تحديد نقطة متابعة ومقياس للإنجاز'],en:['Define outcome, deadline, and priority','List tasks, resources, and blockers','Sequence practical actions with realistic timing','Set a check-in point and completion measure']},
+  };
+  const flow = flows[specialty].find((item)=>item.pattern.test(normalized));
+  const steps = flow ? (ar ? flow.ar : flow.en) : generic[specialty][ar ? 'ar' : 'en'];
+  const detail = context ? (ar ? ' مع مراعاة ' : ', accounting for ') + context : '';
+  return [
+    (ar ? '1. تحديد المطلوب للطلب: «' : '1. Define the outcome for: “') + topic + (ar ? '».' : '”.'),
+    '2. ' + steps[0] + detail + '.',
+    '3. ' + steps[1] + detail + '.',
+    '4. ' + steps[2] + '، ' + steps[3] + '.',
+  ];
 }
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
