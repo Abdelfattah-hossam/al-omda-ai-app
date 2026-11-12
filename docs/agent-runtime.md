@@ -60,6 +60,10 @@ The agent exposes `web.search` to the lead agent and read-only specialists. It a
 Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
 
 
+### Local CTF analysis helpers
+
+The Agent has bounded local tools for Base64/Base64URL, hex, URL, ROT13, Caesar, binary, HTML-entity, and Unicode decoding; all Caesar shifts; common hash-format identification; and JWT header/payload decoding. These helpers process only the supplied text and do not perform network calls, password cracking, or signature verification. Hash identification is heuristic, and JWT output is explicitly marked unverified.
+
 ### Passive Web Recon and security research
 
 The Agent includes read-only tools for DNS A/AAAA/CNAME/MX/NS/TXT lookups, validated TLS certificate inspection, common HTTP security-header analysis, and `robots.txt` retrieval. Each hostname/URL must be explicitly allowlisted. DNS results containing private or reserved addresses are rejected by default; TLS inspection pins the connection to a validated resolved address and verifies the certificate. HTTP checks remain bounded and use the existing request allowlist.
