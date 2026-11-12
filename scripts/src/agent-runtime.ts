@@ -18,6 +18,7 @@ import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http
 import { buildCommandEnvironment } from "./command-env.js";
 import { parseModelProviderConfig } from "./model-providers.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
+import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -595,6 +596,10 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "recon.tls_certificate", description: "Inspect the validated TLS certificate for an exact allowlisted HTTPS hostname using a pinned resolved address.", parameters: { type: "object", properties: { hostname: { type: "string" } }, required: ["hostname"], additionalProperties: false } } },
   { type: "function", function: { name: "http.security_headers", description: "Audit common HTTP security response headers on an allowlisted HTTPS endpoint.", parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"], additionalProperties: false } } },
   { type: "function", function: { name: "http.robots_txt", description: "Read the public robots.txt file for an allowlisted HTTPS origin.", parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"], additionalProperties: false } } },
+  { type: "function", function: { name: "ctf.decode", description: "Decode a bounded local CTF text sample using a selected common encoding. No network access.", parameters: { type: "object", properties: { value: { type: "string" }, encoding: { type: "string", enum: ["base64", "base64url", "hex", "url", "rot13", "binary", "caesar", "html", "unicode"] }, shift: { type: "integer", minimum: 0, maximum: 25 } }, required: ["value", "encoding"], additionalProperties: false } } },
+  { type: "function", function: { name: "ctf.caesar_bruteforce", description: "Return all 26 Caesar cipher shifts for a bounded local text sample.", parameters: { type: "object", properties: { value: { type: "string" } }, required: ["value"], additionalProperties: false } } },
+  { type: "function", function: { name: "ctf.hash_identify", description: "Identify likely hash formats from length and syntax only; this does not crack or prove a hash algorithm.", parameters: { type: "object", properties: { value: { type: "string" } }, required: ["value"], additionalProperties: false } } },
+  { type: "function", function: { name: "ctf.jwt_decode", description: "Decode JWT header and payload locally without verifying the signature; always report that it is unverified.", parameters: { type: "object", properties: { token: { type: "string" } }, required: ["token"], additionalProperties: false } } },
   { type: "function", function: { name: "web.search", description: "Search the web through the configured Bing-compatible Search API. Search provider hostname must be allowlisted; the API key stays local.", parameters: { type: "object", properties: { query: { type: "string" }, count: { type: "integer", minimum: 1, maximum: 10 }, market: { type: "string" }, safeSearch: { type: "string", enum: ["Strict", "Moderate", "Off"] } }, required: ["query"], additionalProperties: false } } },
   { type: "function", function: { name: "http.request", description: "Inspect an HTTPS response from a hostname explicitly configured in the authorized target allowlist.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, headers: { type: "object", additionalProperties: { type: "string" } } }, required: ["url"], additionalProperties: false } } },
 ];
@@ -644,6 +649,14 @@ async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void):
       return await executeCommand(args);
     case "agent.delegate":
       return await delegateAgent(args, onProgress);
+    case "ctf.decode":
+      return { encoding: args.encoding, output: decodeCtfValue(String(args.value || ""), String(args.encoding || "") as any, typeof args.shift === "number" ? args.shift : 13) };
+    case "ctf.caesar_bruteforce":
+      return bruteForceCaesar(String(args.value || ""));
+    case "ctf.hash_identify":
+      return identifyHash(String(args.value || ""));
+    case "ctf.jwt_decode":
+      return decodeJwtUnverified(String(args.token || ""));
     case "recon.dns_records":
       return await dnsRecords(args);
     case "recon.tls_certificate":
@@ -782,7 +795,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
   await saveAgentState(id, state);
   return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
 }
-const READ_ONLY_TOOLS = AGENT_TOOLS.filter((tool: any) => ["skills.list", "files.list", "files.read", "http.request", "web.search", "recon.dns_records", "recon.tls_certificate", "http.security_headers", "http.robots_txt"].includes(tool.function.name));
+const READ_ONLY_TOOLS = AGENT_TOOLS.filter((tool: any) => ["skills.list", "files.list", "files.read", "http.request", "web.search", "recon.dns_records", "recon.tls_certificate", "http.security_headers", "http.robots_txt", "ctf.decode", "ctf.caesar_bruteforce", "ctf.hash_identify", "ctf.jwt_decode"].includes(tool.function.name));
 async function runReadOnlySubagent(role: string, goal: string): Promise<Json> {
   const evidence: Array<{ tool: string; summary: string }> = [];
   const messages: Array<Record<string, unknown>> = [
