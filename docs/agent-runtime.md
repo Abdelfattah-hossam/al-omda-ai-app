@@ -14,7 +14,8 @@ The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating
 export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
-export OMDA_AGENT_ALLOWED_HOSTS="example.com"
+export OMDA_AGENT_ALLOWED_HOSTS="example.com,127.0.0.1,localhost"
+export OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS="true"
 export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
@@ -29,7 +30,8 @@ $bytes = New-Object byte[] 32
 $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
-$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
+$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com,127.0.0.1,localhost"
+$env:OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS = "true"
 $env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
@@ -51,7 +53,7 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 }
 \`\`\`
 
-Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls that may change data pause for user approval. Treat installed MCP servers as trusted local programs.
+Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls pause for user approval. HTTP role comparisons also require approval. Configure `.omda/http-roles.json` from `.omda/http-roles.example.json`, and place credential values only in environment variables named by `headersFromEnv`. The local role config is git-ignored. Treat installed MCP servers as trusted local programs.
 
 The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. Local models do not require a provider API key.
 
@@ -61,6 +63,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 
 - `GET /health` — local runtime status.
 - `GET /v1/tools` — tool discovery, including available Skills.
+- `POST /v1/http/compare` — compare an allowlisted endpoint across two or more named roles configured in `.omda/http-roles.json`.
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
 - `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
 - `GET /v1/mcp/servers` and `GET /v1/mcp/tools` — inspect configured MCP servers and their advertised tools.
