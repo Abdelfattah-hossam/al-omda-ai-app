@@ -52,6 +52,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [showConversationList, setShowConversationList] = useState(false);
+  const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [memory, setMemory] = useState("");
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
@@ -412,12 +413,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     <div className="page-heading ai-chat-heading">
       <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{copy.title}</h1><p className="page-subtitle">{copy.subtitle}</p></div>
       <div className="ai-chat-actions">
-        <span className="status-chip"><Bot size={13}/>{ar ? "توجيه تلقائي" : "Auto routing"}</span>
+        <button type="button" className="button button-quiet button-small ai-routing-button" onClick={()=>setShowRoutingInfo((value)=>!value)} aria-expanded={showRoutingInfo}><Bot size={13}/>{ar ? "توجيه تلقائي" : "Auto routing"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>setShowConversationList((value)=>!value)} aria-expanded={showConversationList}><History size={14}/>{ar ? "المحادثات" : "Chats"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>void createConversation()} disabled={loading || historyLoading}><Plus size={14}/>{ar ? "محادثة جديدة" : "New chat"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai/usage")}><Settings2 size={14}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
       </div>
     </div>
+    {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار تلقائيًا المحرك المجاني المتاح والأنسب لنوع طلبك." : "Automatic routing is on. AL OMDA selects the best available free engine for your request."}</span></div>}
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
