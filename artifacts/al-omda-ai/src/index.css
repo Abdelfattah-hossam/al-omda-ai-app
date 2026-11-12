@@ -1090,3 +1090,44 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .app-shell > .mobile-nav > a svg { width: 18px !important; height: 18px !important; }
   .app-shell > .main-area { padding-bottom: 86px !important; }
 }
+
+
+/* Desktop: the workspace navigation belongs in a single bottom dock, not at either side. */
+@media (min-width: 801px) {
+  .app-shell > .sidebar { display: none !important; }
+  .app-shell > .main-area,
+  [dir="rtl"] .app-shell > .main-area { margin: 0 !important; padding-bottom: 92px !important; }
+  .app-shell > .mobile-nav {
+    position: fixed !important;
+    inset-inline: 24px !important;
+    bottom: 14px !important;
+    z-index: 50 !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 9px 14px !important;
+    border: 1px solid rgba(120,169,255,.28) !important;
+    border-radius: 18px !important;
+    background: rgba(7,11,23,.96) !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,.42), 0 0 22px rgba(120,169,255,.12) !important;
+    backdrop-filter: blur(22px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  }
+  .app-shell > .mobile-nav > a {
+    display: flex !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 6px 4px !important;
+    color: #a5b0ca !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+  }
+  .app-shell > .mobile-nav > a span { font-size: 11px !important; line-height: 1.2 !important; }
+  .app-shell > .mobile-nav > a svg { width: 19px !important; height: 19px !important; }
+  .app-shell .curtain-trigger { display: none !important; }
+}
