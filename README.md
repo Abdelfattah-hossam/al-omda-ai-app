@@ -30,6 +30,7 @@ A separate Node.js runtime now provides the first local tools:
 - Streaming local Agent responses in the main chat and Agents workspace, with a live estimated tokens-per-second indicator and final provider usage when available.
 - Parallel read-only delegation to 2–4 specialist agents.
 - Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
+- Direct model-visible MCP function discovery from configured tool schemas, with per-call approval and generic call fallback.
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
 - Optional native desktop control through the MIT-licensed Computer Use MCP companion (screen, accessibility, mouse, keyboard, clipboard, and app/window tools), gated by local Agent MCP approvals.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
