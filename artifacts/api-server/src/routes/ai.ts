@@ -424,7 +424,33 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       }
     }
     if (!parsed) {
-      res.status(502).json({ error: "تعذر اعتماد خطة المشروع بعد مراجعتها. لم يتم خصم وحدات؛ حاول مرة أخرى." });
+      const alternateProvider = providers.find((candidate) => candidate !== provider);
+      if (alternateProvider) {
+        try {
+          const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter", [{
+            role: "user",
+            content: [
+              "Create a concise, accurate project plan. Return ONLY valid JSON with this exact shape: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
+              "Create 3 to 5 sequential steps, each with one concrete result and an objective completion check. Preserve every explicit requirement, quantity, budget, platform, location, deadline, language, and exclusion.",
+              "Do not add generic filler, duplicate work, or unnecessary files. Create downloadable files only if explicitly requested. Each step describes work AL OMDA will perform.",
+              "Original request: " + request,
+              "Relevant same-project context: " + context,
+              "Previous invalid output: " + answer.text.slice(0, 10000)
+            ].join("\n")
+          }], memory);
+          const alternatePlan = parsePlan(alternateAnswer.text);
+          if (alternatePlan) {
+            answer = alternateAnswer;
+            parsed = alternatePlan;
+            provider = alternateProvider;
+          }
+        } catch (error) {
+          console.warn("[Alternate project plan engine failed]", error instanceof Error ? error.message : "Unknown error");
+        }
+      }
+    }
+    if (!parsed) {
+      res.status(502).json({ error: "تعذر اعتماد خطة المشروع بعد مراجعة المحركين. لم يتم خصم وحدات؛ احتفظنا بطلبك ويمكنك المحاولة دون إعادة كتابته." });
       return;
     }
     const chargedUsage = await reserveUnits(session.accessToken, 1);
