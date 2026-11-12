@@ -1131,3 +1131,47 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .app-shell > .mobile-nav > a svg { width: 19px !important; height: 19px !important; }
   .app-shell .curtain-trigger { display: none !important; }
 }
+
+
+/* Desktop navigation correction: target the actual rendered layout elements. */
+@media screen and (min-width: 801px) {
+  .app-shell .sidebar { display: none !important; }
+  .app-shell .main-area { width: 100% !important; margin: 0 !important; margin-inline: 0 !important; padding-bottom: 104px !important; }
+  .app-shell nav.mobile-nav {
+    display: grid !important;
+    position: fixed !important;
+    left: 24px !important;
+    right: 24px !important;
+    inset-inline: 24px !important;
+    top: auto !important;
+    bottom: 14px !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 66px !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    align-items: center !important;
+    padding: 8px 14px !important;
+    padding-bottom: 8px !important;
+    border: 1px solid rgba(120,169,255,.28) !important;
+    border-radius: 18px !important;
+    background: rgba(7,11,23,.96) !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,.42), 0 0 22px rgba(120,169,255,.12) !important;
+    backdrop-filter: blur(22px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  }
+  .app-shell nav.mobile-nav > a {
+    display: flex !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 5px 3px !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+  .app-shell nav.mobile-nav > a svg { width: 19px !important; height: 19px !important; }
+  .app-shell .curtain-trigger { display: none !important; }
+}
