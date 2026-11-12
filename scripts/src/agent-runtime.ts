@@ -695,7 +695,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
       continue;
     }
     try {
-      const result = await runTool(call);
+      const result = await runTool(call, onProgress);
       appendMcpToolResult(state.messages, call, result, imageQueue);
     } catch (error) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
@@ -742,7 +742,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = await readBody(req);
     const action = body.action;
     delete body.action;
-    if (action !== "run" && action !== "resume" && action !== "continue") throw new Error("Stream action must be run, resume, or continue.");
+    if (action !== "run" && action !== "resume" && action !== "continue" && action !== "delegate") throw new Error("Stream action must be run, resume, continue, or delegate.");
     res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-store", connection: "keep-alive", "x-accel-buffering": "no" });
     const emit = (event: Json) => {
       if (!res.destroyed && !res.writableEnded) res.write("data: " + JSON.stringify(event) + "\n\n");
@@ -750,7 +750,8 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
       const result = action === "run" ? await startAgent(body, emit)
         : action === "resume" ? await resumeAgent(body, emit)
-        : await continueAgent(body, emit);
+        : action === "continue" ? await continueAgent(body, emit)
+        : await delegateAgent(body, emit);
       emit({ type: "complete", result });
     } catch (error) {
       emit({ type: "error", error: error instanceof Error ? error.message.slice(0, 300) : "Agent stream failed." });
