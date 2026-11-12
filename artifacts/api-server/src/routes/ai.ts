@@ -43,9 +43,19 @@ function getProviders() {
   };
 }
 
-function chooseProviders(messages: ChatMessage[]) {
+function isCodingRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
-  const coding = /code|coding|debug|typescript|javascript|python|react|node|sql|برمج|كود|بايثون|جافاسكريبت|خطأ|تصحيح/i.test(last);
+  return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
+}
+
+function systemPrompt(coding: boolean): string {
+  const base = "You are AL OMDA AI, a helpful Arabic and English assistant. Match the user's language. Be accurate, practical, honest about uncertainty, and never claim to have executed code or changed external systems unless a tool actually did so.";
+  if (!coding) return base + " Explain clearly and organize longer answers with concise headings and steps.";
+  return base + " You are also a senior software engineering assistant. For programming requests: identify the language and environment; provide complete, runnable code when enough context exists; use fenced Markdown code blocks with the correct language; explain where each file belongs and how to run/test it; mention dependencies and assumptions; preserve existing architecture and styling unless asked to change them; never invent test results. For debugging, identify the likely root cause, explain the smallest safe fix, and show the exact corrected code. If essential context is missing, ask one focused question instead of guessing. Prefer secure defaults and never expose secrets.";
+}
+
+function chooseProviders(messages: ChatMessage[]) {
+  const coding = isCodingRequest(messages);
   const configured = getProviders();
   const order = coding ? ["gemini", "openrouter"] : ["openrouter", "gemini"];
   return order.filter((provider) => configured[provider as keyof typeof configured]);
@@ -63,9 +73,9 @@ async function callGemini(messages: ChatMessage[]): Promise<{ text: string; mode
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: "You are AL OMDA AI, a helpful Arabic and English assistant. Give accurate, practical answers. For code, provide complete, safe examples and explain important assumptions." }] },
+      systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages)) }] },
       contents,
-      generationConfig: { maxOutputTokens: 1400, temperature: 0.4 },
+      generationConfig: { maxOutputTokens: isCodingRequest(messages) ? 3000 : 1400, temperature: 0.4 },
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -83,7 +93,7 @@ async function callOpenRouter(messages: ChatMessage[]): Promise<{ text: string; 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: "You are AL OMDA AI, a helpful Arabic and English assistant. Give accurate, practical answers. For code, provide complete, safe examples and explain important assumptions." }, ...messages], max_tokens: 1400, temperature: 0.4 }),
+    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages)) }, ...messages], max_tokens: isCodingRequest(messages) ? 3000 : 1400, temperature: 0.4 }),
   });
   const payload = await response.json().catch(() => null) as any;
   if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ")" + (providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."));
