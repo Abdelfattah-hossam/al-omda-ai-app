@@ -34,7 +34,7 @@ type Task = { id: string; title: string; request: string; specialty: Specialty; 
 
 const translations = {
   ar: {
-    overview:'الرئيسية', aiChat:'الشات الذكي', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
+    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
     workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'فوّض المهام بثقة. واحتفظ بزمام كل خطوة.', heroText:'اختر اختصاصاً، راجع الخطة المقترحة، ثم قرر بنفسك ما الذي يتقدم.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لتراجعها قبل التنفيذ.', planDisclaimer:'سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لمراجعتها قبل بدء التنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة على الخطوة', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'تم اعتماد التصور فقط. لا يوجد تنفيذ فعلي أو إجراء خارجي.',
@@ -715,7 +715,7 @@ function App() {
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
   else page = dashboardPage();
-  const pageTitleKey = path.startsWith('/ai') ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   return <div className="app-shell" dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
