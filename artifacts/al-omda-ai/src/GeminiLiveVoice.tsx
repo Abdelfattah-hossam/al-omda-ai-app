@@ -101,6 +101,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     setConnecting(true);
     setStatus(labels.connecting);
     try {
+      // Request microphone permission before creating a billable temporary Gemini session.
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      streamRef.current = stream;
+
       const tokenResponse = await fetch("/api/ai/live-token", {
         method: "POST",
         credentials: "same-origin",
@@ -113,8 +121,6 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         throw new Error(diagnostic || labels.unavailable);
       }
 
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
       const context: AudioContext = new AudioContextClass();
       contextRef.current = context;
       await context.resume();
@@ -175,10 +181,6 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         };
       });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
-      streamRef.current = stream;
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
       sourceRef.current = source;
