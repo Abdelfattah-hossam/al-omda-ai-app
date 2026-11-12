@@ -14,8 +14,7 @@ The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating
 export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
-export OMDA_AGENT_ALLOWED_HOSTS="example.com,127.0.0.1,localhost"
-export OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS="true"
+export OMDA_AGENT_ALLOWED_HOSTS="example.com"
 export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
@@ -30,8 +29,7 @@ $bytes = New-Object byte[] 32
 $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
-$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com,127.0.0.1,localhost"
-$env:OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS = "true"
+$env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
 $env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
@@ -76,6 +74,17 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `POST /v1/terminal/execute` — run an approved executable with an argument array; disabled unless explicitly enabled.
 
 All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` is an explicit exception for isolated local CTF labs; exact allowlisting is still required. Redirects are revalidated.
+
+## Local CTF lab mode
+
+Keep local targets disabled for normal browsing and bug-bounty work. Only when running an isolated local challenge, set the exact lab hosts and explicitly enable HTTP/private-address access:
+
+```sh
+export OMDA_AGENT_ALLOWED_HOSTS="127.0.0.1,localhost"
+export OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS="true"
+```
+
+Do not add broad private-network ranges or enable this mode when testing ordinary public targets.
 
 ## Terminal execution warning
 
