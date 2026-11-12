@@ -586,7 +586,7 @@ function App() {
         <div className="hero-side"><WandSparkles size={29} strokeWidth={1.2}/></div>
       </section>
       <div className="stats-grid">
-        {[{label:t('activeTasks'),value:active,foot:t('reviewStatus'),icon:Activity},{label:t('approvedPlans'),value:approved,foot:t('noExecution'),icon:BadgeCheck},{label:t('specialists'),value:6,foot:t('allSix'),icon:Bot},{label:t('totalTasks'),value:tasks.length,foot:t('preview'),icon:FileText}].map((stat,index)=><div className="panel stat-card" key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-label">{stat.label}</div><div className="stat-value"><span>{stat.value}</span><stat.icon size={16} color="#c6a76c"/></div><div className="stat-foot">{stat.foot}</div></div>)}
+        {[{label:t('activeTasks'),value:active,foot:t('reviewStatus'),icon:Activity,href:'/history?status=review'},{label:t('approvedPlans'),value:approved,foot:t('noExecution'),icon:BadgeCheck,href:'/history?status=approved'},{label:t('specialists'),value:6,foot:t('allSix'),icon:Bot,href:'/agents'},{label:t('totalTasks'),value:tasks.length,foot:t('preview'),icon:FileText,href:'/history'}].map((stat,index)=><Link to={stat.href} href={stat.href} className="panel stat-card stat-card-link" key={stat.label} data-testid={`stat-card-${index}`} aria-label={stat.label}><div className="stat-label">{stat.label}</div><div className="stat-value"><span>{stat.value}</span><stat.icon size={16} color="#c6a76c"/></div><div className="stat-foot">{stat.foot}</div></Link>)}
       </div>
       <div className="notice-bar" style={{marginBottom:16}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{authUser?t('authConfigured'):t('demoNotice')}</span></div>
       <div className="dashboard-grid">
@@ -639,7 +639,11 @@ function App() {
   };
 
   const historyPage = () => {
-    const filtered = tasks.filter((task)=>`${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase()));
+    const statusFilter = new URLSearchParams(window.location.search).get('status');
+    const filtered = tasks.filter((task)=>
+      (!statusFilter || (statusFilter === 'review' ? task.status === 'review' || task.status === 'paused' : task.status === statusFilter)) &&
+      `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
+    );
     return <div className="page-enter">
       {pageHeading(t('history'),t('history'),t('historySub'),<Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link>)}
       <div className="field-group" style={{maxWidth:460}}><div style={{position:'relative'}}><Search size={15} style={{position:'absolute',insetInlineStart:13,top:13,color:'#818891'}}/><input className="field" style={{paddingInlineStart:38}} placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
