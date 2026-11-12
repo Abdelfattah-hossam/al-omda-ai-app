@@ -55,7 +55,7 @@ function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
-  return /(?:ساعة.{0,55}(?:سطح المكتب|desktop|نافذة|الشاشة)|(?:سطح المكتب|desktop|نافذة سطح المكتب).{0,55}ساعة|(?:تطبيق|برنامج|app|application|موقع|website).{0,55}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,55}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
+  return /(?:ساعة.{0,70}(?:سطح\s*المكتب?|desktop|نافذة|الشاشة)|(?:سطح\s*المكتب?|desktop|نافذة سطح المكتب).{0,70}ساعة|(?:تطبيق|برنامج|app|application|موقع|website|ساعة).{0,70}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|عاوز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,70}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
