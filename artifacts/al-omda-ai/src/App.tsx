@@ -136,17 +136,32 @@ function cleanSubmittedRequest(value:string):string {
 
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
   const clean = request.trim().replace(/\s+/g,' ');
-  const normalized = clean.toLocaleLowerCase();
+  const normalized = clean.toLocaleLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g,'')
+    .replace(/[إأآ]/g,'ا')
+    .replace(/ـ/g,'');
   const ar = language === 'ar';
-  const budget = clean.match(/(?:ميزانية|بميزانية|تكلفة|مبلغ)\s*[:：]?\s*([\d,.]+\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar)?)/i)?.[1];
-  const deadlineMatch = clean.match(/(?:خلال|في خلال|قبل|لمدة|مدة|على مدار)\s*(?:(\d+)\s*)?(يوم(?:ين)?|أيام|أسبوع(?:ين)?|أسابيع|شهر(?:ين)?|شهور|ساعة(?:ين)?|ساعات|days?|weeks?|months?)/i);
+  // Extract practical constraints before choosing a specialty-specific workflow.
+  const budgetMatch = clean.match(/(?:ميزانية|بميزانية|التكلفة|تكلفة|مبلغ|رأس المال|رأس مال)\s*[:：]?\s*([\d,.]+\s*(?:درهم(?:اً)?|دولار(?:اً)?|جنيه(?:اً)?|ريال(?:اً)?|aed|usd|egp|sar)?)/i)
+    ?? clean.match(/([\d,.]+\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar))\s*(?:ميزانية|كرأس مال)/i);
+  const budget = budgetMatch?.[1]?.trim();
+  const deadlineMatch = clean.match(/(?:خلال|في خلال|قبل|لمدة|مدة|على مدار|في غضون)\s*(?:(\d+)\s*)?(يوم(?:ين)?|أيام|اسبوع(?:ين)?|أسابيع|شهر(?:ين)?|شهور|ساعه(?:ين)?|ساعات|days?|weeks?|months?|hours?)/i);
   const deadline = deadlineMatch ? [deadlineMatch[1], deadlineMatch[2]].filter(Boolean).join(' ') : undefined;
-  const audienceMatch = clean.match(/(?:يستهدف|تستهدف|استهداف|الجمهور المستهدف|الفئة المستهدفة|جمهور|عملاء)\s*(?:هو|هي)?\s*([^،.؛!?؟]{2,40})/i);
+  const audienceMatch = clean.match(/(?:يستهدف|تستهدف|استهداف|الجمهور المستهدف|الفئة المستهدفة|موجه(?:ة)? الى|موجه(?:ة)? ل|جمهور|عملاء)\s*(?:هو|هي)?\s*([^،.؛!?؟]{2,45})/i);
   const audience = audienceMatch?.[1]?.trim().replace(/^(?:الـ|ال)\s*/, '');
+  const locationMatch = clean.match(/(?:في|داخل|بمدينة|بمنطقة|بالسوق)\s+([\p{L}][\p{L}\s-]{1,28}?)(?=\s+(?:مع|خلال|لمدة|بميزانية|ويستهدف|وتستهدف|على|لدى)|[،.؛!?؟]|$)/u);
+  const location = locationMatch?.[1]?.trim();
+  const platformMatch = clean.match(/\b(tiktok|instagram|facebook|youtube|linkedin|snapchat|web|ios|android)\b|تيك.?توك|انستجرام|انستغرام|فيسبوك|يوتيوب|لينكد.?ان|سناب(?: شات)?/i);
+  const platform = platformMatch?.[0]?.trim();
+  const scaleMatch = clean.match(/(?:عدد|بواقع|حوالي|تقريبا)\s*(\d{1,6})\s*(منتج|منتجات|عميل|عملاء|موظف|موظفين|صفحة|صفحات|فيديو|فيديوهات|قطعة|قطع|users?|customers?|products?|pages?|videos?)/i);
+  const scale = scaleMatch ? scaleMatch[1] + ' ' + scaleMatch[2] : undefined;
   const context = [
     budget ? (ar ? 'الميزانية: ' : 'Budget: ') + budget : '',
     deadline ? (ar ? 'المدة: ' : 'Timeline: ') + deadline : '',
     audience ? (ar ? 'الفئة: ' : 'Audience: ') + audience : '',
+    location ? (ar ? 'النطاق المكاني: ' : 'Location: ') + location : '',
+    platform ? (ar ? 'المنصة: ' : 'Platform: ') + platform : '',
+    scale ? (ar ? 'الحجم: ' : 'Scale: ') + scale : '',
   ].filter(Boolean).join('؛ ');
   type Flow = { pattern:RegExp; ar:string[]; en:string[] };
   const flows:Record<Specialty,Flow[]> = {
