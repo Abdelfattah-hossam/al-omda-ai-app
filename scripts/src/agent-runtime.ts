@@ -539,6 +539,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
+    await saveAgentState(id, state);
   }
   await saveAgentState(id, state);
   return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
@@ -600,6 +601,7 @@ async function startAgent(body: Json): Promise<Json> {
       { role: "user", content: goal },
     ],
   };
+  await saveAgentState(id, state);
   return await runAgentLoop(id, state);
 }
 async function resumeAgent(body: Json): Promise<Json> {
