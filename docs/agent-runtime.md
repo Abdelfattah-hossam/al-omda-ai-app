@@ -43,12 +43,23 @@ pnpm --filter @workspace/scripts agent:runtime
 
 To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated allowlist of executable names (for example `node,npx`).
 
-### Optional browser automation through Playwright MCP
+### Browser automation through Playwright MCP
 
-The local runtime can connect to a Playwright browser MCP server over stdio. Copy `.omda/mcp-servers.browser.example.json` into the workspace as `.omda/mcp-servers.json`, then allow `npx` in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`). The example launches Chromium through `@playwright/mcp`; the first launch may download the package and browser runtime. Restart the local Agent runtime, then inspect the advertised MCP tools from the Agents panel or chat.
+A setup helper creates or updates the Playwright MCP entry without deleting other MCP servers already configured in your workspace.
 
-Browser actions are executed on the computer running the local runtime, not in the hosted Cloudflare Worker. MCP tool calls require explicit approval in the current runtime policy. Use a dedicated browser profile and test only accounts and sites you own or are authorized to access. The example is optional and does not install or launch a browser until you configure it.
- Then create `.omda/mcp-servers.json` inside the workspace:
+From the repository root, run one of:
+
+```sh
+pnpm --filter @workspace/scripts browser:setup -- chromium
+pnpm --filter @workspace/scripts browser:setup -- firefox
+pnpm --filter @workspace/scripts browser:setup -- webkit
+```
+
+The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the current directory when that variable is unset). It refuses to overwrite malformed JSON. The browser MCP package is fetched by `npx` on first launch; install the matching Playwright browser runtime if prompted.
+
+Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
+
+The current browser bridge is Playwright MCP over local stdio. It provides browser control through the MCP tools; it is not yet a native browser panel with integrated tab thumbnails, profile management, or cross-device remote control.
 
 ```json
 {
