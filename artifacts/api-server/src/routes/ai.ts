@@ -58,7 +58,7 @@ function chooseProviders(messages: ChatMessage[]) {
 async function callGemini(messages: ChatMessage[]): Promise<{ text: string; model: string }> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("Gemini is not configured.");
-  const model = process.env.GEMINI_FREE_MODEL?.trim() || "gemini-2.5-flash";
+  const model = "gemini-3.8-flash";
   const contents = messages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }],
@@ -85,7 +85,7 @@ async function callCompatible(provider: "groq" | "openrouter", messages: ChatMes
   if (!key) throw new Error(`${provider} is not configured.`);
   // Groq's developer Free plan is rate-limited and does not charge; OpenRouter is pinned to its free-only router.
   const model = isGroq
-    ? (process.env.GROQ_FREE_MODEL?.trim() || "openai/gpt-oss-20b")
+    ? "openai/gpt-oss-20b"
     : "openrouter/free";
   const endpoint = isGroq
     ? "https://api.groq.com/openai/v1/chat/completions"
