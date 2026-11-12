@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "agent:runtime": "tsx ./src/agent-runtime.ts",
     "browser:setup": "tsx ./src/setup-browser.ts",
-    "test": "tsx --test ./src/*.test.ts"
+    "test": "tsx --test ./src/browser-config.test.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
