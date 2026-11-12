@@ -676,8 +676,8 @@ function App() {
         ])
       : [[task.title,task.request,label(task.specialty),statusLabel(task.status),'','','','','',task.createdAt]]);
     const escapeCell = (value:unknown) => '"' + String(value ?? '').replace(/"/g,'""') + '"';
-    const csv = [headers,...rows].map((row) => row.map(escapeCell).join(',')).join('\\r\\n');
-    const blob = new Blob(['\\uFEFF',csv], { type:'text/csv;charset=utf-8;' });
+    const csv = [headers,...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
+    const blob = new Blob(['\uFEFF',csv], { type:'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
