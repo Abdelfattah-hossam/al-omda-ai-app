@@ -42,6 +42,24 @@ async function resolveWritePath(input: unknown): Promise<string> {
   if (typeof input !== "string" || !input.trim() || input.includes("\0")) throw new Error("A valid workspace-relative path is required.");
   const candidate = resolve(workspaceRoot, input);
   if (!isInside(workspaceRoot, candidate) || candidate === workspaceRoot) throw new Error("Path is outside the configured workspace.");
+
+  // Validate the nearest existing ancestor before creating missing parent folders.
+  // This permits nested file creation without following a symlink outside the workspace.
+  let ancestor = dirname(candidate);
+  while (true) {
+    try {
+      const actualAncestor = await realpath(ancestor);
+      if (!isInside(workspaceRoot, actualAncestor)) throw new Error("Symlink escapes are not allowed.");
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      const next = dirname(ancestor);
+      if (next === ancestor) throw new Error("Could not resolve a safe workspace parent directory.");
+      ancestor = next;
+    }
+  }
+
+  await mkdir(dirname(candidate), { recursive: true });
   const parent = await realpath(dirname(candidate));
   if (!isInside(workspaceRoot, parent)) throw new Error("Symlink escapes are not allowed.");
   try {
