@@ -160,14 +160,14 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
       if (item && typeof item === "object") {
         const heading = typeof item.heading === "string" ? item.heading.trim() : typeof item.title === "string" ? item.title.trim() : "";
         const body = typeof item.content === "string" ? item.content.trim() : typeof item.text === "string" ? item.text.trim() : "";
-        return [heading, body].filter(Boolean).join("\\n\\n");
+        return [heading, body].filter(Boolean).join("\n\n");
       }
       return "";
     };
     if (!Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
     const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle.trim().slice(0, 180) : "مستند جديد";
     let paragraphs: string[] = [];
-    if (typeof rawParagraphs === "string") paragraphs = rawParagraphs.split(/\\n\\s*\\n/).map((part: string) => part.trim()).filter(Boolean);
+    if (typeof rawParagraphs === "string") paragraphs = rawParagraphs.split(/\n\s*\n/).map((part: string) => part.trim()).filter(Boolean);
     else if (Array.isArray(rawParagraphs)) paragraphs = rawParagraphs.map(toText).filter(Boolean);
     else return null;
     // Preserve long documents instead of rejecting them for having many small sections.
