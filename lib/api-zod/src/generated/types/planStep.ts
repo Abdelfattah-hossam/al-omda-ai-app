@@ -22,5 +22,7 @@ export interface PlanStep {
   complete?: string;
   result?: string;
   executedAt?: string;
+  executionStatus?: "succeeded" | "failed";
+  executionError?: string;
   state: PlanStepState;
 }
