@@ -421,13 +421,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError("");
     try {
-      const response = await fetch(agentRuntimeUrl.replace(/\\/+$/, "") + "/v1/agent/continue", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
+      const response = await fetch(agentRuntimeUrl.replace(/\/+$/, "") + "/v1/agent/continue", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر استكمال الوكيل المحلي." : "Could not continue the local agent."));
       const pending = Array.isArray(data.pending) ? data.pending : [];
       const reply = typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.");
-      const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\\n\\nتمت الموافقة على الإجراءات المطلوبة." : "\\n\\nRequested actions were approved.") : (ar ? "\\n\\nتم رفض الإجراءات المطلوبة." : "\\n\\nRequested actions were denied.")) } : item);
-      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\\n\\nهناك إجراءات أخرى تحتاج موافقتك." : "\\n\\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || target.agentPending.sessionId, calls: pending } } : {}) };
+      const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\n\nتمت الموافقة على الإجراءات المطلوبة." : "\n\nRequested actions were approved.") : (ar ? "\n\nتم رفض الإجراءات المطلوبة." : "\n\nRequested actions were denied.")) } : item);
+      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || target.agentPending.sessionId, calls: pending } } : {}) };
       const completed = [...updated, resultMessage].slice(-100); setMessages(completed); await saveHistory(completed);
       if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "فشل استكمال الوكيل." : "Agent continuation failed.")); }
@@ -456,9 +456,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (agentMode) {
         if (imageForRequest) throw new Error(ar ? "وضع Agent المحلي لا يستقبل الصور حاليًا. أوقف وضع Agent لتحليل الصورة." : "Local Agent mode does not accept images yet. Turn it off to analyze the image.");
         if (!agentRuntimeUrl.trim() || !agentToken.trim()) throw new Error(ar ? "أدخل عنوان Runtime المحلي ورمز الاتصال أولًا." : "Enter the local runtime URL and access token first.");
-        const endpoint = agentRuntimeUrl.replace(/\\/+$/, "");
-        const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\\n\\n").slice(-12000);
-        const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\\n\\n");
+        const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+        const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\n\n").slice(-12000);
+        const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\n\n");
         const route = agentSessionId ? "/v1/agent/resume" : "/v1/agent/run";
         const response = await fetch(endpoint + route, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify(agentSessionId ? { sessionId: agentSessionId, goal } : { goal }) });
         const data = await response.json().catch(() => ({}));
