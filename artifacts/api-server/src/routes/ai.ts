@@ -49,8 +49,8 @@ function getLatestUserRequest(messages: ChatMessage[]): string {
 }
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
-  const explicitWord = /\\b(word|docx|\\.docx)\\b|ملف\\s*(?:و?ورد|word)|مستند\\s*(?:و?ورد|word)|جدول.{0,60}(?:و?ورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,60}جدول/i.test(request);
+  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
+  const explicitWord = /\b(word|docx|\\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|جدول.{0,60}(?:و?ورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,60}جدول/i.test(request);
   const asksForDownloadableDocument = /(?:ملف|مستند).{0,55}(?:تحميل|جاهز|اعمل|اعملي|عايز|عاوز|محتاج|انشئ|أنشئ)|(?:تحميل|جاهز للتحميل).{0,55}(?:ملف|مستند)/i.test(request);
   return asksForSevenFieldTable || explicitWord || asksForDownloadableDocument;
 }
