@@ -5,6 +5,7 @@ import { lookup } from "node:dns/promises";
 import { realpath, mkdir, readFile, writeFile, readdir, stat, rename } from "node:fs/promises";
 import { isIP } from "node:net";
 import { dirname, relative, resolve, sep } from "node:path";
+import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -542,6 +543,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
+    const imageQueue: McpImageObservation[] = [];
     const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || ""));
     if (approvalCalls.length) {
       // Execute read-only/allowlisted research calls now, but pause all writes and
@@ -549,11 +551,12 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       for (const call of calls.filter((item) => !approvalCalls.includes(item))) {
         try {
           const result = await runTool(call);
-          state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result).slice(0, 50000) });
+          appendMcpToolResult(state.messages, call, result, imageQueue);
         } catch (error) {
           state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
         }
       }
+      appendMcpImageObservations(state.messages, imageQueue);
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
       return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
@@ -561,11 +564,12 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
     for (const call of calls) {
       try {
         const result = await runTool(call);
-        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result).slice(0, 50000) });
+        appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
+    appendMcpImageObservations(state.messages, imageQueue);
     await saveAgentState(id, state);
   }
   await saveAgentState(id, state);
@@ -652,6 +656,7 @@ async function continueAgent(body: Json): Promise<Json> {
   const pending = state.pendingToolCalls || [];
   if (!pending.length) throw new Error("This agent session has no pending approval request.");
   const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
+  const imageQueue: McpImageObservation[] = [];
   delete state.pendingToolCalls;
   for (const call of pending) {
     if (!approved.has(call.id)) {
@@ -665,6 +670,7 @@ async function continueAgent(body: Json): Promise<Json> {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
     }
   }
+  appendMcpImageObservations(state.messages, imageQueue);
   return await runAgentLoop(id, state);
 }
 
