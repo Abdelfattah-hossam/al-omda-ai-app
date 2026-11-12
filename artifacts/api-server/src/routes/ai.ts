@@ -380,7 +380,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       "Language: " + (language === "ar" ? "Arabic" : "English"),
       "Return ONLY valid JSON, no Markdown fences, with this exact shape:",
       '{ "title": "short project title", "steps": [{ "text": "actionable step", "output": "specific deliverable", "complete": "objective acceptance check" }] }',
-      "Include 4 to 7 sequential, specific steps tailored to the actual request. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. Only create downloadable files when the customer explicitly requested them; avoid duplicate or unrelated files and use the fewest deliverables that fully satisfy the request. Other steps should produce the actual work or a clear, understandable result. This is a proposed plan only; do not claim execution has happened.",
+      "Include 3 to 5 sequential, specific steps tailored to the actual request. Keep the plan concise: one clear work result per step, no duplicate steps, and no separate files unless the customer explicitly requested files. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. Only create downloadable files when the customer explicitly requested them; avoid duplicate or unrelated files and use the fewest deliverables that fully satisfy the request. Other steps should produce the actual work or a clear, understandable result. This is a proposed plan only; do not claim execution has happened.",
       "Current project request: " + request,
       "Earlier conversation context (use only details that clearly belong to this same project; ignore unrelated topics): " + context
     ].join("\n") }];
@@ -402,7 +402,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
         let jsonText = raw.trim();
         if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
         const value = JSON.parse(jsonText);
-        if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 8 ||
+        if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 5 ||
           value.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || !step.output.trim() || step.output.length > 1200 || typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > 1200)) return null;
         return value;
       } catch { return null; }
@@ -410,7 +410,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     let parsed = parsePlan(answer.text);
     if (!parsed) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair your previous project plan. Return ONLY valid JSON with a title and 4 to 7 sequential steps. Every step must contain non-empty text, output, and complete strings.",
+        "Repair your previous project plan. Return ONLY valid JSON with a title and 3 to 5 sequential steps. Every step must contain non-empty text, output, and complete strings.",
         "Preserve the exact customer request, constraints, quantities, budget, platform, location, and deadline. Avoid generic filler. Each step must describe work AL OMDA will perform and a clear deliverable.",
         "Required schema: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
         "Original customer request: " + request,
