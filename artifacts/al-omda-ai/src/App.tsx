@@ -22,7 +22,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
+  X, Menu, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -267,6 +267,7 @@ const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang =
 function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
+  const [curtainOpen, setCurtainOpen] = useState(false);
   const { language, tasks, name, org, notices } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
@@ -519,7 +520,7 @@ function App() {
   const navLink = (item:typeof navItems[number], mobile = false) => {
     const Icon = item.icon;
     const active = item.path === '/' ? path === '/' : path.startsWith(item.path);
-    return <Link key={item.path} href={item.path} className={`${mobile ? '' : 'nav-link'}${active ? ' active' : ''}`} data-testid={`link-${item.key}`}>
+    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? '' : 'nav-link'}${active ? ' active' : ''}`} data-testid={`link-${item.key}`}>
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
@@ -802,13 +803,21 @@ function App() {
       <div className="sidebar-bottom"><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="crumb">{t(pageTitleKey)}</div><div className="top-actions">
+      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div><div className="top-actions">
         <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
         <button className="lang-button" onClick={toggleLanguage} data-testid="button-language">{t('languageSwitch')}</button>
         <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
       </div></header>
       <div className="content-wrap">{page}</div>
     </main>
+    {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
+      <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
+        <div className="curtain-head"><Link href="/" className="brand-lockup" onClick={()=>setCurtainOpen(false)}><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
+        <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
+        <div className="curtain-caption">{t('workspace')}</div><nav className="curtain-nav">{navItems.map(item=>navLink(item))}</nav>
+        <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
+      </aside>
+    </div>}
     <nav className="mobile-nav" aria-label={t('menu')}>{navItems.map((item)=>navLink(item,true))}{navLink({path:'/profile',key:'profile',icon:UserRound},true)}</nav>
   </div>;
 }
