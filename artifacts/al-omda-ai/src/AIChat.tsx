@@ -424,7 +424,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError("");
     try {
-      const endpoint = agentRuntimeUrl.replace(/\\/+$/, "");
+      const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
       let streamedText = "";
       const startedAt = Date.now();
       const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
