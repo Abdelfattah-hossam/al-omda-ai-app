@@ -13,6 +13,7 @@ import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
+import { buildCommandEnvironment } from "./command-env.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -247,7 +248,7 @@ async function executeCommand(body: Json): Promise<Json> {
   return await new Promise((resolveResult) => {
     const child = spawn(command, args as string[], {
       cwd, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      env: { PATH: process.env.PATH || "", HOME: process.env.HOME || "", USERPROFILE: process.env.USERPROFILE || "", CI: "1", NO_COLOR: "1" },
+      env: buildCommandEnvironment(process.env),
     });
     let stdout = "";
     let stderr = "";
