@@ -8,6 +8,7 @@ import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 import { buildMcpEnvironment } from "./mcp-env.js";
 import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web-search.js";
+import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
@@ -26,7 +27,7 @@ const BODY_LIMIT = 1024 * 1024;
 const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean));
 const SEARCH_BASE_URL = process.env.OMDA_AGENT_SEARCH_BASE_URL?.trim() || "";
 const SEARCH_API_KEY = process.env.OMDA_AGENT_SEARCH_API_KEY?.trim() || "";
-const ALLOWED_ORIGINS = new Set((process.env.OMDA_AGENT_APP_ORIGINS || "").split(",").map((origin) => origin.trim()).filter(Boolean));
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.OMDA_AGENT_APP_ORIGINS);
 const ALLOW_LOCAL_LAB_TARGETS = process.env.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true";
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
 
@@ -750,7 +751,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const origin = req.headers.origin;
   if (origin) {
-    if (!ALLOWED_ORIGINS.has(origin)) { send(res, 403, { error: "This browser origin is not allowed to connect to the local agent runtime." }); return; }
+    if (!isAllowedBrowserOrigin(origin, ALLOWED_ORIGINS)) { send(res, 403, { error: "This browser origin is not allowed to connect to the local agent runtime." }); return; }
     res.setHeader("access-control-allow-origin", origin);
     res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
     res.setHeader("access-control-allow-headers", "authorization, content-type");
@@ -759,7 +760,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     res.setHeader("vary", "Origin");
   }
   if (req.method === "OPTIONS") {
-    if (!origin || !ALLOWED_ORIGINS.has(origin)) { send(res, 403, { error: "Browser origin is not allowed." }); return; }
+    if (!isAllowedBrowserOrigin(origin, ALLOWED_ORIGINS)) { send(res, 403, { error: "Browser origin is not allowed." }); return; }
     res.writeHead(204, { "cache-control": "no-store" }); res.end(); return;
   }
   const url = new URL(req.url || "/", "http://127.0.0.1");
