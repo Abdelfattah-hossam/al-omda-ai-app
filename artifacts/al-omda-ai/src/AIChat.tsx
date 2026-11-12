@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bot, Copy, LoaderCircle, Mic, Send, Trash2, Volume2, VolumeX } from "lucide-react";
+import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string };
@@ -258,6 +259,14 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
   };
 
+  const handleLiveTranscript = (role: "user" | "assistant", text: string) => {
+    setMessages((current) => {
+      const next = [...current, { role, content: text } as ChatMessage].slice(-100);
+      void saveHistory(next);
+      return next;
+    });
+  };
+
   const copyAnswer = async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -271,8 +280,20 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const speak = (text: string) => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = ar ? "ar-SA" : "en-US";
+    const spoken = text
+      .replace(/```[\\s\\S]*?```/g, ar ? " كود برمجي. " : " Code block. ")
+      .replace(/\\bAPI\\b/gi, ar ? "إيه بي آي" : "A P I")
+      .replace(/\\bAI\\b/gi, ar ? "إيه آي" : "A I")
+      .replace(/\\bChatGPT\\b/gi, ar ? "شات جي بي تي" : "Chat G P T")
+      .replace(/\\bOpenRouter\\b/gi, ar ? "أوبن راوتر" : "Open Router")
+      .replace(/\\bGemini\\b/gi, ar ? "جيمناي" : "Gemini")
+      .replace(/\\bCloudflare\\b/gi, ar ? "كلاود فلير" : "Cloudflare")
+      .replace(/شات/g, "تشات")
+      .replace(/\\s+/g, " ")
+      .trim();
+    const utterance = new SpeechSynthesisUtterance(spoken);
+    utterance.lang = ar ? "ar-EG" : "en-US";
+    utterance.rate = 0.94;
     utterance.onstart = () => setSpeaking(true);
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
@@ -323,6 +344,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           <button type="button" className="button button-quiet button-small" onClick={()=>inputRef.current?.focus()}>{copy.keyboardDictation}</button>
         </div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
+        <div style={{ marginBottom: 12, padding: 12, border: "1px solid var(--border,#343a44)", borderRadius: 12 }}>
+          <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
+          <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
+        </div>
         <form onSubmit={sendMessage} style={{display:"grid",gap:10}}>
           <textarea ref={inputRef} className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between"}}>
