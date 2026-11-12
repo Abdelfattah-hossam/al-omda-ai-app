@@ -28,6 +28,8 @@ export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
 ```
 
+The local runtime applies an exact browser-origin allowlist for CORS and browser Private Network Access preflights. Configure only the deployed app origin and local development origins you actually use. Wildcards, `null`, path-bearing URLs, credentialed URLs, and non-HTTPS remote origins are ignored rather than broadening the allowlist. Local HTTP origins are accepted only for loopback development (`localhost`, `127.0.0.1`, or `::1`).
+
 ## Start on Windows PowerShell
 
 ```powershell
