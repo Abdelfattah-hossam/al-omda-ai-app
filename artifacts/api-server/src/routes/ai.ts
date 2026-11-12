@@ -55,7 +55,15 @@ function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
-  return /(?:ساعة.{0,70}(?:سطح\s*(?:ال)?مكتب|desktop|نافذة|الشاشة)|(?:سطح\s*(?:ال)?مكتب|desktop|نافذة سطح المكتب).{0,70}ساعة|(?:تطبيق|برنامج|app|application|موقع|website|ساعة).{0,70}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|عاوز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,70}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
+  const desktop = /desktop|سطح\\s*(?:ال)?مكتب|نافذة سطح المكتب/i;
+  const clock = /ساعة|clock|hour|watch|وقت|time/i;
+  const appAction = /اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|عاوز|محتاج|create|build|make|develop|generate/i;
+  const appNoun = /تطبيق|برنامج|app|application|موقع|website|ساعة|clock/i;
+  return (
+    (desktop.test(request) && clock.test(request)) ||
+    (appNoun.test(request) && appAction.test(request)) ||
+    /(?:desktop|سطح\\s*(?:ال)?مكتب).{0,100}(?:تطبيق|برنامج|app|نافذة)|(?:تطبيق|برنامج|app).{0,100}(?:desktop|سطح\\s*(?:ال)?مكتب)/i.test(request)
+  );
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
