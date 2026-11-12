@@ -49,26 +49,27 @@ function getLatestUserRequest(messages: ChatMessage[]): string {
 }
 function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  return /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
+  const mentionsExcel = /\\b(excel|xlsx|spreadsheet|workbook)\\b|إكسل|اكسيل|اكسل|ملف\\s*(?:جداول|جدول بيانات)|جدول\\s*بيانات|شيت\\s*اكسل/i.test(request);
+  const explicitCreation = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|إنشاء|جهز|جهزي|صمم|حوّل|حول|export|create|generate|make|build|prepare|download)/i.test(request);
+  const directFileRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:لي\\s*)?(?:ملف|شيت|جدول بيانات|مصنف|excel|xlsx|spreadsheet|workbook)/i.test(request);
+  return mentionsExcel && (explicitCreation || directFileRequest);
 }
 function isExplicitWordFileRequest(request: string): boolean {
-  return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
+  return /(?:ملف|مستند|document|file)\\s*.{0,45}(?:و?ورد|word|docx)|(?:و?ورد|word|docx).{0,45}(?:ملف|مستند|document|file)|(?:اعمل|اعملي|أنشئ|انشئ|جهز|create|generate|make|download).{0,40}(?:و?ورد|word|docx)/i.test(request);
 }
 function isWordTableRequest(request: string): boolean {
   if (/(?:بدون|من غير|لا تضف|لا تعمل|مش عايز|مش محتاج|without|no)\s*(?:أي\s*)?(?:جدول|table)/i.test(request)) return false;
   return /جدول|table|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
-  const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
-  const desktop = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i;
-  const clock = /ساعة|clock|hour|watch|وقت|time/i;
-  const appAction = /اعمل|اعملي|انشئ|انشاء|ابني|بناء|صمم|برمج|نفذ|تنفذ|تنفيذ|عايز|عاوز|محتاج|create|build|make|develop|generate/i;
-  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|متجر|ساعة|clock/i;
-  return (
-    (desktop.test(normalized) && clock.test(normalized)) ||
-    (appNoun.test(normalized) && appAction.test(normalized)) ||
-    /(?:desktop|سطح\s*(?:ال)?مكتب).{0,100}(?:تطبيق|برنامج|app|نافذة)|(?:تطبيق|برنامج|app).{0,100}(?:desktop|سطح\s*(?:ال)?مكتب)/i.test(normalized)
-  );
+  const normalized = request.normalize("NFKC").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "");
+  const desktopClock = /desktop|سطح\\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
+  const createAction = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)/i.test(normalized);
+  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s+(?:لي\\s*)?(?:تطبيق|برنامج|موقع|متجر|نظام|منصة|ساعة|app|application|website|web app|software|store|platform|system|clock)/i.test(normalized);
+  const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
+  if (planningOnly && !createAction && !desktopClock) return false;
+  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\\s*تحكم|متجر|ساعة|clock/i.test(normalized);
+  return desktopClock || (appNoun && (createAction || directAppRequest));
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
@@ -79,10 +80,9 @@ function parseHtmlApp(text: string): string | null {
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   if (isExcelRequest(messages)) return false;
   const request = getLatestUserRequest(messages);
-  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
-  const explicitWord = /\b(word|docx|\\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|جدول.{0,60}(?:و?ورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,60}جدول/i.test(request);
+  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
   const asksForDownloadableDocument = /(?:ملف|مستند).{0,55}(?:تحميل|جاهز|اعمل|اعملي|عايز|عاوز|محتاج|انشئ|أنشئ)|(?:تحميل|جاهز للتحميل).{0,55}(?:ملف|مستند)/i.test(request);
-  return asksForSevenFieldTable || explicitWord || asksForDownloadableDocument;
+  return asksForSevenFieldTable || isExplicitWordFileRequest(request) || asksForDownloadableDocument;
 }
 function isTableOnlyRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
