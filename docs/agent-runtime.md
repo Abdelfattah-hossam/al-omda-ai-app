@@ -172,7 +172,7 @@ Do not add broad private-network ranges or enable this mode when testing ordinar
 
 ## Terminal execution warning
 
-Terminal execution is disabled by default. To opt in, set `OMDA_AGENT_EXECUTION=host`. The first release uses `spawn(..., { shell: false })`, a fixed executable allowlist, a workspace working directory, a timeout, and an output cap. This is **not an operating-system sandbox**: an allowed program or project script can still access anything permitted to your user account. Use a disposable OS account or isolated VM for untrusted code. Never expose this local service to the public internet.
+Terminal execution is disabled by default. To opt in, set `OMDA_AGENT_EXECUTION=host`. The runtime uses `spawn(..., { shell: false })`, a fixed executable allowlist, a workspace working directory, a timeout, and an output cap. Its child-process environment preserves the Windows `SYSTEMROOT`, `COMSPEC`, `PATHEXT`, user temp/app-data paths, and supported desktop session variables while excluding API keys and arbitrary `NODE_OPTIONS`. This is **not an operating-system sandbox**: an allowed program or project script can still access anything permitted to your user account. Use a disposable OS account or isolated VM for untrusted code. Never expose this local service to the public internet.
 
 ## Current limitations
 
@@ -181,7 +181,7 @@ The following are not yet built into the AL OMDA web app itself:
 - Native browser/desktop panels, built-in browser profile and tab management, and remote cross-device desktop control. Optional Playwright and Computer Use MCP companions can provide local integrations when installed and configured.
 - Write-capable multi-agent delegation with isolated workspaces and shared task state; current parallel specialists run concurrently with read-only tools and return evidence traces. The lead agent retains the normal approval workflow for changes.
 - Provider-accurate live token counts and exact real-time tokens-per-second. Model text is streamed live; the chat's speed display is an estimate while generating, while actual provider usage metrics are reported after completion when available.
-- HTTPFlow history and a visual response-diff interface; the runtime comparison endpoint returns role-by-role status, headers, and bounded response bodies.
+- Persistent HTTPFlow comparison history and export; the Agents workspace now has a visual role/body/header diff, while the runtime comparison endpoint returns bounded role-by-role responses.
 - Broad automatic model routing across multiple providers. The current optional fallback is a second OpenAI-compatible endpoint.
 - Background daemon/service installation, automatic app updates, and crash recovery beyond saved JSON agent sessions.
 - Container-backed execution with resource, network, and filesystem isolation.
