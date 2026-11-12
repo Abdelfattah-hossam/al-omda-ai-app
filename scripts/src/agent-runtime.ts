@@ -256,7 +256,7 @@ function mcpRequest(connection: McpConnection, method: string, params: Record<st
       rejectResult(new Error("MCP request timed out: " + method));
     }, 20000);
     connection.pending.set(id, { resolve: resolveResult, reject: rejectResult, timer });
-    connection.child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\\n");
+    connection.child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
   });
 }
 function handleMcpOutput(connection: McpConnection, chunk: Buffer): void {
@@ -266,7 +266,7 @@ function handleMcpOutput(connection: McpConnection, chunk: Buffer): void {
     connection.buffer = "";
     return;
   }
-  let newline = connection.buffer.indexOf("\\n");
+  let newline = connection.buffer.indexOf("\n");
   while (newline >= 0) {
     const line = connection.buffer.slice(0, newline).trim();
     connection.buffer = connection.buffer.slice(newline + 1);
@@ -284,13 +284,13 @@ function handleMcpOutput(connection: McpConnection, chunk: Buffer): void {
         }
       } catch { /* Ignore non-JSON stdout lines; MCP servers must use stdout for protocol messages. */ }
     }
-    newline = connection.buffer.indexOf("\\n");
+    newline = connection.buffer.indexOf("\n");
   }
 }
 async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
   const existing = mcpConnections.get(config.name);
   if (existing && existing.child.exitCode === null && existing.child.signalCode === null) return existing;
-  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH || "", HOME: process.env.HOME || "", USERPROFILE: process.env.USERPROFILE || "","};
+  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH || "", HOME: process.env.HOME || "", USERPROFILE: process.env.USERPROFILE || "" };
   for (const key of config.envFrom || []) if (process.env[key]) env[key] = process.env[key];
   const child = spawn(config.command, config.args, { cwd: workspaceRoot, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"], env });
   if (!child.stdin || !child.stdout) throw new Error("Could not open MCP stdio transport.");
@@ -305,7 +305,7 @@ async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
   mcpConnections.set(config.name, connection);
   try {
     await mcpRequest(connection, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "AL OMDA AI", version: "0.1.0" } });
-    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\\n");
+    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     connection.initialized = true;
     return connection;
   } catch (error) {
