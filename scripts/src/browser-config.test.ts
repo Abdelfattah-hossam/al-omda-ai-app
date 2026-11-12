@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { mergeBrowserServerConfig, parseBrowserName } from "./browser-config.js";
+import { mergeBrowserServerConfig, mergeDesktopServerConfig, parseBrowserName } from "./browser-config.js";
 
 test("defaults to Chromium and accepts supported browser engines", () => {
   assert.equal(parseBrowserName(undefined), "chromium");
@@ -28,4 +28,23 @@ test("updates only the browser server when it already exists", () => {
 test("refuses malformed config instead of overwriting it", () => {
   assert.throws(() => mergeBrowserServerConfig("{broken", "chromium"), /valid JSON/);
   assert.throws(() => mergeBrowserServerConfig(JSON.stringify({ servers: "no" }), "chromium"), /servers array/);
+});
+
+test("adds desktop MCP server while preserving browser and project servers", () => {
+  const existing = JSON.stringify({ servers: [
+    { name: "playwright-browser", command: "npx", args: ["-y", "@playwright/mcp@latest", "--browser", "chromium"] },
+    { name: "project-tools", command: "node", args: ["./tools/server.js"] },
+  ] });
+  const result = JSON.parse(mergeDesktopServerConfig(existing));
+  assert.equal(result.servers.length, 3);
+  assert.equal(result.servers[0].name, "playwright-browser");
+  assert.equal(result.servers[1].name, "project-tools");
+  assert.deepEqual(result.servers[2].args, ["-y", "@zavora-ai/computer-use-mcp"]);
+});
+
+test("updates the existing desktop server without duplicating it", () => {
+  const existing = JSON.stringify({ servers: [{ name: "computer-use", command: "npx", args: ["old"] }] });
+  const result = JSON.parse(mergeDesktopServerConfig(existing));
+  assert.equal(result.servers.length, 1);
+  assert.deepEqual(result.servers[0].args, ["-y", "@zavora-ai/computer-use-mcp"]);
 });
