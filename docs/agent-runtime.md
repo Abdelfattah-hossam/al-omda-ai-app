@@ -80,6 +80,14 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Multiple remote and local model providers
+
+The runtime tries providers in this order: the primary environment configuration, providers listed in `.omda/models.json`, then the optional fallback environment configuration. All providers use the OpenAI-compatible Chat Completions streaming interface. Configure no more than eight additional providers.
+
+Copy `.omda/models.example.json` to `.omda/models.json`. Each entry contains a display `name`, an OpenAI-compatible `baseUrl`, a `model`, and optionally an `apiKeyEnv` variable name. The file stores only the environment variable name, never the secret. If a named key is not set, that provider is skipped. Remote providers must use HTTPS; plain HTTP is accepted only for loopback endpoints such as LM Studio or Ollama on `127.0.0.1` or `localhost`. Credentials, URL query strings, and fragments are rejected.
+
+The Agents workspace **Model Router** panel lists configured provider names, models, local/remote type, and whether a key is available without exposing the key or full endpoint URL. The runtime tries the next provider when a request fails before any output is streamed; it does not silently switch after partial output has already reached the user.
+
 ### Local supervisor, crash restart, and safe auto-update
 
 For a supervised local runtime, start:
