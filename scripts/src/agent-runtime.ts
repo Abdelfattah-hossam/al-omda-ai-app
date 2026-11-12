@@ -1,9 +1,10 @@
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { lookup } from "node:dns/promises";
+import { lookup, resolve4, resolve6, resolveCname, resolveMx, resolveNs, resolveTxt } from "node:dns/promises";
 import { realpath, mkdir, readFile, writeFile, readdir, stat, rename } from "node:fs/promises";
 import { isIP } from "node:net";
+import { connect as tlsConnect } from "node:tls";
 import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 import { buildMcpEnvironment } from "./mcp-env.js";
@@ -16,6 +17,7 @@ import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
 import { parseModelProviderConfig } from "./model-providers.js";
+import { analyzeSecurityHeaders } from "./security-recon.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -178,6 +180,97 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const limitedBody = method === "HEAD" ? { text: "", truncated: false } : await readLimitedResponse(response, 50000);
   return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated, durationMs: Date.now() - startedAt };
 }
+async function safeDnsQuery<T>(query: () => Promise<T>): Promise<T | []> {
+  try { return await query(); }
+  catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENODATA" || code === "ENOTFOUND" || code === "NODATA") return [];
+    throw error;
+  }
+}
+
+async function dnsRecords(body: Json): Promise<Json> {
+  const raw = typeof body.hostname === "string" ? body.hostname.trim() : "";
+  if (!raw || raw.length > 253 || /[\\/\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
+  const target = await assertAllowedTarget("https://" + raw);
+  const hostname = target.hostname;
+  const [a, aaaa, cname, mx, ns, txt] = await Promise.all([
+    safeDnsQuery(() => resolve4(hostname)),
+    safeDnsQuery(() => resolve6(hostname)),
+    safeDnsQuery(() => resolveCname(hostname)),
+    safeDnsQuery(() => resolveMx(hostname)),
+    safeDnsQuery(() => resolveNs(hostname)),
+    safeDnsQuery(() => resolveTxt(hostname)),
+  ]);
+  const addresses = [...a, ...aaaa] as string[];
+  if (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((address) => isBlockedNetworkAddress(address))) {
+    throw new Error("DNS records include a private or reserved address; refusing to disclose internal network targets.");
+  }
+  return {
+    hostname,
+    records: {
+      A: a,
+      AAAA: aaaa,
+      CNAME: cname,
+      MX: mx,
+      NS: ns,
+      TXT: (txt as string[][]).map((parts) => parts.join("")).slice(0, 30),
+    },
+  };
+}
+
+async function tlsCertificate(body: Json): Promise<Json> {
+  const raw = typeof body.hostname === "string" ? body.hostname.trim() : "";
+  if (!raw || raw.length > 253 || /[\\/\\s:@?#]/.test(raw)) throw new Error("Provide a hostname only, without a URL, port, or path.");
+  const target = await assertAllowedTarget("https://" + raw);
+  const hostname = target.hostname;
+  const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length) throw new Error("Hostname did not resolve to an address.");
+  if (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((item) => isBlockedNetworkAddress(item.address))) {
+    throw new Error("TLS target resolves to a private or reserved address.");
+  }
+  const pinned = addresses[0];
+  return await new Promise((resolveResult, reject) => {
+    const socket = tlsConnect({
+      host: hostname, port: 443, servername: isIP(hostname) ? undefined : hostname,
+      rejectUnauthorized: true, timeout: 9000,
+      lookup: (_host, _options, callback) => callback(null, pinned.address, pinned.family),
+    }, () => {
+      const certificate = socket.getPeerCertificate();
+      const result = {
+        hostname,
+        authorized: socket.authorized,
+        subject: certificate.subject,
+        issuer: certificate.issuer,
+        validFrom: certificate.valid_from,
+        validTo: certificate.valid_to,
+        serialNumber: certificate.serialNumber,
+        fingerprint256: certificate.fingerprint256,
+        subjectAltName: typeof certificate.subjectaltname === "string" ? certificate.subjectaltname.slice(0, 3000) : "",
+      };
+      socket.end();
+      resolveResult(result);
+    });
+    socket.once("error", reject);
+    socket.setTimeout(9000, () => socket.destroy(new Error("TLS certificate inspection timed out.")));
+  });
+}
+
+async function inspectSecurityHeaders(body: Json): Promise<Json> {
+  const rawUrl = typeof body.url === "string" ? body.url : "";
+  const target = await assertAllowedTarget(rawUrl);
+  const response = await httpRequest({ url: target.toString(), method: "GET", headers: {}, allowCredentialHeaders: false });
+  return { url: response.url, status: response.status, headers: response.headers, ...analyzeSecurityHeaders(response.headers) };
+}
+
+async function readRobotsTxt(body: Json): Promise<Json> {
+  const rawUrl = typeof body.url === "string" ? body.url : "";
+  const target = await assertAllowedTarget(rawUrl);
+  const robotsUrl = new URL("/robots.txt", target.origin);
+  const response = await httpRequest({ url: robotsUrl.toString(), method: "GET", headers: {}, allowCredentialHeaders: false });
+  return { url: response.url, status: response.status, robotsTxt: response.body.slice(0, 12000), truncated: response.truncated };
+}
+
 async function searchWeb(body: Json): Promise<Json> {
   if (!SEARCH_BASE_URL) throw new Error("Configure OMDA_AGENT_SEARCH_BASE_URL to enable Bing-compatible search.");
   const query = typeof body.query === "string" ? body.query : "";
@@ -498,6 +591,10 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "terminal.execute", description: "Run an approved project command without a shell. Requires explicit user approval and OMDA_AGENT_EXECUTION=host.", parameters: { type: "object", properties: { command: { type: "string", enum: ["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"] }, args: { type: "array", items: { type: "string" } }, cwd: { type: "string" } }, required: ["command", "args"], additionalProperties: false } } },
   { type: "function", function: { name: "http.compare_roles", description: "Compare the same authorized endpoint using configured user/role credentials. Requires explicit user approval. Credentials are loaded from environment variables and never sent to the model.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, roles: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 } }, required: ["url", "roles"], additionalProperties: false } } },
   { type: "function", function: { name: "agent.delegate", description: "Split a complex task into 2 to 4 independent read-only specialist investigations running in parallel. The lead agent must synthesize findings and perform any edits through its normal approval workflow.", parameters: { type: "object", properties: { tasks: { type: "array", minItems: 2, maxItems: 4, items: { type: "object", properties: { role: { type: "string" }, goal: { type: "string" } }, required: ["role", "goal"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } },
+  { type: "function", function: { name: "recon.dns_records", description: "Perform passive DNS record lookups for an exact allowlisted hostname. Private/reserved IP answers are blocked by default.", parameters: { type: "object", properties: { hostname: { type: "string" } }, required: ["hostname"], additionalProperties: false } } },
+  { type: "function", function: { name: "recon.tls_certificate", description: "Inspect the validated TLS certificate for an exact allowlisted HTTPS hostname using a pinned resolved address.", parameters: { type: "object", properties: { hostname: { type: "string" } }, required: ["hostname"], additionalProperties: false } } },
+  { type: "function", function: { name: "http.security_headers", description: "Audit common HTTP security response headers on an allowlisted HTTPS endpoint.", parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"], additionalProperties: false } } },
+  { type: "function", function: { name: "http.robots_txt", description: "Read the public robots.txt file for an allowlisted HTTPS origin.", parameters: { type: "object", properties: { url: { type: "string" } }, required: ["url"], additionalProperties: false } } },
   { type: "function", function: { name: "web.search", description: "Search the web through the configured Bing-compatible Search API. Search provider hostname must be allowlisted; the API key stays local.", parameters: { type: "object", properties: { query: { type: "string" }, count: { type: "integer", minimum: 1, maximum: 10 }, market: { type: "string" }, safeSearch: { type: "string", enum: ["Strict", "Moderate", "Off"] } }, required: ["query"], additionalProperties: false } } },
   { type: "function", function: { name: "http.request", description: "Inspect an HTTPS response from a hostname explicitly configured in the authorized target allowlist.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, headers: { type: "object", additionalProperties: { type: "string" } } }, required: ["url"], additionalProperties: false } } },
 ];
@@ -547,6 +644,14 @@ async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void):
       return await executeCommand(args);
     case "agent.delegate":
       return await delegateAgent(args, onProgress);
+    case "recon.dns_records":
+      return await dnsRecords(args);
+    case "recon.tls_certificate":
+      return await tlsCertificate(args);
+    case "http.security_headers":
+      return await inspectSecurityHeaders(args);
+    case "http.robots_txt":
+      return await readRobotsTxt(args);
     case "web.search":
       return await searchWeb(args);
     case "http.request":
@@ -677,7 +782,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
   await saveAgentState(id, state);
   return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
 }
-const READ_ONLY_TOOLS = AGENT_TOOLS.filter((tool: any) => ["skills.list", "files.list", "files.read", "http.request", "web.search"].includes(tool.function.name));
+const READ_ONLY_TOOLS = AGENT_TOOLS.filter((tool: any) => ["skills.list", "files.list", "files.read", "http.request", "web.search", "recon.dns_records", "recon.tls_certificate", "http.security_headers", "http.robots_txt"].includes(tool.function.name));
 async function runReadOnlySubagent(role: string, goal: string): Promise<Json> {
   const evidence: Array<{ tool: string; summary: string }> = [];
   const messages: Array<Record<string, unknown>> = [
