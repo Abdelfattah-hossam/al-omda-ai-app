@@ -5,6 +5,8 @@ export type AgentStreamEvent = {
   status?: string;
   turn?: number;
   tools?: string[];
+  role?: string;
+  agentCount?: number;
   result?: Record<string, unknown>;
   error?: string;
 };
