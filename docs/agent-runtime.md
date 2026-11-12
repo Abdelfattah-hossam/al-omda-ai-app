@@ -18,6 +18,10 @@ export OMDA_AGENT_ALLOWED_HOSTS="example.com"
 export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
+# Optional second OpenAI-compatible endpoint if the primary model fails:
+# export OMDA_AGENT_FALLBACK_MODEL_BASE_URL="https://api.example.com/v1"
+# export OMDA_AGENT_FALLBACK_MODEL_NAME="free-or-backup-model"
+# export OMDA_AGENT_FALLBACK_MODEL_API_KEY="set-in-your-shell-not-in-a-file"
 pnpm --filter @workspace/scripts agent:runtime
 ```
 
@@ -33,6 +37,7 @@ $env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
 $env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
+# Optional fallback endpoint variables: OMDA_AGENT_FALLBACK_MODEL_BASE_URL, OMDA_AGENT_FALLBACK_MODEL_NAME, OMDA_AGENT_FALLBACK_MODEL_API_KEY
 pnpm --filter @workspace/scripts agent:runtime
 ```
 
@@ -53,7 +58,7 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 
 Only commands in `OMDA_AGENT_MCP_COMMANDS` can be launched. Environment values are passed only for names explicitly listed in `envFrom`; put secret values in the runtime environment, not the JSON file. MCP calls pause for user approval. HTTP role comparisons also require approval. Configure `.omda/http-roles.json` from `.omda/http-roles.example.json`, and place credential values only in environment variables named by `headersFromEnv`. The local role config is git-ignored. Treat installed MCP servers as trusted local programs.
 
-The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. Local models do not require a provider API key.
+The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. An optional second endpoint can be configured with `OMDA_AGENT_FALLBACK_MODEL_BASE_URL`, `OMDA_AGENT_FALLBACK_MODEL_NAME`, and `OMDA_AGENT_FALLBACK_MODEL_API_KEY`. The Agents panel displays average generated tokens per second for completed model requests; this is not a live streaming counter. Local models do not require a provider API key.
 
 The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGENT_APP_ORIGINS` to an exact comma-separated list of trusted AL OMDA app origins; no wildcard is supported. Command-line clients do not need an Origin header. Every endpoint except `GET /health` requires `Authorization: Bearer <OMDA_AGENT_TOKEN>`. The token must contain at least 32 characters.
 
