@@ -105,7 +105,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       });
       const tokenData = await tokenResponse.json().catch(() => ({}));
       if (!tokenResponse.ok || typeof tokenData.token !== "string") {
-        throw new Error(tokenData.error || labels.unavailable);
+        const diagnostic = [tokenData.error, tokenData.details].filter((value) => typeof value === "string" && value.trim()).join(" — ");
+        throw new Error(diagnostic || labels.unavailable);
       }
 
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -114,7 +115,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       contextRef.current = context;
       await context.resume();
 
-      const socket = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?access_token=" + encodeURIComponent(tokenData.token));
+      const socket = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=" + encodeURIComponent(tokenData.token));
       socketRef.current = socket;
 
       await new Promise<void>((resolve, reject) => {
