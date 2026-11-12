@@ -55,14 +55,14 @@ function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
-  const desktop = /desktop|سطح\\s*(?:ال)?مكتب|نافذة سطح المكتب/i;
+  const desktop = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i;
   const clock = /ساعة|clock|hour|watch|وقت|time/i;
   const appAction = /اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|عاوز|محتاج|create|build|make|develop|generate/i;
   const appNoun = /تطبيق|برنامج|app|application|موقع|website|ساعة|clock/i;
   return (
     (desktop.test(request) && clock.test(request)) ||
     (appNoun.test(request) && appAction.test(request)) ||
-    /(?:desktop|سطح\\s*(?:ال)?مكتب).{0,100}(?:تطبيق|برنامج|app|نافذة)|(?:تطبيق|برنامج|app).{0,100}(?:desktop|سطح\\s*(?:ال)?مكتب)/i.test(request)
+    /(?:desktop|سطح\s*(?:ال)?مكتب).{0,100}(?:تطبيق|برنامج|app|نافذة)|(?:تطبيق|برنامج|app).{0,100}(?:desktop|سطح\s*(?:ال)?مكتب)/i.test(request)
   );
 }
 function parseHtmlApp(text: string): string | null {
