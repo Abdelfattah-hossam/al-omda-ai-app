@@ -910,7 +910,7 @@ function App() {
           streamedText += event.text;
           const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
           const estimated = Math.round((streamedText.length / 4) / seconds);
-          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s");
+          setLocalAgentMessage(streamedText + "\n\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s");
         } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
           setLocalAgentMessage(isAr ? "الوكيل يجهّز الأدوات وينفّذ الخطوات..." : "Agent is selecting tools and executing steps...");
         }
@@ -958,7 +958,7 @@ function App() {
         if (event.type === "token" && event.text) {
           streamedText += event.text;
           const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
-          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
+          setLocalAgentMessage(streamedText + "\n\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
         }
       });
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
@@ -983,7 +983,7 @@ function App() {
         if (event.type === "token" && event.text) {
           streamedText += event.text;
           const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
-          setLocalAgentMessage(streamedText + "\\n\\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
+          setLocalAgentMessage(streamedText + "\n\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + Math.round((streamedText.length / 4) / seconds) + " tok/s");
         }
       });
       setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
