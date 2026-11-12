@@ -250,15 +250,36 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter", messages, memory); provider = candidate; break; }
       catch (error) { const reason = error instanceof Error ? error.message : "Provider unavailable"; failures.push(reason); console.warn("[AI project plan provider failure]", candidate, reason); }
     }
-    if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. The attempt remains counted in today allowance.", details: failures.slice(0, 2) }); return; }
-    let parsed: any;
-    try {
-      let jsonText = answer.text.trim();
-      if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-      parsed = JSON.parse(jsonText);
-    } catch { res.status(502).json({ error: "The AI returned a plan in an unreadable format. Please try again." }); return; }
-    if (!parsed || typeof parsed.title !== "string" || !parsed.title.trim() || !Array.isArray(parsed.steps) || parsed.steps.length < 3 || parsed.steps.length > 8 || parsed.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || step.output.length > 1200 || typeof step.complete !== "string" || step.complete.length > 1200)) {
-      res.status(502).json({ error: "The AI plan did not meet the required structure. Please try again." }); return;
+    if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. No usage was deducted.", details: failures.slice(0, 2) }); return; }
+    const parsePlan = (raw: string): any | null => {
+      try {
+        let jsonText = raw.trim();
+        if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "").trim();
+        const value = JSON.parse(jsonText);
+        if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 8 ||
+          value.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || !step.output.trim() || step.output.length > 1200 || typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > 1200)) return null;
+        return value;
+      } catch { return null; }
+    };
+    let parsed = parsePlan(answer.text);
+    if (!parsed) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair your previous project plan. Return ONLY valid JSON with a title and 4 to 7 sequential steps. Every step must contain non-empty text, output, and complete strings.",
+        "Preserve the exact customer request, constraints, quantities, budget, platform, location, and deadline. Avoid generic filler. Each step must describe work AL OMDA will perform and a clear deliverable.",
+        "Required schema: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
+        "Original customer request: " + request,
+        "Invalid previous response: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try {
+        answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory);
+        parsed = parsePlan(answer.text);
+      } catch (error) {
+        console.warn("[AI project plan repair failed]", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
+    if (!parsed) {
+      res.status(502).json({ error: "تعذر اعتماد خطة المشروع بعد مراجعتها. لم يتم خصم وحدات؛ حاول مرة أخرى." });
+      return;
     }
     const chargedUsage = await reserveUnits(session.accessToken, 1);
     if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: chargedUsage }); return; }
@@ -321,8 +342,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (step.result) { res.status(409).json({ error: "This step already has a saved result." }); return; }
     const providers = chooseProviders([{ role: "user", content: step.text }]);
     if (!providers.length) { res.status(503).json({ error: "No AI provider is configured." }); return; }
-    const usage = await reserveUnits(session.accessToken, 2);
-    if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
+    const usage = await currentUsage(session.accessToken);
+    if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
     // Select the file format from the customer's original request only. Planner-generated titles, steps, and acceptance text must never turn an unrelated task into Excel.
     const customerRequest = task.request || "";
@@ -388,6 +409,52 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
     }
+    if (wordStep && !parseWordDocument(answer.text, false, false)) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
+        "A normal written document may contain paragraphs only, with empty columns and rows. Create a table only if the customer explicitly asked for one.",
+        "Preserve the full original request and all approved requirements. Do not invent unrelated content.",
+        "Original request: " + customerRequest,
+        "Approved step: " + step.text,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
+      catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseWordDocument(answer.text, false, false)) {
+        await saveExecutionFailure("Word document failed structural validation after one repair attempt.");
+        res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        return;
+      }
+    }
+    if (excelStep && !parseExcelWorkbook(answer.text)) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the Excel workbook. Return ONLY valid JSON with title, columns, and rows. Every row must match the column count.",
+        "Preserve the original request, approved requirements, and actual data. Do not invent unrelated data.",
+        "Original request: " + customerRequest,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
+      catch (error) { console.warn("[Excel task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseExcelWorkbook(answer.text)) {
+        await saveExecutionFailure("Excel workbook failed structural validation after one repair attempt.");
+        res.status(502).json({ error: "تعذر اعتماد ملف Excel بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        return;
+      }
+    }
+    if (htmlAppStep && !parseHtmlApp(answer.text)) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the requested application. Return ONLY a complete self-contained HTML document with all requested functions.",
+        "Original request: " + customerRequest,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
+      catch (error) { console.warn("[HTML task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseHtmlApp(answer.text)) {
+        await saveExecutionFailure("HTML application failed validation after one repair attempt.");
+        res.status(502).json({ error: "تعذر اعتماد التطبيق بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        return;
+      }
+    }
     let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
     let result = answer.text.trim().slice(0, 12000);
     if (htmlAppStep) {
@@ -430,6 +497,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (!latestStep || latestStep.state !== "approved" || latestStep.result) {
       res.status(409).json({ error: "This step changed or was already executed. Refresh the project." }); return;
     }
+    const chargedUsage = await reserveUnits(session.accessToken, 2);
+    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage: chargedUsage }); return; }
     const executedAt = new Date().toISOString();
     const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, result, executedAt, executionStatus: "succeeded" as const, executionError: undefined } : item);
     const updateQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id, select: "id" });
@@ -440,7 +509,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }, session.accessToken);
     const updatedRows = await readSupabaseJson<Array<{ id: string }>>(updateResponse);
     if (!updatedRows[0]) { res.status(409).json({ error: "Could not save the execution result. Refresh and try again." }); return; }
-    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: await currentUsage(session.accessToken) });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
@@ -458,8 +527,8 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
       res.status(503).json({ error: "Live voice is not configured. Add a Gemini API key to Cloudflare Worker secrets." });
       return;
     }
-    const usage = await reserveUnits(session.accessToken, 1);
-    if (!usage.allowed) {
+    const usage = await currentUsage(session.accessToken);
+    if (usage.remaining <= 0) {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage });
       return;
     }
@@ -479,7 +548,9 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
       res.status(502).json({ error: "Gemini Live could not create a temporary voice session.", details: detail || "Provider rejected the token request." });
       return;
     }
-    res.json({ token: payload.name, model: "gemini-3.1-flash-live-preview", usage: await currentUsage(session.accessToken) });
+    const chargedUsage = await reserveUnits(session.accessToken, 1);
+    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage: chargedUsage }); return; }
+    res.json({ token: payload.name, model: "gemini-3.1-flash-live-preview", usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not start a live voice session.");
   }
