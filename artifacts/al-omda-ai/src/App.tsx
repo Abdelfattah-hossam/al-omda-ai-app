@@ -424,6 +424,14 @@ function App() {
   const [localAgentSessionId, setLocalAgentSessionId] = useState(() => { try { return localStorage.getItem("al-omda-agent-session") || ""; } catch { return ""; } });
   const [localAgentPending, setLocalAgentPending] = useState<Array<{ id: string; tool: string; arguments: Record<string, unknown> }>>([]);
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
+  const [delegateRoleOne, setDelegateRoleOne] = useState("Code reviewer");
+  const [delegateGoalOne, setDelegateGoalOne] = useState("");
+  const [delegateRoleTwo, setDelegateRoleTwo] = useState("Security reviewer");
+  const [delegateGoalTwo, setDelegateGoalTwo] = useState("");
+  const [delegateBusy, setDelegateBusy] = useState(false);
+  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; result: string; turns?: number }>>([]);
+  const [delegateError, setDelegateError] = useState("");
+
   const [httpFlowUrl, setHttpFlowUrl] = useState("");
   const [httpFlowMethod, setHttpFlowMethod] = useState<"GET" | "HEAD" | "OPTIONS">("GET");
   const [httpFlowAvailableRoles, setHttpFlowAvailableRoles] = useState<string[]>([]);
@@ -890,6 +898,28 @@ function App() {
       setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Agent run failed.");
     } finally { setLocalAgentBusy(false); }
   };
+  const runLocalAgentDelegation = async () => {
+    const tasks = [
+      { role: delegateRoleOne.trim() || "Specialist 1", goal: delegateGoalOne.trim() },
+      { role: delegateRoleTwo.trim() || "Specialist 2", goal: delegateGoalTwo.trim() },
+    ];
+    if (tasks.some((task) => !task.goal) || delegateBusy || !localAgentToken.trim()) return;
+    setDelegateBusy(true); setDelegateError(""); setDelegateResults([]);
+    try {
+      const result = await callLocalAgentRuntime("/v1/agent/delegate", "POST", { tasks });
+      const agents = Array.isArray(result.agents) ? result.agents.map((item: any) => ({
+        role: String(item.role || "Specialist"),
+        result: String(item.result || ""),
+        turns: typeof item.turns === "number" ? item.turns : undefined,
+      })) : [];
+      setDelegateResults(agents);
+      if (result.sessionId) setLocalAgentSessionId(String(result.sessionId));
+      setLocalAgentMessage(isAr ? "اكتمل تحليل الوكلاء المتوازيين. كل وكيل للقراءة والتحليل فقط." : "Parallel specialist review completed. Specialists had read-only access.");
+    } catch (error) {
+      setDelegateError(error instanceof Error ? error.message : (isAr ? "فشل تشغيل الوكلاء المتوازيين." : "Parallel delegation failed."));
+    } finally { setDelegateBusy(false); }
+  };
+
   const resumeLocalAgent = async () => {
     if (!localAgentSessionId || localAgentBusy) return;
     setLocalAgentBusy(true); setLocalAgentStatus("running"); setLocalAgentMessage("");
@@ -984,6 +1014,33 @@ function App() {
           <button type="button" className="button button-quiet button-small" onClick={()=>continueLocalAgent(false)} disabled={localAgentBusy}>{isAr?'رفض الإجراءات':'Deny actions'}</button>
         </div>
       </div>}
+      <div className="panel panel-pad" style={{marginTop:18}}>
+        <div className="section-head">
+          <div><span className="eyebrow">MULTI-AGENT</span><h3 className="section-title">{isAr?'تشغيل وكيلين بالتوازي':'Parallel specialist review'}</h3><p className="section-meta">{isAr?'قسّم المهمة بين متخصصين مستقلين. صلاحياتهما للقراءة والبحث فقط، ولا يمكنهما تعديل الملفات أو تشغيل الأوامر.':'Split a review between two independent specialists. They can read and research, but cannot edit files or execute commands.'}</p></div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:12}}>
+          <div className="field-group">
+            <label className="form-label">{isAr?'دور الوكيل الأول':'First specialist role'}</label>
+            <input className="field" value={delegateRoleOne} onChange={event=>setDelegateRoleOne(event.target.value)} maxLength={80}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
+            <textarea className="field" rows={3} value={delegateGoalOne} onChange={event=>setDelegateGoalOne(event.target.value)} placeholder={isAr?'مثال: راجع بنية الكود واكتشف الأخطاء.':'Example: Review the code structure and identify defects.'}/>
+          </div>
+          <div className="field-group">
+            <label className="form-label">{isAr?'دور الوكيل الثاني':'Second specialist role'}</label>
+            <input className="field" value={delegateRoleTwo} onChange={event=>setDelegateRoleTwo(event.target.value)} maxLength={80}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
+            <textarea className="field" rows={3} value={delegateGoalTwo} onChange={event=>setDelegateGoalTwo(event.target.value)} placeholder={isAr?'مثال: راجع الأمان وحدد المخاطر.':'Example: Review security and identify risks.'}/>
+          </div>
+        </div>
+        <button type="button" className="button button-primary button-small" style={{marginTop:12}} onClick={runLocalAgentDelegation} disabled={delegateBusy||localAgentBusy||localAgentStatus!=='ready'||!delegateGoalOne.trim()||!delegateGoalTwo.trim()}>{delegateBusy?(isAr?'جارٍ تشغيل الوكلاء...':'Running specialists...'):(isAr?'ابدأ التحليل المتوازي':'Run parallel review')}</button>
+        {delegateError&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)'}}>{delegateError}</p>}
+        {delegateResults.length>0&&<div style={{display:'grid',gap:10,marginTop:14}}>
+          {delegateResults.map((item,index)=><div key={item.role+index} style={{border:'1px solid var(--border)',borderRadius:12,padding:12}}>
+            <strong>{item.role}</strong>{typeof item.turns==='number'&&<span className="section-meta"> · {item.turns} {isAr?'جولات':'turns'}</span>}
+            <p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:8}}>{item.result}</p>
+          </div>)}
+        </div>}
+      </div>
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
