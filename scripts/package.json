@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "agent:runtime": "tsx ./src/agent-runtime.ts",
     "browser:setup": "tsx ./src/setup-browser.ts",
-    "test": "tsx --test ./src/browser-config.test.ts ./src/mcp-content.test.ts ./src/mcp-env.test.ts ./src/web-search.test.ts ./src/http-diff.test.ts ./src/openai-stream.test.ts ./src/network-safety.test.ts ./src/mcp-tool-alias.test.ts",
+    "test": "tsx --test ./src/browser-config.test.ts ./src/mcp-content.test.ts ./src/mcp-env.test.ts ./src/web-search.test.ts ./src/http-diff.test.ts ./src/openai-stream.test.ts ./src/network-safety.test.ts ./src/mcp-tool-alias.test.ts ./src/http-request-safety.test.ts",
     "desktop:setup": "tsx ./src/setup-desktop.ts"
   },
   "devDependencies": {
