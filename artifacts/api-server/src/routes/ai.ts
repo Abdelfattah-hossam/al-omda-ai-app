@@ -159,6 +159,100 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model, usage: await currentUsage(session.accessToken) });
   } catch (error) { reportSupabaseError(req, res, error, "Could not generate the AI project plan."); }
 });
+router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to execute a project step." }); return; }
+    const taskId = typeof req.body?.taskId === "string" ? req.body.taskId : "";
+    const stepId = typeof req.body?.stepId === "string" ? req.body.stepId : "";
+    const language = req.body?.language === "en" ? "en" : "ar";
+    if (!/^[0-9a-f-]{36}$/i.test(taskId) || !/^[a-zA-Z0-9_-]{1,80}$/.test(stepId)) {
+      res.status(400).json({ error: "A valid task and step are required." }); return;
+    }
+    const taskQuery = new URLSearchParams({
+      id: "eq." + taskId,
+      user_id: "eq." + session.user.id,
+      select: "id,title,request,specialty,steps,status",
+      limit: "1",
+    });
+    const taskResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
+    const taskRows = await readSupabaseJson<Array<{
+      id: string; title: string; request: string; specialty: string; status: string;
+      steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; executedAt?: string }>;
+    }>>(taskResponse);
+    const task = taskRows[0];
+    if (!task) { res.status(404).json({ error: "Project not found in your account." }); return; }
+    if (task.status === "paused" || task.status === "stopped") {
+      res.status(409).json({ error: "Resume the project before executing a step." }); return;
+    }
+    const stepIndex = task.steps.findIndex((step) => step.id === stepId);
+    if (stepIndex < 0) { res.status(404).json({ error: "Project step not found." }); return; }
+    const step = task.steps[stepIndex];
+    if (step.state !== "approved" || task.steps.slice(0, stepIndex).some((item) => item.state !== "approved")) {
+      res.status(409).json({ error: "Approve this step and all earlier steps before execution." }); return;
+    }
+    if (step.result) { res.status(409).json({ error: "This step already has a saved result." }); return; }
+    const providers = chooseProviders([{ role: "user", content: step.text }]);
+    if (!providers.length) { res.status(503).json({ error: "No AI provider is configured." }); return; }
+    const usage = await reserveUnits(session.accessToken, 2);
+    if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
+    const memory = await loadUserMemory(session.accessToken, session.user.id);
+    const prompt = [
+      "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
+      "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
+      "Project: " + task.title,
+      "Original request: " + task.request,
+      "Specialty: " + task.specialty,
+      "Approved step: " + step.text,
+      "Expected deliverable: " + (step.output || "A complete, usable deliverable for this step."),
+      "Acceptance check: " + (step.complete || "Make the result specific, complete, and verifiable."),
+      "Return the deliverable itself. Include code, structured content, calculations, or a ready-to-use draft when relevant. Be explicit about any external action you cannot perform; never claim to have changed files, deployed software, or contacted anyone.",
+      "Keep the result focused and under 12,000 characters."
+    ].join("\n");
+    const messages: ChatMessage[] = [{ role: "user", content: prompt }];
+    const failures: string[] = [];
+    let answer: { text: string; model: string } | null = null;
+    let provider = "";
+    for (const candidate of providers) {
+      try {
+        answer = candidate === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory);
+        provider = candidate;
+        break;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Provider unavailable";
+        failures.push(reason);
+        console.warn("[AI step execution provider failure]", candidate, reason);
+      }
+    }
+    if (!answer) { res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) }); return; }
+    const result = answer.text.trim().slice(0, 12000);
+    if (!result) { res.status(502).json({ error: "The AI returned an empty deliverable." }); return; }
+    const verifyResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
+    const verifyRows = await readSupabaseJson<typeof taskRows>(verifyResponse);
+    const latest = verifyRows[0];
+    if (!latest || latest.status === "paused" || latest.status === "stopped") {
+      res.status(409).json({ error: "The project changed while this step was running. Review the project and try again." }); return;
+    }
+    const latestStep = latest.steps.find((item) => item.id === stepId);
+    if (!latestStep || latestStep.state !== "approved" || latestStep.result) {
+      res.status(409).json({ error: "This step changed or was already executed. Refresh the project." }); return;
+    }
+    const executedAt = new Date().toISOString();
+    const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, result, executedAt } : item);
+    const updateQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id, select: "id" });
+    const updateResponse = await supabaseFetch("/rest/v1/tasks?" + updateQuery.toString(), {
+      method: "PATCH",
+      headers: { "content-type": "application/json", prefer: "return=representation" },
+      body: JSON.stringify({ steps: updatedSteps }),
+    }, session.accessToken);
+    const updatedRows = await readSupabaseJson<Array<{ id: string }>>(updateResponse);
+    if (!updatedRows[0]) { res.status(409).json({ error: "Could not save the execution result. Refresh and try again." }); return; }
+    res.json({ taskId, stepId, result, executedAt, provider, model: answer.model, usage: await currentUsage(session.accessToken) });
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not execute this project step.");
+  }
+});
+
 router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
