@@ -122,8 +122,9 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
       const doc = item.documentData;
       if (!doc || typeof doc !== "object" || typeof doc.title !== "string" || doc.title.length > 180 ||
         !Array.isArray(doc.paragraphs) || doc.paragraphs.length > 12 || doc.paragraphs.some((value: unknown) => typeof value !== "string" || value.length > 3000) ||
-        !Array.isArray(doc.columns) || doc.columns.length < 1 || doc.columns.length > 12 || doc.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
-        !Array.isArray(doc.rows) || doc.rows.length > 100 || doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 1000))) return null;
+        !Array.isArray(doc.columns) || doc.columns.length > 12 || doc.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
+        !Array.isArray(doc.rows) || doc.rows.length > 100 || (doc.columns.length === 0 && (doc.rows.length > 0 || doc.paragraphs.length === 0)) ||
+        doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 1000))) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
     }
     if (item.spreadsheetData !== undefined) {
