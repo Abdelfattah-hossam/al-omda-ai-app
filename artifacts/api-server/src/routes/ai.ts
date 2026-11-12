@@ -262,29 +262,97 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
   return { text, model };
 }
 
+type OpenRouterCatalogModel = { id: string; name?: string; description?: string; pricing?: { prompt?: string; completion?: string } };
+let openRouterCatalogCache: { expiresAt: number; models: OpenRouterCatalogModel[] } | null = null;
+
+async function getOpenRouterFreeModels(): Promise<OpenRouterCatalogModel[]> {
+  if (openRouterCatalogCache && openRouterCatalogCache.expiresAt > Date.now()) return openRouterCatalogCache.models;
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new Error("OpenRouter model catalog returned " + response.status);
+    const payload = await response.json().catch(() => null) as any;
+    const models = Array.isArray(payload?.data) ? payload.data.filter((item: any) => {
+      if (!item || typeof item.id !== "string") return false;
+      const explicitFree = item.id.endsWith(":free");
+      const zeroPrice = Number(item.pricing?.prompt) === 0 && Number(item.pricing?.completion) === 0;
+      return (explicitFree || zeroPrice) && !/embedding|rerank|moderation|image-generation|text-to-speech|speech-to-text/i.test(item.id);
+    }).map((item: any) => ({ id: item.id, name: item.name, description: item.description, pricing: item.pricing })) : [];
+    openRouterCatalogCache = { expiresAt: Date.now() + 10 * 60 * 1000, models };
+    return models;
+  } catch (error) {
+    console.warn("[OpenRouter model catalog unavailable]", error instanceof Error ? error.message : "Unknown error");
+    return [];
+  }
+}
+
+async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[]> {
+  const catalog = await getOpenRouterFreeModels();
+  const staticFallbacks = [
+    "nvidia/nemotron-3-ultra:free",
+    "recursive/flint:free",
+    "nvidia/nemotron-3.5-lightning:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3.5-super-vl:free",
+    "nvidia/nemotron-3-nano-omni:free",
+  ];
+  const coding = isCodingRequest(messages);
+  const structured = needsLongStructuredOutput(messages);
+  const latest = getLatestUserRequest(messages).toLowerCase();
+  const preference = coding
+    ? /coding|code|programming|software|agent|flint|inkling|nemotron.*ultra|deepseek/
+    : structured
+      ? /reasoning|agent|instruct|ultra|ernie|gemma|nemotron/
+      : /instruct|reasoning|general|chat|gemma|ernie|nemotron|inkling/;
+  const ranked = catalog
+    .map((model) => ({ model, score: (preference.test([model.id, model.name, model.description].filter(Boolean).join(" ").toLowerCase()) ? 10 : 0) + (model.id.endsWith(":free") ? 2 : 0) }))
+    .sort((a, b) => b.score - a.score)
+    .map(({ model }) => model.id);
+  const available = ranked.length ? ranked : staticFallbacks;
+  const selected = [...new Set([...available.slice(0, 3), ...staticFallbacks])].slice(0, 4);
+  // Keep a final free-router fallback for newly added models not yet reflected in the cached catalog.
+  return [...selected, "openrouter/free"];
+}
+
 async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OpenRouter is not configured.");
-  // The special router is restricted to free models; never select a paid model ID.
-  const model = "openrouter/free";
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    signal: AbortSignal.timeout(25000),
-    headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
-  });
-  const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ")" + (providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."));
-  const text = payload?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error("OpenRouter returned an empty response.");
-  return { text, model: payload?.model || model };
+  const candidates = await getOpenRouterModelOrder(messages);
+  const failures: string[] = [];
+  for (const model of candidates) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        signal: AbortSignal.timeout(18000),
+        headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
+        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+      });
+      const payload = await response.json().catch(() => null) as any;
+      if (!response.ok) {
+        failures.push(model + ": " + response.status + (providerErrorMessage(payload) ? " " + providerErrorMessage(payload) : ""));
+        continue;
+      }
+      const raw = payload?.choices?.[0]?.message?.content;
+      const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
+      if (!text) {
+        failures.push(model + ": empty response");
+        continue;
+      }
+      return { text, model: payload?.model || model };
+    } catch (error) {
+      failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
+    }
+  }
+  throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
 async function callProviderWithRetry(provider: "gemini" | "openrouter", messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+  // OpenRouter already tries several free specialist models internally; retrying its entire
+  // rotation would repeat the same failed models and waste the user's time.
+  if (provider === "openrouter") return callOpenRouter(messages, memory);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return provider === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory);
+      return await callGemini(messages, memory);
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
