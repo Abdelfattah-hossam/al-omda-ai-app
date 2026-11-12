@@ -41,6 +41,8 @@ jobs:
 
       - name: Test local Agent utilities
         run: pnpm --filter @workspace/scripts test
+      - name: Test chat Agent stream parser
+        run: pnpm --filter @workspace/al-omda-ai test
 
       - name: Typecheck and build application
         run: pnpm build
