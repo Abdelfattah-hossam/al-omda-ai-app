@@ -7,11 +7,12 @@ test("encodes MCP server and tool names into a safe function alias", () => {
   assert.match(alias, /^mcp_tool_[A-Za-z0-9_-]+$/);
   assert.deepEqual(parseMcpToolAlias(alias), { serverName: "desktop-tools", toolName: "computer.screenshot" });
   assert.equal(mcpToolDisplayName(alias), "desktop-tools / computer.screenshot");
+  assert.ok(alias.length <= 64);
 });
 
 test("rejects malformed aliases and invalid names", () => {
   assert.equal(parseMcpToolAlias("mcp.tool.not-base64-json"), null);
   assert.equal(parseMcpToolAlias("mcp.tool." + "a".repeat(600)), null);
   assert.throws(() => createMcpToolAlias("", "tool"), /Invalid MCP/);
-  assert.throws(() => createMcpToolAlias("server".repeat(10), "tool".repeat(10)), /too long/);
+  assert.throws(() => createMcpToolAlias("s".repeat(129), "tool"), /Invalid MCP/);
 });
