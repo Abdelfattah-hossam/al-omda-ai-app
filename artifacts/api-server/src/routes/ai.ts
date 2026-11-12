@@ -8,7 +8,7 @@ import {
 } from "../lib/supabase";
 
 const router: IRouter = Router();
-const DAILY_LIMIT = 100;
+const DAILY_LIMIT = 1000;
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
 
