@@ -575,13 +575,17 @@ async function loadAdditionalModelProviders(): Promise<Array<{ base: string; mod
 }
 
 async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+async function getModelProviders(): Promise<Array<{ base: string; model: string; key: string; name: string }>> {
   const configuredProviders = await loadAdditionalModelProviders();
-  const providers = [
+  return [
     { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary" },
     ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback" },
   ].filter((item, index, all) => item.base && item.model && all.findIndex((other) => other.base === item.base && other.model === item.model) === index);
-  if (!providers.length) throw new Error("Configure OMDA_AGENT_MODEL_NAME or OMDA_AGENT_FALLBACK_MODEL_NAME.");
+}
+
+  const providers = await getModelProviders();
+  if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
   for (const provider of providers) {
@@ -797,6 +801,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
   if (!authenticated(req)) { send(res, 401, { error: "Unauthorized local agent client." }); return; }
+  if (req.method === "GET" && url.pathname === "/v1/models/providers") {
+    const providers = await getModelProviders();
+    send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: /^https?:\\/\\/(localhost|127\\.0\\.0\\.1|\\[::1\\])(?::|\\/|$)/i.test(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key) })) }); return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/runtime/status") { send(res, 200, { activeRuns: activeAgentRuns }); return; }
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {
     const body = await readBody(req);
