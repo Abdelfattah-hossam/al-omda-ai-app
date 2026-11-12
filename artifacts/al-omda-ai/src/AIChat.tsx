@@ -89,7 +89,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
   const copy = {
     title: ar ? "شات العمدة الذكي" : "AL OMDA AI Chat",
-    subtitle: ar ? "العمدة يختار المحرك المجاني الأنسب تلقائيًا." : "AL OMDA automatically selects the best available free engine.",
+    subtitle: ar ? "العمدة يختار نموذجًا مجانيًا متخصصًا حسب طلبك ويجرّب بدائل تلقائيًا." : "AL OMDA selects a specialized free model for each request and automatically tries alternatives.",
     login: ar ? "سجّل الدخول لاستخدام الشات وحفظ رصيدك اليومي." : "Sign in to use AI chat and track your daily allowance.",
     placeholder: ar ? "اكتب سؤالك أو اطلب كودًا..." : "Ask a question or request code...",
     send: ar ? "إرسال" : "Send",
@@ -384,7 +384,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const details = Array.isArray(data.details) ? data.details.filter((item: unknown) => typeof item === "string").join(" · ") : "";
         throw new Error([data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."), details].filter(Boolean).join(" — "));
       }
-      let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.provider };
+      let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.model ? `${data.provider} · ${data.model}` : data.provider };
       if (data.app && typeof data.app.title === "string" && typeof data.app.html === "string") {
         const blob = new Blob([data.app.html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -556,7 +556,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const providerNames = usage?.providers
-    ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : "OpenRouter Free")
+    ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : "OpenRouter Free Models")
     : [];
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
 
@@ -599,7 +599,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <button type="button" className="button button-quiet button-small ai-live-voice-button" onClick={()=>setShowLiveVoice((value)=>!value)} aria-expanded={showLiveVoice}><Volume2 size={14}/>{ar ? "المحادثة الصوتية" : "Live voice"}{showLiveVoice ? <X size={13}/> : null}</button>
       </div>
     </div>
-    {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار تلقائيًا المحرك المجاني المتاح والأنسب لنوع طلبك." : "Automatic routing is on. AL OMDA selects the best available free engine for your request."}</span></div>}
+    {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA selects a free specialist model and tries alternatives when needed."}</span></div>}
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
