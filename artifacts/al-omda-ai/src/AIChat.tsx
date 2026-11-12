@@ -198,9 +198,20 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       const transcript = event.results?.[0]?.[0]?.transcript;
       if (transcript) setInput((current) => current ? current + " " + transcript : transcript);
     };
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
       setListening(false);
-      setError(ar ? "تعذر التعرف على الصوت. تحقق من إذن الميكروفون." : "Voice recognition failed. Check microphone permission.");
+      const code = typeof event?.error === "string" ? event.error : "unknown";
+      const messages: Record<string, { ar: string; en: string }> = {
+        "not-allowed": { ar: "إذن الميكروفون مرفوض. اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع.", en: "Microphone permission is denied. Allow microphone access in your browser's site settings." },
+        "service-not-allowed": { ar: "خدمة التعرف على الصوت غير مسموح بها في هذا المتصفح.", en: "Speech recognition is not allowed by this browser." },
+        "audio-capture": { ar: "لم يتم العثور على ميكروفون متاح. تحقق من توصيله وإذن استخدامه.", en: "No microphone is available. Check the device and microphone permission." },
+        "no-speech": { ar: "لم نسمع صوتًا. اضغط الميكروفون وتحدث بوضوح ثم حاول مرة أخرى.", en: "No speech was detected. Tap the microphone and try speaking again." },
+        "network": { ar: "تعذر الاتصال بخدمة التعرف على الصوت. تحقق من الإنترنت وحاول مرة أخرى.", en: "Speech recognition service could not be reached. Check your internet connection and try again." },
+        "language-not-supported": { ar: "لغة التعرف على الصوت غير مدعومة على هذا الجهاز.", en: "Speech recognition language is not supported on this device." },
+        "aborted": { ar: "تم إيقاف التسجيل.", en: "Recording was stopped." },
+      };
+      const detail = messages[code];
+      setError(detail ? (ar ? detail.ar : detail.en) : (ar ? "تعذر التعرف على الصوت (" + code + "). تحقق من إذن الميكروفون ودعم المتصفح." : "Speech recognition failed (" + code + "). Check microphone permission and browser support."));
     };
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
