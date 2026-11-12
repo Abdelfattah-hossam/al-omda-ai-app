@@ -89,6 +89,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const voiceStoppedByUserRef = useRef(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
+  const sendingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
@@ -381,18 +382,21 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     event?.preventDefault();
     const imageForRequest = pendingImage;
     const text = input.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
-    if (!text || loading || historyLoading || !signedIn || (usage && usage.remaining <= 0)) return;
-    const conversationId = activeConversationId || await createConversation();
-    if (!conversationId) return;
-    const next = [...messages, { role: "user" as const, content: text }];
-    setPendingImage(null);
-    shouldAutoScrollRef.current = true;
-    setMessages(next);
-    setInput("");
+    if (!text || loading || historyLoading || sendingRef.current || !signedIn || (usage && usage.remaining <= 0)) return;
+    // Lock synchronously before the first await so rapid taps/Enter presses cannot
+    // create duplicate conversations or send the same request twice.
+    sendingRef.current = true;
     setLoading(true);
-    setError("");
-    await saveHistory(next.slice(-100), conversationId);
     try {
+      const conversationId = activeConversationId || await createConversation();
+      if (!conversationId) return;
+      const next = [...messages, { role: "user" as const, content: text }];
+      setPendingImage(null);
+      shouldAutoScrollRef.current = true;
+      setMessages(next);
+      setInput("");
+      setError("");
+      await saveHistory(next.slice(-100), conversationId);
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         credentials: "same-origin",
@@ -474,6 +478,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
     } finally {
+      sendingRef.current = false;
       setLoading(false);
       void loadUsage();
     }
