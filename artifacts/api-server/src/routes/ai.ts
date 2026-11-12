@@ -107,29 +107,35 @@ function parseExcelWorkbook(text: string): { title: string; columns: string[]; r
 
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
     const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !Array.isArray(value.columns) || !Array.isArray(value.rows) || !Array.isArray(value.paragraphs ?? [])) return null;
-    let columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
+    if (!value || typeof value.title !== "string" || !value.title.trim()) return null;
+    const rawParagraphs = value.paragraphs === undefined ? [] : value.paragraphs;
+    const rawColumns = value.columns === undefined ? [] : value.columns;
+    const rawRows = value.rows === undefined ? [] : value.rows;
+    if (!Array.isArray(rawParagraphs) || !Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
+    const paragraphs = tableOnly ? [] : rawParagraphs.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.slice(0, 5000)).slice(0, 80);
+    const columns = rawColumns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
     if (forceSevenColumns && columns.length !== 7) return null;
-    if (!columns.length || columns.length > 12) return null;
-    let rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => tableOnly ? "" : String(row[index] ?? "").slice(0, 1000)));
-    if (tableOnly && rows.length === 0) rows = Array.from({ length: 8 }, () => columns.map(() => ""));
-    if (!rows.length) return null;
-    return { title: value.title.trim().slice(0, 180), paragraphs: tableOnly ? [] : (value.paragraphs ?? []).filter((item: unknown) => typeof item === "string").map((item: string) => item.slice(0, 3000)).slice(0, 12), columns, rows };
+    if (columns.length > 12) return null;
+    if (tableOnly && columns.length === 0) return null;
+    if (columns.length === 0 && (rawRows.length > 0 || paragraphs.length === 0)) return null;
+    const rows = columns.length ? rawRows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => tableOnly ? "" : String(row[index] ?? "").slice(0, 2000))) : [];
+    const finalRows = tableOnly && rows.length === 0 ? Array.from({ length: 8 }, () => columns.map(() => "")) : rows;
+    if (columns.length > 0 && finalRows.length === 0) return null;
+    return { title: value.title.trim().slice(0, 180), paragraphs, columns, rows: finalRows };
   } catch { return null; }
 }
-
 function isCodingRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
   return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
 }
 
 function systemPrompt(coding: boolean, memory = ""): string {
-  const base = "You are AL OMDA AI (العمدة), the AI assistant itself. The name AL OMDA always refers to YOU, the assistant, never to a separate human, colleague, or team. Match the user's language. Be accurate, practical, honest about uncertainty, and never claim to have executed code or changed external systems unless a tool actually did so. When the user delegates a project, YOU (AL OMDA AI) are the intended executor: analyze the request, create the deliverables or code using available tools, make revisions, and report what was actually completed. The user is the project owner who sets goals, gives direction, and reviews or approves important decisions. Never say the user should execute the delegated work themselves. If you lack a required tool, explain the specific limitation and provide the closest useful work you can actually complete.";
+  const base = "You are AL OMDA AI (العمدة), the AI assistant itself. The name AL OMDA always refers to YOU, the assistant, never to a separate human, colleague, or team. Match the user's language. Before answering, carefully parse the COMPLETE user request and the relevant conversation context. Silently make a requirements checklist: exact deliverable, every requested item, quantities, format, language, audience, constraints, exclusions, and what must not be changed. Resolve references such as this/that/previous using conversation context. Do not skip, reinterpret, or replace any explicit requirement. If a request is actionable and sufficiently clear, do the work rather than merely describing how the user can do it. Before sending the response, silently verify that every requirement is addressed, all generated content is coherent and understandable, calculations and structure are consistent, and any claimed file or action actually exists. For structured files, validate the complete structure before declaring success; if the first output is malformed, correct it and validate again. Never return an empty, irrelevant, generic, or confusing artifact. If a requirement is genuinely ambiguous and changes the result materially, ask one focused question; otherwise make the safest reasonable assumption and state it briefly. Be accurate, practical, and honest about uncertainty. When the user delegates a project, YOU (AL OMDA AI) are the intended executor: analyze the request, create the deliverables or code using available tools, make revisions, and report what was actually completed. The user is the project owner who sets goals, gives direction, and reviews or approves important decisions. Never say the user should execute delegated work themselves. Never claim to have executed code or changed external systems unless a tool actually did so. If you lack a required tool, explain the specific limitation and provide the closest useful work you can actually complete. Do not reveal private reasoning; provide concise conclusions and verifiable results.";
   const memoryContext = memory.trim()
     ? "\n\nIMPORTANT PRIVATE USER PROFILE (explicitly saved by this account user):\n" +
       "Use these details as the source of truth when the user asks about their own preferences, work style, projects, or previous decisions. Answer directly from saved details; do not ask the user to repeat information already stated here. Apply relevant preferences to your response and project decisions. If a detail is not present, say so rather than guessing.\n" +
@@ -234,8 +240,8 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     ].join("\n") }];
     const providers = chooseProviders(messages);
     if (providers.length === 0) { res.status(503).json({ error: "No AI provider is configured." }); return; }
-    const usage = await reserveUnits(session.accessToken, 1);
-    if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
+    const usage = await currentUsage(session.accessToken);
+    if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
     const failures: string[] = [];
     let answer: { text: string; model: string } | null = null;
@@ -254,7 +260,9 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     if (!parsed || typeof parsed.title !== "string" || !parsed.title.trim() || !Array.isArray(parsed.steps) || parsed.steps.length < 3 || parsed.steps.length > 8 || parsed.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || step.output.length > 1200 || typeof step.complete !== "string" || step.complete.length > 1200)) {
       res.status(502).json({ error: "The AI plan did not meet the required structure. Please try again." }); return;
     }
-    res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model, usage: await currentUsage(session.accessToken) });
+    const chargedUsage = await reserveUnits(session.accessToken, 1);
+    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: chargedUsage }); return; }
+    res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model, usage: chargedUsage });
   } catch (error) { reportSupabaseError(req, res, error, "Could not generate the AI project plan."); }
 });
 router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<void> => {
@@ -589,6 +597,50 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (!answer) {
       res.status(503).json({ error: "All configured free AI providers are temporarily unavailable. No AI usage was deducted; please retry shortly.", details: failures.slice(0, 3), usage });
       return;
+    }
+    if (wordDocumentRequest && !parseWordDocument(answer.text, sevenColumnTable, tableOnly)) {
+      const repairRequest = [{ role: "user" as const, content: [
+        "Repair the Word document output. Return ONLY valid JSON: " + '{"title":"...","paragraphs":["..."],"columns":[],"rows":[]}',
+        "A normal written document may use paragraphs only. Use an empty columns and rows array unless the customer explicitly requested a table. If a table is requested, each row must match its column count.",
+        sevenColumnTable ? "The customer explicitly requires exactly seven table columns." : "",
+        tableOnly ? "The customer requires a blank table only, with exactly eight empty body rows and no paragraphs." : "",
+        "Preserve all details and constraints. Do not invent unrelated sections or data.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 14000)
+      ].filter(Boolean).join("\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
+      catch (error) { console.warn("[Word document repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseWordDocument(answer.text, sevenColumnTable, tableOnly)) {
+        res.status(502).json({ error: "لم يتم اعتماد مستند Word لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات. أعد المحاولة لاحقًا." });
+        return;
+      }
+    }
+    if (excelRequest && !parseExcelWorkbook(answer.text)) {
+      const repairRequest = [{ role: "user" as const, content: [
+        "Repair the Excel workbook. Return ONLY valid JSON: " + '{"title":"...","columns":["..."],"rows":[["..."]]}',
+        "Use relevant columns and rows of equal width. Preserve the original request and never add unrelated sample data.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 14000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
+      catch (error) { console.warn("[Excel workbook repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseExcelWorkbook(answer.text)) {
+        res.status(502).json({ error: "لم يتم اعتماد ملف Excel لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات." });
+        return;
+      }
+    }
+    if (desktopAppRequest && !parseHtmlApp(answer.text)) {
+      const repairRequest = [{ role: "user" as const, content: [
+        "Repair the app output. Return ONLY one complete self-contained HTML document. No Markdown or external dependencies.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 14000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
+      catch (error) { console.warn("[HTML app repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      if (!parseHtmlApp(answer.text)) {
+        res.status(502).json({ error: "لم يتم اعتماد التطبيق لأن فحص HTML فشل. لم يتم خصم وحدات." });
+        return;
+      }
     }
     const latestUsage = await reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000))));
     if (!latestUsage.allowed) {
