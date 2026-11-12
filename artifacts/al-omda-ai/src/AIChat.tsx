@@ -8,7 +8,7 @@ type Usage = {
   remaining: number;
   limit: number;
   resetAt: string;
-  providers?: { gemini: boolean; groq: boolean; openrouter: boolean };
+  providers?: { gemini: boolean; openrouter: boolean };
 };
 
 export default function AIChatPage({ language, signedIn }: { language: Language; signedIn: boolean }) {
@@ -33,7 +33,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     used: ar ? "المستخدم" : "Used",
     limit: ar ? "الحد اليومي" : "Daily limit",
     providers: ar ? "المحركات المجانية المتصلة" : "Connected free engines",
-    noProvider: ar ? "لم يتم ربط محرك مجاني بعد. أضف مفتاح Gemini أو Groq أو OpenRouter المجاني في أسرار Cloudflare." : "No free engine is connected yet. Add a free Gemini, Groq, or OpenRouter key to Cloudflare secrets.",
+    noProvider: ar ? "لم يتم ربط محرك مجاني بعد. أضف مفتاح Gemini أو OpenRouter المجاني في أسرار Cloudflare." : "No free engine is connected yet. Add a free Gemini or OpenRouter key to Cloudflare secrets.",
     voiceUnsupported: ar ? "الإملاء الصوتي غير مدعوم في هذا المتصفح." : "Voice input is not supported in this browser.",
     mic: ar ? "تحدث" : "Speak",
     stop: ar ? "إيقاف التسجيل" : "Stop recording",
@@ -131,7 +131,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   };
 
   const providerNames = usage?.providers
-    ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : name === "groq" ? "Groq" : "OpenRouter Free")
+    ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : "OpenRouter Free")
     : [];
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
 
