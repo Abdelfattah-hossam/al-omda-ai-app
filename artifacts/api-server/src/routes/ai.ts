@@ -129,6 +129,12 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
     let value: any = null;
     try { value = JSON.parse(source); }
     catch {
+      // Preserve a clean prose draft as a Word document if a provider ignores the JSON format.
+      const plainText = source.replace(/^\x60\x60\x60(?:text|markdown)?\s*/i, "").replace(/\s*\x60\x60\x60$/, "").trim();
+      if (plainText && !plainText.startsWith("{") && plainText.length >= 40 && !/<(?:html|!doctype)/i.test(plainText)) {
+        const plainParagraphs = plainText.split(/\n\s*\n/).map((part) => part.replace(/^#{1,6}\s*/, "").trim()).filter(Boolean);
+        if (plainParagraphs.length) return { title: plainParagraphs[0].slice(0, 180), paragraphs: plainParagraphs, columns: [], rows: [] };
+      }
       // Providers sometimes wrap JSON in a short explanation. Extract the first complete JSON object safely.
       const first = source.indexOf("{");
       if (first < 0) return null;
@@ -723,7 +729,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings." : wordTableRequested ? "The user explicitly requested a table. Create only the table structure and content needed by the request." : "PROSE DOCUMENT ONLY: write the complete document in paragraphs. Set columns and rows to empty arrays. Do NOT add a table because the user did not request one.",
         tableOnly ? "TABLE-ONLY BLANK TEMPLATE: return an empty paragraphs array and exactly 8 blank body rows. Every row must contain the correct number of empty strings. Do NOT fill any cells with examples, sample data, explanations, or invented content. The table headers may be inferred from the request." : "For a populated document, include meaningful complete content in rows.",
         "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
-        tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : wordTableRequested ? "Include only relevant table rows. Do not add unrelated sample data." : "Write clear, complete, well-organized paragraphs with useful headings where appropriate. Do not invent table columns, rows, or sample data.",
+        tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : wordTableRequested ? "Include only relevant table rows. Do not add unrelated sample data." : "Write clear, complete, well-organized paragraphs with useful headings where appropriate. Keep columns and rows empty. Do not invent a table.",
+        "Before drafting, interpret every sentence in the original request. Internally checklist all requested items, constraints, quantities, names, language, format, and exclusions. Draft only what was requested, then verify the finished document against every item. Resolve ambiguity conservatively; never invent facts, sections, examples, tables, or extra deliverables. Do not show the checklist.",
+        "The JSON must be valid. paragraphs must contain the complete document text; columns and rows must be empty unless a table was explicitly requested.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
     ] : messages;
@@ -759,7 +767,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (wordDocumentRequest && !validatedWordDocument) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the Word document output. Return ONLY valid JSON: " + '{"title":"...","paragraphs":["..."],"columns":[],"rows":[]}',
-        "A normal written document may use paragraphs only. Use an empty columns and rows array unless the customer explicitly requested a table. If a table is requested, each row must match its column count.",
+        "Read the original request sentence by sentence and preserve every requested requirement, constraint, and exclusion. Do not add a table unless explicitly requested. For prose documents, put all complete content in paragraphs and keep columns and rows empty. For a requested table, include only relevant headings and rows with matching cell counts.",
         sevenColumnTable ? "The customer explicitly requires exactly seven table columns." : "",
         tableOnly ? "The customer requires a blank table only, with exactly eight empty body rows and no paragraphs." : "",
         "Preserve all details and constraints. Do not invent unrelated sections or data.",
@@ -770,7 +778,30 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       catch (error) { console.warn("[Word document repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested);
       if (!validatedWordDocument) {
-        res.status(502).json({ error: "لم يتم اعتماد مستند Word لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات. أعد المحاولة لاحقًا." });
+        // Try the other configured provider automatically before returning a failure to the user.
+        const alternateProvider = providers.find((candidate) => candidate !== usedProvider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter", [
+              { role: "user", content: [
+                "Create the final Word document now. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
+                "Review every sentence of the original request and satisfy all explicit requirements. Do not invent content or add a table unless explicitly requested.",
+                sevenColumnTable ? "Exactly seven table columns are required." : wordTableRequested ? "A relevant table is explicitly required." : "This is a prose-only document: paragraphs contain the complete text; columns and rows must be empty arrays.",
+                tableOnly ? "Blank table only: eight empty rows; no prose or sample values." : "",
+                "Original request: " + latestCustomerRequest
+              ].filter(Boolean).join("\n") }
+            ], userMemory);
+            const alternateDocument = parseWordDocument(alternateAnswer.text, sevenColumnTable, tableOnly, wordTableRequested);
+            if (alternateDocument) {
+              answer = alternateAnswer;
+              validatedWordDocument = alternateDocument;
+              usedProvider = alternateProvider;
+            }
+          } catch (error) { console.warn("[Alternate Word provider failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
+      if (!validatedWordDocument) {
+        res.status(502).json({ error: "تعذر إنشاء المستند بعد محاولات الإصلاح التلقائية. لم يتم خصم وحداتك. حاول بعد قليل، ولن تحتاج إلى إعادة كتابة طلبك." });
         return;
       }
     }
