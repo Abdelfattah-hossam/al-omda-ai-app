@@ -8,6 +8,7 @@ import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
 import { buildMcpEnvironment } from "./mcp-env.js";
 import { buildBingCompatibleSearchUrl, parseBingCompatibleSearchPayload } from "./web-search.js";
+import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -165,6 +166,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   if (!response) throw new Error("No HTTP response was received.");
   const responseHeaders: Record<string, string> = {};
   response.headers.forEach((value, key) => { responseHeaders[key] = value.slice(0, 1000); });
+  Object.assign(responseHeaders, redactResponseHeaders(responseHeaders));
   const limitedBody = method === "HEAD" ? { text: "", truncated: false } : await readLimitedResponse(response, 50000);
   return { url: url.toString(), method, status: response.status, statusText: response.statusText, headers: responseHeaders, body: limitedBody.text, truncated: limitedBody.truncated, durationMs: Date.now() - startedAt };
 }
@@ -237,17 +239,11 @@ async function compareHttpRoles(body: Json): Promise<Json> {
     role: role.name,
     ...(await httpRequest({ url, method, headers: role.headers }, true)),
   })));
-  const first = responses[0];
   return {
     url,
     method,
     responses,
-    comparison: {
-      sameStatus: responses.every((item) => item.status === first.status),
-      sameBody: responses.every((item) => item.body === first.body),
-      statuses: responses.map((item) => ({ role: item.role, status: item.status })),
-      bodyLengths: responses.map((item) => ({ role: item.role, length: item.body.length })),
-    },
+    comparison: compareHttpRoleResponses(responses),
   };
 }
 async function executeCommand(body: Json): Promise<Json> {
@@ -725,6 +721,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {
     const body = await readBody(req);
     send(res, 200, await delegateAgent(body)); return;
+  }
+  if (req.method === "GET" && url.pathname === "/v1/http/roles") {
+    const roles = await loadHttpRoles();
+    send(res, 200, { roles: roles.map((role) => role.name) }); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/http/compare") {
     const body = await readBody(req);
