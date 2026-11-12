@@ -10,7 +10,7 @@ import {
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -110,6 +110,14 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
     total += item.content.length;
     if (total > 200000) return null;
     const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };
+    if (item.taskId !== undefined) {
+      if (typeof item.taskId !== "string" || !validConversationId(item.taskId)) return null;
+      saved.taskId = item.taskId;
+    }
+    if (item.taskTitle !== undefined) {
+      if (typeof item.taskTitle !== "string" || item.taskTitle.length > 160) return null;
+      saved.taskTitle = item.taskTitle;
+    }
     if (item.documentData !== undefined) {
       const doc = item.documentData;
       if (!doc || typeof doc !== "object" || typeof doc.title !== "string" || doc.title.length > 180 ||
