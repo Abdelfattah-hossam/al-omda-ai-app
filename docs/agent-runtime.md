@@ -74,6 +74,10 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Parallel specialist agents
+
+The main Agent can call `agent.delegate` to split a complex request into 2–4 independent specialist investigations. They run concurrently and can read workspace files, use Skills, inspect allowlisted HTTPS targets, and use the configured web search. Specialists are deliberately read-only: they cannot write files, execute terminal commands, or call arbitrary MCP tools. The lead Agent combines their evidence and performs any required changes through its normal approval gate. The Agents workspace also exposes a manual two-specialist delegation form with live progress.
+
 The current browser bridge is Playwright MCP over local stdio. It provides browser control through the MCP tools; it is not yet a native browser panel with integrated tab thumbnails, profile management, or cross-device remote control.
 
 ### Desktop control through Computer Use MCP
@@ -135,7 +139,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `GET /v1/http/roles` — list configured role names without exposing credential environment variables.
 - `POST /v1/http/compare` — compare an allowlisted endpoint across two or more named roles configured in `.omda/http-roles.json`.
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
-- `POST /v1/agent/stream` — stream `token`, `status`, `complete`, and `error` events for `{ "action": "run|resume|continue", ... }`; the existing JSON endpoints remain available for compatibility.
+- `POST /v1/agent/stream` — stream `token`, `status`, `complete`, and `error` events for `{ "action": "run|resume|continue|delegate", ... }`; the existing JSON endpoints remain available for compatibility.
 - `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
 - `GET /v1/mcp/servers` and `GET /v1/mcp/tools` — inspect configured MCP servers and their advertised tools.
 - `POST /v1/agent/continue` — resume a paused run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
