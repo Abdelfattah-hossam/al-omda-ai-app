@@ -33,7 +33,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     remaining: ar ? "المتبقي اليوم" : "Remaining today",
     used: ar ? "المستخدم" : "Used",
     limit: ar ? "الحد اليومي" : "Daily limit",
-    providers: ar ? "المحركات المجانية المتصلة" : "Connected free engines",
+    providers: ar ? "المحركات المجانية المهيأة" : "Configured free engines",
     noProvider: ar ? "لم يتم ربط محرك مجاني بعد. أضف مفتاح Gemini أو OpenRouter المجاني في أسرار Cloudflare." : "No free engine is connected yet. Add a free Gemini or OpenRouter key to Cloudflare secrets.",
     voiceUnsupported: ar ? "الإملاء الصوتي غير مدعوم في هذا المتصفح." : "Voice input is not supported in this browser.",
     mic: ar ? "تحدث" : "Speak",
@@ -167,7 +167,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           <div style={{height:"100%",width:`${percent}%`,background:"#c6a76c",borderRadius:99,transition:"width .2s"}}/>
         </div>
         <div className="setting-row"><div><strong>{copy.used}</strong><small>{usage?.used ?? "—"}</small></div><div><strong>{copy.limit}</strong><small>{usage?.limit ?? 100}</small></div></div>
-        {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })} UTC</small>}
+        {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })}</small>}
         <div className="setting-row"><div><strong>{copy.providers}</strong><small>{providerNames.length ? providerNames.join(" · ") : "—"}</small></div></div>
         {usage && providerNames.length === 0 && <div className="notice-bar" style={{marginTop:10}}>{copy.noProvider}</div>}
         <small className="muted">{copy.voiceNote}</small>
