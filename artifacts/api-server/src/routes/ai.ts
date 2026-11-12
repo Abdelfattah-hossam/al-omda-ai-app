@@ -116,6 +116,49 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
   return { text, model: payload?.model || model };
 }
 
+router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to generate an AI project plan." }); return; }
+    const request = typeof req.body?.request === "string" ? req.body.request.trim() : "";
+    const specialty = req.body?.specialty;
+    const language = req.body?.language === "en" ? "en" : "ar";
+    const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant"];
+    if (!request || request.length > 5000 || !allowedSpecialties.includes(specialty)) { res.status(400).json({ error: "Provide a valid project request and specialty." }); return; }
+    const messages: ChatMessage[] = [{ role: "user", content: [
+      "Create a practical project plan for the user request. You are AL OMDA, the executor; the user is the project owner.",
+      "Specialty: " + specialty,
+      "Language: " + (language === "ar" ? "Arabic" : "English"),
+      "Return ONLY valid JSON, no Markdown fences, with this exact shape:",
+      '{ "title": "short project title", "steps": [{ "text": "actionable step", "output": "specific deliverable", "complete": "objective acceptance check" }] }',
+      "Include 4 to 7 sequential, specific steps tailored to the actual request. Avoid generic filler. Respect every quantity, budget, location, platform, deadline, and constraint. Each step describes work AL OMDA will carry out, not work the user must do. This is a proposed plan only; do not claim execution has happened.",
+      "User request: " + request
+    ].join("\n") }];
+    const providers = chooseProviders(messages);
+    if (providers.length === 0) { res.status(503).json({ error: "No AI provider is configured." }); return; }
+    const usage = await reserveUnits(session.accessToken, 1);
+    if (!usage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
+    const memory = await loadUserMemory(session.accessToken, session.user.id);
+    const failures: string[] = [];
+    let answer: { text: string; model: string } | null = null;
+    let provider = "";
+    for (const candidate of providers) {
+      try { answer = candidate === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory); provider = candidate; break; }
+      catch (error) { const reason = error instanceof Error ? error.message : "Provider unavailable"; failures.push(reason); console.warn("[AI project plan provider failure]", candidate, reason); }
+    }
+    if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. The attempt remains counted in today allowance.", details: failures.slice(0, 2) }); return; }
+    let parsed: any;
+    try {
+      let jsonText = answer.text.trim();
+      if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      parsed = JSON.parse(jsonText);
+    } catch { res.status(502).json({ error: "The AI returned a plan in an unreadable format. Please try again." }); return; }
+    if (!parsed || typeof parsed.title !== "string" || !parsed.title.trim() || !Array.isArray(parsed.steps) || parsed.steps.length < 3 || parsed.steps.length > 8 || parsed.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || step.output.length > 1200 || typeof step.complete !== "string" || step.complete.length > 1200)) {
+      res.status(502).json({ error: "The AI plan did not meet the required structure. Please try again." }); return;
+    }
+    res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model, usage: await currentUsage(session.accessToken) });
+  } catch (error) { reportSupabaseError(req, res, error, "Could not generate the AI project plan."); }
+});
 router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
