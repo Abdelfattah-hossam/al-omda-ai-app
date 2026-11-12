@@ -1,7 +1,7 @@
 export type ModelProviderConfig = { name: string; base: string; model: string; key: string };
 
 function isLoopback(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
@@ -28,7 +28,7 @@ export function parseModelProviderConfig(
     if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
       throw new Error("Model provider " + name + " must use HTTPS or an explicit loopback HTTP endpoint, without credentials or query parameters.");
     }
-    result.push({ name, base: url.toString().replace(/\\/+$/, ""), model, key: apiKeyEnv ? env[apiKeyEnv]!.trim() : "" });
+    result.push({ name, base: url.toString().replace(/\/+$/, ""), model, key: apiKeyEnv ? env[apiKeyEnv]!.trim() : "" });
   }
   return result;
 }
