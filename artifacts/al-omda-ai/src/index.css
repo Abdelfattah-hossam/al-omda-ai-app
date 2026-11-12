@@ -1219,7 +1219,9 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .ai-chat-page .chat-messages{scroll-behavior:auto!important;overflow-anchor:none!important;-webkit-overflow-scrolling:touch;}
 
 
-/* Lock the document itself on the AI chat route: only the transcript may scroll. */
+/* Keep the chat inside the viewport without fixing the document to the screen.
+   A fixed body + fixed app shell can trigger viewport re-positioning on mobile
+   and nested scroll jumps on desktop browsers. */
 html:has(.ai-chat-page),
 body:has(.ai-chat-page){
   width:100%!important;
@@ -1228,20 +1230,26 @@ body:has(.ai-chat-page){
   overflow:hidden!important;
   overscroll-behavior:none!important;
 }
-body:has(.ai-chat-page){position:fixed!important;inset:0!important}
+body:has(.ai-chat-page){
+  position:relative!important;
+  inset:auto!important;
+}
 .app-shell:has(.ai-chat-page){
-  position:fixed!important;
-  inset:0!important;
+  position:relative!important;
+  inset:auto!important;
   width:100%!important;
   height:100dvh!important;
   min-height:0!important;
   max-height:100dvh!important;
   overflow:hidden!important;
   overscroll-behavior:none!important;
+  box-sizing:border-box!important;
 }
 .main-area:has(.ai-chat-page){
+  height:100dvh!important;
   min-height:0!important;
   max-height:100dvh!important;
+  box-sizing:border-box!important;
   overscroll-behavior:none!important;
 }
 .main-area:has(.ai-chat-page)>.content-wrap{overscroll-behavior:none!important}
