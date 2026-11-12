@@ -47,7 +47,12 @@ function getProviders() {
 function getLatestUserRequest(messages: ChatMessage[]): string {
   return messages.filter((message) => message.role === "user").slice(-2).map((message) => message.content).join("\n");
 }
+function isExcelRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  return /\\b(excel|xlsx|spreadsheet|workbook)\\b|إكسل|اكسيل|اكسل|ملف\\s*(?:جداول|جدول بيانات)|جدول\\s*بيانات|شيت\\s*اكسل/i.test(request);
+}
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
+  if (isExcelRequest(messages)) return false;
   const request = getLatestUserRequest(messages);
   const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
   const explicitWord = /\b(word|docx|\\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|جدول.{0,60}(?:و?ورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,60}جدول/i.test(request);
@@ -61,6 +66,22 @@ function isTableOnlyRequest(messages: ChatMessage[]): boolean {
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   return /7\s*(?:خانات|أعمدة|اعمدة|حقول|columns)|سبع\s*(?:خانات|أعمدة|اعمدة|حقول)|جدول.{0,45}(?:7|سبع)|(?:7|سبع).{0,30}جدول/i.test(request);
+}
+
+function parseExcelWorkbook(text: string): { title: string; columns: string[]; rows: string[][] } | null {
+  try {
+    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+    const start = source.indexOf("{");
+    const end = source.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const value = JSON.parse(source.slice(start, end + 1));
+    if (!value || typeof value.title !== "string" || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
+    const columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 30);
+    if (!columns.length) return null;
+    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 500).map((row: unknown[]) => columns.map((_: string, index: number) => String(row[index] ?? "").slice(0, 2000)));
+    if (!rows.length) return null;
+    return { title: value.title.trim().slice(0, 180) || "Excel workbook", columns, rows };
+  } catch { return null; }
 }
 
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
@@ -427,10 +448,19 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000)))),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
-    const wordDocumentRequest = isWordDocumentRequest(messages);
+    const excelRequest = isExcelRequest(messages);
+    const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
-    const modelMessages: ChatMessage[] = wordDocumentRequest ? [
+    const modelMessages: ChatMessage[] = excelRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create a real Excel workbook deliverable. Return ONLY valid JSON with this exact schema: " + '{"title":"Workbook title","columns":["Column 1","Column 2"],"rows":[["",""]]}',
+        "Choose useful column headings and create blank rows if the user asks for a blank template. Otherwise populate the workbook with relevant, accurate data. Never return instructions for manually creating the file.",
+        "Keep the workbook in the user's language. Use 1 to 30 columns and 1 to 500 rows. Each row must match the number of columns.",
+        "Original user request: " + getLatestUserRequest(messages)
+      ].join("\\n") }
+    ] : wordDocumentRequest ? [
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Create a real Microsoft Word document deliverable. Do not answer with source code, instructions, or a Markdown table.",
@@ -471,6 +501,21 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     const latestUsage = usage;
+    if (excelRequest) {
+      const spreadsheet = parseExcelWorkbook(answer.text);
+      if (!spreadsheet) {
+        res.status(502).json({ error: "تعذر تكوين ملف Excel منظم. أعد إرسال الطلب مرة واحدة." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء بيانات المصنف وتجهيز ملف Excel قابل للتحميل والمعاينة.",
+        spreadsheet,
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
+      return;
+    }
     if (wordDocumentRequest) {
       const document = parseWordDocument(answer.text, sevenColumnTable, tableOnly);
       if (!document) {
