@@ -126,12 +126,16 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(400).json({ error: "The last message must be from the user." });
       return;
     }
+    const characters = messages.reduce((total, message) => total + message.content.length, 0);
+    if (characters > 30000) {
+      res.status(400).json({ error: "Keep the conversation context under 30,000 characters per request." });
+      return;
+    }
     const providers = chooseProviders(messages);
     if (providers.length === 0) {
       res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
       return;
     }
-    const characters = messages.reduce((total, message) => total + message.content.length, 0);
     const units = Math.min(5, Math.max(1, Math.ceil(characters / 6000)));
     const usage = await reserveUnits(accessToken, units);
     if (!usage.allowed) {
