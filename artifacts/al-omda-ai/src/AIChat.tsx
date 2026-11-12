@@ -86,7 +86,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
   const voiceStoppedByUserRef = useRef(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
@@ -297,7 +298,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     };
   }, [signedIn, view, activeConversationId, loading, historyLoading]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
+  useEffect(() => {
+    const container = chatScrollRef.current;
+    if (!container || !shouldAutoScrollRef.current) return;
+    // Scroll only inside the message list, and only while the reader is already at its end.
+    // This avoids moving the whole page or pulling someone away from older messages.
+    container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+  }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
@@ -370,6 +377,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const conversationId = activeConversationId || await createConversation();
     if (!conversationId) return;
     const next = [...messages, { role: "user" as const, content: text }];
+    shouldAutoScrollRef.current = true;
     setMessages(next);
     setInput("");
     setLoading(true);
@@ -657,7 +665,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       <section className="panel panel-pad">
         <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><span className="muted">{messages.length} {ar ? "رسالة" : "messages"}</span></div>
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
-        <div className="chat-messages" aria-live="polite" style={{minHeight:250,maxHeight:"52vh",overflowY:"auto"}}>
+        <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
           {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
@@ -682,7 +690,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             </div>}
           </div>)}
           {loading && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.loading}</p></div>}
-          <div ref={bottomRef}/>
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
