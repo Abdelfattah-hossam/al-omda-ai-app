@@ -64,12 +64,12 @@ function isWordTableRequest(request: string): boolean {
 function isDesktopAppRequest(request: string): boolean {
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
   const desktopClock = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
-  const createAction = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)/i.test(normalized);
-  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:تطبيق|برنامج|موقع|متجر|نظام|منصة|ساعة|app|application|website|web app|software|store|platform|system|clock)/i.test(normalized);
+  const directBuild = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?)?\s*(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|ساعة|website|web app|mobile app|application|software|project|store|platform|system|clock)/i.test(normalized);
+  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:مشروع|تطبيق|برنامج|موقع|متجر|نظام|منصة|ساعة|app|application|website|web app|software|store|platform|system|clock)/i.test(normalized);
   const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
-  if (planningOnly && !createAction && !desktopClock) return false;
+  if (planningOnly && !directBuild && !directAppRequest) return false;
   const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|متجر|ساعة|clock/i.test(normalized);
-  return desktopClock || (appNoun && (createAction || directAppRequest));
+  return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
