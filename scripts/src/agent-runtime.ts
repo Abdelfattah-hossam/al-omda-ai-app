@@ -9,6 +9,7 @@ import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservati
 import { buildMcpEnvironment } from "./mcp-env.js";
 import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web-search.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
+import { consumeOpenAIChatStream } from "./openai-stream.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -509,7 +510,7 @@ async function runTool(call: AgentToolCall): Promise<unknown> {
       throw new Error("Unknown agent tool.");
   }
 }
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
   const providers = [
     { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary" },
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback" },
@@ -523,30 +524,38 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       if (provider.key) headers.set("authorization", "Bearer " + provider.key);
       const response = await fetch(provider.base + "/chat/completions", {
         method: "POST", headers,
-        body: JSON.stringify({ model: provider.model, messages, tools, tool_choice: "auto", temperature: 0.2, stream: false }),
+        body: JSON.stringify({ model: provider.model, messages, tools, tool_choice: "auto", temperature: 0.2, stream: true, stream_options: { include_usage: true } }),
         signal: AbortSignal.timeout(90000),
       });
-      const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
-        const detail = typeof payload?.error?.message === "string" ? payload.error.message.slice(0, 240) : "Model request failed.";
+        const detailText = await response.text().catch(() => "");
+        let detail = "Model request failed.";
+        try { const payload = JSON.parse(detailText); if (typeof payload?.error?.message === "string") detail = payload.error.message.slice(0, 240); } catch { /* use bounded status fallback */ }
         throw new Error("HTTP " + response.status + ": " + detail);
       }
-      const message = payload?.choices?.[0]?.message;
-      if (!message || typeof message !== "object") throw new Error("Model returned an invalid chat completion.");
-      return { message, usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null, durationMs: Date.now() - started, provider: provider.name };
+      let emitted = false;
+      const streamed = await consumeOpenAIChatStream(response, (token) => {
+        emitted = true;
+        onProgress?.({ type: "token", text: token, provider: provider.name });
+      });
+      if (!streamed.message || typeof streamed.message !== "object") throw new Error("Model returned an invalid streaming completion.");
+      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, provider: provider.name };
     } catch (error) {
-      failures.push(provider.name + ": " + (error instanceof Error ? error.message : "request failed"));
+      const message = error instanceof Error ? error.message : "request failed";
+      failures.push(provider.name + ": " + message);
+      if (message.includes("stream") && onProgress) throw error;
     }
   }
   throw new Error("All configured model endpoints failed. " + failures.join(" | ").slice(0, 500));
 }
-async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
+async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: Json) => void): Promise<Json> {
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
   let totalDurationMs = 0;
   let lastProvider = "primary";
   for (let turn = 0; turn < 10; turn++) {
-    const completion = await modelCompletion(state.messages);
+    onProgress?.({ type: "status", status: "thinking", turn: turn + 1 });
+    const completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress);
     totalDurationMs += completion.durationMs;
     lastProvider = completion.provider;
     if (typeof completion.usage?.prompt_tokens === "number") totalPromptTokens += completion.usage.prompt_tokens;
@@ -557,6 +566,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
+    onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
     const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || ""));
     if (approvalCalls.length) {
@@ -635,7 +645,7 @@ async function delegateAgent(body: Json): Promise<Json> {
   });
   return { status: "completed", sessionId: id, agents: results, note: "Specialists ran concurrently with read-only tools. File changes and terminal execution remain in the main agent approval flow." };
 }
-async function startAgent(body: Json): Promise<Json> {
+async function startAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const goal = typeof body.goal === "string" ? body.goal.trim() : "";
   if (!goal || goal.length > 12000) throw new Error("Provide an agent goal between 1 and 12,000 characters.");
   const id = typeof body.sessionId === "string" && /^[a-zA-Z0-9_-]{1,80}$/.test(body.sessionId) ? body.sessionId : randomUUID().replace(/-/g, "");
@@ -647,9 +657,9 @@ async function startAgent(body: Json): Promise<Json> {
     ],
   };
   await saveAgentState(id, state);
-  return await runAgentLoop(id, state);
+  return await runAgentLoop(id, state, onProgress);
 }
-async function resumeAgent(body: Json): Promise<Json> {
+async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
   const state = await loadAgentState(id);
   if (typeof body.goal === "string" && body.goal.trim()) {
@@ -662,9 +672,9 @@ async function resumeAgent(body: Json): Promise<Json> {
     return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })) };
   }
   await saveAgentState(id, state);
-  return await runAgentLoop(id, state);
+  return await runAgentLoop(id, state, onProgress);
 }
-async function continueAgent(body: Json): Promise<Json> {
+async function continueAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
   const state = await loadAgentState(id);
   const pending = state.pendingToolCalls || [];
@@ -685,7 +695,7 @@ async function continueAgent(body: Json): Promise<Json> {
     }
   }
   appendMcpImageObservations(state.messages, imageQueue);
-  return await runAgentLoop(id, state);
+  return await runAgentLoop(id, state, onProgress);
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -720,6 +730,27 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "POST" && url.pathname === "/v1/http/compare") {
     const body = await readBody(req);
     send(res, 200, await compareHttpRoles(body)); return;
+  }
+  if (req.method === "POST" && url.pathname === "/v1/agent/stream") {
+    const body = await readBody(req);
+    const action = body.action;
+    delete body.action;
+    if (action !== "run" && action !== "resume" && action !== "continue") throw new Error("Stream action must be run, resume, or continue.");
+    res.writeHead(200, { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache, no-store", connection: "keep-alive", "x-accel-buffering": "no" });
+    const emit = (event: Json) => {
+      if (!res.destroyed && !res.writableEnded) res.write("data: " + JSON.stringify(event) + "\\n\\n");
+    };
+    try {
+      const result = action === "run" ? await startAgent(body, emit)
+        : action === "resume" ? await resumeAgent(body, emit)
+        : await continueAgent(body, emit);
+      emit({ type: "complete", result });
+    } catch (error) {
+      emit({ type: "error", error: error instanceof Error ? error.message.slice(0, 300) : "Agent stream failed." });
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
+    return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/run") {
     const body = await readBody(req);
