@@ -1,68 +1,99 @@
 # AL OMDA AI
 
-Arabic-first AI workspace for chat, project planning, specialist workflows, account memory, and user-owned task tracking.
+**An Arabic-first, open-source AI workspace evolving into a tool-using agent platform.**
 
-## Current capabilities
+AL OMDA AI combines an AI chat workspace, user-owned project tracking, and a separate local runtime foundation for tools that must run on the user's computer.
 
+> Status: active development / experimental agent runtime. The current web app is not yet a full autonomous coding or desktop agent. See the implementation boundaries below.
+
+## What works today
+
+- Arabic/English React web application.
 - Supabase email/password authentication with HTTP-only session cookies.
-- User-scoped profiles, tasks, independent AI conversations, and private account memory protected by Supabase Row Level Security.
-- AI chat routed between configured Gemini and OpenRouter providers.
-- Gemini Live voice sessions (requires the server-side Gemini key).
-- AI-generated project plans saved to the user's workspace, with per-step approval, pause, resume, and stop controls.
-- Shared daily AI allowance enforced by Supabase RPC.
-- Profile preferences, avatar storage, and private user data.
-- GitHub Actions CI runs typecheck and production build on pushes and pull requests.
-- Installable web-app metadata and a service worker that caches the static app shell for offline launch.
+- User-scoped profiles, tasks, conversations, and private account memory protected by Supabase Row Level Security.
+- AI chat routed through configured Gemini and OpenRouter providers.
+- Gemini Live voice sessions when the server-side Gemini key is configured.
+- AI-generated project plans with per-step approval, pause, resume, and stop controls.
+- Daily AI allowance enforced through Supabase RPC.
+- User workspace, profile preferences, and avatar storage.
+- Document and spreadsheet export flows with fallbacks.
+- Installable web-app shell and GitHub Actions typecheck/build validation.
 
-## Important boundaries
+## Local agent runtime (experimental)
 
-- Project planning and approval are implemented; autonomous end-to-end execution of arbitrary web/mobile projects is not yet implemented. Approving a plan does not itself create or deploy a project.
-- Offline support currently covers launching the cached app shell and cached static assets. Sign-in, AI providers, Supabase reads/writes, voice, and other server-backed actions require an internet connection.
-- The service worker deliberately does not cache API responses, authentication data, private conversations, or secrets.
-- Account memory is private context supplied to AI requests; it is not model training.
-- Claude is not currently integrated as a provider.
-- Dedicated document generation/export (DOCX, XLSX, PDF, and PPTX) and automated project execution still require implementation.
+A separate Node.js runtime now provides the first local tools:
+
+- Workspace file listing, reading, and writing with path and symlink checks.
+- Tool discovery through `GET /v1/tools`.
+- Resumable JSON session storage.
+- Scoped HTTPS inspection for exact authorized hostnames.
+- Optional terminal command execution, disabled by default.
+
+See [Local Agent Runtime](docs/agent-runtime.md) for setup, endpoints, and security boundaries.
 
 ## Architecture
 
 - `artifacts/al-omda-ai/` — React/Vite frontend and Cloudflare Worker configuration.
 - `artifacts/api-server/` — Express-compatible API running inside the Cloudflare Worker.
-- `supabase/setup.sql` and `supabase/migrations/` — user data, chat, memory, and quota schema.
-- `.github/workflows/ci.yml` — automated typecheck and build validation.
+- `scripts/src/agent-runtime.ts` — local Node.js runtime for workspace tools.
+- `supabase/` — database setup and migrations.
+- `.github/workflows/ci.yml` — typecheck and production build validation.
 
-The frontend calls the same-origin `/api` endpoints. Supabase credentials and AI provider keys remain server-side in Cloudflare Worker secrets; do not place secrets in the browser bundle.
+The Cloudflare Worker serves the web application and API. It cannot directly control a user's desktop or safely run arbitrary local processes. Those capabilities require the local runtime or a separately installed desktop companion.
 
-## Local development
+## Roadmap
 
-Use Node.js 22+ and pnpm 9:
+The following are goals, not claims of existing functionality:
+
+1. Connect the local runtime to an agent loop with validated tool calls, approval gates, streaming progress, retries, and cancellation.
+2. Add browser automation for Chromium/Firefox with explicit per-site permissions and tab management.
+3. Add desktop control through a separately installed, permissioned companion.
+4. Add MCP client support and a versioned Skills format.
+5. Add specialist agents for coding, testing, project analysis, documentation, and authorized security research.
+6. Add parallel multi-agent orchestration with shared task state and isolated workspaces.
+7. Add provider adapters for Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, LM Studio, and local models.
+8. Add scoped HTTPFlow comparison, authorized web recon, and CTF workflows with audit logs and safety limits.
+9. Add background job supervision, durable checkpoints, and restart recovery.
+10. Add release/update channels, migration checks, and signed update verification.
+
+## Security model
+
+- Never commit API keys, access tokens, Supabase secrets, or local runtime tokens.
+- The local runtime binds to `127.0.0.1` and requires a bearer token.
+- Terminal execution is disabled unless the operator explicitly opts in.
+- HTTP inspection is limited to HTTPS hostnames explicitly allowlisted by the operator.
+- Security research features are for assets you own or are explicitly authorized to test.
+- Use a disposable account or VM when running untrusted code; host execution is not a sandbox.
+
+See [SECURITY.md](SECURITY.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Development
+
+Requirements: Node.js 22+ and pnpm 9.
 
 ```sh
 pnpm install
-pnpm --filter @workspace/al-omda-ai run dev
-```
-
-Run validation and production build:
-
-```sh
 pnpm run typecheck
 pnpm run build
 ```
 
-## Cloudflare deployment
+Run the local runtime separately:
 
-The application Worker configuration is `artifacts/al-omda-ai/wrangler.jsonc`. The Worker serves the built frontend assets and routes `/api/*` requests through the API server.
+```sh
+pnpm --filter @workspace/scripts agent:runtime
+```
 
-Required server-side configuration includes:
+## Configuration
+
+The web app uses server-side Cloudflare Worker configuration:
 
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
-- `GEMINI_API_KEY` (chat fallback and live voice)
-- `OPENROUTER_API_KEY` (free-model chat routing)
+- `GEMINI_API_KEY`
+- `OPENROUTER_API_KEY`
 
-Set these as Worker secrets/variables in Cloudflare. Never commit their values.
+The local runtime uses environment variables documented in [docs/agent-runtime.md](docs/agent-runtime.md). Never put server secrets in the browser bundle or commit real values.
 
-## Supabase setup
+## License
 
-For a new Supabase project, run `supabase/setup.sql` in the SQL Editor. For an existing project, apply any unapplied migration files in `supabase/migrations/` in chronological order. Configure the Supabase Auth Site URL and allowed redirect URLs for the deployed app origin.
-
-The database policies scope user-owned rows to the authenticated user. Do not use a service-role key in the browser or expose it to the Worker unless a separately reviewed server-side requirement is introduced.
+MIT. See [LICENSE](LICENSE).
