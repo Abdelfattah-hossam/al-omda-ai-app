@@ -26,6 +26,7 @@ A separate Node.js runtime now provides the first local tools:
 - Workspace file listing, reading, and writing with path and symlink checks.
 - Tool discovery through `GET /v1/tools` and project Skills from `.omda/skills/`.
 - A model-driven tool loop with saved sessions and approval gates for file writes and terminal commands.
+- Streaming local Agent responses in the main chat and Agents workspace, with a live estimated tokens-per-second indicator and final provider usage when available.
 - Parallel read-only delegation to 2–4 specialist agents.
 - Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
@@ -54,14 +55,14 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 The following are future goals, not claims of existing functionality:
 
-1. Extend the basic Local Agent integration in regular chat (task submission, explicit approvals, saved-session resume/listing) with streaming progress, retries, cancellation, and durable job status.
+1. Extend the basic Local Agent integration in regular chat (task submission, explicit approvals, saved-session resume/listing) with retries, cancellation, and durable job status.
 2. Add native browser automation for Chromium/Firefox with explicit per-site permissions and tab management; MCP browser servers are the interim route.
 3. Add desktop control through a separately installed, permissioned companion.
 4. Expand MCP beyond local stdio transport with remote transports, server lifecycle management, and a safer install/update experience.
 5. Add write-capable specialist delegation with isolated workspaces, shared task state, and per-agent approval routing.
 6. Expand provider adapters and routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, LM Studio, and other local models.
 7. Add richer HTTPFlow history and visual response diffs, plus additional authorized recon workflows with explicit scope and audit logs.
-8. Add live streaming token output and real-time generation speed.
+8. Add provider-accurate live token accounting and real-time generation speed; the current UI shows a character-based live estimate.
 9. Add background job supervision, service installation, automatic updates, and stronger crash recovery.
 10. Add container-backed execution with resource, network, and filesystem isolation.
 
