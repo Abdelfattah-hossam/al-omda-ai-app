@@ -53,6 +53,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showLiveVoice, setShowLiveVoice] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
@@ -413,13 +414,15 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
-        <details className="ai-voice-panel">
-          <summary>{ar ? "محادثة صوتية مباشرة" : "Live voice conversation"}</summary>
-          <div style={{padding:"10px 2px 2px"}}>
-            <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
-            <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
-          </div>
-        </details>
+        <div className="ai-voice-actions">
+          <button type="button" className="button button-quiet button-small ai-live-voice-button" onClick={()=>setShowLiveVoice((value)=>!value)} aria-expanded={showLiveVoice}>
+            <Volume2 size={14}/>{ar ? "المحادثة الصوتية" : "Live voice"}{showLiveVoice ? <X size={13}/> : null}
+          </button>
+        </div>
+        {showLiveVoice && <div className="ai-voice-panel">
+          <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
+          <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
+        </div>}
         <form onSubmit={sendMessage} className="ai-composer">
           <div className="ai-composer-tools">
             <div className="ai-plus-wrap">
@@ -437,7 +440,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
                 ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
               </div>}
             </div>
-            <textarea ref={inputRef} className="field ai-composer-input" rows={2} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
+            <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
             <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
           </div>
           <div className="ai-composer-footer">
