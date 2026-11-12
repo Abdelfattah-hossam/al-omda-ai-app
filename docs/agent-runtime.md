@@ -80,6 +80,20 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Local supervisor, crash restart, and safe auto-update
+
+For a supervised local runtime, start:
+
+```sh
+pnpm --filter @workspace/scripts agent:supervisor
+```
+
+The supervisor restarts the local Agent runtime after an unexpected exit using bounded backoff. To enable automatic source updates, explicitly set `OMDA_AGENT_AUTO_UPDATE=true`; the default is off. The check interval is controlled by `OMDA_AGENT_UPDATE_INTERVAL_HOURS` (1–168, default 24).
+
+Before updating, it requires the runtime to be idle, the checkout to be on a clean `main` branch with no local commits ahead, and `origin` to be an HTTPS GitHub remote. It fetches `origin/main`, fast-forwards only, runs `pnpm install --frozen-lockfile` and `pnpm build`, and rolls back to the previous commit if installation or build fails. It defers rather than overwriting local edits or interrupting an active Agent task.
+
+The supervisor updates the local Git checkout and restarts the local runtime; it does **not** deploy the Cloudflare website. Keep the supervisor process running. Closing its terminal stops supervision; a platform-specific user service/Task Scheduler installer is still a future improvement. Use a dedicated checkout and review your Git remote before enabling automatic updates.
+
 ### Parallel specialist agents
 
 The main Agent can call `agent.delegate` to split a complex request into 2–4 independent specialist investigations. They run concurrently and can read workspace files, use Skills, inspect allowlisted HTTPS targets, and use the configured web search. Specialists are deliberately read-only: they cannot write files, execute terminal commands, or call arbitrary MCP tools. The lead Agent combines their evidence and performs any required changes through its normal approval gate. The Agents workspace also exposes a manual two-specialist delegation form with live progress.
@@ -151,6 +165,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `POST /v1/agent/continue` — resume a paused run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
 - `POST /v1/agent/resume` — restore a checkpointed session after restarting the local runtime.
 - `GET /v1/agent/sessions` — list up to 100 saved Agent sessions with their last user request and pending-approval status.
+- `GET /v1/runtime/status` — authenticated active-run count used by the supervisor to defer updates while work is in progress.
 - `POST /v1/files/list` — list workspace entries.
 - `POST /v1/files/read` — read a UTF-8 workspace file (2 MB maximum).
 - `POST /v1/files/write` — write a UTF-8 workspace file (2 MB maximum).
