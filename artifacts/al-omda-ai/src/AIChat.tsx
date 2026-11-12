@@ -396,19 +396,19 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       }
       const projectSpecialty = detectProjectSpecialty(text);
-      const projectRequestContext = next.filter((message) => message.role === "user").slice(-6).map((message) => message.content).join("\n\n").slice(-5000);
+      const projectRequestContext = next.filter((message) => message.role === "user").slice(-6, -1).map((message) => message.content).join("\n\n").slice(-5000);
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
             method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ request: projectRequestContext, specialty: projectSpecialty, language: ar ? "ar" : "en" }),
+            body: JSON.stringify({ request: text.slice(0, 5000), context: projectRequestContext, specialty: projectSpecialty, language: ar ? "ar" : "en" }),
           });
           const plan = await planResponse.json().catch(() => ({}));
           if (!planResponse.ok || !Array.isArray(plan.steps) || !plan.title) throw new Error(plan.error || "تعذر تجهيز خطة المشروع.");
           const taskResponse = await fetch("/api/tasks", {
             method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
             body: JSON.stringify({
-              title: String(plan.title).slice(0, 160), request: projectRequestContext.slice(0, 10000), specialty: projectSpecialty, status: "review",
+              title: String(plan.title).slice(0, 160), request: [text, projectRequestContext ? "Relevant earlier project context (only details that apply):\\n" + projectRequestContext : ""].filter(Boolean).join("\\n\\n").slice(0, 10000), specialty: projectSpecialty, status: "review",
               steps: plan.steps.map((step: any) => ({ id: crypto.randomUUID(), text: String(step.text || "").slice(0, 1200), output: String(step.output || "").slice(0, 1200), complete: String(step.complete || "").slice(0, 1200), state: "pending" })),
             }),
           });
