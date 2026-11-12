@@ -117,7 +117,7 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
     const rawColumns = value.columns === undefined ? [] : value.columns;
     const rawRows = value.rows === undefined ? [] : value.rows;
     if (!Array.isArray(rawParagraphs) || !Array.isArray(rawColumns) || !Array.isArray(rawRows)) return null;
-    const paragraphs = tableOnly ? [] : rawParagraphs.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.slice(0, 5000)).slice(0, 80);
+    const paragraphs = tableOnly ? [] : rawParagraphs.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.slice(0, 3000)).slice(0, 12);
     const columns = rawColumns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
     if (forceSevenColumns && columns.length !== 7) return null;
     if (columns.length > 12) return null;
