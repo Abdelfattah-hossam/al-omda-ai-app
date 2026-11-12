@@ -1003,3 +1003,38 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .main-area:has(.ai-chat-page) .ai-chat-page>.panel .ai-composer-input{min-height:42px!important;max-height:104px!important}
   .main-area:has(.ai-chat-page) .ai-chat-page>.panel .chat-message{max-width:96%!important;min-width:0!important;padding:11px!important}
 }
+
+
+/* Compact mobile bottom bar: keep the safe-area clear without inflating the dock */
+@media(max-width:650px){
+  .app-shell>.mobile-nav{
+    position:fixed!important;
+    inset-inline:0!important;
+    bottom:0!important;
+    height:calc(56px + env(safe-area-inset-bottom))!important;
+    min-height:calc(56px + env(safe-area-inset-bottom))!important;
+    max-height:calc(56px + env(safe-area-inset-bottom))!important;
+    padding:3px 8px calc(3px + env(safe-area-inset-bottom))!important;
+    gap:3px!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    box-sizing:border-box!important;
+  }
+  .app-shell>.mobile-nav>a{
+    flex:0 0 56px!important;
+    width:56px!important;
+    min-width:56px!important;
+    max-width:56px!important;
+    min-height:46px!important;
+    height:46px!important;
+    padding:3px 2px!important;
+    gap:3px!important;
+    border-radius:10px!important;
+  }
+  .app-shell>.mobile-nav>a span{font-size:7.5px!important;line-height:1.1!important}
+  .app-shell>.mobile-nav>a svg{width:16px!important;height:16px!important}
+  .main-area{padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
+  .main-area:has(.ai-chat-page){padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
+}
