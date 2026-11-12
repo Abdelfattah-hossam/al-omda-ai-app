@@ -44,6 +44,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const recognitionRef = useRef<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +68,61 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     exhausted: ar ? "انتهى رصيدك اليومي. سيتجدد تلقائيًا عند بداية يوم UTC التالي." : "Your daily allowance is exhausted. It resets at the next UTC day.",
     empty: ar ? "ابدأ محادثتك مع العمدة." : "Start a conversation with AL OMDA.",
     clear: ar ? "محادثة جديدة" : "New chat",
+    historyLoading: ar ? "جارٍ تحميل المحادثة المحفوظة..." : "Loading saved conversation...",
     copy: ar ? "نسخ الرد" : "Copy answer",
     copied: ar ? "تم النسخ" : "Copied",
     reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
+  };
+
+  const loadHistory = async () => {
+    if (!signedIn) return;
+    setHistoryLoading(true);
+    try {
+      const response = await fetch("/api/ai/history", { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load chat history."));
+      if (Array.isArray(data.messages)) setMessages(data.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة المحفوظة." : "Could not load saved conversation."));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const saveHistory = async (items: ChatMessage[]) => {
+    try {
+      const response = await fetch("/api/ai/history", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: items.slice(-100) }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save chat history."));
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save chat history."));
+      return false;
+    }
+  };
+
+  const clearChat = async () => {
+    if (clearing || loading || messages.length === 0) return;
+    setClearing(true);
+    setError("");
+    try {
+      const response = await fetch("/api/ai/history", { method: "DELETE", credentials: "same-origin" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف المحادثة." : "Could not clear chat history."));
+      setMessages([]);
+      setInput("");
+      window.speechSynthesis?.cancel?.();
+      setSpeaking(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر حذف المحادثة." : "Could not clear chat history."));
+    } finally {
+      setClearing(false);
+    }
   };
 
   const loadUsage = async () => {
@@ -83,7 +137,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
   };
 
-  useEffect(() => { void loadUsage(); }, [signedIn]);
+  useEffect(() => { void loadUsage(); void loadHistory(); }, [signedIn]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
@@ -99,6 +153,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     setInput("");
     setLoading(true);
     setError("");
+    await saveHistory(next.slice(-100));
     try {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
@@ -112,7 +167,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const details = Array.isArray(data.details) ? data.details.filter((item: unknown) => typeof item === "string").join(" · ") : "";
         throw new Error([data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."), details].filter(Boolean).join(" — "));
       }
-      setMessages((current) => [...current, { role: "assistant", content: data.reply, provider: data.provider }]);
+      const completed = [...next, { role: "assistant" as const, content: data.reply, provider: data.provider }].slice(-100);
+      setMessages(completed);
+      await saveHistory(completed);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -196,7 +253,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         <small className="muted">{copy.voiceNote}</small>
       </section>
       <section className="panel panel-pad">
-        <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><button type="button" className="button button-quiet button-small" onClick={()=>{setMessages([]);setError("");setInput("");window.speechSynthesis?.cancel?.();setSpeaking(false);}} disabled={loading || messages.length===0}><Trash2 size={13}/>{copy.clear}</button></div>
+        <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><button type="button" className="button button-quiet button-small" onClick={()=>void clearChat()} disabled={loading || clearing || historyLoading || messages.length===0}><Trash2 size={13}/>{clearing ? (ar ? "جارٍ الحذف..." : "Clearing...") : copy.clear}</button></div>
+        {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
         <div className="chat-messages" aria-live="polite" style={{minHeight:250,maxHeight:"52vh",overflowY:"auto"}}>
           {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
