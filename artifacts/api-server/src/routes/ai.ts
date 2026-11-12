@@ -52,14 +52,14 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
   return /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
 }
 function isExplicitWordFileRequest(request: string): boolean {
-  return /\\b(?:word|docx)\\b|ملف\\s*(?:و?ورد|word)|مستند\\s*(?:و?ورد|word)|صيغة\\s*(?:و?ورد|word)/i.test(request);
+  return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
   return /(?:ساعة.{0,45}(?:سطح المكتب|desktop)|(?:سطح المكتب|desktop).{0,45}ساعة|(?:تطبيق|برنامج|app|application|موقع|website).{0,55}(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|عايز|محتاج|create|build|make|develop)|(?:اعمل|اعملي|أنشئ|انشئ|ابني|صمم|برمج|نفذ|create|build|make|develop).{0,55}(?:تطبيق|برنامج|app|application|موقع|website|ساعة))/i.test(request);
 }
 function parseHtmlApp(text: string): string | null {
-  const source = text.trim().replace(/^\\s*```(?:html)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
-  if (!/<html[\\s>]|<!doctype\\s+html|<body[\\s>]/i.test(source) || !/<script[\\s>]/i.test(source) && !/<main[\\s>]|<div[\\s>]/i.test(source)) return null;
+  const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
+  if (!/<html[\s>]|<!doctype\s+html|<body[\s>]/i.test(source) || !/<script[\s>]/i.test(source) && !/<main[\s>]|<div[\s>]/i.test(source)) return null;
   if (source.length > 90000) return null;
   return source;
 }
@@ -331,14 +331,14 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Use the original customer request and the previously approved steps. Include useful complete content, not instructions for the user.",
       "Original request: " + customerRequest,
       "Approved step: " + step.text,
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000)
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
     ].join("\n") : htmlAppStep ? [
       "You are AL OMDA, building the requested small browser-based app as a deliverable. Return ONLY one complete, self-contained HTML document, with inline CSS and JavaScript. No Markdown fences and no instructions.",
       "The app must work immediately when opened as an .html file and inside a sandboxed preview iframe. Do not use external libraries, network requests, or external assets. Make the UI polished, responsive, and match the customer's exact request.",
       "For a desktop clock, build a working live clock that updates every second, with clear readable time and useful controls if appropriate. Do not return a tutorial or PowerShell instructions.",
       "Original customer request: " + customerRequest,
       "Approved step: " + step.text,
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000)
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
     ].join("\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
       "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
