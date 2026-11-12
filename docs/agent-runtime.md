@@ -61,6 +61,27 @@ Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for ex
 
 The current browser bridge is Playwright MCP over local stdio. It provides browser control through the MCP tools; it is not yet a native browser panel with integrated tab thumbnails, profile management, or cross-device remote control.
 
+### Desktop control through Computer Use MCP
+
+The optional desktop companion uses the MIT-licensed `@zavora-ai/computer-use-mcp` MCP server for native app discovery, screenshots, accessibility controls, mouse, keyboard, clipboard, window targeting, and app scripting on supported Windows, macOS, and Linux desktops.
+
+From the repository root, run:
+
+```sh
+pnpm --filter @workspace/scripts desktop:setup
+```
+
+This adds or updates only the `computer-use` entry in `.omda/mcp-servers.json` and preserves the other configured servers. Add `npx` to `OMDA_AGENT_MCP_COMMANDS` (preserving any other allowed commands), then restart the local runtime. The first launch fetches the package and its platform-specific native module; do not disable optional npm dependencies.
+
+Before use:
+- Windows: run in a signed-in interactive desktop session. Elevated/protected windows may require matching privileges.
+- macOS: grant the launching host app the Accessibility and Screen Recording permissions requested by macOS. Input Monitoring may be needed for user-activity detection.
+- Linux: use a supported X11/Wayland session and install the platform prerequisites requested by the server.
+
+All desktop MCP calls pass through the AL OMDA runtime's explicit per-call approval gate. The desktop server also provides its own user-active pause/stop safeguards on supported platforms; use its documented emergency stop shortcut `Ctrl+Alt+Escape`. Do not expose its optional HTTP console endpoint to a network: the stdio MCP mode is the configured integration. Desktop actions can affect real applications and files, so use a dedicated, signed-in workstation and supervise the session.
+
+This integration is a local MCP companion, not yet a native AL OMDA desktop app or background service.
+
 ```json
 {
   "servers": [
