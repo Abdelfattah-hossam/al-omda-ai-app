@@ -424,7 +424,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
     }
-    if (wordStep && !parseWordDocument(answer.text, false, false, isWordTableRequest(customerRequest))) {
+    if (wordStep && !parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested)) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
         wordTaskSevenColumnTable ? "The customer requires exactly seven table columns." : wordTaskTableRequested ? "The customer explicitly requested a table; keep the relevant table." : "The customer did not request a table; return paragraphs only and empty columns and rows.",
@@ -482,7 +482,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
       result = "ALOMDA_HTML_APP:" + html;
     } else if (wordStep) {
-      const document = parseWordDocument(answer.text, false, false);
+      const document = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
       if (!document) {
         await saveExecutionFailure("The AI did not return a valid structured Word document.");
         res.status(502).json({ error: "تعذر إنشاء مستند Word منظم. أعد تنفيذ الخطوة." });
