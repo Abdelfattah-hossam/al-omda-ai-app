@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
@@ -60,6 +60,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [pendingImage, setPendingImage] = useState<{ name: string; mimeType: string; data: string; preview: string } | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -89,6 +90,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
 
@@ -372,11 +374,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
-    const text = input.trim();
+    const imageForRequest = pendingImage;
+    const text = input.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
     if (!text || loading || historyLoading || !signedIn || (usage && usage.remaining <= 0)) return;
     const conversationId = activeConversationId || await createConversation();
     if (!conversationId) return;
     const next = [...messages, { role: "user" as const, content: text }];
+    setPendingImage(null);
     shouldAutoScrollRef.current = true;
     setMessages(next);
     setInput("");
@@ -388,7 +392,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-12).map(({ role, content }) => ({ role, content })) }),
+        body: JSON.stringify({ messages: next.slice(-12).map((message, index, list) => ({
+          role: message.role,
+          content: message.content,
+          ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
+        })) }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -695,7 +703,24 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
 
         <form onSubmit={sendMessage} className="ai-composer">
+          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:"none"}} onChange={(event)=>{
+            const file=event.currentTarget.files?.[0];
+            event.currentTarget.value="";
+            if(!file)return;
+            if(file.size>4*1024*1024){setError(ar?"حجم الصورة أكبر من 4 ميجابايت. اختر صورة أصغر.":"Image is larger than 4 MB. Choose a smaller image.");return;}
+            if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){setError(ar?"صيغة الصورة غير مدعومة.":"Unsupported image format.");return;}
+            const reader=new FileReader();
+            reader.onload=()=>{const result=typeof reader.result==="string"?reader.result:"";const comma=result.indexOf(",");if(comma<0){setError(ar?"تعذر قراءة الصورة.":"Could not read the image.");return;}setPendingImage({name:file.name,mimeType:file.type,data:result.slice(comma+1),preview:result});setError("");};
+            reader.onerror=()=>setError(ar?"تعذر قراءة الصورة.":"Could not read the image.");
+            reader.readAsDataURL(file);
+          }}/>
+          {pendingImage && <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",border:"1px solid var(--border,#343a44)",borderRadius:10,marginBottom:8}}>
+            <img src={pendingImage.preview} alt={pendingImage.name} style={{width:54,height:54,objectFit:"cover",borderRadius:7}}/>
+            <span style={{fontSize:12,overflowWrap:"anywhere",flex:1}}>{pendingImage.name}</span>
+            <button type="button" className="icon-button" onClick={()=>setPendingImage(null)} aria-label={ar?"إزالة الصورة":"Remove image"}><X size={15}/></button>
+          </div>}
           <div className="ai-composer-tools">
+            <button type="button" className="ai-plus-button" onClick={()=>imageInputRef.current?.click()} aria-label={ar?"إرفاق صورة":"Attach image"} title={ar?"تحليل صورة باستخدام نموذج مجاني":"Analyze an image with a free model"} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}><ImagePlus size={18}/></button>
             <div className="ai-plus-wrap">
               <button type="button" className="ai-plus-button" aria-label={ar ? "خيارات العمل" : "Work options"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
@@ -712,7 +737,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               </div>}
             </div>
             <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/> 
-            <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
+            <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={(!input.trim() && !pendingImage) || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
           </div>
           {showLiveVoice && signedIn && <section className="panel ai-voice-panel ai-voice-panel-under-input">
             <div className="section-head"><strong>{ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}</strong><button type="button" className="icon-button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
