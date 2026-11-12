@@ -8,7 +8,8 @@ import {
 } from "../lib/supabase";
 
 const router: IRouter = Router();
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string };
+type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -107,7 +108,16 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
     if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 8000) return null;
     total += item.content.length;
     if (total > 200000) return null;
-    messages.push({ role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) });
+    const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };
+    if (item.documentData !== undefined) {
+      const doc = item.documentData;
+      if (!doc || typeof doc !== "object" || typeof doc.title !== "string" || doc.title.length > 180 ||
+        !Array.isArray(doc.paragraphs) || doc.paragraphs.length > 12 || doc.paragraphs.some((value: unknown) => typeof value !== "string" || value.length > 3000) ||
+        !Array.isArray(doc.columns) || doc.columns.length < 1 || doc.columns.length > 12 || doc.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
+        !Array.isArray(doc.rows) || doc.rows.length > 100 || doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 1000))) return null;
+      saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
+    }
+    messages.push(saved);
   }
   return messages;
 }
