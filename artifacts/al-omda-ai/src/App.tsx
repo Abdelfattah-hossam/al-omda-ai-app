@@ -421,7 +421,7 @@ function App() {
   const [localAgentGoal, setLocalAgentGoal] = useState("");
   const [localAgentStatus, setLocalAgentStatus] = useState<"idle" | "checking" | "ready" | "running" | "approval" | "error">("idle");
   const [localAgentMessage, setLocalAgentMessage] = useState("");
-  const [localAgentSessionId, setLocalAgentSessionId] = useState("");
+  const [localAgentSessionId, setLocalAgentSessionId] = useState(() => { try { return localStorage.getItem("al-omda-agent-session") || ""; } catch { return ""; } });
   const [localAgentPending, setLocalAgentPending] = useState<Array<{ id: string; tool: string; arguments: Record<string, unknown> }>>([]);
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
@@ -830,6 +830,13 @@ function App() {
     </div>;
   };
 
+  useEffect(() => {
+    try {
+      if (localAgentSessionId) localStorage.setItem("al-omda-agent-session", localAgentSessionId);
+      else localStorage.removeItem("al-omda-agent-session");
+    } catch { /* Session ID persistence is optional when browser storage is unavailable. */ }
+  }, [localAgentSessionId]);
+
   const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" = "GET", body?: Record<string, unknown>) => {
     const base = new URL(localAgentUrl.trim());
     if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) {
@@ -876,6 +883,20 @@ function App() {
       setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Agent run failed.");
     } finally { setLocalAgentBusy(false); }
   };
+  const resumeLocalAgent = async () => {
+    if (!localAgentSessionId || localAgentBusy) return;
+    setLocalAgentBusy(true); setLocalAgentStatus("running"); setLocalAgentMessage("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/agent/resume", "POST", { sessionId: localAgentSessionId });
+      setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
+      const speed = Number(result.usage?.averageTokensPerSecond || 0);
+      const message = String(result.message || (result.status === "approval_required" ? (isAr ? "الجلسة المحفوظة تنتظر موافقتك." : "Saved session is waiting for your approval.") : ""));
+      setLocalAgentMessage(message + (speed > 0 ? " · " + speed + " tok/s avg" : ""));
+      setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
+    } catch (error) {
+      setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Could not resume saved agent session.");
+    } finally { setLocalAgentBusy(false); }
+  };
   const continueLocalAgent = async (approve: boolean) => {
     if (!localAgentSessionId || localAgentBusy) return;
     setLocalAgentBusy(true); setLocalAgentStatus("running");
@@ -907,6 +928,7 @@ function App() {
       </div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
         <button type="button" className="button button-quiet button-small" onClick={checkLocalAgent} disabled={localAgentBusy || !localAgentToken.trim()}>{isAr?'اختبار الاتصال':'Test connection'}</button>
+        {localAgentSessionId&&<button type="button" className="button button-quiet button-small" onClick={resumeLocalAgent} disabled={localAgentBusy||localAgentStatus!=='ready'||!localAgentToken.trim()}>{isAr?'استكمال آخر جلسة محفوظة':'Resume saved session'}</button>}
         <span className="section-meta">{isAr?'الموديل المحلي يُضبط من إعدادات LM Studio أو مزود OpenAI-compatible.':'Configure the local model in LM Studio or another OpenAI-compatible provider.'}</span>
       </div>
       <div className="field-group" style={{marginTop:18}}>
@@ -917,6 +939,7 @@ function App() {
         <button type="button" className="button button-primary" onClick={runLocalAgent} disabled={localAgentBusy || localAgentStatus!=='ready' || !localAgentGoal.trim()}><Bot size={15}/>{localAgentBusy?(isAr?'جارٍ التنفيذ...':'Working...'):(isAr?'ابدأ تنفيذ المهمة':'Run agent task')}<ArrowLeft size={13}/></button>
         {localAgentMessage&&<span className="section-meta" role="status">{localAgentMessage}</span>}
       </div>
+      {localAgentSessionId&&<p className="section-meta" style={{marginTop:8}}>{isAr?'رقم الجلسة المحفوظة: ':'Saved session: '}{localAgentSessionId}</p>}
       {localAgentPending.length>0&&<div className="panel panel-pad" style={{marginTop:16,borderColor:'rgba(190,155,91,.45)'}}>
         <h3 className="section-title">{isAr?'إجراءات تنتظر موافقتك':'Actions awaiting your approval'}</h3>
         {localAgentPending.map(item=><div key={item.id} style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
