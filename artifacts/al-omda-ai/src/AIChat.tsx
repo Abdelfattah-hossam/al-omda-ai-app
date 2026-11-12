@@ -439,7 +439,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const checkLocalAgentConnection = async () => {
     setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
     try {
-      const response = await fetch(agentRuntimeUrl.replace(/\\/+$/, "") + "/health", { cache: "no-store" });
+      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/health", { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
       setAgentConnectionStatus(ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready"));
@@ -451,7 +451,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const loadAgentSessions = async () => {
     if (!agentToken.trim()) { setError(ar ? "أدخل رمز الاتصال أولًا." : "Enter the access token first."); return; }
     try {
-      const response = await fetch(agentRuntimeUrl.replace(/\\/+$/, "") + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
+      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل الجلسات." : "Could not load sessions."));
       const items = Array.isArray(data.sessions) ? data.sessions : [];
