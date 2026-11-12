@@ -292,7 +292,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let provider = "";
     for (const candidate of providers) {
       try {
-        answer = candidate === "gemini" ? await callGemini(messages, memory) : await callOpenRouter(messages, memory);
+        answer = await callProviderWithRetry(candidate as "gemini" | "openrouter", messages, memory);
         provider = candidate;
         break;
       } catch (error) {
