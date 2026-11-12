@@ -342,9 +342,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const paragraphs = documentData.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\n/g, "<br>") + "</p>").join("");
         const table = documentData.columns.length ? "<table><thead><tr>" + documentData.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + documentData.rows.map((row) => "<tr>" + documentData.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
         const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (ar ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(documentData.title) + "</h1>" + paragraphs + table + "</body></html>";
-        const file = new Blob(["\\ufeff", html], { type: "application/msword;charset=utf-8" });
+        const file = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
         const url = URL.createObjectURL(file);
-        const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+        const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
         return { name: safeName + ".doc", url };
       }
     }
@@ -379,7 +379,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     }
     const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
     const url = URL.createObjectURL(file);
-    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
   };
 
@@ -393,10 +393,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       catch {
         // Excel-compatible CSV fallback keeps the deliverable available without a CDN.
         const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
-        const csv = "\\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\\r\\n");
+        const csv = "\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
         const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(file);
-        const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+        const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
         return { name: safeName + ".csv", url };
       }
     }
@@ -408,7 +408,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(file);
-    const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+    const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
     return { name: safeName + ".xlsx", url };
   };
 
