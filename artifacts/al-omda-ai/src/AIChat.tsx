@@ -409,7 +409,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     </div>}
     {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
   </div>;
-  return <div className="page-enter">
+  return <div className="page-enter ai-chat-page">
     <div className="page-heading ai-chat-heading">
       <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{copy.title}</h1><p className="page-subtitle">{copy.subtitle}</p></div>
       <div className="ai-chat-actions">
