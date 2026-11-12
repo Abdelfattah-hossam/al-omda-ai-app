@@ -77,7 +77,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       const data = await response.json();
       if (!response.ok) {
         if (data.usage) setUsage(data.usage);
-        throw new Error(data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."));
+        const details = Array.isArray(data.details) ? data.details.filter((item: unknown) => typeof item === "string").join(" · ") : "";
+        throw new Error([data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."), details].filter(Boolean).join(" — "));
       }
       setMessages((current) => [...current, { role: "assistant", content: data.reply, provider: data.provider }]);
       if (data.usage) setUsage(data.usage);
