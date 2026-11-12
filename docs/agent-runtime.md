@@ -45,6 +45,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `GET /health` — local runtime status.
 - `GET /v1/tools` — tool discovery, including available Skills.
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
+- `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
 - `POST /v1/agent/continue` — resume a saved run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
 - `POST /v1/files/list` — list workspace entries.
 - `POST /v1/files/read` — read a UTF-8 workspace file (2 MB maximum).
@@ -61,7 +62,7 @@ Terminal execution is disabled by default. To opt in, set `OMDA_AGENT_EXECUTION=
 
 ## Not implemented yet
 
-The runtime is the execution foundation only. The following integrations remain planned and must not be considered available yet:
+The runtime is an early execution foundation. The following integrations remain planned and must not be considered available yet:
 
 - Chat-connected agent loop with tool selection, approvals, retries, and progress streaming.
 - Browser automation and desktop control.
