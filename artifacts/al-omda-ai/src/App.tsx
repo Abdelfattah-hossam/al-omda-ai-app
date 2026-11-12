@@ -654,13 +654,39 @@ function App() {
     </div>;
   };
 
-  const taskDetailPage = (task:Task) => <div className="page-enter">
-    {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
-    <div className="history-detail">
-      <div>{renderPlan(task)}</div>
-      <aside className="panel panel-pad"><div className="section-head"><h2 className="section-title">{t('taskRequest')}</h2></div><p style={{color:'#b7b7b1',fontSize:11,lineHeight:1.9,margin:'0 0 18px'}}>{task.request}</p><div className="divider"/><div className="setting-row"><div><strong>{t('planProgress')}</strong><small>{count(task)} / {task.steps.length} {t('approvedCount')}</small></div>{statusBadge(task.status)}</div><div className="setting-row"><div><strong>{t('created')}</strong><small>{dateLabel(task.createdAt,language)}</small></div></div><div className="setting-row"><div><strong>{t('planIsDemo')}</strong><small>{task.demo?t('demoTask'):t('userTask')}</small></div></div><div className="notice-bar" style={{marginTop:15}}><ShieldCheck size={15}/><span>{t('noExecution')}</span></div></aside>
-    </div>
-  </div>;
+  const taskDetailPage = (task:Task) => {
+    const approvedSteps = task.steps.filter((step)=>step.state === 'approved').length;
+    const rejectedSteps = task.steps.filter((step)=>step.state === 'rejected').length;
+    const pendingSteps = task.steps.length - approvedSteps - rejectedSteps;
+    const planApproval = task.steps.length ? Math.round(approvedSteps / task.steps.length * 100) : 0;
+    return <div className="page-enter">
+      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
+      <div className="history-detail">
+        <div>{renderPlan(task)}</div>
+        <aside className="project-tracking">
+          <section className="panel panel-pad">
+            <div className="section-head"><h2 className="section-title">{isAr?'مؤشرات المشروع':'Project indicators'}</h2>{statusBadge(task.status)}</div>
+            <div className="project-kpi-grid">
+              <div className="project-kpi"><small>{isAr?'اعتماد الخطة':'Plan approval'}</small><strong>{planApproval}%</strong></div>
+              <div className="project-kpi"><small>{isAr?'خطوات معتمدة':'Approved steps'}</small><strong>{approvedSteps}/{task.steps.length}</strong></div>
+              <div className="project-kpi"><small>{isAr?'خطوات مرفوضة':'Rejected steps'}</small><strong>{rejectedSteps}</strong></div>
+              <div className="project-kpi"><small>{isAr?'خطوات متبقية':'Pending steps'}</small><strong>{pendingSteps}</strong></div>
+            </div>
+            <div className="project-progress-track"><span style={{width:`${planApproval}%`}}/></div>
+            <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?'لم يتم تسجيل تنفيذ فعلي لهذا المشروع بعد':'No real execution has been recorded for this project yet'}</small></div><span className="status-chip paused">{isAr?'غير مسجل':'Not tracked'}</span></div>
+            <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'هذه النسبة تقيس اعتماد خطوات الخطة فقط، وليست نسبة نجاح المشروع النهائي. سيتم احتساب النجاح والفشل الفعليين بعد تسجيل نتائج التنفيذ والاختبارات لكل مرحلة.':'This percentage measures plan approval only, not final project success. Actual success/failure requires recorded execution results and tests for each stage.'}</span></div>
+          </section>
+          <section className="panel panel-pad">
+            <div className="section-head"><h2 className="section-title">{t('taskRequest')}</h2></div>
+            <p style={{color:'#b7b7b1',fontSize:11,lineHeight:1.9,margin:'0 0 18px',overflowWrap:'anywhere'}}>{task.request}</p>
+            <div className="setting-row"><div><strong>{t('created')}</strong><small>{dateLabel(task.createdAt,language)}</small></div></div>
+            <div className="setting-row"><div><strong>{t('planIsDemo')}</strong><small>{task.demo?t('demoTask'):t('userTask')}</small></div></div>
+            <div className="notice-bar" style={{marginTop:15}}><ShieldCheck size={15}/><span>{t('noExecution')}</span></div>
+          </section>
+        </aside>
+      </div>
+    </div>;
+  };
 
   const profilePage = () => <div className="page-enter">
     {pageHeading(t('profile'),t('profile'),t('profileSub'))}
