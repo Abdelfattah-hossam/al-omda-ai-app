@@ -52,6 +52,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const sessionReadyRef = useRef(false);
   const userTranscriptRef = useRef("");
   const assistantTranscriptRef = useRef("");
+  const speechActiveRef = useRef(false);
+  const silenceFramesRef = useRef(0);
 
   const labels = {
     start: ar ? "محادثة صوتية مباشرة" : "Live voice conversation",
@@ -63,6 +65,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
 
   const cleanup = () => {
     sessionReadyRef.current = false;
+    speechActiveRef.current = false;
+    silenceFramesRef.current = 0;
     processorRef.current?.disconnect();
     sourceRef.current?.disconnect();
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -136,6 +140,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               },
               inputAudioTranscription: {},
               outputAudioTranscription: {},
+              realtimeInputConfig: { automaticActivityDetection: { disabled: true } },
               systemInstruction: {
                 parts: [{ text: "You are AL OMDA AI, a warm and capable voice assistant. Respond naturally in the user's language. When the user speaks Egyptian Arabic, reply in clear Egyptian Arabic. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking." }]
               }
@@ -180,12 +185,39 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
         if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current) return;
-        const pcm = downsampleTo16k(event.inputBuffer.getChannelData(0), context.sampleRate);
+        const input = event.inputBuffer.getChannelData(0);
+        let energy = 0;
+        for (let i = 0; i < input.length; i++) energy += input[i] * input[i];
+        const rms = Math.sqrt(energy / Math.max(1, input.length));
+        const hasSpeech = rms > 0.012;
+
+        if (hasSpeech) {
+          if (!speechActiveRef.current) {
+            socket.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
+            speechActiveRef.current = true;
+            setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
+          }
+          silenceFramesRef.current = 0;
+        } else if (!speechActiveRef.current) {
+          return;
+        }
+
+        const pcm = downsampleTo16k(input, context.sampleRate);
         socket.send(JSON.stringify({
           realtimeInput: {
             audio: { mimeType: "audio/pcm;rate=16000", data: toBase64(pcm) }
           }
         }));
+
+        if (!hasSpeech) {
+          silenceFramesRef.current += 1;
+          if (silenceFramesRef.current >= 8) {
+            socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
+            speechActiveRef.current = false;
+            silenceFramesRef.current = 0;
+            setStatus(ar ? "جاري تجهيز رد العمدة..." : "Preparing AL OMDA's reply...");
+          }
+        }
       };
       source.connect(processor);
       processor.connect(context.destination);
@@ -205,6 +237,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           userTranscriptRef.current += inputText;
         }
         const outputText = serverContent?.outputTranscription?.text;
+        if (outputText || serverContent?.modelTurn?.parts?.length) setStatus(ar ? "العمدة بيرد عليك..." : "AL OMDA is replying...");
         if (typeof outputText === "string" && outputText.trim()) {
           assistantTranscriptRef.current += outputText;
         }
@@ -238,6 +271,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           if (assistantText) onTranscript("assistant", assistantText);
           userTranscriptRef.current = "";
           assistantTranscriptRef.current = "";
+          setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
         }
       };
       socket.onclose = () => {
