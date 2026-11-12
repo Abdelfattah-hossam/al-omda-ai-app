@@ -288,7 +288,6 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       .replace(/\bOpenRouter\b/gi, ar ? "أوبن راوتر" : "Open Router")
       .replace(/\bGemini\b/gi, ar ? "جيمناي" : "Gemini")
       .replace(/\bCloudflare\b/gi, ar ? "كلاود فلير" : "Cloudflare")
-      .replace(/شات/g, "تشات")
       .replace(/\s+/g, " ")
       .trim();
     const utterance = new SpeechSynthesisUtterance(spoken);
