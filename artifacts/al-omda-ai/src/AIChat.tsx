@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, LoaderCircle, Mic, Send, Volume2, VolumeX } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Mic, Send, Trash2, Volume2, VolumeX } from "lucide-react";
 
 type Language = "ar" | "en";
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string };
@@ -20,6 +20,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [error, setError] = useState("");
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +42,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     loading: ar ? "العمدة يفكر..." : "AL OMDA is thinking...",
     exhausted: ar ? "انتهى رصيدك اليومي. سيتجدد تلقائيًا عند بداية يوم UTC التالي." : "Your daily allowance is exhausted. It resets at the next UTC day.",
     empty: ar ? "ابدأ محادثتك مع العمدة." : "Start a conversation with AL OMDA.",
+    clear: ar ? "محادثة جديدة" : "New chat",
+    copy: ar ? "نسخ الرد" : "Copy answer",
+    copied: ar ? "تم النسخ" : "Copied",
+    reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
   };
 
   const loadUsage = async () => {
@@ -57,6 +62,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
 
   useEffect(() => { void loadUsage(); }, [signedIn]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
+  useEffect(() => () => {
+    recognitionRef.current?.stop?.();
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  }, []);
 
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -102,7 +111,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = ar ? "ar-SA" : "en-US";
+    recognition.lang = ar ? "ar-EG" : "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onresult = (event: any) => {
@@ -118,6 +127,16 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     setError("");
     setListening(true);
     recognition.start();
+  };
+
+  const copyAnswer = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex((current) => current === index ? null : current), 1800);
+    } catch {
+      setError(ar ? "تعذر النسخ؛ حدّد النص وانسخه يدويًا." : "Could not copy. Select the text and copy it manually.");
+    }
   };
 
   const speak = (text: string) => {
@@ -148,17 +167,22 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           <div style={{height:"100%",width:`${percent}%`,background:"#c6a76c",borderRadius:99,transition:"width .2s"}}/>
         </div>
         <div className="setting-row"><div><strong>{copy.used}</strong><small>{usage?.used ?? "—"}</small></div><div><strong>{copy.limit}</strong><small>{usage?.limit ?? 100}</small></div></div>
+        {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })} UTC</small>}
         <div className="setting-row"><div><strong>{copy.providers}</strong><small>{providerNames.length ? providerNames.join(" · ") : "—"}</small></div></div>
         {usage && providerNames.length === 0 && <div className="notice-bar" style={{marginTop:10}}>{copy.noProvider}</div>}
         <small className="muted">{copy.voiceNote}</small>
       </section>
       <section className="panel panel-pad">
+        <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><button type="button" className="button button-quiet button-small" onClick={()=>{setMessages([]);setError("");setInput("");window.speechSynthesis?.cancel?.();setSpeaking(false);}} disabled={loading || messages.length===0}><Trash2 size={13}/>{copy.clear}</button></div>
         <div className="chat-messages" aria-live="polite" style={{minHeight:250,maxHeight:"52vh",overflowY:"auto"}}>
           {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <p style={{whiteSpace:"pre-wrap"}}>{message.content}</p>
-            {message.role === "assistant" && <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>}
+            {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
+              <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
+            </div>}
           </div>)}
           {loading && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.loading}</p></div>}
           <div ref={bottomRef}/>
