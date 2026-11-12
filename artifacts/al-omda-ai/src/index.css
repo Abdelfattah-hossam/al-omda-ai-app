@@ -238,3 +238,25 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
  .ai-usage-grid{grid-template-columns:1fr}
  .ai-conversations-panel{padding:11px}
 }
+
+
+/* Final chat viewport fixes: keep controls clear of the mobile tab bar */
+.ai-chat-heading{top:72px;z-index:60}
+.ai-chat-actions .ai-live-voice-button{display:inline-flex;align-items:center;gap:6px}
+.ai-voice-panel-top{position:relative;z-index:20;margin:10px 0 14px;padding:12px}
+.ai-composer{box-sizing:border-box}
+.ai-composer-input{box-sizing:border-box;min-height:36px;height:36px;max-height:72px}
+@media(max-width:650px){
+ .ai-chat-heading{top:60px;padding:9px 0;margin-bottom:10px}
+ .ai-chat-heading .page-subtitle{font-size:10px}
+ .ai-chat-actions{gap:5px}
+ .ai-chat-actions .button{min-height:31px;padding:0 8px;font-size:9px}
+ .ai-composer{position:fixed;inset-inline:10px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:70;width:auto;max-width:none;box-sizing:border-box;padding:6px;border-radius:13px}
+ .ai-composer-tools{align-items:center;gap:6px}
+ .ai-composer-input{height:34px;min-height:34px;max-height:66px;padding:6px !important;font-size:12px !important;line-height:1.4}
+ .ai-plus-button,.ai-send-button{width:35px;height:35px;min-width:35px}
+ .ai-composer-footer{padding:3px 3px 0}
+ .ai-composer-footer small{font-size:9px}
+ .ai-chat-heading ~ .panel{padding-bottom:145px !important}
+ .ai-chat-heading ~ .panel .chat-messages{padding-bottom:12px}
+}
