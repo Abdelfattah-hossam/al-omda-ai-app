@@ -928,7 +928,7 @@ function App() {
       </div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
         <button type="button" className="button button-quiet button-small" onClick={checkLocalAgent} disabled={localAgentBusy || !localAgentToken.trim()}>{isAr?'اختبار الاتصال':'Test connection'}</button>
-        {localAgentSessionId&&<button type="button" className="button button-quiet button-small" onClick={resumeLocalAgent} disabled={localAgentBusy||localAgentStatus!=='ready'||!localAgentToken.trim()}>{isAr?'استكمال آخر جلسة محفوظة':'Resume saved session'}</button>}
+        {localAgentSessionId&&<button type="button" className="button button-quiet button-small" onClick={resumeLocalAgent} disabled={localAgentBusy||!localAgentToken.trim()}>{isAr?'استكمال آخر جلسة محفوظة':'Resume saved session'}</button>}
         <span className="section-meta">{isAr?'الموديل المحلي يُضبط من إعدادات LM Studio أو مزود OpenAI-compatible.':'Configure the local model in LM Studio or another OpenAI-compatible provider.'}</span>
       </div>
       <div className="field-group" style={{marginTop:18}}>
