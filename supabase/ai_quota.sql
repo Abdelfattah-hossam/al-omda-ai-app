@@ -35,7 +35,7 @@ begin
   where user_id = v_user and usage_date = v_today;
   return jsonb_build_object(
     'used', coalesce(v_used, 0),
-    'remaining', greatest(0, 100 - coalesce(v_used, 0)),
+    'remaining', greatest(0, 1000 - coalesce(v_used, 0)),
     'limit', 1000,
     'resetAt', v_reset
   );
