@@ -567,7 +567,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
       return;
     }
-    if (!usage.allowed) {
+    if (usage.remaining <= 0) {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage });
       return;
     }
