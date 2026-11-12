@@ -424,6 +424,13 @@ function App() {
   const [localAgentSessionId, setLocalAgentSessionId] = useState(() => { try { return localStorage.getItem("al-omda-agent-session") || ""; } catch { return ""; } });
   const [localAgentPending, setLocalAgentPending] = useState<Array<{ id: string; tool: string; arguments: Record<string, unknown> }>>([]);
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
+  const [httpFlowUrl, setHttpFlowUrl] = useState("");
+  const [httpFlowMethod, setHttpFlowMethod] = useState<"GET" | "HEAD" | "OPTIONS">("GET");
+  const [httpFlowAvailableRoles, setHttpFlowAvailableRoles] = useState<string[]>([]);
+  const [httpFlowSelectedRoles, setHttpFlowSelectedRoles] = useState<string[]>([]);
+  const [httpFlowBusy, setHttpFlowBusy] = useState(false);
+  const [httpFlowError, setHttpFlowError] = useState("");
+  const [httpFlowResult, setHttpFlowResult] = useState<any>(null);
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
@@ -915,6 +922,33 @@ function App() {
     } finally { setLocalAgentBusy(false); }
   };
 
+  const loadHttpFlowRoles = async () => {
+    setHttpFlowBusy(true); setHttpFlowError("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/http/roles");
+      const roles = Array.isArray(result.roles) ? result.roles.filter((item: unknown): item is string => typeof item === "string") : [];
+      setHttpFlowAvailableRoles(roles);
+      setHttpFlowSelectedRoles((current) => current.filter((role) => roles.includes(role)).length >= 2
+        ? current.filter((role) => roles.includes(role))
+        : roles.slice(0, 2));
+      if (!roles.length) setHttpFlowError(isAr ? "لم يتم العثور على أدوار. جهّز ملف .omda/http-roles.json أولًا." : "No roles found. Configure .omda/http-roles.json first.");
+    } catch (error) {
+      setHttpFlowError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل الأدوار." : "Could not load HTTP roles."));
+    } finally { setHttpFlowBusy(false); }
+  };
+  const runHttpFlowComparison = async () => {
+    if (!httpFlowUrl.trim() || httpFlowSelectedRoles.length < 2 || httpFlowBusy) return;
+    setHttpFlowBusy(true); setHttpFlowError(""); setHttpFlowResult(null);
+    try {
+      const result = await callLocalAgentRuntime("/v1/http/compare", "POST", {
+        url: httpFlowUrl.trim(), method: httpFlowMethod, roles: httpFlowSelectedRoles,
+      });
+      setHttpFlowResult(result);
+    } catch (error) {
+      setHttpFlowError(error instanceof Error ? error.message : (isAr ? "فشلت مقارنة HTTP." : "HTTP comparison failed."));
+    } finally { setHttpFlowBusy(false); }
+  };
+
   const agentsPage = () => <div className="page-enter">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
     <section className="panel panel-pad" style={{marginBottom:20}}>
@@ -951,6 +985,25 @@ function App() {
         </div>
       </div>}
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
+    </section>
+    <section className="panel panel-pad" style={{marginBottom:20}}>
+      <div className="section-head">
+        <div><span className="eyebrow">HTTPFLOW</span><h2 className="section-title">{isAr?'مقارنة الاستجابات والصلاحيات':'HTTP response & role diff'}</h2><p className="section-meta">{isAr?'قارن نفس المسار بين الزائر والمستخدم والمدير باستخدام بيانات الاعتماد المحلية.':'Compare the same endpoint across anonymous, user, and admin roles using local credentials.'}</p></div>
+        <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowRoles} disabled={httpFlowBusy||!localAgentToken.trim()}>{httpFlowBusy?(isAr?'جارٍ التحميل...':'Loading...'):(isAr?'تحميل الأدوار':'Load roles')}</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 120px',gap:10,marginTop:12}}>
+        <label className="field-group"><span className="form-label">{isAr?'عنوان endpoint المصرح به':'Authorized endpoint URL'}</span><input className="field" type="url" value={httpFlowUrl} onChange={event=>setHttpFlowUrl(event.target.value)} placeholder="https://your-authorized-domain.example/api/me"/></label>
+        <label className="field-group"><span className="form-label">{isAr?'الطريقة':'Method'}</span><select className="field" value={httpFlowMethod} onChange={event=>setHttpFlowMethod(event.target.value as "GET"|"HEAD"|"OPTIONS")}><option value="GET">GET</option><option value="HEAD">HEAD</option><option value="OPTIONS">OPTIONS</option></select></label>
+      </div>
+      {httpFlowAvailableRoles.length>0&&<div className="field-group" style={{marginTop:10}}><span className="form-label">{isAr?'الأدوار المراد مقارنتها':'Roles to compare'}</span><div style={{display:'flex',gap:14,flexWrap:'wrap'}}>{httpFlowAvailableRoles.map(role=><label key={role} style={{display:'inline-flex',alignItems:'center',gap:7,fontSize:13}}><input type="checkbox" checked={httpFlowSelectedRoles.includes(role)} onChange={event=>setHttpFlowSelectedRoles(current=>event.target.checked?[...current,role]:current.filter(item=>item!==role))}/>{role}</label>)}</div></div>}
+      <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',marginTop:12}}><button type="button" className="button button-primary button-small" onClick={runHttpFlowComparison} disabled={httpFlowBusy||!localAgentToken.trim()||!httpFlowUrl.trim()||httpFlowSelectedRoles.length<2}>{httpFlowBusy?(isAr?'جارٍ المقارنة...':'Comparing...'):(isAr?'قارن الاستجابات':'Compare responses')}</button><span className="section-meta">{isAr?'الطلبات تستخدم GET أو HEAD أو OPTIONS فقط، ويجب أن يكون النطاق ضمن قائمة السماح المحلية.':'Requests are limited to GET, HEAD, or OPTIONS and the host must be in the local allowlist.'}</span></div>
+      {httpFlowError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{httpFlowError}</div>}
+      {httpFlowResult&&<div style={{display:'grid',gap:14,marginTop:16}}>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{(httpFlowResult.comparison?.statuses||[]).map((item:any)=><span key={item.role} className="status-chip"><strong>{item.role}</strong>&nbsp; {item.status}</span>)}<span className="status-chip">{httpFlowResult.comparison?.sameBody?(isAr?'المحتوى متطابق':'Bodies match'):(isAr?'اختلاف في المحتوى':'Body differs')}</span></div>
+        {!httpFlowResult.comparison?.sameBody&&<div className="panel panel-pad"><h3 className="section-title">{isAr?'أول اختلاف في المحتوى':'First body difference'}</h3><p className="section-meta">{isAr?'موضع الاختلاف: ':'Difference offset: '}{httpFlowResult.comparison?.bodyDiff?.firstDifferenceAt}</p><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:10}}>{(httpFlowResult.comparison?.bodyDiff?.snippets||[]).map((item:any)=><div key={item.role}><strong>{item.role} · {item.length} {isAr?'حرف':'chars'}</strong><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:180,overflow:'auto',fontSize:12,marginTop:6}}>{item.excerpt}</pre></div>)}</div></div>}
+        {(httpFlowResult.comparison?.headerDifferences||[]).length>0&&<div className="panel panel-pad"><h3 className="section-title">{isAr?'اختلافات الترويسات':'Header differences'}</h3>{httpFlowResult.comparison.headerDifferences.map((item:any)=><div key={item.header} style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}><strong>{item.header}</strong>{item.values.map((entry:any)=><div key={entry.role} className="section-meta">{entry.role}: {entry.value}</div>)}</div>)}</div>}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:10}}>{(httpFlowResult.responses||[]).map((response:any)=><div className="panel panel-pad" key={response.role}><div className="section-head"><strong>{response.role}</strong><span className="status-chip">{response.status}</span></div><p className="section-meta">{response.durationMs} ms · {response.body.length} {isAr?'حرف':'chars'}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:240,overflow:'auto',fontSize:11,marginTop:8}}>{response.body||'(empty response)'}</pre></div>)}</div>
+      </div>}
     </section>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
     <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
