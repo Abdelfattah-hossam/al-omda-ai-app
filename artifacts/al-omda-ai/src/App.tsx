@@ -48,7 +48,20 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
   const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
   let module: any;
   try { module = await import(/* @vite-ignore */ primary); }
-  catch { module = await import(/* @vite-ignore */ fallback); }
+  catch {
+    try { module = await import(/* @vite-ignore */ fallback); }
+    catch {
+      const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+      const csv = "\\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\\r\\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-workbook") + ".csv";
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
+  }
   const XLSX = module.default ?? module;
   const sheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
   sheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
@@ -95,7 +108,22 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
   const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
   let lib: any;
   try { lib = await import(/* @vite-ignore */ primary); }
-  catch { lib = await import(/* @vite-ignore */ fallback); }
+  catch {
+    try { lib = await import(/* @vite-ignore */ fallback); }
+    catch {
+      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+      const paragraphs = data.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\\n/g, "<br>") + "</p>").join("");
+      const table = data.columns.length ? "<table><thead><tr>" + data.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + data.rows.map((row) => "<tr>" + data.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
+      const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:rtl;line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
+      const blob = new Blob(["\\ufeff", html], { type: "application/msword;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".doc";
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
+  }
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
   const border = { style: "single", size: 1, color: "B8C2D2" };
   const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
