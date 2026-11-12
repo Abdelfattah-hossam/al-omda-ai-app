@@ -53,3 +53,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# AL OMDA local agent state and machine-specific MCP settings
+.omda/sessions/
+.omda/mcp-servers.json
+.omda/*.tmp
