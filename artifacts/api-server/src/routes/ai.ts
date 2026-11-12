@@ -55,7 +55,8 @@ function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
 function isWordTableRequest(request: string): boolean {
-  return /جدول|table|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
+  if (/(?:بدون|من غير|لا تضف|لا تعمل|مش عايز|مش محتاج|without|no)\\s*(?:أي\\s*)?(?:جدول|table)/i.test(request)) return false;
+  return /جدول|table|(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
 }
 function isDesktopAppRequest(request: string): boolean {
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
