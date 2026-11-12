@@ -63,7 +63,7 @@ function parseWordDocument(text: string, forceSevenColumns: boolean): { title: s
     let columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
     if (forceSevenColumns && columns.length !== 7) return null;
     if (!columns.length || columns.length > 12) return null;
-    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_, index) => String(row[index] ?? "").slice(0, 1000)));
+    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_: string, index: number) => String(row[index] ?? "").slice(0, 1000)));
     if (!rows.length) return null;
     return { title: value.title.trim().slice(0, 180), paragraphs: (value.paragraphs ?? []).filter((item: unknown) => typeof item === "string").map((item: string) => item.slice(0, 3000)).slice(0, 12), columns, rows };
   } catch { return null; }
