@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
 import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
+import { readAgentEventStream } from "./lib/agent-stream";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -423,9 +424,18 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError("");
     try {
-      const response = await fetch(agentRuntimeUrl.replace(/\/+$/, "") + "/v1/agent/continue", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر استكمال الوكيل المحلي." : "Could not continue the local agent."));
+      const endpoint = agentRuntimeUrl.replace(/\\/+$/, "");
+      let streamedText = "";
+      const startedAt = Date.now();
+      const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
+      const data = await readAgentEventStream(response, (event) => {
+        if (event.type === "token" && event.text) {
+          streamedText += event.text;
+          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+          const estimated = Math.round((streamedText.length / 4) / seconds);
+          setMessages([...messages, { role: "assistant", content: streamedText + "\\n\\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
+        }
+      }) as any;
       const pending = Array.isArray(data.pending) ? data.pending : [];
       const reply = typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.");
       const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\n\nتمت الموافقة على الإجراءات المطلوبة." : "\n\nRequested actions were approved.") : (ar ? "\n\nتم رفض الإجراءات المطلوبة." : "\n\nRequested actions were denied.")) } : item);
@@ -485,10 +495,20 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
         const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\n\n").slice(-12000);
         const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\n\n");
-        const route = agentSessionId ? "/v1/agent/resume" : "/v1/agent/run";
-        const response = await fetch(endpoint + route, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify(agentSessionId ? { sessionId: agentSessionId, goal } : { goal }) });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || (ar ? "تعذر الاتصال بالوكيل المحلي." : "Could not reach the local agent."));
+        const action = agentSessionId ? "resume" : "run";
+        let streamedText = "";
+        const startedAt = Date.now();
+        const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify(agentSessionId ? { action, sessionId: agentSessionId, goal } : { action, goal }) });
+        const data = await readAgentEventStream(response, (event) => {
+          if (event.type === "token" && event.text) {
+            streamedText += event.text;
+            const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
+            const estimated = Math.round((streamedText.length / 4) / seconds);
+            setMessages([...next, { role: "assistant", content: streamedText + "\\n\\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
+          } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
+            setMessages([...next, { role: "assistant", content: ar ? "الوكيل يختار الأدوات وينفذ الخطوات..." : "Agent is selecting tools and executing steps...", provider: "Local Agent" }]);
+          }
+        }) as any;
         const pending = Array.isArray(data.pending) ? data.pending : [];
         const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
