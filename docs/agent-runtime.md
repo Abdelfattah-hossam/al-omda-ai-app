@@ -70,7 +70,8 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
 - `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
 - `GET /v1/mcp/servers` and `GET /v1/mcp/tools` — inspect configured MCP servers and their advertised tools.
-- `POST /v1/agent/continue` — resume a saved run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
+- `POST /v1/agent/continue` — resume a paused run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
+- `POST /v1/agent/resume` — restore a checkpointed session after restarting the local runtime.
 - `POST /v1/files/list` — list workspace entries.
 - `POST /v1/files/read` — read a UTF-8 workspace file (2 MB maximum).
 - `POST /v1/files/write` — write a UTF-8 workspace file (2 MB maximum).
