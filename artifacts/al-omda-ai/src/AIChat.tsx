@@ -46,11 +46,13 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [voiceFallback, setVoiceFallback] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
   const voiceStoppedByUserRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const copy = {
     title: ar ? "شات العمدة الذكي" : "AL OMDA AI Chat",
@@ -63,7 +65,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     limit: ar ? "الحد اليومي" : "Daily limit",
     providers: ar ? "المحركات المجانية المهيأة" : "Configured free engines",
     noProvider: ar ? "لم يتم ربط محرك مجاني بعد. أضف مفتاح Gemini أو OpenRouter المجاني في أسرار Cloudflare." : "No free engine is connected yet. Add a free Gemini or OpenRouter key to Cloudflare secrets.",
-    voiceUnsupported: ar ? "الإملاء الصوتي غير مدعوم في هذا المتصفح." : "Voice input is not supported in this browser.",
+    voiceUnsupported: ar ? "التعرف الصوتي المباشر غير متاح هنا. استخدم إملاء لوحة مفاتيح iPhone." : "Direct speech recognition is unavailable here. Use iPhone keyboard dictation.",
+    keyboardDictation: ar ? "استخدم إملاء لوحة المفاتيح" : "Use keyboard dictation",
+    keyboardDictationHelp: ar ? "اضغط الزر لفتح لوحة المفاتيح، ثم اضغط علامة الميكروفون في لوحة مفاتيح iPhone وتحدث بالعربية. سيُكتب كلامك داخل الرسالة دون خدمة مدفوعة." : "Tap to open the keyboard, then tap the microphone on the iPhone keyboard and speak. Your words will be inserted into the message without a paid service.",
     mic: ar ? "تحدث" : "Speak",
     stop: ar ? "إيقاف التسجيل" : "Stop recording",
     voiceNote: ar ? "الصوت يستخدم إمكانات المتصفح والجهاز، وقد يختلف دعمه حسب المتصفح." : "Voice uses browser and device capabilities; support varies by browser.",
@@ -191,6 +195,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      setVoiceFallback(true);
       setError(copy.voiceUnsupported);
       return;
     }
@@ -216,6 +221,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     recognition.onerror = (event: any) => {
       voiceHadErrorRef.current = true;
       setListening(false);
+      setVoiceFallback(true);
       const code = typeof event?.error === "string" ? event.error : "unknown";
       const messages: Record<string, { ar: string; en: string }> = {
         "not-allowed": { ar: "إذن الميكروفون مرفوض. اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع.", en: "Microphone permission is denied. Allow microphone access in your browser's site settings." },
@@ -233,6 +239,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     recognition.onend = () => {
       setListening(false);
       if (!voiceHasResultRef.current && !voiceHadErrorRef.current) {
+        setVoiceFallback(true);
         setError(ar
           ? "Safari أنهى التسجيل لكنه لم يُرجع نصًا. قد لا تدعم خدمة التعرف على الصوت العربية في هذا المتصفح حاليًا. جرّب تحديث الصفحة والتحدث بوضوح، وإذا تكررت المشكلة سنضيف طريقة صوت بديلة."
           : "Safari ended recording without returning a transcript. Speech recognition may not be available for this language in this browser. Refresh and try again; if it persists, we can add an alternative voice method.");
@@ -240,12 +247,14 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     };
     recognitionRef.current = recognition;
     setError("");
+    setVoiceFallback(false);
     setListening(true);
     try {
       recognition.start();
     } catch {
       setListening(false);
-      setError(ar ? "تعذر بدء التعرف على الصوت في Safari. أغلق التسجيل وحاول مرة أخرى." : "Safari could not start speech recognition. Close recording and try again.");
+      setVoiceFallback(true);
+      setError(ar ? "تعذر بدء التعرف على الصوت في Safari." : "Safari could not start speech recognition.");
     }
   };
 
@@ -309,9 +318,13 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           <div ref={bottomRef}/>
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
+        {voiceFallback && <div className="notice-bar" style={{marginBottom:12}}>
+          <p style={{margin:"0 0 8px"}}>{copy.keyboardDictationHelp}</p>
+          <button type="button" className="button button-quiet button-small" onClick={()=>inputRef.current?.focus()}>{copy.keyboardDictation}</button>
+        </div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
         <form onSubmit={sendMessage} style={{display:"grid",gap:10}}>
-          <textarea className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
+          <textarea ref={inputRef} className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between"}}>
             <button type="button" className={`button ${listening ? "button-primary" : "button-quiet"} button-small`} onClick={toggleVoiceInput} disabled={loading || !signedIn}><Mic size={14}/>{listening ? copy.stop : copy.mic}</button>
             <div style={{display:"flex",gap:8}}>
