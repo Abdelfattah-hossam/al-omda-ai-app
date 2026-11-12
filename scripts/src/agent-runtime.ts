@@ -788,6 +788,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       { name: "files.write", description: "Create or replace a UTF-8 file inside the configured workspace." },
       { name: "terminal.execute", description: "Run an approved command without a shell; disabled unless host execution is explicitly enabled." },
       { name: "http.compare_roles", description: "Compare authorized endpoint responses for configured user roles; requires approval." },
+      { name: "web.search", description: "Search through the configured Bing-compatible Search API; provider hostname must be allowlisted." },
       { name: "http.request", description: "Inspect HTTPS responses from explicitly allowlisted authorized targets (GET/HEAD/OPTIONS)." },
       { name: "sessions.save", description: "Persist agent session state in the workspace." },
       { name: "sessions.load", description: "Restore persisted agent session state." },
