@@ -715,7 +715,7 @@ function App() {
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'التخصيص':'PERSONALIZATION'}</span><h2>{isAr?'مظهر التطبيق':'App appearance'}</h2><p>{isAr?'اختر لون الواجهة وطريقة عرض المساحات.':'Choose your accent color and workspace density.'}</p></div><Palette size={18}/></div>
           <div className="setting-row"><div><strong>{isAr?'لون الواجهة':'Accent color'}</strong><small>{isAr?'سبعة ألوان زجاجية للاختيار بينها':'Seven glass-inspired colors'}</small></div></div>
           <div className="accent-picker" role="group" aria-label={isAr?'ألوان الواجهة':'Accent colors'}>
-            {accentOptions.map((option)=><button type="button" key={option.id} className={'accent-choice '+(saved.accent===option.id?'selected':'')} style={{backgroundColor:option.color}} onClick={()=>setSaved((prev)=>({...prev,accent:option.id}))} aria-label={option.name} aria-pressed={saved.accent===option.id}><span/><small>{option.name}</small></button>)}
+            {accentOptions.map((option)=><button type="button" key={option.id} className={'accent-choice '+(saved.accent===option.id?'selected':'')} style={{color:option.color}} onClick={()=>setSaved((prev)=>({...prev,accent:option.id}))} aria-label={option.name} aria-pressed={saved.accent===option.id}><span/><small>{option.name}</small></button>)}
           </div>
           <div className="setting-row"><div><strong>{isAr?'كثافة العرض':'Display density'}</strong><small>{isAr?'تحكم في المسافات داخل البطاقات والقوائم.':'Control spacing in cards and lists.'}</small></div><button type="button" role="switch" aria-checked={saved.compact} className={'toggle '+(saved.compact?'on':'')} onClick={()=>setSaved((prev)=>({...prev,compact:!prev.compact}))} aria-label={isAr?'عرض مضغوط':'Compact layout'}/></div>
         </section>
@@ -751,7 +751,7 @@ function App() {
   else if (path === '/profile') page = profilePage();
   else page = dashboardPage();
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
-  return <div className="app-shell" dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-accent={saved.accent} data-density={saved.compact?"compact":"comfortable"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
       <div className="nav-caption">{t('workspace')}</div><nav className="nav-stack">{navItems.map((item)=>navLink(item))}</nav>
