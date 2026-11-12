@@ -131,7 +131,7 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
     catch {
       // Preserve a clean prose draft as a Word document if a provider ignores the JSON format.
       const plainText = source.replace(/^\x60\x60\x60(?:text|markdown)?\s*/i, "").replace(/\s*\x60\x60\x60$/, "").trim();
-      if (plainText && !plainText.startsWith("{") && plainText.length >= 40 && !/<(?:html|!doctype)/i.test(plainText)) {
+      if (!requireTable && !tableOnly && !forceSevenColumns && plainText && !plainText.startsWith("{") && !plainText.includes("{") && plainText.length >= 40 && !/<(?:html|!doctype)/i.test(plainText)) {
         const plainParagraphs = plainText.split(/\n\s*\n/).map((part) => part.replace(/^#{1,6}\s*/, "").trim()).filter(Boolean);
         if (plainParagraphs.length) return { title: plainParagraphs[0].slice(0, 180), paragraphs: plainParagraphs, columns: [], rows: [] };
       }
@@ -872,7 +872,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (wordDocumentRequest) {
       const document = validatedWordDocument;
       if (!document) {
-        res.status(502).json({ error: "تعذر تكوين مستند Word منظم. أعد إرسال الطلب مرة واحدة." });
+        res.status(502).json({ error: "لم يكتمل إنشاء مستند Word بعد محاولات الإصلاح التلقائية. لم يتم خصم وحداتك، واحتفظنا بطلبك؛ حاول بعد قليل." });
         return;
       }
       res.json({
