@@ -467,11 +467,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       </div>
     </div>
     {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار تلقائيًا المحرك المجاني المتاح والأنسب لنوع طلبك." : "Automatic routing is on. AL OMDA selects the best available free engine for your request."}</span></div>}
-    {showLiveVoice && signedIn && <section className="panel ai-voice-panel ai-voice-panel-top">
-      <div className="section-head"><strong>{ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}</strong><button type="button" className="icon-button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
-      <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
-      <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
-    </section>}
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
@@ -518,9 +513,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
                 ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
               </div>}
             </div>
-            <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
+            <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/> 
             <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
           </div>
+          {showLiveVoice && signedIn && <section className="panel ai-voice-panel ai-voice-panel-under-input">
+            <div className="section-head"><strong>{ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}</strong><button type="button" className="icon-button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
+            <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
+            <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
+          </section>}
           <div className="ai-composer-footer">
             <div>{speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}</div>
             <small className="muted">{usage ? (ar ? `متبقي ${usage.remaining} من ${usage.limit} وحدة` : `${usage.remaining} of ${usage.limit} units left`) : copy.subtitle}</small>
