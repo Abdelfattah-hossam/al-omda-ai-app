@@ -51,11 +51,11 @@ export async function consumeOpenAIChatStream(
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    let boundary = buffer.indexOf("\n\n");
-    while (boundary >= 0) {
-      consumeEvent(buffer.slice(0, boundary));
-      buffer = buffer.slice(boundary + 2);
-      boundary = buffer.indexOf("\n\n");
+    let boundary = /\\r?\\n\\r?\\n/.exec(buffer);
+    while (boundary && boundary.index !== undefined) {
+      consumeEvent(buffer.slice(0, boundary.index));
+      buffer = buffer.slice(boundary.index + boundary[0].length);
+      boundary = /\\r?\\n\\r?\\n/.exec(buffer);
     }
   }
   buffer += decoder.decode();
