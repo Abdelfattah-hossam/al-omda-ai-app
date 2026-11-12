@@ -128,17 +128,19 @@ export async function resolveSession(
   if (!isSupabaseConfigured()) return null;
   const accessToken = req.cookies?.[ACCESS_COOKIE] as string | undefined;
   const refreshToken = req.cookies?.[REFRESH_COOKIE] as string | undefined;
-  if (!accessToken) return null;
+  if (!accessToken && !refreshToken) return null;
 
-  const current = await supabaseFetch("/auth/v1/user", {}, accessToken);
-  if (current.ok) {
-    const user = await readSupabaseJson<SupabaseUser>(current);
-    if (user?.id && user.email) return { user, accessToken };
-    clearSessionCookies(req, res);
-    return null;
-  }
-  if (current.status !== 401 && current.status !== 403) {
-    throw new SupabaseHttpError(current.status, await current.json().catch(() => null));
+  if (accessToken) {
+    const current = await supabaseFetch("/auth/v1/user", {}, accessToken);
+    if (current.ok) {
+      const user = await readSupabaseJson<SupabaseUser>(current);
+      if (user?.id && user.email) return { user, accessToken };
+      clearSessionCookies(req, res);
+      return null;
+    }
+    if (current.status !== 401 && current.status !== 403) {
+      throw new SupabaseHttpError(current.status, await current.json().catch(() => null));
+    }
   }
   if (!refreshToken) {
     clearSessionCookies(req, res);
