@@ -9,7 +9,8 @@ import {
 
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument };
+type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -116,6 +117,13 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
         !Array.isArray(doc.columns) || doc.columns.length < 1 || doc.columns.length > 12 || doc.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
         !Array.isArray(doc.rows) || doc.rows.length > 100 || doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 1000))) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
+    }
+    if (item.spreadsheetData !== undefined) {
+      const sheet = item.spreadsheetData;
+      if (!sheet || typeof sheet !== "object" || typeof sheet.title !== "string" || sheet.title.length > 180 ||
+        !Array.isArray(sheet.columns) || sheet.columns.length < 1 || sheet.columns.length > 30 || sheet.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
+        !Array.isArray(sheet.rows) || sheet.rows.length > 500 || sheet.rows.some((row: unknown) => !Array.isArray(row) || row.length !== sheet.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 2000))) return null;
+      saved.spreadsheetData = { title: sheet.title, columns: sheet.columns, rows: sheet.rows };
     }
     messages.push(saved);
   }
