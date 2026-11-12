@@ -709,6 +709,32 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = await readBody(req);
     send(res, 200, await continueAgent(body)); return;
   }
+  if (req.method === "GET" && url.pathname === "/v1/agent/sessions") {
+    const directory = resolve(workspaceRoot, ".omda", "sessions");
+    let actualDirectory = "";
+    try { actualDirectory = await realpath(directory); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") { send(res, 200, { sessions: [] }); return; }
+      throw error;
+    }
+    if (!isInside(workspaceRoot, actualDirectory)) throw new Error("Session directory escapes the workspace.");
+    const entries = await readdir(actualDirectory, { withFileTypes: true });
+    const sessions: Array<{ id: string; updatedAt: string; lastMessage: string; pending: boolean }> = [];
+    for (const entry of entries.filter((item) => item.isFile() && /^[a-zA-Z0-9_-]{1,80}\\.json$/.test(item.name)).slice(0, 200)) {
+      try {
+        const sessionFile = await realpath(resolve(actualDirectory, entry.name));
+        if (!isInside(actualDirectory, sessionFile)) continue;
+        const info = await stat(sessionFile);
+        if (!info.isFile() || info.size > 2 * 1024 * 1024) continue;
+        const saved = JSON.parse(await readFile(sessionFile, "utf8")) as { id?: string; updatedAt?: string; state?: AgentState };
+        if (!saved.state || !Array.isArray(saved.state.messages)) continue;
+        const lastUser = [...saved.state.messages].reverse().find((message) => message.role === "user" && typeof message.content === "string");
+        sessions.push({ id: entry.name.replace(/\\.json$/, ""), updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : "", lastMessage: typeof lastUser?.content === "string" ? lastUser.content.slice(0, 180) : "", pending: Boolean(saved.state.pendingToolCalls?.length) });
+      } catch { /* Ignore malformed or unreadable session files. */ }
+    }
+    sessions.sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || ""));
+    send(res, 200, { sessions: sessions.slice(0, 100) }); return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/mcp/servers") {
     send(res, 200, { servers: (await loadMcpConfig()).map(({ name, command }) => ({ name, command })) }); return;
   }
