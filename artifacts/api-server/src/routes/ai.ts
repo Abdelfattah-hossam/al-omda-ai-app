@@ -173,13 +173,13 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
     // Preserve long documents instead of rejecting them for having many small sections.
     if (paragraphs.length > 12) {
       const grouped: string[] = [];
-      for (let index = 0; index < paragraphs.length; index += Math.ceil(paragraphs.length / 12)) grouped.push(paragraphs.slice(index, index + Math.ceil(paragraphs.length / 12)).join("\\n\\n"));
+      for (let index = 0; index < paragraphs.length; index += Math.ceil(paragraphs.length / 12)) grouped.push(paragraphs.slice(index, index + Math.ceil(paragraphs.length / 12)).join("\n\n"));
       paragraphs = grouped;
     }
-    if (paragraphs.some((item) => item.length > 12000)) return null;
+    if (paragraphs.some((item) => item.length > 8000)) return null;
     const columns = rawColumns.map(toText);
     if (columns.some((item: string) => !item || item.length > 180)) return null;
-    if (columns.length > 12 || rawRows.length > 200) return null;
+    if (columns.length > 12 || rawRows.length > 100) return null;
     if (forceSevenColumns && columns.length !== 7) return null;
     if (requireTable && columns.length === 0) return null;
     if (!requireTable && columns.length > 0) return null;
@@ -190,9 +190,10 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
       if (row && typeof row === "object") return columns.map((column: string, index: number) => toText(row[column] ?? Object.values(row)[index]));
       return [];
     }) : [];
-    if (rows.some((row: string[]) => row.length !== columns.length || row.some((cell) => cell.length > 3000))) return null;
+    if (rows.some((row: string[]) => row.length !== columns.length || row.some((cell) => cell.length > 2000))) return null;
     const finalRows = tableOnly ? Array.from({ length: 8 }, () => columns.map(() => "")) : rows;
     if (columns.length > 0 && finalRows.length === 0 && !tableOnly) return null;
+    if (JSON.stringify({ title, paragraphs, columns, rows: finalRows }).length > 70000) return null;
     return { title, paragraphs: tableOnly ? [] : paragraphs, columns, rows: finalRows };
   } catch { return null; }
 }
