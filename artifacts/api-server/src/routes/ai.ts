@@ -1106,7 +1106,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       ].join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[Excel workbook repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseExcelWorkbook(answer.text)) {
+      validatedSpreadsheet = parseExcelWorkbook(answer.text);
+      if (!validatedSpreadsheet) {
         res.status(502).json({ error: "لم يتم اعتماد ملف Excel لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات." });
         return;
       }
