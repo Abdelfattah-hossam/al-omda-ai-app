@@ -18,5 +18,9 @@ export interface PlanStep {
      * @maxLength 2000
      */
   text: string;
+  output?: string;
+  complete?: string;
+  result?: string;
+  executedAt?: string;
   state: PlanStepState;
 }
