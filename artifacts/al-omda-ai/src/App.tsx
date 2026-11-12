@@ -63,6 +63,56 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+
+type TaskWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
+function getTaskWordDocument(result?: string): TaskWordDocument | null {
+  if (!result?.startsWith("ALOMDA_DOCX_JSON:")) return null;
+  try {
+    const value = JSON.parse(result.slice("ALOMDA_DOCX_JSON:".length));
+    if (typeof value.title !== "string" || !Array.isArray(value.paragraphs) || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
+    if (!value.columns.length || value.columns.length > 12 || value.rows.length > 100) return null;
+    if (value.rows.some((row: unknown) => !Array.isArray(row) || row.length !== value.columns.length)) return null;
+    return value as TaskWordDocument;
+  } catch { return null; }
+}
+function getTaskHtmlApp(result?: string): string | null {
+  return result?.startsWith("ALOMDA_HTML_APP:") ? result.slice("ALOMDA_HTML_APP:".length) : null;
+}
+function safeArtifactName(value: string, fallback: string): string {
+  return value.replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
+}
+function downloadTaskHtml(data: { title: string; html: string }): void {
+  const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
+  document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
+  const primary = "https://esm.sh/docx@9.5.1";
+  const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
+  let lib: any;
+  try { lib = await import(/* @vite-ignore */ primary); }
+  catch { lib = await import(/* @vite-ignore */ fallback); }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
+  const border = { style: "single", size: 1, color: "B8C2D2" };
+  const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
+  const para = (value: string, bold = false) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })], spacing: { after: 100 } });
+  const rows = [
+    new TableRow({ tableHeader: true, children: data.columns.map((column) => new TableCell({ shading: { fill: "E8EDF5" }, children: [para(column, true)] })) }),
+    ...data.rows.map((row) => new TableRow({ children: data.columns.map((_, index) => new TableCell({ children: [para(String(row[index] ?? ""))] })) })),
+  ];
+  const table = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows });
+  const children = [new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: data.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }), ...data.paragraphs.map((p) => para(p)), table];
+  const blob = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".docx";
+  document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const translations = {
   ar: {
     overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
@@ -615,13 +665,27 @@ function App() {
             </div>; })()}
             {step.result && <div style={{marginTop:12,padding:12,borderRadius:9,border:'1px solid rgba(74,190,145,.28)',background:'rgba(74,190,145,.06)'}}>
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
-               {getTaskSpreadsheet(step.result) ? <div style={{display:'grid',gap:10}}>
+               {getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
+                 <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
+                 <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
+                   <iframe title={task.title} sandbox="allow-scripts" srcDoc={getTaskHtmlApp(step.result)!} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
+                 </div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>downloadTaskHtml({title:task.title,html:getTaskHtmlApp(step.result)!})}><FileText size={14}/>{isAr?'تحميل التطبيق HTML':'Download app (.html)'}</button></div>
+                 <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملف HTML مستقل يعمل في المتصفح.':'A standalone HTML file that runs in a browser.'}</small>
+               </div> : getTaskSpreadsheet(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskSpreadsheet(step.result)!.title}</strong>
                  <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!)}><FileText size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
                  <div style={{overflowX:'auto',maxWidth:'100%'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:560,width:'100%',fontSize:12}}>
                    <thead><tr>{getTaskSpreadsheet(step.result)!.columns.map((column,index)=><th key={index} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead>
                    <tbody>{getTaskSpreadsheet(step.result)!.rows.map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,cellIndex)=><td key={cellIndex} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody>
                  </table></div>
+               </div> : getTaskWordDocument(step.result) ? <div style={{display:'grid',gap:10}}>
+                 <strong>{getTaskWordDocument(step.result)!.title}</strong>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(step.result)!)}><FileText size={14}/>{isAr?'تحميل مستند Word (.docx)':'Download Word (.docx)'}</button></div>
+                 <div style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
+                   {getTaskWordDocument(step.result)!.paragraphs.map((p,i)=><p key={i} style={{margin:'5px 0',lineHeight:1.8}}>{p}</p>)}
+                   <div style={{overflowX:'auto'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:480,width:'100%',fontSize:12}}><thead><tr>{getTaskWordDocument(step.result)!.columns.map((column,i)=><th key={i} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead><tbody>{getTaskWordDocument(step.result)!.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody></table></div>
+                 </div>
                </div> : <pre style={{margin:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,lineHeight:1.8,color:'var(--text-primary,#e5e7eb)'}}>{step.result}</pre>}
              </div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
@@ -936,7 +1000,7 @@ function App() {
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
     const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
     return <div className="page-enter">
-      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>void exportTaskWord(task)}><FileText size={14}/>Word DOCX</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskPdf(task)}><FileText size={14}/>PDF</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskPowerPoint(task)}><FileText size={14}/>PowerPoint</button><button type="button" className="button button-quiet" onClick={()=>void exportTaskExcel(task)}><FileText size={14}/>Excel XLSX</button><Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link></div>)}
+      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
       <div className="history-detail">
         <div>{renderPlan(task)}</div>
         <aside className="project-tracking">
