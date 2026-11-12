@@ -369,7 +369,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       <div className="ai-chat-actions">
         <span className="status-chip"><Bot size={13}/>{ar ? "توجيه تلقائي" : "Auto routing"}</span>
         <button type="button" className="button button-quiet button-small" onClick={()=>void clearChat()} disabled={loading || clearing || historyLoading || messages.length===0}><Trash2 size={13}/>{copy.clear}</button>
-        <button type="button" className="button button-quiet button-small" onClick={()=>setShowSettings((v)=>!v)} aria-expanded={showSettings}><Settings2 size={14}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
+        <button type="button" className="button button-quiet button-small" onClick={()=>setShowSettings((v)=>!v)} aria-expanded={showSettings}>{showSettings ? <X size={14}/> : <Settings2 size={14}/ >}{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
       </div>
     </div>
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
