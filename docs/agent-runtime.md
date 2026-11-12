@@ -15,6 +15,8 @@ export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
 export OMDA_AGENT_ALLOWED_HOSTS="example.com"
+export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
+export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
 ```
 
@@ -27,15 +29,21 @@ $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
 $env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
+$env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
+$env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
 ```
+
+The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. Local models do not require a provider API key.
 
 The runtime listens only on `127.0.0.1:4318`. Every endpoint except `GET /health` requires `Authorization: Bearer <OMDA_AGENT_TOKEN>`. The token must contain at least 32 characters.
 
 ## Available endpoints
 
 - `GET /health` — local runtime status.
-- `GET /v1/tools` — tool discovery.
+- `GET /v1/tools` — tool discovery, including available Skills.
+- `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
+- `POST /v1/agent/continue` — resume a saved run with `{ "sessionId": "...", "approvedCallIds": ["..."] }`. Omitted pending call IDs are denied.
 - `POST /v1/files/list` — list workspace entries.
 - `POST /v1/files/read` — read a UTF-8 workspace file (2 MB maximum).
 - `POST /v1/files/write` — write a UTF-8 workspace file (2 MB maximum).
