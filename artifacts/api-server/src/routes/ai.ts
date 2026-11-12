@@ -85,8 +85,10 @@ function isDesktopAppRequest(request: string): boolean {
 }
 function parseHtmlApp(text: string): string | null {
   const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
-  if (!/<html[\s>]|<!doctype\s+html|<body[\s>]/i.test(source) || !/<script[\s>]/i.test(source) && !/<main[\s>]|<div[\s>]/i.test(source)) return null;
-  if (source.length > 90000) return null;
+  if (!/<html[\s>]/i.test(source) || !/<body[\s>]/i.test(source) || !/<\/body>\s*<\/html>\s*$/i.test(source)) return null;
+  if (/<script[\s>]/i.test(source) && !/<\/script>/i.test(source)) return null;
+  if (/<style[\s>]/i.test(source) && !/<\/style>/i.test(source)) return null;
+  if (!/<main[\s>]|<div[\s>]|<form[\s>]|<canvas[\s>]/i.test(source) || source.length > 90000) return null;
   return source;
 }
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
