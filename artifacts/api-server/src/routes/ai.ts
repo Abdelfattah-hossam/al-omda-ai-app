@@ -297,7 +297,6 @@ async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[
   ];
   const coding = isCodingRequest(messages);
   const structured = needsLongStructuredOutput(messages);
-  const latest = getLatestUserRequest(messages).toLowerCase();
   const preference = coding
     ? /coding|code|programming|software|agent|flint|inkling|nemotron.*ultra|deepseek/
     : structured
