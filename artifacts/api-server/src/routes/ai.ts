@@ -54,6 +54,9 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
 function isExplicitWordFileRequest(request: string): boolean {
   return /\b(?:word|docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|صيغة\s*(?:و?ورد|word)/i.test(request);
 }
+function isWordTableRequest(request: string): boolean {
+  return /جدول|table|(?:7|سبع)\\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
+}
 function isDesktopAppRequest(request: string): boolean {
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
   const desktop = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i;
@@ -105,7 +108,7 @@ function parseExcelWorkbook(text: string): { title: string; columns: string[]; r
   } catch { return null; }
 }
 
-function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
+function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
     let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
@@ -120,6 +123,8 @@ function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: 
     const paragraphs = tableOnly ? [] : rawParagraphs.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.slice(0, 3000)).slice(0, 12);
     const columns = rawColumns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
     if (forceSevenColumns && columns.length !== 7) return null;
+    if (requireTable && columns.length === 0) return null;
+    if (!requireTable && columns.length > 0) return null;
     if (columns.length > 12) return null;
     if (tableOnly && columns.length === 0) return null;
     if (columns.length === 0 && (rawRows.length > 0 || paragraphs.length === 0)) return null;
@@ -409,7 +414,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
     }
-    if (wordStep && !parseWordDocument(answer.text, false, false)) {
+    if (wordStep && !parseWordDocument(answer.text, false, false, isWordTableRequest(customerRequest))) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
         "A normal written document may contain paragraphs only, with empty columns and rows. Create a table only if the customer explicitly asked for one.",
@@ -612,6 +617,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
+    const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
     const modelMessages: ChatMessage[] = desktopAppRequest ? [
       ...messages,
       { role: "user", content: [
@@ -634,10 +640,10 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Create a real Microsoft Word document deliverable. Do not answer with source code, instructions, or a Markdown table.",
         "Return ONLY valid JSON with this exact schema: " + '{"title":"Document title","paragraphs":["optional intro or notes"],"columns":["column 1","column 2"],"rows":[["cell 1","cell 2"]]}',
-        sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings." : "Choose the number of columns and rows that best fulfill the user's request.",
+        sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings." : wordTableRequested ? "The user explicitly requested a table. Create only the table structure and content needed by the request." : "PROSE DOCUMENT ONLY: write the complete document in paragraphs. Set columns and rows to empty arrays. Do NOT add a table because the user did not request one.",
         tableOnly ? "TABLE-ONLY BLANK TEMPLATE: return an empty paragraphs array and exactly 8 blank body rows. Every row must contain the correct number of empty strings. Do NOT fill any cells with examples, sample data, explanations, or invented content. The table headers may be inferred from the request." : "For a populated document, include meaningful complete content in rows.",
         "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
-        tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
+        tableOnly ? "Do not add prose before or after the table. The user asked for the table only." : wordTableRequested ? "Include only relevant table rows. Do not add unrelated sample data." : "Write clear, complete, well-organized paragraphs with useful headings where appropriate. Do not invent table columns, rows, or sample data.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
     ] : messages;
@@ -669,7 +675,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(503).json({ error: "All configured free AI providers are temporarily unavailable. No AI usage was deducted; please retry shortly.", details: failures.slice(0, 3), usage });
       return;
     }
-    if (wordDocumentRequest && !parseWordDocument(answer.text, sevenColumnTable, tableOnly)) {
+    if (wordDocumentRequest && !parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested)) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the Word document output. Return ONLY valid JSON: " + '{"title":"...","paragraphs":["..."],"columns":[],"rows":[]}',
         "A normal written document may use paragraphs only. Use an empty columns and rows array unless the customer explicitly requested a table. If a table is requested, each row must match its column count.",
