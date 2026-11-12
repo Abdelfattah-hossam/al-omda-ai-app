@@ -47,6 +47,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [historyLoading, setHistoryLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const voiceHasResultRef = useRef(false);
+  const voiceStoppedByUserRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const copy = {
@@ -181,6 +183,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
 
   const toggleVoiceInput = () => {
     if (listening) {
+      voiceStoppedByUserRef.current = true;
       recognitionRef.current?.stop();
       setListening(false);
       return;
@@ -194,9 +197,19 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     recognition.lang = ar ? "ar-EG" : "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    voiceHasResultRef.current = false;
+    voiceStoppedByUserRef.current = false;
     recognition.onresult = (event: any) => {
-      const transcript = event.results?.[0]?.[0]?.transcript;
-      if (transcript) setInput((current) => current ? current + " " + transcript : transcript);
+      const transcripts: string[] = [];
+      for (let index = event.resultIndex ?? 0; index < (event.results?.length ?? 0); index += 1) {
+        const transcript = event.results[index]?.[0]?.transcript;
+        if (typeof transcript === "string" && transcript.trim()) transcripts.push(transcript.trim());
+      }
+      const transcript = transcripts.join(" ").trim();
+      if (transcript) {
+        voiceHasResultRef.current = true;
+        setInput((current) => current ? current + " " + transcript : transcript);
+      }
     };
     recognition.onerror = (event: any) => {
       setListening(false);
@@ -210,14 +223,27 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         "language-not-supported": { ar: "لغة التعرف على الصوت غير مدعومة على هذا الجهاز.", en: "Speech recognition language is not supported on this device." },
         "aborted": { ar: "تم إيقاف التسجيل.", en: "Recording was stopped." },
       };
+      if (code === "aborted" && voiceStoppedByUserRef.current) return;
       const detail = messages[code];
       setError(detail ? (ar ? detail.ar : detail.en) : (ar ? "تعذر التعرف على الصوت (" + code + "). تحقق من إذن الميكروفون ودعم المتصفح." : "Speech recognition failed (" + code + "). Check microphone permission and browser support."));
     };
-    recognition.onend = () => setListening(false);
+    recognition.onend = () => {
+      setListening(false);
+      if (!voiceHasResultRef.current) {
+        setError(ar
+          ? "Safari أنهى التسجيل لكنه لم يُرجع نصًا. قد لا تدعم خدمة التعرف على الصوت العربية في هذا المتصفح حاليًا. جرّب تحديث الصفحة والتحدث بوضوح، وإذا تكررت المشكلة سنضيف طريقة صوت بديلة."
+          : "Safari ended recording without returning a transcript. Speech recognition may not be available for this language in this browser. Refresh and try again; if it persists, we can add an alternative voice method.");
+      }
+    };
     recognitionRef.current = recognition;
     setError("");
     setListening(true);
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setListening(false);
+      setError(ar ? "تعذر بدء التعرف على الصوت في Safari. أغلق التسجيل وحاول مرة أخرى." : "Safari could not start speech recognition. Close recording and try again.");
+    }
   };
 
   const copyAnswer = async (text: string, index: number) => {
