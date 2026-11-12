@@ -52,12 +52,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [showConversationList, setShowConversationList] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const [memory, setMemory] = useState("");
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
   const [voiceFallback, setVoiceFallback] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -382,6 +380,34 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     : [];
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
 
+  if (view === "usage") return <div className="page-enter ai-usage-page">
+    <div className="page-heading ai-chat-heading">
+      <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</h1><p className="page-subtitle">{ar ? "تابع رصيدك وتحكم في ذاكرة العمدة الخاصة بحسابك." : "Track your allowance and manage your private AL OMDA memory."}</p></div>
+      <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai")}><ArrowLeft size={14}/>{ar ? "العودة إلى الشات" : "Back to chat"}</button>
+    </div>
+    {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <div className="ai-usage-grid">
+      <section className="panel panel-pad">
+        <div className="section-head"><h2 className="section-title">{copy.remaining}</h2><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></div>
+        <div style={{height:9,background:"var(--surface-muted,#252a32)",borderRadius:99,overflow:"hidden",margin:"12px 0"}}><div style={{height:"100%",width:`${percent}%`,background:"#c6a76c",borderRadius:99}}/></div>
+        <div className="setting-row"><div><strong>{copy.used}</strong><small>{usage?.used ?? "—"}</small></div><div><strong>{copy.limit}</strong><small>{usage?.limit ?? 1000}</small></div></div>
+        {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" })}</small>}
+        <div className="setting-row"><div><strong>{copy.providers}</strong><small>{providerNames.length ? providerNames.join(" · ") : "—"}</small></div></div>
+        {usage && providerNames.length === 0 && <div className="notice-bar" style={{marginTop:10}}>{copy.noProvider}</div>}
+        <small className="muted">{copy.voiceNote}</small>
+      </section>
+      <section className="panel panel-pad">
+        <div className="section-head"><h2 className="section-title">{ar ? "ذاكرة العمدة الخاصة بك" : "Your private AL OMDA memory"}</h2><span className="muted">{memory.length}/6000</span></div>
+        <p className="muted" style={{margin:"8px 0"}}>{ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة. سيستخدمها العمدة لتخصيص ردوده واستكمال العمل. الذاكرة خاصة بحسابك ويمكنك تعديلها أو حذفها في أي وقت." : "Save your preferences, projects, and important decisions. AL OMDA will use them to personalize replies and continue work. This memory is private to your account and can be edited or deleted anytime."}</p>
+        <textarea className="field" rows={7} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} placeholder={ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة..." : "Write your preferences, projects, and important decisions..."} disabled={memoryLoading || memorySaving}/>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+          <button type="button" className="button button-primary" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "حفظ الذاكرة" : "Save memory")}</button>
+          <button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || !memory.trim()}>{ar ? "حذف الذاكرة" : "Delete memory"}</button>
+          {memoryLoading && <small className="muted">{ar ? "جارٍ تحميل الذاكرة..." : "Loading memory..."}</small>}
+        </div>
+      </section>
+    </div>}
+    {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
+  </div>;
   return <div className="page-enter">
     <div className="page-heading ai-chat-heading">
       <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{copy.title}</h1><p className="page-subtitle">{copy.subtitle}</p></div>
