@@ -1217,3 +1217,35 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 
 /* Stop browser smooth-scroll and scroll anchoring from moving the chat unexpectedly. */
 .ai-chat-page .chat-messages{scroll-behavior:auto!important;overflow-anchor:none!important;-webkit-overflow-scrolling:touch;}
+
+
+/* Lock the document itself on the AI chat route: only the transcript may scroll. */
+html:has(.ai-chat-page),
+body:has(.ai-chat-page){
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+body:has(.ai-chat-page){position:fixed!important;inset:0!important}
+.app-shell:has(.ai-chat-page){
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100dvh!important;
+  min-height:0!important;
+  max-height:100dvh!important;
+  overflow:hidden!important;
+  overscroll-behavior:none!important;
+}
+.main-area:has(.ai-chat-page){
+  min-height:0!important;
+  max-height:100dvh!important;
+  overscroll-behavior:none!important;
+}
+.main-area:has(.ai-chat-page)>.content-wrap{overscroll-behavior:none!important}
+.main-area:has(.ai-chat-page) .chat-messages{
+  touch-action:pan-y!important;
+  overscroll-behavior-y:contain!important;
+}
