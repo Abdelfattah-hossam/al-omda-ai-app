@@ -440,6 +440,8 @@ function App() {
   const [httpFlowBusy, setHttpFlowBusy] = useState(false);
   const [httpFlowError, setHttpFlowError] = useState("");
   const [httpFlowResult, setHttpFlowResult] = useState<any>(null);
+  const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean }>>([]);
+  const [modelProvidersError, setModelProvidersError] = useState("");
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
@@ -1004,6 +1006,18 @@ function App() {
     } finally { setLocalAgentBusy(false); }
   };
 
+  const loadLocalModelProviders = async () => {
+    setModelProvidersError("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/models/providers");
+      const providers = Array.isArray(result.providers) ? result.providers.filter((item: any) => item && typeof item.name === "string" && typeof item.model === "string") : [];
+      setLocalModelProviders(providers);
+      if (!providers.length) setModelProvidersError(isAr ? "لم يتم إعداد أي مزود موديلات بعد." : "No model providers are configured yet.");
+    } catch (error) {
+      setModelProvidersError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مزودي الموديلات." : "Could not load model providers."));
+    }
+  };
+
   const loadHttpFlowRoles = async () => {
     setHttpFlowBusy(true); setHttpFlowError("");
     try {
@@ -1116,6 +1130,12 @@ function App() {
         {(httpFlowResult.comparison?.headerDifferences||[]).length>0&&<div className="panel panel-pad"><h3 className="section-title">{isAr?'اختلافات الترويسات':'Header differences'}</h3>{httpFlowResult.comparison.headerDifferences.map((item:any)=><div key={item.header} style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}><strong>{item.header}</strong>{item.values.map((entry:any)=><div key={entry.role} className="section-meta">{entry.role}: {entry.value}</div>)}</div>)}</div>}
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:10}}>{(httpFlowResult.responses||[]).map((response:any)=><div className="panel panel-pad" key={response.role}><div className="section-head"><strong>{response.role}</strong><span className="status-chip">{response.status}</span></div><p className="section-meta">{response.durationMs} ms · {response.body.length} {isAr?'حرف':'chars'}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:240,overflow:'auto',fontSize:11,marginTop:8}}>{response.body||'(empty response)'}</pre></div>)}</div>
       </div>}
+    </section>
+    <section className="panel panel-pad" style={{marginBottom:20}}>
+      <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
+      {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
+      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small></div>)}</div>}
+      <p className="section-meta" style={{marginTop:10}}>{isAr?'لإضافة مزود جديد، عدّل .omda/models.json وفق المثال .omda/models.example.json ثم حدّث القائمة.':'Add providers in .omda/models.json using .omda/models.example.json, then refresh this list.'}</p>
     </section>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
     <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
