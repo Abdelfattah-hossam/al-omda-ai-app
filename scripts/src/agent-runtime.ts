@@ -404,6 +404,8 @@ type AgentToolCall = { id: string; type: "function"; function: { name: string; a
 type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string };
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
+const FALLBACK_MODEL_BASE_URL = (process.env.OMDA_AGENT_FALLBACK_MODEL_BASE_URL || "").replace(/\/+$/, "");
+const FALLBACK_MODEL_NAME = process.env.OMDA_AGENT_FALLBACK_MODEL_NAME?.trim() || "";
 const AGENT_TOOLS = [
   { type: "function", function: { name: "mcp.list_tools", description: "Discover tools from configured Model Context Protocol servers.", parameters: { type: "object", properties: { serverName: { type: "string" } }, additionalProperties: false } } },
   { type: "function", function: { name: "mcp.call_tool", description: "Call a configured MCP server tool. Requires explicit user approval before execution.", parameters: { type: "object", properties: { serverName: { type: "string" }, toolName: { type: "string" }, arguments: { type: "object", additionalProperties: true } }, required: ["serverName", "toolName", "arguments"], additionalProperties: false } } },
@@ -465,37 +467,53 @@ async function runTool(call: AgentToolCall): Promise<unknown> {
       throw new Error("Unknown agent tool.");
   }
 }
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null }> {
-  if (!MODEL_NAME) throw new Error("Configure OMDA_AGENT_MODEL_NAME. For a local model, use an LM Studio model identifier.");
-  const headers = new Headers({ "content-type": "application/json" });
-  const apiKey = process.env.OMDA_AGENT_MODEL_API_KEY?.trim();
-  if (apiKey) headers.set("authorization", "Bearer " + apiKey);
-  const response = await fetch(MODEL_BASE_URL + "/chat/completions", {
-    method: "POST", headers,
-    body: JSON.stringify({ model: MODEL_NAME, messages, tools, tool_choice: "auto", temperature: 0.2, stream: false }),
-    signal: AbortSignal.timeout(90000),
-  });
-  const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) {
-    const detail = typeof payload?.error?.message === "string" ? payload.error.message.slice(0, 300) : "Model request failed.";
-    throw new Error("Model provider returned " + response.status + ": " + detail);
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+  const providers = [
+    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary" },
+    { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback" },
+  ].filter((item) => item.base && item.model);
+  if (!providers.length) throw new Error("Configure OMDA_AGENT_MODEL_NAME or OMDA_AGENT_FALLBACK_MODEL_NAME.");
+  const failures: string[] = [];
+  for (const provider of providers) {
+    const started = Date.now();
+    try {
+      const headers = new Headers({ "content-type": "application/json" });
+      if (provider.key) headers.set("authorization", "Bearer " + provider.key);
+      const response = await fetch(provider.base + "/chat/completions", {
+        method: "POST", headers,
+        body: JSON.stringify({ model: provider.model, messages, tools, tool_choice: "auto", temperature: 0.2, stream: false }),
+        signal: AbortSignal.timeout(90000),
+      });
+      const payload = await response.json().catch(() => null) as any;
+      if (!response.ok) {
+        const detail = typeof payload?.error?.message === "string" ? payload.error.message.slice(0, 240) : "Model request failed.";
+        throw new Error("HTTP " + response.status + ": " + detail);
+      }
+      const message = payload?.choices?.[0]?.message;
+      if (!message || typeof message !== "object") throw new Error("Model returned an invalid chat completion.");
+      return { message, usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null, durationMs: Date.now() - started, provider: provider.name };
+    } catch (error) {
+      failures.push(provider.name + ": " + (error instanceof Error ? error.message : "request failed"));
+    }
   }
-  const message = payload?.choices?.[0]?.message;
-  if (!message || typeof message !== "object") throw new Error("Model returned an invalid chat completion.");
-  return { message, usage: payload.usage && typeof payload.usage === "object" ? payload.usage : null };
+  throw new Error("All configured model endpoints failed. " + failures.join(" | ").slice(0, 500));
 }
 async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
+  let totalDurationMs = 0;
+  let lastProvider = "primary";
   for (let turn = 0; turn < 10; turn++) {
     const completion = await modelCompletion(state.messages);
+    totalDurationMs += completion.durationMs;
+    lastProvider = completion.provider;
     if (typeof completion.usage?.prompt_tokens === "number") totalPromptTokens += completion.usage.prompt_tokens;
     if (typeof completion.usage?.completion_tokens === "number") totalCompletionTokens += completion.usage.completion_tokens;
     state.messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) {
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || ""));
     if (approvalCalls.length) {
