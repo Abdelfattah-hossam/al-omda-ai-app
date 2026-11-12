@@ -429,7 +429,7 @@ function App() {
   const [delegateRoleTwo, setDelegateRoleTwo] = useState("Security reviewer");
   const [delegateGoalTwo, setDelegateGoalTwo] = useState("");
   const [delegateBusy, setDelegateBusy] = useState(false);
-  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; result: string; turns?: number }>>([]);
+  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; result: string; turns?: number; evidence?: Array<{ tool: string; summary: string }> }>>([]);
   const [delegateError, setDelegateError] = useState("");
 
   const [httpFlowUrl, setHttpFlowUrl] = useState("");
@@ -911,6 +911,7 @@ function App() {
         role: String(item.role || "Specialist"),
         result: String(item.result || ""),
         turns: typeof item.turns === "number" ? item.turns : undefined,
+        evidence: Array.isArray(item.evidence) ? item.evidence.map((entry: any) => ({ tool: String(entry.tool || "tool"), summary: String(entry.summary || "") })) : [],
       })) : [];
       setDelegateResults(agents);
       if (result.sessionId) setLocalAgentSessionId(String(result.sessionId));
@@ -1038,6 +1039,9 @@ function App() {
           {delegateResults.map((item,index)=><div key={item.role+index} style={{border:'1px solid var(--border)',borderRadius:12,padding:12}}>
             <strong>{item.role}</strong>{typeof item.turns==='number'&&<span className="section-meta"> · {item.turns} {isAr?'جولات':'turns'}</span>}
             <p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:8}}>{item.result}</p>
+            {item.evidence&&item.evidence.length>0&&<details style={{marginTop:10}}><summary className="section-meta">{isAr?'الأدلة والأدوات المستخدمة':'Evidence and tools used'} ({item.evidence.length})</summary>
+              {item.evidence.map((entry,evidenceIndex)=><div key={entry.tool+evidenceIndex} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{entry.tool}</strong><p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:4}}>{entry.summary}</p></div>)}
+            </details>}
           </div>)}
         </div>}
       </div>
