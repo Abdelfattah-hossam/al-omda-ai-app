@@ -665,7 +665,7 @@ async function continueAgent(body: Json): Promise<Json> {
     }
     try {
       const result = await runTool(call);
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result).slice(0, 50000) });
+      appendMcpToolResult(state.messages, call, result, imageQueue);
     } catch (error) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
     }
