@@ -305,7 +305,7 @@ async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
   mcpConnections.set(config.name, connection);
   try {
     await mcpRequest(connection, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "AL OMDA AI", version: "0.1.0" } });
-    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
+    child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     connection.initialized = true;
     return connection;
   } catch (error) {
@@ -647,6 +647,14 @@ async function main(): Promise<void> {
       send(res, 400, { error: message.slice(0, 300) });
     });
   });
+  const shutdown = () => {
+    for (const connection of mcpConnections.values()) connection.child.kill("SIGTERM");
+    server.close(() => process.exit(0));
+    const forceExit = setTimeout(() => process.exit(1), 2500);
+    forceExit.unref();
+  };
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
   server.listen(PORT, HOST, () => {
     process.stdout.write("AL OMDA Agent Runtime listening on http://" + HOST + ":" + PORT + "\n");
     process.stdout.write("Workspace: " + workspaceRoot + "\n");
