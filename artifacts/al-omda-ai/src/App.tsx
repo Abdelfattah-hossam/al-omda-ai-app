@@ -416,6 +416,14 @@ function App() {
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [avatarWorking, setAvatarWorking] = useState(false);
+  const [localAgentUrl, setLocalAgentUrl] = useState("http://127.0.0.1:4318");
+  const [localAgentToken, setLocalAgentToken] = useState("");
+  const [localAgentGoal, setLocalAgentGoal] = useState("");
+  const [localAgentStatus, setLocalAgentStatus] = useState<"idle" | "checking" | "ready" | "running" | "approval" | "error">("idle");
+  const [localAgentMessage, setLocalAgentMessage] = useState("");
+  const [localAgentSessionId, setLocalAgentSessionId] = useState("");
+  const [localAgentPending, setLocalAgentPending] = useState<Array<{ id: string; tool: string; arguments: Record<string, unknown> }>>([]);
+  const [localAgentBusy, setLocalAgentBusy] = useState(false);
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
@@ -820,6 +828,66 @@ function App() {
         <div className="developer-console-foot"><span><i/> {isAr?'واجهة تحت إشراف المستخدم':'USER-GOVERNED WORKSPACE'}</span><span>TSX <span className="code-divider">/</span> CSS</span></div>
       </section>
     </div>;
+  };
+
+  const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" = "GET", body?: Record<string, unknown>) => {
+    const base = new URL(localAgentUrl.trim());
+    if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) {
+      throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
+    }
+    if (!localAgentToken.trim()) throw new Error(isAr ? "أدخل مفتاح الاتصال المحلي." : "Enter the local runtime token.");
+    const response = await fetch(base.origin + endpoint, {
+      method,
+      headers: { authorization: "Bearer " + localAgentToken.trim(), ...(body ? { "content-type": "application/json" } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Local agent runtime request failed.");
+    return result;
+  };
+  const checkLocalAgent = async () => {
+    setLocalAgentBusy(true); setLocalAgentStatus("checking"); setLocalAgentMessage("");
+    try {
+      const healthUrl = new URL(localAgentUrl.trim());
+      if (healthUrl.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(healthUrl.hostname)) throw new Error(isAr ? "استخدم عنوان الجهاز المحلي فقط." : "Use a localhost runtime URL only.");
+      const healthResponse = await fetch(healthUrl.origin + "/health");
+      if (!healthResponse.ok) throw new Error("Local runtime is not responding.");
+      const health = await healthResponse.json();
+      const tools = await callLocalAgentRuntime("/v1/tools");
+      setLocalAgentStatus("ready");
+      setLocalAgentMessage((isAr ? "متصل · " : "Connected · ") + String(tools.tools?.length || 0) + (isAr ? " أداة متاحة" : " tools available") + " · " + String(health.execution || "disabled"));
+    } catch (error) {
+      setLocalAgentStatus("error");
+      setLocalAgentMessage(error instanceof Error ? error.message : (isAr ? "تعذر الاتصال بالوكيل المحلي." : "Could not connect to local runtime."));
+    } finally { setLocalAgentBusy(false); }
+  };
+  const runLocalAgent = async () => {
+    if (!localAgentGoal.trim() || localAgentBusy) return;
+    setLocalAgentBusy(true); setLocalAgentStatus("running"); setLocalAgentMessage("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/agent/run", "POST", { goal: localAgentGoal.trim() });
+      setLocalAgentSessionId(String(result.sessionId || ""));
+      setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
+      setLocalAgentMessage(String(result.message || (result.status === "approval_required" ? (isAr ? "الوكيل محتاج موافقتك على إجراءات." : "The agent needs your approval for actions.") : "")));
+      setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
+    } catch (error) {
+      setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Agent run failed.");
+    } finally { setLocalAgentBusy(false); }
+  };
+  const continueLocalAgent = async (approve: boolean) => {
+    if (!localAgentSessionId || localAgentBusy) return;
+    setLocalAgentBusy(true); setLocalAgentStatus("running");
+    try {
+      const result = await callLocalAgentRuntime("/v1/agent/continue", "POST", {
+        sessionId: localAgentSessionId,
+        approvedCallIds: approve ? localAgentPending.map((item) => item.id) : [],
+      });
+      setLocalAgentPending(Array.isArray(result.pending) ? result.pending : []);
+      setLocalAgentMessage(String(result.message || (result.status === "approval_required" ? (isAr ? "هناك إجراء آخر ينتظر موافقتك." : "Another action needs your approval.") : "")));
+      setLocalAgentStatus(result.status === "approval_required" ? "approval" : result.status === "completed" || result.status === "limit_reached" ? "ready" : "error");
+    } catch (error) {
+      setLocalAgentStatus("error"); setLocalAgentMessage(error instanceof Error ? error.message : "Could not resume agent session.");
+    } finally { setLocalAgentBusy(false); }
   };
 
   const agentsPage = () => <div className="page-enter">
