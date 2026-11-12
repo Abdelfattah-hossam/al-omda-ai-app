@@ -27,6 +27,7 @@ A separate Node.js runtime now provides the first local tools:
 - Tool discovery through `GET /v1/tools` and project Skills from `.omda/skills/`.
 - A model-driven tool loop with saved sessions and approval gates for file writes and terminal commands.
 - Parallel read-only delegation to 2–4 specialist agents.
+- Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
 - OpenAI-compatible local model endpoints such as LM Studio (no provider API key required when running locally).
 - Resumable JSON session storage.
 - Scoped HTTPS inspection for exact authorized hostnames.
