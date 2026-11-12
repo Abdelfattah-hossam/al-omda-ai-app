@@ -1038,3 +1038,55 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .main-area{padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
   .main-area:has(.ai-chat-page){padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
 }
+
+/* Desktop navigation: keep the sidebar as the only desktop menu.
+   The slide-in curtain belongs to compact screens, not desktop layouts. */
+@media (min-width: 801px) {
+  .app-shell .curtain-trigger { display: none !important; }
+  .app-shell > .mobile-nav { display: none !important; }
+}
+
+/* Tablet navigation stays docked to the bottom instead of flowing at the side. */
+@media (min-width: 651px) and (max-width: 800px) {
+  .app-shell > .mobile-nav {
+    position: fixed !important;
+    inset-inline: 12px !important;
+    bottom: 10px !important;
+    z-index: 40 !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 7px 8px !important;
+    border: 1px solid rgba(120,169,255,.28) !important;
+    border-radius: 18px !important;
+    background: rgba(7,11,23,.94) !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,.42), 0 0 22px rgba(120,169,255,.12) !important;
+    backdrop-filter: blur(22px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  }
+  .app-shell > .mobile-nav > a {
+    display: flex !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 5px 2px !important;
+    color: #a5b0ca !important;
+    text-align: center !important;
+    white-space: normal !important;
+    font-size: 8px !important;
+  }
+  .app-shell > .mobile-nav > a span {
+    display: block !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    text-align: center !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+  .app-shell > .mobile-nav > a svg { width: 18px !important; height: 18px !important; }
+  .app-shell > .main-area { padding-bottom: 86px !important; }
+}
