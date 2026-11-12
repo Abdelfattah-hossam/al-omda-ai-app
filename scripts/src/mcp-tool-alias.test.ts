@@ -13,4 +13,5 @@ test("rejects malformed aliases and invalid names", () => {
   assert.equal(parseMcpToolAlias("mcp.tool.not-base64-json"), null);
   assert.equal(parseMcpToolAlias("mcp.tool." + "a".repeat(600)), null);
   assert.throws(() => createMcpToolAlias("", "tool"), /Invalid MCP/);
+  assert.throws(() => createMcpToolAlias("server".repeat(10), "tool".repeat(10)), /too long/);
 });
