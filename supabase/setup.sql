@@ -195,14 +195,14 @@ begin
   where user_id = v_user and usage_date = v_today;
   return jsonb_build_object(
     'used', coalesce(v_used, 0),
-    'remaining', greatest(0, 100 - coalesce(v_used, 0)),
-    'limit', 100,
+    'remaining', greatest(0, 1000 - coalesce(v_used, 0)),
+    'limit', 1000,
     'resetAt', v_reset
   );
 end;
 $$;
 
-create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 100)
+create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
 returns jsonb
 language plpgsql
 security definer
@@ -217,7 +217,7 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
-  if p_units is null or p_units < 1 or p_units > 5 or p_daily_limit <> 100 then
+  if p_units is null or p_units < 1 or p_units > 5 or p_daily_limit <> 1000 then
     raise exception 'Invalid AI quota request';
   end if;
 
