@@ -119,8 +119,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       socketRef.current = socket;
 
       await new Promise<void>((resolve, reject) => {
-        const timeout = window.setTimeout(() => reject(new Error(ar ? "انتهت مهلة الاتصال بالعمدة." : "Connection to AL OMDA timed out.")), 15000);
+        let lastServerMessage = "";
+        let opened = false;
+        const timeout = window.setTimeout(() => {
+          const detail = lastServerMessage ? " — " + lastServerMessage.slice(0, 700) : "";
+          reject(new Error((ar ? "انتهت مهلة اتصال Gemini بعد فتح القناة." : "Gemini connection timed out after the WebSocket opened.") + detail));
+        }, 15000);
         socket.onopen = () => {
+          opened = true;
           socket.send(JSON.stringify({
             setup: {
               model: "models/gemini-3.8-live",
@@ -138,11 +144,15 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         };
         socket.onerror = () => {
           window.clearTimeout(timeout);
-          reject(new Error(labels.unavailable));
+          reject(new Error(opened ? (ar ? "فُتح اتصال Gemini لكن حدث خطأ أثناء تهيئة الجلسة." : "Gemini WebSocket opened but failed during session setup.") : labels.unavailable));
         };
-        socket.onmessage = (event) => {
+        socket.onmessage = async (event) => {
           let message: any;
-          try { message = JSON.parse(event.data); } catch { return; }
+          try {
+            const raw = typeof event.data === "string" ? event.data : await event.data.text();
+            lastServerMessage = raw;
+            message = JSON.parse(raw);
+          } catch { return; }
           if (message.setupComplete) {
             window.clearTimeout(timeout);
             resolve();
@@ -151,9 +161,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             reject(new Error(message.error.message || labels.unavailable));
           }
         };
-        socket.onclose = () => {
+        socket.onclose = (event) => {
           window.clearTimeout(timeout);
-          if (!sessionReadyRef.current) reject(new Error(labels.unavailable));
+          if (!sessionReadyRef.current) {
+            const detail = [event.code ? "code " + event.code : "", event.reason || ""].filter(Boolean).join(": ");
+            reject(new Error((ar ? "أغلق Gemini الاتصال قبل اكتمال الجلسة." : "Gemini closed the connection before setup completed.") + (detail ? " — " + detail : "")));
+          }
         };
       });
 
