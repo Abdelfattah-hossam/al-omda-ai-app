@@ -47,6 +47,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [memory, setMemory] = useState("");
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memorySaving, setMemorySaving] = useState(false);
   const [voiceFallback, setVoiceFallback] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
@@ -133,6 +136,60 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
   };
 
+  const loadMemory = async () => {
+    if (!signedIn) return;
+    setMemoryLoading(true);
+    try {
+      const response = await fetch("/api/ai/memory", { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل ذاكرة العمدة." : "Could not load AI memory."));
+      setMemory(typeof data.memory === "string" ? data.memory : "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الذاكرة." : "Could not load memory."));
+    } finally {
+      setMemoryLoading(false);
+    }
+  };
+
+  const saveMemory = async () => {
+    if (memorySaving || memoryLoading || !signedIn) return;
+    setMemorySaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/ai/memory", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ memory }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
+      setError(ar ? "تم حفظ ذاكرة العمدة الخاصة بحسابك." : "Your private AL OMDA memory was saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
+    } finally {
+      setMemorySaving(false);
+    }
+  };
+
+  const clearMemory = async () => {
+    if (memorySaving || memoryLoading || !signedIn || !memory.trim()) return;
+    if (!window.confirm(ar ? "هل تريد حذف ذاكرة العمدة الخاصة بحسابك؟" : "Delete your private AL OMDA memory?")) return;
+    setMemorySaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/ai/memory", { method: "DELETE", credentials: "same-origin" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف الذاكرة." : "Could not delete memory."));
+      setMemory("");
+      setError(ar ? "تم حذف الذاكرة الخاصة بحسابك." : "Your private memory was deleted.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر حذف الذاكرة." : "Could not delete memory."));
+    } finally {
+      setMemorySaving(false);
+    }
+  };
+
   const loadUsage = async () => {
     if (!signedIn) return;
     try {
@@ -145,7 +202,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
   };
 
-  useEffect(() => { void loadUsage(); void loadHistory(); }, [signedIn]);
+  useEffect(() => { void loadUsage(); void loadHistory(); void loadMemory(); }, [signedIn]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
@@ -320,6 +377,16 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         <div className="setting-row"><div><strong>{copy.providers}</strong><small>{providerNames.length ? providerNames.join(" · ") : "—"}</small></div></div>
         {usage && providerNames.length === 0 && <div className="notice-bar" style={{marginTop:10}}>{copy.noProvider}</div>}
         <small className="muted">{copy.voiceNote}</small>
+      </section>
+      <section className="panel panel-pad" style={{ marginBottom: 14 }}>
+        <div className="section-head"><h2 className="section-title">{ar ? "ذاكرة العمدة الخاصة بك" : "Your private AL OMDA memory"}</h2><span className="muted">{memory.length}/6000</span></div>
+        <p className="muted" style={{ margin: "8px 0" }}>{ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة. سيستخدمها العمدة لتخصيص ردوده واستكمال العمل. الذاكرة خاصة بحسابك ويمكنك تعديلها أو حذفها في أي وقت." : "Save your preferences, projects, and important decisions. AL OMDA will use them to personalize replies and continue work. This memory is private to your account and can be edited or deleted anytime."}</p>
+        <textarea className="field" rows={4} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} placeholder={ar ? "مثال: أفضل الشرح خطوة بخطوة. أعمل على مشروع العمدة AI، ولا أريد خدمات مدفوعة..." : "Example: I prefer step-by-step guidance. I am building AL OMDA AI and want to avoid paid services..."} disabled={memoryLoading || memorySaving}/>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+          <button type="button" className="button button-primary" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "حفظ الذاكرة" : "Save memory")}</button>
+          <button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || !memory.trim()}>{ar ? "حذف الذاكرة" : "Delete memory"}</button>
+          {memoryLoading && <small className="muted">{ar ? "جارٍ تحميل الذاكرة..." : "Loading memory..."}</small>}
+        </div>
       </section>
       <section className="panel panel-pad">
         <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><button type="button" className="button button-quiet button-small" onClick={()=>void clearChat()} disabled={loading || clearing || historyLoading || messages.length===0}><Trash2 size={13}/>{clearing ? (ar ? "جارٍ الحذف..." : "Clearing...") : copy.clear}</button></div>
