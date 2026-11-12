@@ -497,3 +497,35 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .market-signal strong{font-size:10px;color:currentColor;white-space:normal}
 @keyframes marketPulse{0%,100%{opacity:.55;transform:scale(.85)}50%{opacity:1;transform:scale(1.2)}}
 @media(max-width:650px){.market-signals{grid-template-columns:1fr}.market-signal{padding:9px 11px}.market-main-trend{min-height:122px}}
+
+
+/* Reliable live theme switching and full-screen glass wallpaper */
+.app-shell{position:relative;isolation:isolate;min-height:100vh;background:transparent!important}
+.app-shell::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923));background-size:cover;background-position:center;transition:background .45s ease}
+.app-shell[data-accent="blue"]{--profile-accent:#78a9ff;--active-glow:rgba(120,169,255,.28)}
+.app-shell[data-accent="violet"]{--profile-accent:#a78bfa;--active-glow:rgba(167,139,250,.28)}
+.app-shell[data-accent="cyan"]{--profile-accent:#67d8ef;--active-glow:rgba(103,216,239,.28)}
+.app-shell[data-accent="teal"]{--profile-accent:#62d6c2;--active-glow:rgba(98,214,194,.28)}
+.app-shell[data-accent="pink"]{--profile-accent:#f29ac7;--active-glow:rgba(242,154,199,.28)}
+.app-shell[data-accent="amber"]{--profile-accent:#e9c27b;--active-glow:rgba(233,194,123,.28)}
+.app-shell[data-accent="lime"]{--profile-accent:#b7df8a;--active-glow:rgba(183,223,138,.28)}
+.app-shell[data-accent] .button-primary{background:linear-gradient(125deg,var(--profile-accent),color-mix(in srgb,var(--profile-accent) 58%,#30244f))!important;border-color:var(--profile-accent)!important;box-shadow:0 0 22px var(--active-glow),inset 0 1px 0 rgba(255,255,255,.24)!important}
+.app-shell[data-accent] .nav-link.active,.app-shell[data-accent] .mobile-nav a.active{color:var(--profile-accent)!important;border-color:var(--active-glow)!important;box-shadow:inset 0 0 22px var(--active-glow),0 0 20px var(--active-glow)!important}
+.app-shell[data-accent] .eyebrow,.app-shell[data-accent] .profile-section-heading>svg,.app-shell[data-accent] .online-dot,.app-shell[data-accent] .text-button,.app-shell[data-accent] .lang-button{color:var(--profile-accent)!important}
+.app-shell[data-accent] .panel,.app-shell[data-accent] .stat-card,.app-shell[data-accent] .agent-card{border-color:color-mix(in srgb,var(--profile-accent) 23%,transparent);transition:border-color .3s,box-shadow .3s}
+.app-shell[data-accent] .button-quiet:focus-visible,.app-shell[data-accent] .icon-button:focus-visible,.app-shell[data-accent] .accent-choice.selected{outline-color:var(--profile-accent)!important;box-shadow:0 0 18px var(--active-glow)!important}
+.curtain-trigger{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.curtain-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(1,4,12,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:curtainFade .2s ease}
+.app-curtain{position:absolute;inset-block:0;inset-inline-start:0;width:min(360px,88vw);padding:20px;display:flex;flex-direction:column;gap:16px;background:linear-gradient(155deg,rgba(16,23,43,.98),rgba(8,11,22,.98));border-inline-end:1px solid color-mix(in srgb,var(--profile-accent) 40%,transparent);box-shadow:0 0 55px rgba(0,0,0,.55),0 0 28px var(--active-glow);animation:curtainSlide .28s cubic-bezier(.2,.8,.2,1)}
+.curtain-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.curtain-user{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.045)}
+.curtain-user>span:last-child{display:grid;gap:4px;min-width:0}.curtain-user strong{font-size:12px;color:#f1f4ff}.curtain-user small{font-size:10px;color:#a6b3cc;overflow-wrap:anywhere}
+.curtain-caption{font-size:10px;color:var(--profile-accent);letter-spacing:.08em}
+.curtain-nav{display:grid;gap:7px;overflow:auto}
+.curtain-nav .nav-link{width:100%;padding:12px;border-radius:11px}
+.curtain-profile-link{margin-top:auto;display:flex;align-items:center;gap:10px;padding:13px;border:1px solid var(--active-glow);border-radius:12px;background:rgba(255,255,255,.045);color:var(--profile-accent);cursor:pointer}
+.curtain-profile-link svg:last-child{margin-inline-start:auto}
+@keyframes curtainFade{from{opacity:0}to{opacity:1}}
+@keyframes curtainSlide{from{opacity:.6;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
+@media(max-width:800px){.curtain-trigger{display:inline-flex}.topbar{gap:10px}.crumb{margin-inline-end:auto}}
+@media(prefers-reduced-motion:reduce){.app-curtain,.curtain-backdrop,.app-shell::before{animation:none;transition:none}}
