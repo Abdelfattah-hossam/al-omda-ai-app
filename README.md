@@ -24,12 +24,14 @@ AL OMDA AI combines an AI chat workspace, user-owned project tracking, and a sep
 A separate Node.js runtime now provides the first local tools:
 
 - Workspace file listing, reading, and writing with path and symlink checks.
-- Tool discovery through `GET /v1/tools`.
+- Tool discovery through `GET /v1/tools` and project Skills from `.omda/skills/`.
+- A model-driven tool loop with saved sessions and approval gates for file writes and terminal commands.
+- OpenAI-compatible local model endpoints such as LM Studio (no provider API key required when running locally).
 - Resumable JSON session storage.
 - Scoped HTTPS inspection for exact authorized hostnames.
 - Optional terminal command execution, disabled by default.
 
-See [Local Agent Runtime](docs/agent-runtime.md) for setup, endpoints, and security boundaries.
+See [Local Agent Runtime](docs/agent-runtime.md) for setup, endpoints, local model configuration, and security boundaries.
 
 ## Architecture
 
