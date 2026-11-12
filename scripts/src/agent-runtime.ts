@@ -602,6 +602,21 @@ async function startAgent(body: Json): Promise<Json> {
   };
   return await runAgentLoop(id, state);
 }
+async function resumeAgent(body: Json): Promise<Json> {
+  const id = typeof body.sessionId === "string" ? body.sessionId : "";
+  const state = await loadAgentState(id);
+  if (typeof body.goal === "string" && body.goal.trim()) {
+    if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
+    state.messages.push({ role: "user", content: body.goal.trim() });
+  } else if (!state.pendingToolCalls?.length) {
+    state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
+  }
+  if (state.pendingToolCalls?.length) {
+    return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })) };
+  }
+  await saveAgentState(id, state);
+  return await runAgentLoop(id, state);
+}
 async function continueAgent(body: Json): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
   const state = await loadAgentState(id);
@@ -657,6 +672,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = await readBody(req);
     send(res, 200, await startAgent(body)); return;
   }
+  if (req.method === "POST" && url.pathname === "/v1/agent/resume") {
+    const body = await readBody(req);
+    send(res, 200, await resumeAgent(body)); return;
+  }
   if (req.method === "POST" && url.pathname === "/v1/agent/continue") {
     const body = await readBody(req);
     send(res, 200, await continueAgent(body)); return;
@@ -672,6 +691,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       { name: "agent.delegate", description: "Run 2 to 4 specialist agents concurrently with read-only tools." },
       { name: "agent.run", description: "Run a model-driven agent loop with tool calls and approval gates." },
       { name: "agent.continue", description: "Resume a saved agent run after approving or denying pending actions." },
+      { name: "agent.resume", description: "Restore a saved agent session after the runtime or terminal was restarted." },
       { name: "mcp.list_tools", description: "Discover tools from configured MCP servers." },
       { name: "mcp.call_tool", description: "Call an MCP tool after user approval." },
       { name: "skills.list", description: "List project Skills installed under .omda/skills." },
