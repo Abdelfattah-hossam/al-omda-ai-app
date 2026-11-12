@@ -43,12 +43,12 @@ test("rejects malformed stream events", async () => {
 });
 
 test("accepts CRLF-delimited server-sent events", async () => {
-  const response = new Response('data: {"choices":[{"delta":{"content":"CRLF works"}}]}\\r\\n\\r\\ndata: [DONE]\\r\\n\\r\\n', { status: 200 });
+  const response = new Response('data: {"choices":[{"delta":{"content":"CRLF works"}}]}\r\n\r\ndata: [DONE]\r\n\r\n', { status: 200 });
   const result = await consumeOpenAIChatStream(response);
   assert.equal(result.message.content, "CRLF works");
 });
 
 test("rejects streams with no event data", async () => {
-  const response = new Response(": keep-alive\\n\\n", { status: 200 });
+  const response = new Response(": keep-alive\n\n", { status: 200 });
   await assert.rejects(() => consumeOpenAIChatStream(response), /no streaming events/);
 });
