@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocation } from "wouter";
 import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string };
+type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
   remaining: number;
@@ -35,8 +37,9 @@ function MessageContent({ content }: { content: string }) {
   </div>;
 }
 
-export default function AIChatPage({ language, signedIn }: { language: Language; signedIn: boolean }) {
+export default function AIChatPage({ language, signedIn, view = "chat" }: { language: Language; signedIn: boolean; view?: "chat" | "usage" }) {
   const ar = language === "ar";
+  const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -46,6 +49,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [speaking, setSpeaking] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
+  const [showConversationList, setShowConversationList] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [memory, setMemory] = useState("");
   const [memoryLoading, setMemoryLoading] = useState(false);
