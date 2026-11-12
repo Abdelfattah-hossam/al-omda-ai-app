@@ -1175,3 +1175,41 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .app-shell nav.mobile-nav > a svg { width: 19px !important; height: 19px !important; }
   .app-shell .curtain-trigger { display: none !important; }
 }
+
+
+/* Desktop: keep the workspace dock vertical and on the language-reading edge. */
+@media screen and (min-width: 801px) {
+  .app-shell .main-area {
+    padding-inline-start: 112px !important;
+    padding-inline-end: 20px !important;
+    padding-bottom: 24px !important;
+  }
+  .app-shell nav.mobile-nav {
+    top: 50% !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    inset-inline-start: 14px !important;
+    inset-inline-end: auto !important;
+    transform: translateY(-50%) !important;
+    width: 82px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: calc(100dvh - 40px) !important;
+    overflow-y: auto !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: minmax(48px, auto) !important;
+    gap: 4px !important;
+    padding: 10px 7px !important;
+  }
+  .app-shell nav.mobile-nav > a {
+    min-height: 46px !important;
+    padding: 6px 2px !important;
+    gap: 4px !important;
+    font-size: 10px !important;
+  }
+  .app-shell nav.mobile-nav > a span { font-size: 10px !important; white-space: normal !important; }
+  .app-shell nav.mobile-nav > a svg { width: 18px !important; height: 18px !important; }
+}
+.ai-voice-panel-under-input { margin: 10px 0 0 !important; padding: 10px !important; }
+.ai-voice-panel-under-input .section-head { margin-bottom: 8px; }
