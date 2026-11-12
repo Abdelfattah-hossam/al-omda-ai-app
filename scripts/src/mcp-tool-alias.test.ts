@@ -4,7 +4,7 @@ import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp
 
 test("encodes MCP server and tool names into a safe function alias", () => {
   const alias = createMcpToolAlias("desktop-tools", "computer.screenshot");
-  assert.match(alias, /^mcp\\.tool\\.[A-Za-z0-9_-]+$/);
+  assert.match(alias, /^mcp_tool_[A-Za-z0-9_-]+$/);
   assert.deepEqual(parseMcpToolAlias(alias), { serverName: "desktop-tools", toolName: "computer.screenshot" });
   assert.equal(mcpToolDisplayName(alias), "desktop-tools / computer.screenshot");
 });
