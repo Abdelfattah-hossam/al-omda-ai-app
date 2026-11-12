@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
@@ -51,6 +51,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
   const [voiceFallback, setVoiceFallback] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
@@ -362,12 +364,16 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
 
   return <div className="page-enter">
-    <div className="page-heading">
+    <div className="page-heading ai-chat-heading">
       <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{copy.title}</h1><p className="page-subtitle">{copy.subtitle}</p></div>
-      <span className="status-chip"><Bot size={13}/>{ar ? "توجيه تلقائي" : "Auto routing"}</span>
+      <div className="ai-chat-actions">
+        <span className="status-chip"><Bot size={13}/>{ar ? "توجيه تلقائي" : "Auto routing"}</span>
+        <button type="button" className="button button-quiet button-small" onClick={()=>void clearChat()} disabled={loading || clearing || historyLoading || messages.length===0}><Trash2 size={13}/>{copy.clear}</button>
+        <button type="button" className="button button-quiet button-small" onClick={()=>setShowSettings((v)=>!v)} aria-expanded={showSettings}><Settings2 size={14}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
+      </div>
     </div>
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
-      <section className="panel panel-pad" style={{ marginBottom: 14 }}>
+      {showSettings && <div className="ai-settings-drawer">      <section className="panel panel-pad" style={{ marginBottom: 14 }}>
         <div className="section-head"><h2 className="section-title">{copy.remaining}</h2><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></div>
         <div style={{height:9,background:"var(--surface-muted,#252a32)",borderRadius:99,overflow:"hidden",margin:"12px 0"}}>
           <div style={{height:"100%",width:`${percent}%`,background:"#c6a76c",borderRadius:99,transition:"width .2s"}}/>
@@ -388,8 +394,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           {memoryLoading && <small className="muted">{ar ? "جارٍ تحميل الذاكرة..." : "Loading memory..."}</small>}
         </div>
       </section>
+      </div>}
       <section className="panel panel-pad">
-        <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><button type="button" className="button button-quiet button-small" onClick={()=>void clearChat()} disabled={loading || clearing || historyLoading || messages.length===0}><Trash2 size={13}/>{clearing ? (ar ? "جارٍ الحذف..." : "Clearing...") : copy.clear}</button></div>
+        <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><span className="muted">{messages.length} {ar ? "رسالة" : "messages"}</span></div>
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
         <div className="chat-messages" aria-live="polite" style={{minHeight:250,maxHeight:"52vh",overflowY:"auto"}}>
           {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
@@ -406,17 +413,36 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
-        <div style={{ marginBottom: 12, padding: 12, border: "1px solid var(--border,#343a44)", borderRadius: 12 }}>
-          <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
-          <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
-        </div>
-        <form onSubmit={sendMessage} style={{display:"grid",gap:10}}>
-          <textarea ref={inputRef} className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between"}}>
-            <div style={{display:"flex",gap:8}}>
-              {speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}
-              <button type="submit" className="button button-primary" disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={14} className="animate-spin"/> : <Send size={14}/>} {copy.send}</button>
+        <details className="ai-voice-panel">
+          <summary>{ar ? "محادثة صوتية مباشرة" : "Live voice conversation"}</summary>
+          <div style={{padding:"10px 2px 2px"}}>
+            <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
+            <small className="muted" style={{ display: "block", marginTop: 6 }}>{ar ? "تحدث مع العمدة مباشرة بالصوت، وسيجيبك بصوته دون كتابة." : "Talk to AL OMDA naturally; it listens and replies with voice, without typing."}</small>
+          </div>
+        </details>
+        <form onSubmit={sendMessage} className="ai-composer">
+          <div className="ai-composer-tools">
+            <div className="ai-plus-wrap">
+              <button type="button" className="ai-plus-button" aria-label={ar ? "خيارات العمل" : "Work options"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
+              {showPlusMenu && <div className="ai-plus-menu" role="menu">
+                {[
+                  {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
+                  {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
+                  {icon:Palette,label:ar?"تصميم":"Design",prompt:ar?"أريد تصميم: ":"I want to design: "},
+                  {icon:FileText,label:ar?"مستند Word":"Word document",prompt:ar?"أنشئ مستند Word عن: ":"Create a Word document about: "},
+                  {icon:Sheet,label:"Excel",prompt:ar?"أنشئ ملف Excel لـ: ":"Create an Excel workbook for: "},
+                  {icon:Presentation,label:"PowerPoint",prompt:ar?"أنشئ عرض PowerPoint عن: ":"Create a PowerPoint presentation about: "},
+                  {icon:Search,label:ar?"بحث ودراسة":"Research",prompt:ar?"أجرِ بحثًا ودراسة عن: ":"Research and analyze: "},
+                  {icon:PenLine,label:ar?"كتابة محتوى":"Content writing",prompt:ar?"اكتب محتوى عن: ":"Write content about: "}
+                ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
+              </div>}
             </div>
+            <textarea ref={inputRef} className="field ai-composer-input" rows={2} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
+            <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
+          </div>
+          <div className="ai-composer-footer">
+            <div>{speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}</div>
+            <small className="muted">{usage ? (ar ? `متبقي ${usage.remaining} من ${usage.limit} وحدة` : `${usage.remaining} of ${usage.limit} units left`) : copy.subtitle}</small>
           </div>
         </form>
       </section>
