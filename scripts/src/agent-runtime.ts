@@ -720,7 +720,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (!isInside(workspaceRoot, actualDirectory)) throw new Error("Session directory escapes the workspace.");
     const entries = await readdir(actualDirectory, { withFileTypes: true });
     const sessions: Array<{ id: string; updatedAt: string; lastMessage: string; pending: boolean }> = [];
-    for (const entry of entries.filter((item) => item.isFile() && /^[a-zA-Z0-9_-]{1,80}\\.json$/.test(item.name)).slice(0, 200)) {
+    for (const entry of entries.filter((item) => item.isFile() && item.name.endsWith(".json") && /^[a-zA-Z0-9_-]{1,80}$/.test(item.name.slice(0, -5))).slice(0, 200)) {
       try {
         const sessionFile = await realpath(resolve(actualDirectory, entry.name));
         if (!isInside(actualDirectory, sessionFile)) continue;
@@ -729,7 +729,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
         const saved = JSON.parse(await readFile(sessionFile, "utf8")) as { id?: string; updatedAt?: string; state?: AgentState };
         if (!saved.state || !Array.isArray(saved.state.messages)) continue;
         const lastUser = [...saved.state.messages].reverse().find((message) => message.role === "user" && typeof message.content === "string");
-        sessions.push({ id: entry.name.replace(/\\.json$/, ""), updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : "", lastMessage: typeof lastUser?.content === "string" ? lastUser.content.slice(0, 180) : "", pending: Boolean(saved.state.pendingToolCalls?.length) });
+        sessions.push({ id: entry.name.slice(0, -5), updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : "", lastMessage: typeof lastUser?.content === "string" ? lastUser.content.slice(0, 180) : "", pending: Boolean(saved.state.pendingToolCalls?.length) });
       } catch { /* Ignore malformed or unreadable session files. */ }
     }
     sessions.sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || ""));
