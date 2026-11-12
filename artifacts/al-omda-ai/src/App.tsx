@@ -86,11 +86,13 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
 function buildLocalPlan(request:string, specialty:Specialty, language:Language):string[] {
   const clean = request.trim().replace(/\s+/g,' ');
   const normalized = clean.toLocaleLowerCase();
-  const topic = clean.replace(/[.!؟?]+$/,'').slice(0,90);
+  const topic = clean.replace(/[.!؟?]+$/,'').slice(0,140);
   const ar = language === 'ar';
-  const budget = clean.match(/(?:ميزانية|بميزانية|تكلفة|مبلغ)\s*[:：]?\s*([\d,.]+\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar)?)/i)?.[1];
-  const deadline = clean.match(/(?:خلال|قبل|مدة|في خلال)\s*([\d]+\s*(?:يوم|أيام|أسبوع|أسابيع|شهر|شهور|ساعة|ساعات|days?|weeks?|months?))/i)?.[1];
-  const audience = clean.match(/(?:يستهدف|استهداف|جمهور|عملاء)\s*([^،.؛!?؟]{3,36})/i)?.[1]?.trim();
+  const budget = clean.match(/(?:ميزانية|بميزانية|تكلفة|مبلغ)\\s*[:：]?\\s*([\\d,.]+\\s*(?:درهم|دولار|جنيه|ريال|aed|usd|egp|sar)?)/i)?.[1];
+  const deadlineMatch = clean.match(/(?:خلال|في خلال|قبل|لمدة|مدة|على مدار)\\s*(?:(\\d+)\\s*)?(يوم(?:ين)?|أيام|أسبوع(?:ين)?|أسابيع|شهر(?:ين)?|شهور|ساعة(?:ين)?|ساعات|days?|weeks?|months?)/i);
+  const deadline = deadlineMatch ? [deadlineMatch[1], deadlineMatch[2]].filter(Boolean).join(' ') : undefined;
+  const audienceMatch = clean.match(/(?:يستهدف|تستهدف|استهداف|الجمهور المستهدف|الفئة المستهدفة|جمهور|عملاء)\\s*(?:هو|هي)?\\s*([^،.؛!?؟]{2,40})/i);
+  const audience = audienceMatch?.[1]?.trim().replace(/^(?:الـ|ال)\\s*/, '');
   const context = [
     budget ? (ar ? 'الميزانية: ' : 'Budget: ') + budget : '',
     deadline ? (ar ? 'المدة: ' : 'Timeline: ') + deadline : '',
