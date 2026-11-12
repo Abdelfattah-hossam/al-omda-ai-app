@@ -212,7 +212,7 @@ async function callProviderWithRetry(provider: "gemini" | "openrouter", messages
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
-      const temporary = /\\b(?:429|500|502|503|504)\\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
+      const temporary = /\b(?:429|500|502|503|504)\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
       if (!temporary || attempt === 1) throw error;
       await new Promise((resolve) => setTimeout(resolve, 900));
     }
@@ -254,7 +254,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const parsePlan = (raw: string): any | null => {
       try {
         let jsonText = raw.trim();
-        if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "").trim();
+        if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
         const value = JSON.parse(jsonText);
         if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 8 ||
           value.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || !step.output.trim() || step.output.length > 1200 || typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > 1200)) return null;
@@ -269,7 +269,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
         "Required schema: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
         "Original customer request: " + request,
         "Invalid previous response: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try {
         answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory);
         parsed = parsePlan(answer.text);
@@ -417,7 +417,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Original request: " + customerRequest,
         "Approved step: " + step.text,
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       if (!parseWordDocument(answer.text, false, false)) {
@@ -432,7 +432,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Preserve the original request, approved requirements, and actual data. Do not invent unrelated data.",
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Excel task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       if (!parseExcelWorkbook(answer.text)) {
@@ -446,7 +446,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Repair the requested application. Return ONLY a complete self-contained HTML document with all requested functions.",
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[HTML task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       if (!parseHtmlApp(answer.text)) {
