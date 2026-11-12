@@ -50,7 +50,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 The following are future goals, not claims of existing functionality:
 
-1. Connect the local execution runtime directly to regular chat conversations, with streaming progress, retries, cancellation, and durable job status.
+1. Extend the basic Local Agent integration in regular chat (task submission, explicit approvals, saved-session resume/listing) with streaming progress, retries, cancellation, and durable job status.
 2. Add native browser automation for Chromium/Firefox with explicit per-site permissions and tab management; MCP browser servers are the interim route.
 3. Add desktop control through a separately installed, permissioned companion.
 4. Expand MCP beyond local stdio transport with remote transports, server lifecycle management, and a safer install/update experience.
