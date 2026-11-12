@@ -34,7 +34,7 @@ export function mergeDesktopServerConfig(existingText: string | null): string {
   const index = config.servers.findIndex((server) => server.name === desktopServer.name);
   if (index >= 0) config.servers[index] = desktopServer;
   else config.servers.push(desktopServer);
-  return JSON.stringify(config, null, 2) + "\\n";
+  return JSON.stringify(config, null, 2) + "\n";
 }
 
 export function mergeBrowserServerConfig(existingText: string | null, browser: BrowserName): string {
