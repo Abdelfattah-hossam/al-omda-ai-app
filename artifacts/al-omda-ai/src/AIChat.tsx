@@ -505,6 +505,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
             const estimated = Math.round((streamedText.length / 4) / seconds);
             setMessages([...next, { role: "assistant", content: streamedText + "\n\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
+          } else if (event.type === "status" && event.status === "delegating") {
+            setMessages([...next, { role: "assistant", content: ar ? "الوكيل يقسم المهمة على " + (event.agentCount || 2) + " وكلاء متخصصين..." : "Agent is splitting the task across " + (event.agentCount || 2) + " specialists...", provider: "Local Agent" }]);
+          } else if (event.type === "status" && event.status === "specialist_started") {
+            setMessages([...next, { role: "assistant", content: (ar ? "بدأ الوكيل المتخصص: " : "Specialist started: ") + (event.role || ""), provider: "Local Agent" }]);
           } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
             setMessages([...next, { role: "assistant", content: ar ? "الوكيل يختار الأدوات وينفذ الخطوات..." : "Agent is selecting tools and executing steps...", provider: "Local Agent" }]);
           }
