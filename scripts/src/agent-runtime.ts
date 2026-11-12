@@ -184,7 +184,8 @@ async function compareHttpRoles(body: Json): Promise<Json> {
     const headers: Record<string, string> = {};
     for (const [header, envName] of Object.entries(config.headersFromEnv)) {
       const value = process.env[envName];
-      if (value) headers[header] = value;
+      if (!value) throw new Error("Missing environment variable " + envName + " for HTTP role " + name + ".");
+      headers[header] = value;
     }
     return { name, headers };
   });
