@@ -42,7 +42,6 @@ async function refundUnits(accessToken: string, units: number): Promise<void> {
 function getProviders() {
   return {
     gemini: Boolean(process.env.GEMINI_API_KEY?.trim()),
-    groq: Boolean(process.env.GROQ_API_KEY?.trim()),
     openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
   };
 }
@@ -51,7 +50,7 @@ function chooseProviders(messages: ChatMessage[]) {
   const last = messages[messages.length - 1]?.content ?? "";
   const coding = /code|coding|debug|typescript|javascript|python|react|node|sql|برمج|كود|بايثون|جافاسكريبت|خطأ|تصحيح/i.test(last);
   const configured = getProviders();
-  const order = coding ? ["gemini", "groq", "openrouter"] : ["groq", "gemini", "openrouter"];
+  const order = coding ? ["gemini", "openrouter"] : ["openrouter", "gemini"];
   return order.filter((provider) => configured[provider as keyof typeof configured]);
 }
 
@@ -79,38 +78,20 @@ async function callGemini(messages: ChatMessage[]): Promise<{ text: string; mode
   return { text, model };
 }
 
-async function callCompatible(provider: "groq" | "openrouter", messages: ChatMessage[]): Promise<{ text: string; model: string }> {
-  const isGroq = provider === "groq";
-  const key = (isGroq ? process.env.GROQ_API_KEY : process.env.OPENROUTER_API_KEY)?.trim();
-  if (!key) throw new Error(`${provider} is not configured.`);
-  // Groq's developer Free plan is rate-limited and does not charge; OpenRouter is pinned to its free-only router.
-  const model = isGroq
-    ? "openai/gpt-oss-20b"
-    : "openrouter/free";
-  const endpoint = isGroq
-    ? "https://api.groq.com/openai/v1/chat/completions"
-    : "https://openrouter.ai/api/v1/chat/completions";
-  const response = await fetch(endpoint, {
+async function callOpenRouter(messages: ChatMessage[]): Promise<{ text: string; model: string }> {
+  const key = process.env.OPENROUTER_API_KEY?.trim();
+  if (!key) throw new Error("OpenRouter is not configured.");
+  // The special router is restricted to free models; never select a paid model ID.
+  const model = "openrouter/free";
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    headers: {
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-      ...(isGroq ? {} : { "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" }),
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: "You are AL OMDA AI, a helpful Arabic and English assistant. Give accurate, practical answers. For code, provide complete, safe examples and explain important assumptions." },
-        ...messages,
-      ],
-      max_tokens: 1400,
-      temperature: 0.4,
-    }),
+    headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
+    body: JSON.stringify({ model, messages: [{ role: "system", content: "You are AL OMDA AI, a helpful Arabic and English assistant. Give accurate, practical answers. For code, provide complete, safe examples and explain important assumptions." }, ...messages], max_tokens: 1400, temperature: 0.4 }),
   });
   const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) throw new Error(`${provider} request failed (${response.status}).`);
+  if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ").");
   const text = payload?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error(`${provider} returned an empty response.`);
+  if (!text) throw new Error("OpenRouter returned an empty response.");
   return { text, model: payload?.model || model };
 }
 
@@ -174,9 +155,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        answer = provider === "gemini"
-          ? await callGemini(messages)
-          : await callCompatible(provider as "groq" | "openrouter", messages);
+        answer = provider === "gemini" ? await callGemini(messages) : await callOpenRouter(messages);
         usedProvider = provider;
         break;
       } catch (error) {
