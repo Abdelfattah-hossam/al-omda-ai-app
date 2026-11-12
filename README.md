@@ -29,7 +29,7 @@ A separate Node.js runtime now provides the first local tools:
 - Parallel read-only delegation to 2–4 specialist agents.
 - Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
-- OpenAI-compatible local model endpoints such as LM Studio (no provider API key required when running locally).
+- OpenAI-compatible local model endpoints such as LM Studio (no provider API key required when running locally), optional fallback model endpoint, and average tokens-per-second reporting.
 - Resumable JSON session storage.
 - Scoped HTTPS inspection for exact authorized hostnames.
 - Optional terminal command execution, disabled by default.
