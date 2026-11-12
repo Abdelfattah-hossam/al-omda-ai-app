@@ -46,7 +46,7 @@ function getProviders() {
 
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
-  return /\b(word|docx|\.docx)\b|ملف\s*(?:وورد|word)|مستند\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:وورد|word).{0,45}جدول/i.test(last);
+  return /\b(word|docx|\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,45}جدول/i.test(last);
 }
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
