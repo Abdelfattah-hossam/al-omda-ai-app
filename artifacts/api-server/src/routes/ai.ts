@@ -9,7 +9,7 @@ import {
 
 const router: IRouter = Router();
 const DAILY_LIMIT = 1000;
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; image?: { mimeType: string; data: string } };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
 
 async function currentUsage(accessToken: string): Promise<Usage> {
@@ -243,7 +243,10 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
   const model = "gemini-3.8-flash";
   const contents = messages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
-    parts: [{ text: message.content }],
+    parts: [
+      { text: message.content },
+      ...(message.image ? [{ inlineData: { mimeType: message.image.mimeType, data: message.image.data } }] : []),
+    ],
   }));
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
     method: "POST",
@@ -303,11 +306,13 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
   ];
   const coding = isCodingRequest(messages);
   const structured = needsLongStructuredOutput(messages);
+  const hasImage = messages.some((message) => Boolean(message.image));
   const describe = (model: OpenRouterCatalogModel) => [model.id, model.name, model.description].filter(Boolean).join(" ").toLowerCase();
   const score = (model: OpenRouterCatalogModel, role: "reasoning" | "coding" | "writing" | "general") => {
     const text = describe(model);
     const params = model.supported_parameters || [];
     let value = model.id.endsWith(":free") ? 3 : 0;
+    if (hasImage && (model.architecture?.input_modalities?.includes("image") || /vision|vl:/i.test(model.id))) value += 30;
     if (role === "coding") {
       if (/coding|code|coder|programming|software|deepseek|qwen|flint|nemotron.*ultra/.test(text)) value += 12;
       if (params.includes("tools")) value += 2;
@@ -319,7 +324,8 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
     } else if (/instruct|general|chat|assistant|gemma|llama|nemotron/.test(text)) value += 10;
     return value;
   };
-  const available = catalog.length ? catalog : staticFallbacks.map((id) => ({ id }));
+  const available = (catalog.length ? catalog : staticFallbacks.map((id) => ({ id })))
+    .filter((model) => !hasImage || model.architecture?.input_modalities?.includes("image") || /vision|vl:/i.test(model.id));
   const roles: Array<"reasoning" | "coding" | "writing" | "general"> = coding
     ? ["coding", "reasoning", "general"]
     : structured
@@ -346,7 +352,13 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
         method: "POST",
         signal: AbortSignal.timeout(15000),
         headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
-        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+        body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages.map((message) => message.image ? {
+          role: message.role,
+          content: [
+            { type: "text", text: message.content },
+            { type: "image_url", image_url: { url: `data:${message.image.mimeType};base64,${message.image.data}` } },
+          ],
+        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
@@ -917,7 +929,15 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         res.status(400).json({ error: "A chat message is invalid or too long." });
         return;
       }
-      messages.push({ role: item.role, content: item.content.trim() });
+      let image: ChatMessage["image"];
+      if (item.image !== undefined) {
+        if (!item.image || typeof item.image.mimeType !== "string" || !/^image\/(?:jpeg|png|webp|gif)$/i.test(item.image.mimeType) || typeof item.image.data !== "string" || item.image.data.length > 5_600_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(item.image.data)) {
+          res.status(400).json({ error: "The image is invalid or too large. Use a JPEG, PNG, WebP, or GIF under 4 MB." });
+          return;
+        }
+        image = { mimeType: item.image.mimeType, data: item.image.data };
+      }
+      messages.push({ role: item.role, content: item.content.trim(), ...(image ? { image } : {}) });
     }
     if (messages[messages.length - 1].role !== "user") {
       res.status(400).json({ error: "The last message must be from the user." });
