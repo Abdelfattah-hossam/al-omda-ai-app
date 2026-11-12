@@ -125,18 +125,7 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
         uses: 1,
-        expireTime,
-        liveConnectConstraints: {
-          model: "models/gemini-3.8-live",
-          config: {
-            responseModalities: ["AUDIO"],
-            systemInstruction: {
-              parts: [{ text: "You are AL OMDA AI. Speak naturally and warmly. Respond in the same language the user speaks, especially Egyptian Arabic when the user speaks Arabic. Keep replies concise unless asked for detail. This is a voice conversation: do not read punctuation or describe that you are speaking." }]
-            },
-            inputAudioTranscription: {},
-            outputAudioTranscription: {}
-          }
-        }
+        expireTime
       })
     });
     const payload = await response.json().catch(() => null) as any;
