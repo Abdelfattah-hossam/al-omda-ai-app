@@ -58,6 +58,10 @@ The agent exposes `web.search` to the lead agent and read-only specialists. It a
 Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
 
 
+### Dynamic MCP tool discovery
+
+The runtime advertises configured MCP tools directly to the model as function tools when their input schemas are valid and within size limits. This lets the Agent choose a specific browser or desktop action without a separate discovery round-trip. Every direct MCP tool call still pauses for explicit user approval; the generic `mcp.call_tool` remains available as a fallback. MCP servers are local programs, so configure only servers you trust.
+
 ### Browser automation through Playwright MCP
 
 A setup helper creates or updates the Playwright MCP entry without deleting other MCP servers already configured in your workspace.
