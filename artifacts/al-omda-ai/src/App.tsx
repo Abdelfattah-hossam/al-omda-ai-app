@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
-import * as Docx from "docx";
-import * as XLSXModule from "xlsx";
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import {
@@ -46,7 +44,12 @@ function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
   } catch { return null; }
 }
 async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
-  const XLSX = (XLSXModule as any).default ?? XLSXModule;
+  const primary = "https://esm.sh/xlsx@0.18.5";
+  const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+  let module: any;
+  try { module = await import(/* @vite-ignore */ primary); }
+  catch { module = await import(/* @vite-ignore */ fallback); }
+  const XLSX = module.default ?? module;
   const sheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
   sheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
   const workbook = XLSX.utils.book_new();
@@ -88,7 +91,11 @@ function downloadTaskHtml(data: { title: string; html: string }): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
-  const lib: any = Docx;
+  const primary = "https://esm.sh/docx@9.5.1";
+  const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
+  let lib: any;
+  try { lib = await import(/* @vite-ignore */ primary); }
+  catch { lib = await import(/* @vite-ignore */ fallback); }
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
   const border = { style: "single", size: 1, color: "B8C2D2" };
   const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
