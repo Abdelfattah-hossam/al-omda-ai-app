@@ -44,14 +44,19 @@ function getProviders() {
 }
 
 
+function getLatestUserRequest(messages: ChatMessage[]): string {
+  return messages.filter((message) => message.role === "user").slice(-2).map((message) => message.content).join("\n");
+}
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
-  const last = messages[messages.length - 1]?.content ?? "";
-  return /\b(word|docx|\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,45}جدول/i.test(last);
+  const request = getLatestUserRequest(messages);
+  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
+  return asksForSevenFieldTable || /\b(word|docx|\.docx)\b|ملف\s*(?:و?ورد|word)|مستند\s*(?:و?ورد|word)|(?:انشئ|أنشئ|اعمل|اعملي).{0,55}(?:ملف|جدول)|جدول.{0,60}(?:و?ورد|word|خانات|أعمدة)|(?:و?ورد|word).{0,60}جدول/i.test(request);
 }
 function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
-  const last = messages[messages.length - 1]?.content ?? "";
-  return /7\s*(?:خانات|أعمدة|اعمدة|columns)|سبع\s*(?:خانات|أعمدة|اعمدة)|جدول.{0,35}7|7.{0,25}جدول/i.test(last);
+  const request = getLatestUserRequest(messages);
+  return /7\s*(?:خانات|أعمدة|اعمدة|حقول|columns)|سبع\s*(?:خانات|أعمدة|اعمدة|حقول)|جدول.{0,45}(?:7|سبع)|(?:7|سبع).{0,30}جدول/i.test(request);
 }
+
 function parseWordDocument(text: string, forceSevenColumns: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
     let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
@@ -404,7 +409,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings, and every row MUST contain exactly 7 cell values. Do not ask a clarifying question; infer sensible headings and sample/content rows from the user's request." : "Choose the number of columns and rows that best fulfill the user's request. Include meaningful, complete content, not placeholder rows.",
         "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
         "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
-        "Original user request: " + messages[messages.length - 1].content
+        "Original user request: " + getLatestUserRequest(messages)
       ].join("\\n") }
     ] : messages;
     const providers = chooseProviders(modelMessages);
