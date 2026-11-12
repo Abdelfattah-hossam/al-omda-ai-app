@@ -487,7 +487,10 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
     }
-    if (wordStep && !parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested)) {
+    let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
+    let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
+    let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
+    if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
         wordTaskSevenColumnTable ? "The customer requires exactly seven table columns." : wordTaskTableRequested ? "The customer explicitly requested a table; keep the relevant table." : "The customer did not request a table; return paragraphs only and empty columns and rows.",
@@ -499,13 +502,14 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
-      if (!parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested)) {
+      validatedWordDocument = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
+      if (!validatedWordDocument) {
         await saveExecutionFailure("Word document failed structural validation after one repair attempt.");
         res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
       }
     }
-    if (excelStep && !parseExcelWorkbook(answer.text)) {
+    if (excelStep && !validatedSpreadsheet) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Excel workbook. Return ONLY valid JSON with title, columns, and rows. Every row must match the column count.",
         "Preserve the original request, approved requirements, and actual data. Do not invent unrelated data.",
@@ -521,7 +525,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
-    if (htmlAppStep && !parseHtmlApp(answer.text)) {
+    if (htmlAppStep && !validatedHtmlApp) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the requested application. Return ONLY a complete self-contained HTML document with all requested functions.",
         "Original request: " + customerRequest,
@@ -547,7 +551,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
       result = "ALOMDA_HTML_APP:" + html;
     } else if (wordStep) {
-      const document = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
+      const document = validatedWordDocument;
       if (!document) {
         await saveExecutionFailure("The AI did not return a valid structured Word document.");
         res.status(502).json({ error: "تعذر إنشاء مستند Word منظم. أعد تنفيذ الخطوة." });
@@ -555,7 +559,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
       result = "ALOMDA_DOCX_JSON:" + JSON.stringify(document);
     } else if (excelStep) {
-      spreadsheet = parseExcelWorkbook(answer.text);
+      spreadsheet = validatedSpreadsheet;
       if (!spreadsheet) {
         await saveExecutionFailure("The AI did not return a valid structured Excel workbook.");
         res.status(502).json({ error: "تعذر إنشاء ملف Excel منظم. أعد تنفيذ الخطوة بعد قليل." });
