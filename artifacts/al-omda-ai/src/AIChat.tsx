@@ -396,8 +396,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       }
-      const projectSpecialty = detectProjectSpecialty(text);
+      // Detect a project from the current message AND the recent user context.
+      // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
+      // the user has just described, instead of losing them because the last sentence is short.
       const projectRequestContext = next.filter((message) => message.role === "user").slice(-6, -1).map((message) => message.content).join("\n\n").slice(-5000);
+      const projectSpecialty = detectProjectSpecialty([projectRequestContext, text].filter(Boolean).join("\n\n"));
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
