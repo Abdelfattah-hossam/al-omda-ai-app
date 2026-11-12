@@ -54,6 +54,12 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
   const directFileRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|جدول بيانات|مصنف|excel|xlsx|spreadsheet|workbook)/i.test(request);
   return mentionsExcel && (explicitCreation || directFileRequest);
 }
+function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
+  const latest = getLatestUserRequest(messages);
+  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isDesktopAppRequest(latest) ||
+    /project plan|خطة مشروع|خطة تنفيذ|create a practical project plan/i.test(latest);
+}
+
 function isExplicitWordFileRequest(request: string): boolean {
   return /(?:ملف|مستند|document|file)\s*.{0,45}(?:و?ورد|word|docx)|(?:و?ورد|word|docx).{0,45}(?:ملف|مستند|document|file)|(?:اعمل|اعملي|أنشئ|انشئ|جهز|create|generate|make|download).{0,40}(?:و?ورد|word|docx)/i.test(request);
 }
@@ -185,7 +191,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
       contents,
-      generationConfig: { maxOutputTokens: isCodingRequest(messages) ? 3000 : 1400, temperature: 0.4 },
+      generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 6000 : 1800, temperature: 0.4 },
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -204,7 +210,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
     method: "POST",
     signal: AbortSignal.timeout(25000),
     headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
-    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) ? 3000 : 1400, temperature: 0.4 }),
+    body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 6000 : 1800, temperature: 0.4 }),
   });
   const payload = await response.json().catch(() => null) as any;
   if (!response.ok) throw new Error("OpenRouter request failed (" + response.status + ")" + (providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."));
