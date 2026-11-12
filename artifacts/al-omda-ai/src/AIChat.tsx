@@ -4,7 +4,7 @@ import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string } };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -136,7 +136,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider }) => ({ role, content, ...(provider ? { provider } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
@@ -227,6 +227,46 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   }, []);
 
+
+  const createWordAttachment = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }) => {
+    const lib = await import(/* @vite-ignore */ "https://esm.sh/docx@9.5.1");
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
+    const rtl = ar;
+    const border = { style: "single", size: 1, color: "B8C2D2" };
+    const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
+    const makeParagraph = (value: string, bold = false) => new Paragraph({
+      alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      bidirectional: rtl,
+      children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })],
+      spacing: { after: 100 },
+    });
+    const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
+      shading: { fill: "E8EDF5" }, verticalAlign: "center",
+      children: [makeParagraph(column, true)],
+    })) });
+    const bodyRows = documentData.rows.map((row) => new TableRow({
+      children: documentData.columns.map((_, index) => new TableCell({
+        verticalAlign: "center",
+        children: [makeParagraph(String(row[index] ?? ""))],
+      })),
+    }));
+    const table = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: documentData.columns.map(() => Math.floor(9000 / documentData.columns.length)),
+      borders,
+      rows: [header, ...bodyRows],
+    });
+    const children = [
+      new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: rtl, children: [new TextRun({ text: documentData.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
+      ...documentData.paragraphs.map((paragraph) => makeParagraph(paragraph)),
+      table,
+    ];
+    const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
+    const url = URL.createObjectURL(file);
+    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+    return { name: safeName + ".docx", url };
+  };
+
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const text = input.trim();
@@ -252,7 +292,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const details = Array.isArray(data.details) ? data.details.filter((item: unknown) => typeof item === "string").join(" · ") : "";
         throw new Error([data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."), details].filter(Boolean).join(" — "));
       }
-      const completed = [...next, { role: "assistant" as const, content: data.reply, provider: data.provider }].slice(-100);
+      let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.provider };
+      if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
+        const attachment = await createWordAttachment(data.document);
+        assistantMessage = { ...assistantMessage, attachment };
+      }
+      const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
       await saveHistory(completed, conversationId);
       if (data.usage) setUsage(data.usage);
@@ -443,6 +488,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
+            {message.attachment && <a className="button button-primary button-small" href={message.attachment.url} download={message.attachment.name} style={{display:"inline-flex",alignItems:"center",gap:8,width:"fit-content",textDecoration:"none"}}><FileText size={15}/>{ar ? "تحميل ملف Word" : "Download Word file"} (.docx)</a>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>void copyAnswer(message.content,index)}><Copy size={13}/>{copiedIndex===index?copy.copied:copy.copy}</button>
