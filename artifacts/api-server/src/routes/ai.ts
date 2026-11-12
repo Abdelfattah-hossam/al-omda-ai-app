@@ -107,7 +107,7 @@ function parseExcelWorkbook(text: string): { title: string; columns: string[]; r
 
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
-    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
