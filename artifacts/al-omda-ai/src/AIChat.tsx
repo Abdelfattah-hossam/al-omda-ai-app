@@ -5,7 +5,8 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string }; documentData?: WordDocumentData };
+type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -103,7 +104,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       setActiveConversationId(id);
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
-      const withFiles = await Promise.all(restored.map(async (item) => item.documentData ? { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) } : item));
+      const withFiles = await Promise.all(restored.map(async (item) => {
+        if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
+        if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
+        return item;
+      }));
       setMessages(withFiles);
       setShowConversationList(false);
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة." : "Could not load conversation.")); }
@@ -140,7 +145,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, documentData }) => ({ role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, documentData, spreadsheetData }) => ({ role, content, ...(provider ? { provider } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
@@ -278,6 +283,24 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     return { name: safeName + ".docx", url };
   };
 
+  const createExcelAttachment = async (data: SpreadsheetData) => {
+    const primaryModuleUrl = "https://esm.sh/xlsx@0.18.5";
+    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+    let lib: any;
+    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
+    catch { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+    const XLSX = (lib as any).default ?? lib;
+    const worksheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
+    worksheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(file);
+    const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+    return { name: safeName + ".xlsx", url };
+  };
+
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const text = input.trim();
@@ -304,7 +327,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         throw new Error([data.error || (ar ? "تعذر إكمال الطلب." : "The request could not be completed."), details].filter(Boolean).join(" — "));
       }
       let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.provider };
-      if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
+      if (data.spreadsheet && typeof data.spreadsheet.title === "string" && Array.isArray(data.spreadsheet.columns) && Array.isArray(data.spreadsheet.rows)) {
+        const attachment = await createExcelAttachment(data.spreadsheet);
+        assistantMessage = { ...assistantMessage, attachment, spreadsheetData: data.spreadsheet };
+      } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       }
