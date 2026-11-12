@@ -48,6 +48,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [clearing, setClearing] = useState(false);
   const recognitionRef = useRef<any>(null);
   const voiceHasResultRef = useRef(false);
+  const voiceHadErrorRef = useRef(false);
   const voiceStoppedByUserRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -198,6 +199,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     voiceHasResultRef.current = false;
+    voiceHadErrorRef.current = false;
     voiceStoppedByUserRef.current = false;
     recognition.onresult = (event: any) => {
       const transcripts: string[] = [];
@@ -212,6 +214,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       }
     };
     recognition.onerror = (event: any) => {
+      voiceHadErrorRef.current = true;
       setListening(false);
       const code = typeof event?.error === "string" ? event.error : "unknown";
       const messages: Record<string, { ar: string; en: string }> = {
@@ -229,7 +232,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     };
     recognition.onend = () => {
       setListening(false);
-      if (!voiceHasResultRef.current) {
+      if (!voiceHasResultRef.current && !voiceHadErrorRef.current) {
         setError(ar
           ? "Safari أنهى التسجيل لكنه لم يُرجع نصًا. قد لا تدعم خدمة التعرف على الصوت العربية في هذا المتصفح حاليًا. جرّب تحديث الصفحة والتحدث بوضوح، وإذا تكررت المشكلة سنضيف طريقة صوت بديلة."
           : "Safari ended recording without returning a transcript. Speech recognition may not be available for this language in this browser. Refresh and try again; if it persists, we can add an alternative voice method.");
