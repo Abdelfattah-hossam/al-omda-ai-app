@@ -43,6 +43,32 @@ function getProviders() {
   };
 }
 
+
+function isWordDocumentRequest(messages: ChatMessage[]): boolean {
+  const last = messages[messages.length - 1]?.content ?? "";
+  return /\\b(word|docx|\\.docx)\\b|ملف\\s*(?:وورد|word)|مستند\\s*(?:وورد|word)|انشئ.{0,35}(?:ملف|جدول)|أنشئ.{0,35}(?:ملف|جدول)|اعمل.{0,35}(?:ملف|جدول)|جدول.{0,45}(?:وورد|word|خانات|أعمدة)|(?:وورد|word).{0,45}جدول/i.test(last);
+}
+function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
+  const last = messages[messages.length - 1]?.content ?? "";
+  return /7\\s*(?:خانات|أعمدة|اعمدة|columns)|سبع\\s*(?:خانات|أعمدة|اعمدة)|جدول.{0,35}7|7.{0,25}جدول/i.test(last);
+}
+function parseWordDocument(text: string, forceSevenColumns: boolean): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
+  try {
+    let source = text.trim().replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "");
+    const start = source.indexOf("{");
+    const end = source.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const value = JSON.parse(source.slice(start, end + 1));
+    if (!value || typeof value.title !== "string" || !Array.isArray(value.columns) || !Array.isArray(value.rows) || !Array.isArray(value.paragraphs ?? [])) return null;
+    let columns = value.columns.filter((item: unknown) => typeof item === "string" && item.trim()).map((item: string) => item.trim()).slice(0, 12);
+    if (forceSevenColumns && columns.length !== 7) return null;
+    if (!columns.length || columns.length > 12) return null;
+    const rows = value.rows.filter((row: unknown) => Array.isArray(row)).slice(0, 100).map((row: unknown[]) => columns.map((_, index) => String(row[index] ?? "").slice(0, 1000)));
+    if (!rows.length) return null;
+    return { title: value.title.trim().slice(0, 180), paragraphs: (value.paragraphs ?? []).filter((item: unknown) => typeof item === "string").map((item: string) => item.slice(0, 3000)).slice(0, 12), columns, rows };
+  } catch { return null; }
+}
+
 function isCodingRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
   return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
@@ -368,7 +394,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const userMemory = await loadUserMemory(accessToken, session.user.id);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
-    const providers = chooseProviders(messages);
+    const wordDocumentRequest = isWordDocumentRequest(messages);
+    const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
+    const modelMessages: ChatMessage[] = wordDocumentRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create a real Microsoft Word document deliverable. Do not answer with source code, instructions, or a Markdown table.",
+        "Return ONLY valid JSON with this exact schema: " + '{"title":"Document title","paragraphs":["optional intro or notes"],"columns":["column 1","column 2"],"rows":[["cell 1","cell 2"]]}',
+        sevenColumnTable ? "The user requested a seven-field table. The columns array MUST contain exactly 7 meaningful column headings, and every row MUST contain exactly 7 cell values. Do not ask a clarifying question; infer sensible headings and sample/content rows from the user's request." : "Choose the number of columns and rows that best fulfill the user's request. Include meaningful, complete content, not placeholder rows.",
+        "Keep the document in the user's language. For Arabic, write natural Arabic headings and content, suitable for right-to-left Word layout.",
+        "Include enough useful rows to make the requested document usable. Do not put code in cells unless the user explicitly requested a code table.",
+        "Original user request: " + messages[messages.length - 1].content
+      ].join("\\n") }
+    ] : messages;
+    const providers = chooseProviders(modelMessages);
     if (providers.length === 0) {
       res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
       return;
@@ -385,7 +424,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        answer = provider === "gemini" ? await callGemini(messages, userMemory) : await callOpenRouter(messages, userMemory);
+        answer = provider === "gemini" ? await callGemini(modelMessages, userMemory) : await callOpenRouter(modelMessages, userMemory);
         usedProvider = provider;
         break;
       } catch (error) {
@@ -399,12 +438,22 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     const latestUsage = await currentUsage(accessToken);
-    res.json({
-      reply: answer.text,
-      provider: usedProvider,
-      model: answer.model,
-      usage: latestUsage,
-    });
+    if (wordDocumentRequest) {
+      const document = parseWordDocument(answer.text, sevenColumnTable);
+      if (!document) {
+        res.status(502).json({ error: "تعذر تكوين مستند Word منظم. أعد إرسال الطلب مرة واحدة." });
+        return;
+      }
+      res.json({
+        reply: "تم إعداد محتوى مستند Word. أرفقت لك الملف الجاهز للتحميل.",
+        document,
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
+      return;
+    }
+    res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
