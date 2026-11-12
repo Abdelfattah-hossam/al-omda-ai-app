@@ -250,7 +250,17 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
     }
     const approvalCalls = calls.filter((call) => call.function?.name === "files.write" || call.function?.name === "terminal.execute");
     if (approvalCalls.length) {
-      state.pendingToolCalls = calls;
+      // Execute read-only/allowlisted research calls now, but pause all writes and
+      // terminal work until the user approves the exact pending call IDs.
+      for (const call of calls.filter((item) => !approvalCalls.includes(item))) {
+        try {
+          const result = await runTool(call);
+          state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result).slice(0, 50000) });
+        } catch (error) {
+          state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        }
+      }
+      state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
       return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change project files or run a terminal command.", pending: approvalCalls.map((call) => ({ id: call.id, tool: call.function.name, arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
     }
