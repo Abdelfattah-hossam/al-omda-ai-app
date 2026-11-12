@@ -15,6 +15,7 @@ export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
 export OMDA_AGENT_WORKSPACE="$HOME/projects/my-project"
 export OMDA_AGENT_EXECUTION="disabled"
 export OMDA_AGENT_ALLOWED_HOSTS="example.com"
+export OMDA_AGENT_APP_ORIGINS="https://your-al-omda-app.example"
 export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
 export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
@@ -29,6 +30,7 @@ $env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
 $env:OMDA_AGENT_WORKSPACE = "C:\Users\You\Projects\my-project"
 $env:OMDA_AGENT_EXECUTION = "disabled"
 $env:OMDA_AGENT_ALLOWED_HOSTS = "example.com"
+$env:OMDA_AGENT_APP_ORIGINS = "https://your-al-omda-app.example"
 $env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
 $env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
 pnpm --filter @workspace/scripts agent:runtime
@@ -36,7 +38,7 @@ pnpm --filter @workspace/scripts agent:runtime
 
 The model endpoint defaults to LM Studio's OpenAI-compatible API at `http://127.0.0.1:1234/v1`. Set `OMDA_AGENT_MODEL_BASE_URL`, `OMDA_AGENT_MODEL_NAME`, and optionally `OMDA_AGENT_MODEL_API_KEY` for another OpenAI-compatible provider. Local models do not require a provider API key.
 
-The runtime listens only on `127.0.0.1:4318`. Every endpoint except `GET /health` requires `Authorization: Bearer <OMDA_AGENT_TOKEN>`. The token must contain at least 32 characters.
+The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGENT_APP_ORIGINS` to an exact comma-separated list of trusted AL OMDA app origins; no wildcard is supported. Command-line clients do not need an Origin header. Every endpoint except `GET /health` requires `Authorization: Bearer <OMDA_AGENT_TOKEN>`. The token must contain at least 32 characters.
 
 ## Available endpoints
 
