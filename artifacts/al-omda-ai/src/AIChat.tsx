@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, Copy, LoaderCircle, Mic, Send, Trash2, Volume2, VolumeX } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 
 type Language = "ar" | "en";
@@ -338,10 +338,6 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           <div ref={bottomRef}/>
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
-        {voiceFallback && <div className="notice-bar" style={{marginBottom:12}}>
-          <p style={{margin:"0 0 8px"}}>{copy.keyboardDictationHelp}</p>
-          <button type="button" className="button button-quiet button-small" onClick={()=>inputRef.current?.focus()}>{copy.keyboardDictation}</button>
-        </div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
         <div style={{ marginBottom: 12, padding: 12, border: "1px solid var(--border,#343a44)", borderRadius: 12 }}>
           <GeminiLiveVoice language={language} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0} onTranscript={handleLiveTranscript} />
@@ -350,7 +346,6 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         <form onSubmit={sendMessage} style={{display:"grid",gap:10}}>
           <textarea ref={inputRef} className="field" rows={3} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || usage?.remaining === 0}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between"}}>
-            <button type="button" className={`button ${listening ? "button-primary" : "button-quiet"} button-small`} onClick={toggleVoiceInput} disabled={loading || !signedIn}><Mic size={14}/>{listening ? copy.stop : copy.mic}</button>
             <div style={{display:"flex",gap:8}}>
               {speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}
               <button type="submit" className="button button-primary" disabled={!input.trim() || loading || historyLoading || !signedIn || usage?.remaining === 0}>{loading ? <LoaderCircle size={14} className="animate-spin"/> : <Send size={14}/>} {copy.send}</button>
