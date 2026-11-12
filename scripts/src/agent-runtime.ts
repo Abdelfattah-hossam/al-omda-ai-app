@@ -218,11 +218,132 @@ async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions
     throw error;
   }
 }
+
+type McpConfig = { name: string; command: string; args: string[]; envFrom?: string[] };
+type McpPending = { resolve: (value: any) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> };
+type McpConnection = { child: ReturnType<typeof spawn>; buffer: string; nextId: number; pending: Map<number, McpPending>; initialized: boolean };
+const mcpConnections = new Map<string, McpConnection>();
+const MCP_ALLOWED_COMMANDS = new Set((process.env.OMDA_AGENT_MCP_COMMANDS || "").split(",").map((value) => value.trim()).filter(Boolean));
+async function loadMcpConfig(): Promise<McpConfig[]> {
+  const configPath = resolve(workspaceRoot, ".omda", "mcp-servers.json");
+  try {
+    const actual = await realpath(configPath);
+    if (!isInside(workspaceRoot, actual)) throw new Error("MCP config escapes the workspace.");
+    const info = await stat(actual);
+    if (!info.isFile() || info.size > 50000) throw new Error("MCP config must be a JSON file up to 50 KB.");
+    const parsed = JSON.parse(await readFile(actual, "utf8")) as { servers?: unknown };
+    if (!Array.isArray(parsed.servers)) throw new Error("MCP config must contain a servers array.");
+    return parsed.servers.slice(0, 20).map((item: any) => {
+      if (!item || typeof item.name !== "string" || !/^[a-zA-Z0-9_-]{1,50}$/.test(item.name) ||
+          typeof item.command !== "string" || !MCP_ALLOWED_COMMANDS.has(item.command) ||
+          !Array.isArray(item.args) || item.args.length > 30 ||
+          item.args.some((arg: unknown) => typeof arg !== "string" || arg.length > 2000)) {
+        throw new Error("Invalid MCP server entry or command not present in OMDA_AGENT_MCP_COMMANDS.");
+      }
+      const envFrom = Array.isArray(item.envFrom) ? item.envFrom.filter((key: unknown): key is string => typeof key === "string" && /^[A-Z_][A-Z0-9_]{0,80}$/.test(key)).slice(0, 20) : [];
+      return { name: item.name, command: item.command, args: item.args as string[], envFrom };
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+}
+function mcpRequest(connection: McpConnection, method: string, params: Record<string, unknown> = {}): Promise<any> {
+  const id = connection.nextId++;
+  return new Promise((resolveResult, rejectResult) => {
+    const timer = setTimeout(() => {
+      connection.pending.delete(id);
+      rejectResult(new Error("MCP request timed out: " + method));
+    }, 20000);
+    connection.pending.set(id, { resolve: resolveResult, reject: rejectResult, timer });
+    connection.child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\\n");
+  });
+}
+function handleMcpOutput(connection: McpConnection, chunk: Buffer): void {
+  connection.buffer += chunk.toString("utf8");
+  if (connection.buffer.length > 1024 * 1024) {
+    connection.child.kill();
+    connection.buffer = "";
+    return;
+  }
+  let newline = connection.buffer.indexOf("\\n");
+  while (newline >= 0) {
+    const line = connection.buffer.slice(0, newline).trim();
+    connection.buffer = connection.buffer.slice(newline + 1);
+    if (line) {
+      try {
+        const message = JSON.parse(line);
+        if (typeof message.id === "number") {
+          const pending = connection.pending.get(message.id);
+          if (pending) {
+            clearTimeout(pending.timer);
+            connection.pending.delete(message.id);
+            if (message.error) pending.reject(new Error(String(message.error.message || "MCP server returned an error.")));
+            else pending.resolve(message.result);
+          }
+        }
+      } catch { /* Ignore non-JSON stdout lines; MCP servers must use stdout for protocol messages. */ }
+    }
+    newline = connection.buffer.indexOf("\\n");
+  }
+}
+async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
+  const existing = mcpConnections.get(config.name);
+  if (existing && existing.child.exitCode === null && existing.child.signalCode === null) return existing;
+  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH || "", HOME: process.env.HOME || "", USERPROFILE: process.env.USERPROFILE || "","};
+  for (const key of config.envFrom || []) if (process.env[key]) env[key] = process.env[key];
+  const child = spawn(config.command, config.args, { cwd: workspaceRoot, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"], env });
+  if (!child.stdin || !child.stdout) throw new Error("Could not open MCP stdio transport.");
+  const connection: McpConnection = { child, buffer: "", nextId: 1, pending: new Map(), initialized: false };
+  child.stdout.on("data", (chunk: Buffer) => handleMcpOutput(connection, chunk));
+  child.stderr.on("data", () => { /* MCP diagnostics stay out of the protocol channel. */ });
+  child.on("close", () => {
+    for (const pending of connection.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error("MCP server process exited.")); }
+    connection.pending.clear();
+    mcpConnections.delete(config.name);
+  });
+  mcpConnections.set(config.name, connection);
+  try {
+    await mcpRequest(connection, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "AL OMDA AI", version: "0.1.0" } });
+    child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\\n");
+    connection.initialized = true;
+    return connection;
+  } catch (error) {
+    child.kill();
+    mcpConnections.delete(config.name);
+    throw error;
+  }
+}
+async function listMcpTools(serverName?: string): Promise<Json> {
+  const configs = await loadMcpConfig();
+  const selected = serverName ? configs.filter((item) => item.name === serverName) : configs;
+  if (serverName && !selected.length) throw new Error("MCP server is not configured.");
+  const results = await Promise.all(selected.map(async (config) => {
+    const connection = await getMcpConnection(config);
+    const result = await mcpRequest(connection, "tools/list");
+    return { server: config.name, tools: Array.isArray(result?.tools) ? result.tools.slice(0, 100) : [] };
+  }));
+  return { servers: results };
+}
+async function callMcpTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
+  const configs = await loadMcpConfig();
+  const config = configs.find((item) => item.name === serverName);
+  if (!config) throw new Error("MCP server is not configured.");
+  const connection = await getMcpConnection(config);
+  const listed = await mcpRequest(connection, "tools/list");
+  const tool = Array.isArray(listed?.tools) ? listed.tools.find((item: any) => item?.name === toolName) : null;
+  if (!tool) throw new Error("MCP tool was not advertised by this server.");
+  const result = await mcpRequest(connection, "tools/call", { name: toolName, arguments: args });
+  return result;
+}
+
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string };
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
 const AGENT_TOOLS = [
+  { type: "function", function: { name: "mcp.list_tools", description: "Discover tools from configured Model Context Protocol servers.", parameters: { type: "object", properties: { serverName: { type: "string" } }, additionalProperties: false } } },
+  { type: "function", function: { name: "mcp.call_tool", description: "Call a configured MCP server tool. Requires explicit user approval before execution.", parameters: { type: "object", properties: { serverName: { type: "string" }, toolName: { type: "string" }, arguments: { type: "object", additionalProperties: true } }, required: ["serverName", "toolName", "arguments"], additionalProperties: false } } },
   { type: "function", function: { name: "skills.list", description: "List installed project skills from .omda/skills/*/SKILL.md.", parameters: { type: "object", properties: {}, additionalProperties: false } } },
   { type: "function", function: { name: "files.list", description: "List files and directories in the configured project workspace.", parameters: { type: "object", properties: { path: { type: "string", description: "Workspace-relative directory path; use . for the root." } }, additionalProperties: false } } },
   { type: "function", function: { name: "files.read", description: "Read a UTF-8 source or project file inside the workspace.", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } } },
@@ -247,6 +368,10 @@ async function loadAgentState(id: string): Promise<AgentState> {
 async function runTool(call: AgentToolCall): Promise<unknown> {
   const args = JSON.parse(call.function.arguments || "{}") as Json;
   switch (call.function.name) {
+    case "mcp.list_tools":
+      return await listMcpTools(typeof args.serverName === "string" ? args.serverName : undefined);
+    case "mcp.call_tool":
+      return await callMcpTool(String(args.serverName || ""), String(args.toolName || ""), args.arguments && typeof args.arguments === "object" ? args.arguments as Record<string, unknown> : {});
     case "skills.list":
       return { skills: (await loadWorkspaceSkills()).map((skill) => ({ name: skill.name, description: skill.instructions.slice(0, 500) })) };
     case "files.list": {
@@ -306,7 +431,7 @@ async function runAgentLoop(id: string, state: AgentState): Promise<Json> {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens } };
     }
-    const approvalCalls = calls.filter((call) => call.function?.name === "files.write" || call.function?.name === "terminal.execute");
+    const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool"].includes(call.function?.name || ""));
     if (approvalCalls.length) {
       // Execute read-only/allowlisted research calls now, but pause all writes and
       // terminal work until the user approves the exact pending call IDs.
@@ -448,11 +573,19 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const body = await readBody(req);
     send(res, 200, await continueAgent(body)); return;
   }
+  if (req.method === "GET" && url.pathname === "/v1/mcp/servers") {
+    send(res, 200, { servers: (await loadMcpConfig()).map(({ name, command }) => ({ name, command })) }); return;
+  }
+  if (req.method === "GET" && url.pathname === "/v1/mcp/tools") {
+    send(res, 200, await listMcpTools()); return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/tools") {
     send(res, 200, { tools: [
       { name: "agent.delegate", description: "Run 2 to 4 specialist agents concurrently with read-only tools." },
       { name: "agent.run", description: "Run a model-driven agent loop with tool calls and approval gates." },
       { name: "agent.continue", description: "Resume a saved agent run after approving or denying pending actions." },
+      { name: "mcp.list_tools", description: "Discover tools from configured MCP servers." },
+      { name: "mcp.call_tool", description: "Call an MCP tool after user approval." },
       { name: "skills.list", description: "List project Skills installed under .omda/skills." },
       { name: "files.list", description: "List entries inside the configured workspace." },
       { name: "files.read", description: "Read a UTF-8 file inside the configured workspace." },
