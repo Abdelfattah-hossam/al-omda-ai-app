@@ -22,12 +22,12 @@ function detectProjectSpecialty(request: string): "business" | "development" | "
   const buildVerb = /(?:اعمل|اعملي|تعمل|تعملي|تعمللي|اعملوا|أنشئ|انشئ|إنشاء|ابني|ابنيلي|بناء|نفذ|نفّذ|تنفيذ|صمم|صمّم|طور|تطوير|برمج|ابدأ|اشتغل على|كمل بناء|build|create|develop|make|implement|start|build me|create me)/i.test(value);
   const directRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:(?:اعمل|اعمللي|أنشئ|انشئ|إنشاء|ابني|بناء|نفذ|صمم|طور)\s+)?(?:مشروع(?:\s+جديد)?|تطبيق|ابلكيشن|موقع(?:\s+إلكتروني)?|برنامج|متجر(?:\s+إلكتروني)?|نظام|منصة|لعبة|website|web app|mobile app|application|software|project|store|platform|system)/i.test(value);
   const fromScratch = /(?:من الصفر للنهاية|من البداية للنهاية|من الصفر|from scratch|end.to.end)/i.test(value);
-  const hasProject = /(?:مشروع|تطبيق|ابلكيشن|موقع|برنامج|متجر|نظام|منصة|لعبة|شعار|لوجو|هوية|تصميم|واجهة|بوستر|website|web app|mobile app|application|software|project|store|platform|system|logo|brand identity|design project)/i.test(value);
+  const hasProject = /(?:مشروع|تطبيق|ابلكيشن|موقع|برنامج|متجر|نظام|منصة|لعبة|شعار|لوجو|هوية|تصميم|واجهة|بوستر|حملة|بحث|دراسة|تحليل|تقرير|عرض تقديمي|أتمتة|تكامل|قاعدة بيانات|بوت|وكيل|محتوى|خطة عمل|خطة تسويق|دراسة جدوى|website|web app|mobile app|application|software|project|store|platform|system|logo|brand identity|design project|campaign|research|study|analysis|report|presentation|automation|integration|database|bot|agent|content strategy|business plan|marketing plan|workflow)/i.test(value);
   if (!((buildVerb && hasProject) || directRequest || (fromScratch && hasProject))) return null;
   if (/(?:بحث|دراسة|مقارنة|تحليل|research|study|compare|analysis)/i.test(value)) return "research";
   if (/(?:تيك.?توك|تسويق|حملة|إعلان|محتوى|فيديو|marketing|campaign|content|social)/i.test(value)) return "marketing";
   if (/(?:شعار|لوجو|هوية|تصميم|واجهة|بوستر|logo|brand|design|ui|ux)/i.test(value)) return "design";
-  if (/(?:موقع|ويب|تطبيق|ابلكيشن|برنامج|نظام|منصة|website|web app|mobile app|application|software|code|برمج|كود)/i.test(value)) return "development";
+  if (/(?:موقع|ويب|تطبيق|ابلكيشن|برنامج|نظام|منصة|قاعدة بيانات|بوت|وكيل|أتمتة|تكامل|website|web app|mobile app|application|software|api|database|bot|agent|automation|integration|workflow|code|برمج|كود)/i.test(value)) return "development";
   if (/(?:جدول|تنظيم|مواعيد|أولويات|schedule|organize|calendar)/i.test(value)) return "assistant";
   return "business";
 }
