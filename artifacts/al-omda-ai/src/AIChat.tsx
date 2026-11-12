@@ -229,8 +229,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
 
   const createWordAttachment = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }) => {
-    const moduleUrl = "https://esm.sh/docx@9.5.1";
-    const lib = await import(/* @vite-ignore */ moduleUrl);
+    let lib: any;
+    try {
+      lib = await import(/* @vite-ignore */ "https://esm.sh/docx@9.5.1");
+    } catch {
+      lib = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm");
+    }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
