@@ -156,13 +156,14 @@ router.put("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise
   try {
     const session = await resolveSession(req, res);
     if (!session) { res.status(401).json({ error: "Sign in to save this conversation." }); return; }
-    if (!validConversationId(req.params.id)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
+    const conversationId = req.params.id;
+    if (typeof conversationId !== "string" || !validConversationId(conversationId)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
     const messages = validateMessages(req.body?.messages);
     if (!messages) { res.status(400).json({ error: "Conversation messages are invalid or too large." }); return; }
     const requestedTitle = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
     const firstUserMessage = messages.find((message) => message.role === "user")?.content ?? "";
     const title = requestedTitle || firstUserMessage.slice(0, 72) || "محادثة جديدة";
-    const query = new URLSearchParams({ id: `eq.${req.params.id}`, user_id: `eq.${session.user.id}` });
+    const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
     const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, {
       method: "PATCH",
       headers: { "content-type": "application/json", Prefer: "return=representation" },
@@ -178,8 +179,9 @@ router.delete("/ai/conversations/:id", requireSameOrigin, async (req, res): Prom
   try {
     const session = await resolveSession(req, res);
     if (!session) { res.status(401).json({ error: "Sign in to delete this conversation." }); return; }
-    if (!validConversationId(req.params.id)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
-    const query = new URLSearchParams({ id: `eq.${req.params.id}`, user_id: `eq.${session.user.id}` });
+    const conversationId = req.params.id;
+    if (typeof conversationId !== "string" || !validConversationId(conversationId)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
+    const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
     const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, { method: "DELETE", headers: { Prefer: "return=minimal" } }, session.accessToken);
     await readSupabaseJson<unknown>(response);
     res.json({ deleted: true });
