@@ -773,7 +773,7 @@ function App() {
       const html2pdf = lib.default ?? lib;
       container=document.createElement('div');
       container.style.cssText='position:fixed;left:-10000px;top:0;width:780px;background:#fff;color:#20242a;padding:36px;font-family:Arial,Tahoma,sans-serif;line-height:1.8;direction:'+(isAr?'rtl':'ltr');
-      container.innerHTML=buildTaskReportHtml(task).replace(/^<!doctype html>[\\s\\S]*?<body>/i,'').replace(/<\\/body>[\\s\\S]*$/i,'');
+      container.innerHTML=buildTaskReportHtml(task).replace(/^<!doctype html>[\s\S]*?<body>/i,'').replace(/<\/body>[\s\S]*$/i,'');
       document.body.appendChild(container);
       await html2pdf().set({margin:10,filename:reportFileBase(task)+'.pdf',image:{type:'jpeg',quality:0.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(container).save();
     } catch(error) {
