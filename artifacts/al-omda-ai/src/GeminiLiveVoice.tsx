@@ -227,27 +227,38 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       setActive(true);
       setStatus(labels.listening);
 
-      socket.onmessage = (event) => {
+      let receivedAudioChunks = 0;
+      socket.onmessage = async (event) => {
         let message: any;
-        try { message = JSON.parse(event.data); } catch { return; }
-        const serverContent = message.serverContent;
-        if (serverContent?.interrupted) nextPlayTimeRef.current = context.currentTime;
-        const inputText = serverContent?.inputTranscription?.text;
-        if (typeof inputText === "string" && inputText.trim()) {
-          userTranscriptRef.current += inputText;
+        try {
+          const raw = typeof event.data === "string" ? event.data : await event.data.text();
+          message = JSON.parse(raw);
+        } catch {
+          if (mountedRef.current) setStatus(ar ? "وصلت رسالة غير مفهومة من Gemini." : "Received an unreadable message from Gemini.");
+          return;
         }
-        const outputText = serverContent?.outputTranscription?.text;
-        if (outputText || serverContent?.modelTurn?.parts?.length) setStatus(ar ? "العمدة بيرد عليك..." : "AL OMDA is replying...");
+        if (message.error) {
+          if (mountedRef.current) setStatus((ar ? "خطأ من Gemini: " : "Gemini error: ") + (message.error.message || "Unknown error"));
+          return;
+        }
+        const serverContent = message.serverContent;
+        if (!serverContent) return;
+        if (serverContent.interrupted) nextPlayTimeRef.current = context.currentTime;
+        const inputText = serverContent.inputTranscription?.text;
+        if (typeof inputText === "string" && inputText.trim()) userTranscriptRef.current += inputText;
+        const outputText = serverContent.outputTranscription?.text;
         if (typeof outputText === "string" && outputText.trim()) {
           assistantTranscriptRef.current += outputText;
+          if (mountedRef.current) setStatus(ar ? "وصل رد العمدة..." : "AL OMDA's reply arrived...");
         }
-        const parts = serverContent?.modelTurn?.parts;
+        const parts = serverContent.modelTurn?.parts;
         if (Array.isArray(parts)) {
           for (const part of parts) {
-            const data = part?.inlineData?.data;
-            if (typeof data !== "string") continue;
+            const data = part?.inlineData?.data ?? part?.inline_data?.data;
+            if (typeof data !== "string" || data.length < 8) continue;
             const binary = atob(data);
-            const pcm = new Int16Array(binary.length / 2);
+            if (binary.length < 4) continue;
+            const pcm = new Int16Array(Math.floor(binary.length / 2));
             for (let i = 0; i < pcm.length; i++) {
               const low = binary.charCodeAt(i * 2);
               const high = binary.charCodeAt(i * 2 + 1);
@@ -262,16 +273,32 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             const startAt = Math.max(context.currentTime + 0.03, nextPlayTimeRef.current);
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
+            receivedAudioChunks++;
+            if (mountedRef.current) setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...");
           }
         }
-        if (serverContent?.turnComplete) {
+        if (serverContent.turnComplete) {
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
           if (userText) onTranscript("user", userText);
-          if (assistantText) onTranscript("assistant", assistantText);
+          if (assistantText) {
+            onTranscript("assistant", assistantText);
+            if (receivedAudioChunks === 0 && "speechSynthesis" in window) {
+              const utterance = new SpeechSynthesisUtterance(assistantText);
+              utterance.lang = ar ? "ar-EG" : "en-US";
+              utterance.rate = 0.96;
+              window.speechSynthesis.cancel();
+              window.speechSynthesis.speak(utterance);
+              if (mountedRef.current) setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
+            } else if (mountedRef.current) {
+              setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+            }
+          } else if (mountedRef.current) {
+            setStatus(ar ? "Gemini استقبل دور الكلام لكنه لم يرسل ردًا. جرّب جملة أقصر." : "Gemini received the turn but sent no reply. Try a shorter sentence.");
+          }
           userTranscriptRef.current = "";
           assistantTranscriptRef.current = "";
-          setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+          receivedAudioChunks = 0;
         }
       };
       socket.onclose = () => {
