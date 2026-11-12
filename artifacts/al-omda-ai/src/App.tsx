@@ -83,6 +83,46 @@ const localPlanTemplates: Record<Language, Record<Specialty, string[]>> = {
     assistant: ['Clarify the priority and deadline', 'Break the request into small actions', 'Suggest a useful order and schedule', 'Review conflicts and the next step'],
   },
 };
+
+function getStepGuidance(specialty:Specialty, index:number, language:Language):{output:string; complete:string} {
+  const ar = language === 'ar';
+  const guidance:Record<Specialty,{output:string[];complete:string[];outputEn:string[];completeEn:string[]}> = {
+    business:{
+      output:['ملخص فرصة العمل والعميل المستهدف','قائمة المنتجات أو الخدمات مع تسعير وتكلفة مبدئية','مقارنة الموردين وخطة موارد ومخاطر','خطة إطلاق ومؤشرات متابعة'],
+      complete:['الهدف والعميل والقيود مكتوبة بوضوح','كل خيار له تكلفة وسعر وهامش أو مبرر للاختيار','الموردون قورنوا بمعايير موحدة والمخاطر موثقة','تم اختبار مسار العميل وتحديد مؤشرات قابلة للقياس'],
+      outputEn:['Business opportunity and target-customer brief','Product/service shortlist with initial costs and pricing','Supplier comparison, resource plan, and risks','Launch plan and tracking metrics'],
+      completeEn:['Goal, customer, and constraints are documented','Each option has cost, price, margin, or a clear selection rationale','Suppliers are compared consistently and risks are recorded','Customer journey is tested and measurable metrics are set']},
+    development:{
+      output:['وثيقة متطلبات ونطاق واضح','مخطط الشاشات أو المكونات وتدفق الاستخدام','تقسيم تقني للمهام والاعتماديات','نسخة قابلة للاختبار وخطة إصدار'],
+      complete:['المتطلبات ومعايير القبول محددة','المسارات والحالات الأساسية والبديلة موضحة','كل مكوّن له مهمة واعتمادية معروفة','اختبارات القبول الأساسية ناجحة وخطة الإصدار موثقة'],
+      outputEn:['Requirements and scope brief','Screen/component map and user flows','Technical task breakdown and dependencies','Testable release candidate and release plan'],
+      completeEn:['Requirements and acceptance criteria are defined','Primary and alternative flows are documented','Each component has a task and known dependencies','Core acceptance tests pass and release plan is recorded']},
+    design:{
+      output:['ملخص الجمهور والرسالة والهدف','اتجاه بصري ومراجع وأسس التصميم','مسودة التصميم ومراجعاتها','ملفات نهائية ومواصفات التسليم'],
+      complete:['الجمهور والرسالة والمقاس أو الاستخدام محدد','الألوان والخطوط والتكوين متسقة مع الهدف','تمت مراجعة النصوص والمحاذاة والنسخ المطلوبة','الملفات بالمقاسات والصيغ المطلوبة وجاهزة للاستخدام'],
+      outputEn:['Audience, message, and objective brief','Visual direction, references, and design foundations','Design draft and reviewed variations','Final assets and handoff specifications'],
+      completeEn:['Audience, message, and dimensions/use are defined','Colors, typography, and composition support the objective','Copy, alignment, and required variations are reviewed','Assets use the required dimensions/formats and are ready']},
+    marketing:{
+      output:['تعريف الجمهور والهدف والرسالة','أفكار ومواد أو نصوص جاهزة للاختبار','جدول نشر أو إعداد حملة وقنواتها','تقرير نتائج وتوصيات تحسين'],
+      complete:['الجمهور والهدف ومؤشر النجاح محددون','المواد متوافقة مع الرسالة والمنصة','المواعيد والقنوات والميزانية أو الموارد موثقة','النتائج مقاسة مقارنة بالهدف والتحسينات محددة'],
+      outputEn:['Audience, objective, and message definition','Campaign/content assets ready for testing','Publishing calendar or campaign/channel setup','Results report and optimization recommendations'],
+      completeEn:['Audience, objective, and success metric are defined','Assets match the message and platform','Dates, channels, and budget/resources are documented','Results are measured against the goal and improvements identified']},
+    research:{
+      output:['سؤال بحث ونطاق ومعايير','مجموعة مصادر وأدلة موثقة','تحليل ومقارنة للنتائج','ملخص نتائج وتوصيات وحدود البحث'],
+      complete:['السؤال والنطاق ومعايير الاستبعاد واضحة','المصادر موثوقة والادعاءات مرتبطة بأدلتها','التعارضات والفجوات والافتراضات موضحة','كل توصية مدعومة وقيود البحث مذكورة'],
+      outputEn:['Research question, scope, and criteria','Documented source and evidence set','Analysis and comparison of findings','Findings summary, recommendations, and limitations'],
+      completeEn:['Question, scope, and exclusion criteria are clear','Sources are credible and claims linked to evidence','Conflicts, gaps, and assumptions are identified','Recommendations are supported and limitations stated']},
+    assistant:{
+      output:['هدف وأولويات ومواعيد محددة','قائمة مهام وموارد وعوائق','جدول تنفيذ واقعي مرتب','نقطة متابعة ومقياس إنجاز'],
+      complete:['النتيجة المطلوبة والموعد والأولوية محددة','المهام والموارد والعوائق محصورة','لكل مهمة وقت ومسؤول أو خطوة تالية واضحة','يوجد موعد مراجعة ومقياس واضح للتقدم'],
+      outputEn:['Defined goal, priorities, and deadlines','Task, resource, and blocker list','Prioritized realistic action schedule','Check-in point and completion measure'],
+      completeEn:['Desired outcome, deadline, and priority are clear','Tasks, resources, and blockers are captured','Each task has a time estimate and clear next action/owner','A review point and progress measure are set']}
+  };
+  const item = guidance[specialty];
+  const i = Math.max(0,Math.min(index,3));
+  return ar ? {output:item.output[i],complete:item.complete[i]} : {output:item.outputEn[i],complete:item.completeEn[i]};
+}
+
 function cleanSubmittedRequest(value:string):string {
   const clean = value.trim().replace(/\s+/g,' ');
   // Strip accidentally pasted plan UI only when its quoted original request is present.
@@ -478,6 +518,10 @@ function App() {
           <div className="step-copy">
             {editId === step.id ? <textarea className="step-edit" value={editText} onChange={(event) => setEditText(event.target.value)} aria-label={t('edit')}/> : <strong>{step.text}</strong>}
             <small>{step.state === 'approved' ? t('approvedStep') : step.state === 'rejected' ? t('rejectedStep') : isCurrent ? t('pendingStep') : t('step')}</small>
+            {(() => { const guidance = getStepGuidance(task.specialty,index,language); return <div style={{display:'grid',gap:5,marginTop:9,padding:'9px 11px',borderRadius:8,background:'rgba(198,167,108,0.07)',border:'1px solid rgba(198,167,108,0.16)'}}>
+              <div><small style={{display:'block',color:'#c6a76c',fontWeight:700,marginBottom:2}}>{isAr?'النتيجة المطلوبة':'Expected output'}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{guidance.output}</span></div>
+              <div><small style={{display:'block',color:'#c6a76c',fontWeight:700,marginBottom:2}}>{isAr?'معيار الاكتمال':'Completion check'}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{guidance.complete}</span></div>
+            </div>; })()}
             {isCurrent && task.status === 'review' && <div className="step-actions">
               {editId === step.id ? <><button className="button button-quiet button-small" onClick={() => { if (editText.trim()) changeStep(task,step.id,editText.trim()); setEditId(null); }}>{t('save')}</button><button className="button button-quiet button-small" onClick={() => setEditId(null)}>{isAr?'إلغاء':'Cancel'}</button></> :
                 <button className="button button-quiet button-small" onClick={() => { setEditId(step.id); setEditText(step.text); }}><Edit3 size={12}/>{t('edit')}</button>}
