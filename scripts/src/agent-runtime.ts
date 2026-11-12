@@ -220,7 +220,7 @@ async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions
 }
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string };
-const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\\/+$/, "");
+const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
 const AGENT_TOOLS = [
   { type: "function", function: { name: "skills.list", description: "List installed project skills from .omda/skills/*/SKILL.md.", parameters: { type: "object", properties: {}, additionalProperties: false } } },
