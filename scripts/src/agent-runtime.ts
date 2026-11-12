@@ -6,6 +6,7 @@ import { realpath, mkdir, readFile, writeFile, readdir, stat, rename } from "nod
 import { isIP } from "node:net";
 import { dirname, relative, resolve, sep } from "node:path";
 import { appendMcpImageObservations, appendMcpToolResult, type McpImageObservation } from "./mcp-content.js";
+import { buildMcpEnvironment } from "./mcp-env.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -381,8 +382,7 @@ function handleMcpOutput(connection: McpConnection, chunk: Buffer): void {
 async function getMcpConnection(config: McpConfig): Promise<McpConnection> {
   const existing = mcpConnections.get(config.name);
   if (existing && existing.child.exitCode === null && existing.child.signalCode === null) return existing;
-  const env: NodeJS.ProcessEnv = { PATH: process.env.PATH || "", HOME: process.env.HOME || "", USERPROFILE: process.env.USERPROFILE || "" };
-  for (const key of config.envFrom || []) if (process.env[key]) env[key] = process.env[key];
+  const env: NodeJS.ProcessEnv = buildMcpEnvironment(process.env, config.envFrom || []);
   const child = spawn(config.command, config.args, { cwd: workspaceRoot, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"], env });
   if (!child.stdin || !child.stdout) throw new Error("Could not open MCP stdio transport.");
   const connection: McpConnection = { child, buffer: "", nextId: 1, pending: new Map(), initialized: false };
