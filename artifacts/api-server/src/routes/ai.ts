@@ -307,8 +307,9 @@ async function getOpenRouterModelOrder(messages: ChatMessage[]): Promise<string[
     .sort((a, b) => b.score - a.score)
     .map(({ model }) => model.id);
   const available = ranked.length ? ranked : staticFallbacks;
-  const selected = [...new Set([...available.slice(0, 3), ...staticFallbacks])].slice(0, 4);
-  // Keep a final free-router fallback for newly added models not yet reflected in the cached catalog.
+  // Two explicit specialists plus the free router provide meaningful diversity without
+  // serially waiting on a long list of unavailable free endpoints.
+  const selected = [...new Set(available)].slice(0, 2);
   return [...selected, "openrouter/free"];
 }
 
@@ -321,7 +322,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = ""): Promise<{ t
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(15000),
         headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
         body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
       });
