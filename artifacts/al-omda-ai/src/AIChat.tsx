@@ -433,7 +433,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           streamedText += event.text;
           const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
           const estimated = Math.round((streamedText.length / 4) / seconds);
-          setMessages([...messages, { role: "assistant", content: streamedText + "\\n\\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
+          setMessages([...messages, { role: "assistant", content: streamedText + "\n\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
         }
       }) as any;
       const pending = Array.isArray(data.pending) ? data.pending : [];
@@ -504,7 +504,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             streamedText += event.text;
             const seconds = Math.max((Date.now() - startedAt) / 1000, 0.25);
             const estimated = Math.round((streamedText.length / 4) / seconds);
-            setMessages([...next, { role: "assistant", content: streamedText + "\\n\\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
+            setMessages([...next, { role: "assistant", content: streamedText + "\n\n" + (ar ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s", provider: "Local Agent" }]);
           } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
             setMessages([...next, { role: "assistant", content: ar ? "الوكيل يختار الأدوات وينفذ الخطوات..." : "Agent is selecting tools and executing steps...", provider: "Local Agent" }]);
           }
