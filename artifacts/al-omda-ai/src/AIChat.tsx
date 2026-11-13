@@ -536,7 +536,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       // Detect a project from the current message AND the recent user context.
       // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
       // the user has just described, instead of losing them because the last sentence is short.
-      const projectRequestContext = next.filter((message) => message.role === "user").slice(-6, -1).map((message) => message.content).join("\n\n").slice(-5000);
+      const projectRequestContext = next.filter((message) => message.role === "user").slice(-2, -1).map((message) => message.content).join("\n\n").slice(-5000);
       const currentProjectSpecialty = detectProjectSpecialty(text);
       const linkedProjectMessage = [...next].reverse().find((message) => message.role === "assistant" && Boolean(message.taskId));
       const explicitlyNewProject = /(?:مشروع جديد|ابدأ مشروع جديد|انشئ مشروع جديد|new project|start a new project)/i.test(text);
