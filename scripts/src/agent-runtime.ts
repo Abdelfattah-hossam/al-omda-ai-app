@@ -2,7 +2,7 @@ import { timingSafeEqual, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { lookup, resolve4, resolve6, resolveCname, resolveMx, resolveNs, resolveTxt } from "node:dns/promises";
-import { realpath, mkdir, readFile, writeFile, readdir, stat, rename } from "node:fs/promises";
+import { realpath, mkdir, readFile, writeFile, readdir, stat, rename, unlink } from "node:fs/promises";
 import { isIP } from "node:net";
 import { connect as tlsConnect } from "node:tls";
 import { dirname, relative, resolve, sep } from "node:path";
@@ -19,6 +19,7 @@ import { buildCommandEnvironment } from "./command-env.js";
 import { parseModelProviderConfig } from "./model-providers.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
+import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type HttpFlowHistoryRecord } from "./httpflow-history.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -38,6 +39,8 @@ const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "pyt
 let workspaceRoot = "";
 
 let activeAgentRuns = 0;
+const HTTP_FLOW_HISTORY_FILE = ".omda/httpflow-history.json";
+let httpFlowHistoryQueue: Promise<void> = Promise.resolve();
 async function withActiveAgentRun<T>(operation: () => Promise<T>): Promise<T> {
   activeAgentRuns++;
   try { return await operation(); }
@@ -339,6 +342,53 @@ async function compareHttpRoles(body: Json): Promise<Json> {
     comparison: compareHttpRoleResponses(responses),
   };
 }
+async function readHttpFlowHistory(): Promise<HttpFlowHistoryRecord[]> {
+  const candidate = resolve(workspaceRoot, HTTP_FLOW_HISTORY_FILE);
+  let actual: string;
+  try { actual = await realpath(candidate); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  if (!isInside(workspaceRoot, actual)) throw new Error("HTTPFlow history file escapes the workspace.");
+  const info = await stat(actual);
+  if (!info.isFile() || info.size > 1024 * 1024) throw new Error("HTTPFlow history must be a regular JSON file up to 1 MB.");
+  const parsed = JSON.parse(await readFile(actual, "utf8")) as { records?: unknown };
+  return normalizeHttpFlowHistory(parsed.records);
+}
+async function persistHttpFlowHistory(record: HttpFlowHistoryRecord): Promise<void> {
+  const operation = httpFlowHistoryQueue.then(async () => {
+    const records = await readHttpFlowHistory();
+    const next = [record, ...records.filter((item) => item.id !== record.id)].slice(0, 100);
+    const path = await resolveWritePath(HTTP_FLOW_HISTORY_FILE);
+    const temporary = path + "." + randomUUID() + ".tmp";
+    await writeFile(temporary, JSON.stringify({ version: 1, records: next }), { encoding: "utf8", mode: 0o600, flag: "wx" });
+    try { await rename(temporary, path); }
+    catch (error) {
+      try { await unlink(temporary); } catch { /* Best-effort cleanup. */ }
+      throw error;
+    }
+  });
+  httpFlowHistoryQueue = operation.then(() => undefined, () => undefined);
+  await operation;
+}
+async function clearHttpFlowHistory(): Promise<void> {
+  const operation = httpFlowHistoryQueue.then(async () => {
+    const candidate = resolve(workspaceRoot, HTTP_FLOW_HISTORY_FILE);
+    try {
+      const actual = await realpath(candidate);
+      if (!isInside(workspaceRoot, actual)) throw new Error("HTTPFlow history file escapes the workspace.");
+      const info = await stat(actual);
+      if (!info.isFile()) throw new Error("HTTPFlow history is not a regular file.");
+      await unlink(actual);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  });
+  httpFlowHistoryQueue = operation.then(() => undefined, () => undefined);
+  await operation;
+}
+
 async function executeCommand(body: Json): Promise<Json> {
   if (EXECUTION_MODE !== "host") throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=host only on a machine where you trust the project and its dependencies.");
   const command = typeof body.command === "string" ? body.command : "";
@@ -951,9 +1001,38 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const roles = await loadHttpRoles();
     send(res, 200, { roles: roles.map((role) => role.name) }); return;
   }
+  if (req.method === "GET" && url.pathname === "/v1/http/history") {
+    const history = await readHttpFlowHistory();
+    const requestedLimit = Number(url.searchParams.get("limit") || 100);
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, Math.floor(requestedLimit))) : 100;
+    send(res, 200, { records: history.slice(0, limit) }); return;
+  }
+  if (req.method === "DELETE" && url.pathname === "/v1/http/history") {
+    await clearHttpFlowHistory();
+    send(res, 200, { ok: true }); return;
+  }
   if (req.method === "POST" && url.pathname === "/v1/http/compare") {
     const body = await readBody(req);
-    send(res, 200, await withActiveAgentRun(() => compareHttpRoles(body))); return;
+    const result = await withActiveAgentRun(() => compareHttpRoles(body));
+    let historySaved = false;
+    let historyId: string | null = null;
+    try {
+      const record = createHttpFlowHistoryRecord({
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        url: String(result.url || ""),
+        method: String(result.method || "GET"),
+        roles: Array.isArray(body.roles) ? body.roles.filter((item): item is string => typeof item === "string") : [],
+        responses: Array.isArray(result.responses) ? result.responses as HttpFlowHistoryRecord["responses"] : [],
+        comparison: result.comparison as HttpFlowHistoryRecord["comparison"],
+      });
+      await persistHttpFlowHistory(record);
+      historySaved = true;
+      historyId = record.id;
+    } catch {
+      // Preserve the live comparison result; the client receives an explicit save warning.
+    }
+    send(res, 200, { ...result, historySaved, historyId }); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/stream") {
     const body = await readBody(req);
