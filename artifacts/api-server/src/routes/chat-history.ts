@@ -203,6 +203,26 @@ router.put("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise
   } catch (error) { reportSupabaseError(req, res, error, "Could not save this conversation."); }
 });
 
+router.patch("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to rename this conversation." }); return; }
+    const conversationId = req.params.id;
+    if (typeof conversationId !== "string" || !validConversationId(conversationId)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
+    const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
+    if (!title) { res.status(400).json({ error: "Conversation title is required." }); return; }
+    const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
+    const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ title, updated_at: new Date().toISOString() }),
+    }, session.accessToken);
+    const rows = await readSupabaseJson<Array<{ id: string; title: string; updated_at: string }>>(response);
+    if (!rows[0]) { res.status(404).json({ error: "Conversation not found." }); return; }
+    res.json({ updated: true, conversation: rows[0] });
+  } catch (error) { reportSupabaseError(req, res, error, "Could not rename this conversation."); }
+});
+
 router.delete("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
