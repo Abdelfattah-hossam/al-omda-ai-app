@@ -82,6 +82,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     if (mountedRef.current) {
       setActive(false);
       setConnecting(false);
+      setSpeaking(false);
     }
   };
 
