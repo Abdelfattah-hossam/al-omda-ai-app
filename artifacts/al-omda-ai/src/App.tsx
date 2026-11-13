@@ -345,6 +345,14 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
+const mobileNavItems: typeof navItems = [
+  { path:'/', key:'overview', icon:LayoutDashboard },
+  { path:'/agents', key:'agents', icon:Compass },
+  { path:'/ai', key:'aiChat', icon:Bot },
+  { path:'/workbench', key:'workbench', icon:BriefcaseBusiness },
+  { path:'/history', key:'history', icon:History },
+  { path:'/profile', key:'profile', icon:UserRound },
+];
 const STORE_KEY = 'al-omda-demo-v1';
 const starterTasks: Task[] = [
   { id:'demo-brief', title:'خطة إطلاق خدمة استشارية', request:'إعداد تصور أولي لإطلاق خدمة استشارية رقمية تستهدف الشركات الصغيرة.', specialty:'business', status:'approved', createdAt:'2025-02-20T10:30:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الشريحة المستهدفة والقيمة المقترحة',state:'approved'},{id:'s2',text:'تقسيم الإطلاق إلى مراحل ومخرجات',state:'approved'},{id:'s3',text:'اقتراح مؤشرات متابعة للمراجعة',state:'approved'}] },
@@ -1796,7 +1804,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
       </aside>
     </div>}
-    <nav className="mobile-nav" aria-label={t('menu')}>{[{path:'/',key:'overview',icon:LayoutDashboard},{path:'/agents',key:'agents',icon:Compass},{path:'/ai',key:'aiChat',icon:Bot},{path:'/workbench',key:'workbench',icon:BriefcaseBusiness},{path:'/history',key:'history',icon:History},{path:'/profile',key:'profile',icon:UserRound}].map((item)=>navLink(item,true))}</nav>
+    <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }
 
