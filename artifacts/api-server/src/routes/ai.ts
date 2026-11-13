@@ -775,18 +775,33 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (!latestStep || latestStep.state !== "approved" || latestStep.result) {
       res.status(409).json({ error: "This step changed or was already executed. Refresh the project." }); return;
     }
-    const chargedUsage = await reserveUnits(session.accessToken, 2);
-    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage: chargedUsage }); return; }
     const executedAt = new Date().toISOString();
-    const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, result, executedAt, executionStatus: "succeeded" as const, executionError: undefined } : item);
-    const updateQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id, select: "id" });
-    const updateResponse = await supabaseFetch("/rest/v1/tasks?" + updateQuery.toString(), {
-      method: "PATCH",
-      headers: { "content-type": "application/json", prefer: "return=representation" },
-      body: JSON.stringify({ steps: updatedSteps }),
+    const completionResponse = await supabaseFetch("/rest/v1/rpc/complete_ai_task_step", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        p_task_id: taskId,
+        p_step_id: stepId,
+        p_result: result,
+        p_executed_at: executedAt,
+        p_units: 2,
+        p_daily_limit: DAILY_LIMIT,
+      }),
     }, session.accessToken);
-    const updatedRows = await readSupabaseJson<Array<{ id: string }>>(updateResponse);
-    if (!updatedRows[0]) { res.status(409).json({ error: "Could not save the execution result. Refresh and try again." }); return; }
+    const completion = await readSupabaseJson<Usage & { saved: boolean; allowed?: boolean; conflict?: boolean; notFound?: boolean }>(completionResponse);
+    if (!completion.saved) {
+      if (completion.notFound) { res.status(404).json({ error: "Project not found in your account." }); return; }
+      if (completion.conflict) { res.status(409).json({ error: "This step changed while it was running. Refresh the project and try again." }); return; }
+      if (completion.allowed === false) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage: completion }); return; }
+      res.status(409).json({ error: "Could not save the execution result. No AI units were charged." });
+      return;
+    }
+    const chargedUsage: Usage = {
+      used: completion.used,
+      remaining: completion.remaining,
+      limit: completion.limit,
+      resetAt: completion.resetAt,
+    };
     res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
