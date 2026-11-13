@@ -16,7 +16,7 @@ import { isBlockedNetworkAddress } from "./network-safety.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
-import { parseModelProviderConfig } from "./model-providers.js";
+import { parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
 import { clearProviderCooldown, getProviderCooldownRemainingMs, recordProviderFailure } from "./provider-health.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
@@ -759,7 +759,7 @@ async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void):
       throw new Error("Unknown agent tool.");
   }
 }
-async function loadAdditionalModelProviders(): Promise<Array<{ base: string; model: string; key: string; name: string }>> {
+async function loadAdditionalModelProviders(): Promise<ModelProviderConfig[]> {
   const configPath = resolve(workspaceRoot, ".omda", "models.json");
   let actualPath: string;
   try { actualPath = await realpath(configPath); }
@@ -783,17 +783,20 @@ function isLocalModelProvider(base: string): boolean {
   } catch { return false; }
 }
 
-async function getModelProviders(): Promise<Array<{ base: string; model: string; key: string; name: string }>> {
+async function getModelProviders(purpose: ModelPurpose = "general"): Promise<Array<{ base: string; model: string; key: string; name: string; purposes: Array<ModelPurpose | "all">; priority: number }>> {
   const configuredProviders = await loadAdditionalModelProviders();
-  return [
-    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary" },
+  const all = [
+    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all"] as Array<ModelPurpose | "all">, priority: 0 },
     ...configuredProviders,
-    { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback" },
-  ].filter((item, index, all) => item.base && item.model && all.findIndex((other) => other.base === item.base && other.model === item.model) === index);
+    { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all"] as Array<ModelPurpose | "all">, priority: 1000 },
+  ].filter((item, index, allItems) => item.base && item.model && allItems.findIndex((other) => other.base === item.base && other.model === item.model) === index);
+  const targeted = all.filter((item) => !item.purposes.includes("all") && item.purposes.includes(purpose)).sort((a, b) => a.priority - b.priority);
+  const global = all.filter((item) => item.purposes.includes("all")).sort((a, b) => a.priority - b.priority);
+  return [...targeted, ...global];
 }
 
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
-  const providers = await getModelProviders();
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general"): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+  const providers = await getModelProviders(purpose);
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
@@ -926,7 +929,7 @@ async function runDelegatedSubagent(role: string, goal: string, mode: "read_only
     ...(proposalRoot ? { proposalDirectory: relative(workspaceRoot, proposalRoot), proposalFiles: await listAgentProposalFiles(proposalRoot) } : {}),
   });
   for (let turn = 0; turn < 6; turn++) {
-    const completion = await modelCompletion(messages, tools);
+    const completion = await modelCompletion(messages, tools, undefined, mode === "proposal" ? "proposal" : "research");
     messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) return await finish(typeof completion.message.content === "string" ? completion.message.content : "", turn + 1, completion.usage);
@@ -1097,7 +1100,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (!authenticated(req)) { send(res, 401, { error: "Unauthorized local agent client." }); return; }
   if (req.method === "GET" && url.pathname === "/v1/models/providers") {
     const providers = await getModelProviders();
-    send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: isLocalModelProvider(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key) })) }); return;
+    send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: isLocalModelProvider(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key), purposes: item.purposes, priority: item.priority })) }); return;
   }
   if (req.method === "GET" && url.pathname === "/v1/runtime/status") { send(res, 200, { activeRuns: activeAgentRuns }); return; }
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {
