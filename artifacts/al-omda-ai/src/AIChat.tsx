@@ -96,6 +96,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
 
+  useLayoutEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    const maxHeight = window.matchMedia("(max-width: 650px)").matches ? 128 : 180;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
+
   const copy = {
     title: ar ? "شات العمدة الذكي" : "AL OMDA AI Chat",
     subtitle: ar ? "العمدة يختار نموذجًا مجانيًا متخصصًا حسب طلبك ويجرّب بدائل تلقائيًا." : "AL OMDA selects a specialized free model for each request and automatically tries alternatives.",
