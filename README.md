@@ -67,7 +67,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 - Parallel specialist delegation (2–4 agents) with evidence traces, read-only research mode, or isolated proposal mode. Each proposal agent writes only to its own `.omda/delegates/` directory; the lead agent reviews and applies selected changes through the normal approval workflow.
 - Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
 - Authorized HTTP role comparison with bounded inspection, sensitive-header redaction, persistent sanitized HTTPFlow audit history with JSON export, and DNS/IP safety checks for private IPv4/IPv6 destinations.
-- OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
+- OpenAI-compatible streamed model output, primary/fallback endpoint support, temporary provider cooldowns for 429/5xx/network failures, and provider usage metrics when returned by the model.
 - Multi-provider model routing through `.omda/models.json`, including HTTPS remote providers, LM Studio/Ollama loopback models, and environment-only API key references.
 - Optional local supervisor with crash-restart backoff and safe auto-update checks; updates are deferred for dirty worktrees or active Agent runs and rolled back if the build fails.
 
@@ -75,7 +75,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 1. Browser tab and profile management, tab previews, and optional secure cross-device browser streaming; current Browser Workspace provides local Playwright MCP discovery and per-site permissions, not a hosted browser.
 2. Per-agent approval routing and safer proposal application/conflict resolution; current implementation supports per-agent read-only/proposal modes, isolated directories, shared run manifests, and lead-agent approval.
-3. Broader provider-specific adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
+3. Native provider-specific adapters (including direct Anthropic/Gemini APIs) beyond the current OpenAI-compatible routing; purpose-based priority routing is available for general, research, proposal, coding, and review tasks.
 4. Provider-accurate live token counts and tokens-per-second; current streaming speed is an estimate, and actual usage is shown only when returned by the provider.
 5. Signed update verification; auto-update is opt-in and rolls back failed builds, while installed systemd/LaunchAgent/Task Scheduler services restart failed supervisor processes where supported.
 6. Container-backed execution with resource, network, and filesystem isolation; host terminal execution remains disabled by default and is not a sandbox.
