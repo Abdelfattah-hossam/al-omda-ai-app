@@ -1,5 +1,4 @@
-export type BrowserEngine = "chromium" | "firefox" | "webkit";
-export type BrowserWorkspacePolicy = { version: 1; engine: BrowserEngine; allowedHosts: string[] };
+export type BrowserWorkspacePolicy = { version: 1; allowedHosts: string[] };
 
 export function normalizeBrowserHost(value: unknown): string {
   if (typeof value !== "string" || !value.trim() || value.length > 253) throw new Error("Enter a hostname without a scheme, path, or port.");
@@ -14,12 +13,10 @@ export function normalizeBrowserHost(value: unknown): string {
 
 export function normalizeBrowserWorkspacePolicy(input: unknown): BrowserWorkspacePolicy {
   const value = input && typeof input === "object" ? input as Record<string, unknown> : {};
-  const engine = value.engine === undefined ? "chromium" : value.engine;
-  if (engine !== "chromium" && engine !== "firefox" && engine !== "webkit") throw new Error("Browser engine must be chromium, firefox, or webkit.");
   const rawHosts = value.allowedHosts === undefined ? [] : value.allowedHosts;
   if (!Array.isArray(rawHosts) || rawHosts.length > 100) throw new Error("Allowed hosts must be an array of at most 100 hostnames.");
   const allowedHosts = [...new Set(rawHosts.map(normalizeBrowserHost))].sort();
-  return { version: 1, engine, allowedHosts };
+  return { version: 1, allowedHosts };
 }
 
 export function assertBrowserUrlAllowed(serverName: string, toolName: string, args: unknown, policy: BrowserWorkspacePolicy): void {

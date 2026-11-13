@@ -634,9 +634,9 @@ async function saveBrowserWorkspacePolicy(input: unknown): Promise<BrowserWorksp
   const policy = normalizeBrowserWorkspacePolicy(input);
   const path = await resolveWritePath(BROWSER_WORKSPACE_POLICY_FILE);
   await mkdir(dirname(path), { recursive: true });
-  const temporary = path + ".tmp";
+  const temporary = path + "." + randomUUID() + ".tmp";
   try {
-    await writeFile(temporary, JSON.stringify(policy, null, 2) + "\n", { encoding: "utf8", mode: 0o600, flag: "w" });
+    await writeFile(temporary, JSON.stringify(policy, null, 2) + "\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
     await rename(temporary, path);
   } catch (error) {
     try { await unlink(temporary); } catch { /* Best-effort cleanup. */ }

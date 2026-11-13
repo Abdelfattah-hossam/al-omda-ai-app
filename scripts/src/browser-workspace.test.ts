@@ -9,8 +9,7 @@ test("normalizes exact hostnames and rejects wildcard or URL input", () => {
   assert.throws(() => normalizeBrowserHost("example.com:8443"), /exact hostname/);
 });
 test("normalizes and deduplicates browser workspace permissions", () => {
-  assert.deepEqual(normalizeBrowserWorkspacePolicy({ engine: "firefox", allowedHosts: ["Example.com", "example.com"] }), { version: 1, engine: "firefox", allowedHosts: ["example.com"] });
-  assert.throws(() => normalizeBrowserWorkspacePolicy({ engine: "edge", allowedHosts: [] }), /Browser engine/);
+  assert.deepEqual(normalizeBrowserWorkspacePolicy({ allowedHosts: ["Example.com", "example.com"] }), { version: 1, allowedHosts: ["example.com"] });
   assert.throws(() => normalizeBrowserWorkspacePolicy({ allowedHosts: Array(101).fill("example.com") }), /100 hostnames/);
 });
 test("blocks direct browser navigation to sites not explicitly allowed", () => {

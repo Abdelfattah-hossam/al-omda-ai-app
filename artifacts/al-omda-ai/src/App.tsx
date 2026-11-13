@@ -445,7 +445,7 @@ function App() {
   const [httpFlowHistoryError, setHttpFlowHistoryError] = useState("");
   const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean }>>([]);
   const [modelProvidersError, setModelProvidersError] = useState("");
-  const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; engine: "chromium" | "firefox" | "webkit"; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
+  const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
   const [browserSiteInput, setBrowserSiteInput] = useState("");
   const [browserWorkspaceBusy, setBrowserWorkspaceBusy] = useState(false);
   const [browserWorkspaceError, setBrowserWorkspaceError] = useState("");
@@ -1037,7 +1037,7 @@ function App() {
     catch (error) { setBrowserWorkspaceError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مساحة المتصفح." : "Could not load Browser Workspace.")); }
     finally { setBrowserWorkspaceBusy(false); }
   };
-  const saveBrowserWorkspace = async (next: { engine: "chromium" | "firefox" | "webkit"; allowedHosts: string[] }) => {
+  const saveBrowserWorkspace = async (next: { allowedHosts: string[] }) => {
     setBrowserWorkspaceBusy(true); setBrowserWorkspaceError("");
     try {
       const result = await callLocalAgentRuntime("/v1/browser/policy", "POST", next);
@@ -1191,10 +1191,7 @@ function App() {
       {!browserWorkspace&&<p className="section-meta" style={{marginTop:12}}>{isAr?'اضغط تحديث بعد توصيل الوكيل المحلي لعرض إعدادات المتصفح.':'Refresh after connecting the local runtime to load browser settings.'}</p>}
       {browserWorkspace&&<>
         <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}><span className="status-chip"><span className={browserWorkspace.connected?'online-dot':'offline-dot'}/>{browserWorkspace.connected?(isAr?'أدوات المتصفح متصلة':'Browser tools connected'):(browserWorkspace.configured?(isAr?'المتصفح غير متصل':'Browser not connected'):(isAr?'Playwright غير مُعد':'Playwright not configured'))}</span><span className="status-chip">{browserWorkspace.tools.length} {isAr?'أداة':'tools'}</span></div>
-        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) minmax(0,1fr)',gap:12,marginTop:14}}>
-          <label className="field-group"><span className="form-label">{isAr?'محرك المتصفح':'Browser engine'}</span><select className="field" value={browserWorkspace.policy.engine} onChange={event=>void saveBrowserWorkspace({...browserWorkspace.policy,engine:event.target.value as "chromium"|"firefox"|"webkit"})}><option value="chromium">Chromium</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select></label>
-          <label className="field-group"><span className="form-label">{isAr?'إضافة نطاق مسموح':'Add allowed hostname'}</span><div style={{display:'flex',gap:6}}><input className="field" value={browserSiteInput} onChange={event=>setBrowserSiteInput(event.target.value)} placeholder="docs.example.com"/><button type="button" className="button button-primary button-small" onClick={()=>void addBrowserSite()} disabled={browserWorkspaceBusy||!browserSiteInput.trim()}>{isAr?'إضافة':'Add'}</button></div></label>
-        </div>
+        <div style={{marginTop:14}}><label className="field-group"><span className="form-label">{isAr?'إضافة نطاق مسموح':'Add allowed hostname'}</span><div style={{display:'flex',gap:6}}><input className="field" value={browserSiteInput} onChange={event=>setBrowserSiteInput(event.target.value)} placeholder="docs.example.com"/><button type="button" className="button button-primary button-small" onClick={()=>void addBrowserSite()} disabled={browserWorkspaceBusy||!browserSiteInput.trim()}>{isAr?'إضافة':'Add'}</button></div></label></div>
         <div style={{marginTop:12}}><strong className="section-meta">{isAr?'المواقع المسموح بها':'Allowed sites'}</strong>{browserWorkspace.policy.allowedHosts.length?<div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{browserWorkspace.policy.allowedHosts.map(host=><span key={host} className="status-chip"><Globe size={13}/>{host}<button type="button" aria-label={(isAr?'إزالة ':'Remove ')+host} onClick={()=>void removeBrowserSite(host)} disabled={browserWorkspaceBusy} style={{border:0,background:'transparent',color:'inherit',cursor:'pointer'}}>×</button></span>)}</div>:<p className="section-meta" style={{marginTop:6}}>{isAr?'لا توجد مواقع مسموح بها. التنقل محظور حتى تضيف نطاقًا.':'No sites approved. Navigation is blocked until you add a hostname.'}</p>}</div>
         {browserWorkspace.connectionError&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)',marginTop:10}}>{browserWorkspace.connectionError}</p>}
         {browserWorkspace.tools.length>0&&<details style={{marginTop:12}}><summary className="section-meta">{isAr?'أدوات المتصفح المتاحة':'Available browser tools'} ({browserWorkspace.tools.length})</summary>{browserWorkspace.tools.map(tool=><div key={tool.name} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{tool.name}</strong>{tool.description&&<p className="section-meta">{tool.description}</p>}</div>)}</details>}
