@@ -2167,3 +2167,159 @@ body:has(.ai-chat-page){
  -webkit-backdrop-filter:blur(18px) saturate(145%);
  backdrop-filter:blur(18px) saturate(145%);
 }
+
+
+/* Unified translucent material across the complete application UI. */
+:root{
+ --omda-glass-fill:rgba(13,22,38,.38);
+ --omda-glass-stroke:rgba(205,220,248,.20);
+ --omda-glass-highlight:rgba(255,255,255,.085);
+ --omda-glass-depth:0 12px 32px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.075);
+}
+.app-shell .panel,
+.app-shell [class*="card"]:not(button),
+.app-shell [class*="panel"]:not(button),
+.app-shell [class*="tile"]:not(button),
+.app-shell [class*="surface"]:not(button),
+.app-shell [class*="setting-row"],
+.app-shell [class*="notice-bar"],
+.app-shell [class*="plan-step"],
+.app-shell [class*="feature-link"],
+.app-shell [class*="task-row"],
+.app-shell [class*="history-item"],
+.app-shell [class*="project-kpi"],
+.app-shell .setting-row,
+.app-shell .specialty-card,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .stat-card,
+.app-shell .dashboard-chart-card,
+.app-shell .profile-summary,
+.app-shell .profile-feature-link,
+.app-shell .workbench-step,
+.app-shell .task-detail-card{
+ background:linear-gradient(135deg,rgba(255,255,255,.085),rgba(255,255,255,.018)) ,var(--omda-glass-fill)!important;
+ border:1px solid var(--omda-glass-stroke)!important;
+ box-shadow:var(--omda-glass-depth)!important;
+ -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
+ backdrop-filter:blur(22px) saturate(150%)!important;
+}
+.app-shell .panel:hover,
+.app-shell [class*="card"]:not(button):hover,
+.app-shell [class*="tile"]:not(button):hover{
+ border-color:rgba(218,230,255,.27)!important;
+}
+.app-shell button:not(:disabled),
+.app-shell .button,
+.app-shell .icon-button,
+.app-shell .lang-button,
+.app-shell .status-button,
+.app-shell .curtain-profile-link{
+ background-color:rgba(255,255,255,.055)!important;
+ background-image:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.025))!important;
+ border-color:rgba(205,220,248,.22)!important;
+ -webkit-backdrop-filter:blur(14px) saturate(145%);
+ backdrop-filter:blur(14px) saturate(145%);
+}
+.app-shell button.button-primary,
+.app-shell .button-primary{
+ background-image:linear-gradient(120deg,rgba(var(--omda-glow,120,160,255),.25),rgba(255,255,255,.055))!important;
+ border-color:rgba(var(--omda-glow,120,160,255),.42)!important;
+}
+.app-shell button:not(:disabled):hover,
+.app-shell .button:hover,
+.app-shell .icon-button:hover,
+.app-shell .lang-button:hover{
+ border-color:rgba(220,232,255,.38)!important;
+ background-color:rgba(255,255,255,.09)!important;
+}
+.app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-shell textarea,
+.app-shell select,
+.app-shell .field{
+ background:rgba(8,14,25,.30)!important;
+ border-color:rgba(205,220,248,.20)!important;
+ -webkit-backdrop-filter:blur(12px);
+ backdrop-filter:blur(12px);
+}
+
+/* Mobile dock: chat is the visual center, with the other destinations
+   ordered around it. Seven equal tracks give the chat a wider center slot. */
+@media(max-width:760px){
+ .app-shell .mobile-nav{
+  position:fixed!important;
+  inset-inline:0!important;
+  bottom:0!important;
+  z-index:80!important;
+  display:grid!important;
+  grid-template-columns:repeat(7,minmax(0,1fr))!important;
+  grid-auto-flow:row!important;
+  align-items:stretch!important;
+  gap:4px!important;
+  min-height:68px!important;
+  padding:8px 9px max(8px,env(safe-area-inset-bottom))!important;
+  background:rgba(8,14,25,.68)!important;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.018))!important;
+  border-top:1px solid rgba(210,225,255,.20)!important;
+  box-shadow:0 -12px 36px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(160%)!important;
+  backdrop-filter:blur(26px) saturate(160%)!important;
+  overflow:visible!important;
+ }
+ .app-shell .mobile-nav .mobile-nav-link{
+  display:flex!important;
+  min-width:0!important;
+  width:100%!important;
+  min-height:48px!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:5px 2px!important;
+  border:1px solid transparent!important;
+  border-radius:13px!important;
+  color:rgba(231,237,249,.72)!important;
+  background:rgba(255,255,255,.025)!important;
+  text-decoration:none!important;
+  font-size:clamp(8px,2.3vw,10px)!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+ }
+ .app-shell .mobile-nav .mobile-nav-link svg{
+  display:block!important;
+  width:18px!important;height:18px!important;flex:none!important;
+ }
+ .app-shell .mobile-nav .mobile-nav-link span{
+  display:block!important;max-width:100%!important;overflow:hidden!important;
+  text-overflow:ellipsis!important;
+ }
+ .app-shell .mobile-nav .mobile-nav-link.active{
+  color:var(--foreground,#fff)!important;
+  border-color:rgba(var(--omda-glow,120,160,255),.34)!important;
+  background:linear-gradient(145deg,rgba(var(--omda-glow,120,160,255),.20),rgba(255,255,255,.055))!important;
+  box-shadow:0 0 18px rgba(var(--omda-glow,120,160,255),.12),inset 0 1px 0 rgba(255,255,255,.13)!important;
+ }
+ .app-shell .mobile-nav .mobile-chat-link{
+  grid-column:span 2!important;
+  min-height:52px!important;
+  align-self:center!important;
+  border-color:rgba(var(--omda-glow,120,160,255),.27)!important;
+  background:linear-gradient(135deg,rgba(var(--omda-glow,120,160,255),.16),rgba(255,255,255,.055))!important;
+  box-shadow:0 0 16px rgba(var(--omda-glow,120,160,255),.10),inset 0 1px 0 rgba(255,255,255,.10)!important;
+  font-weight:650!important;
+ }
+ .app-shell .mobile-nav .mobile-chat-link svg{width:20px!important;height:20px!important}
+ .app-shell .mobile-nav .mobile-chat-link.active{
+  border-color:rgba(var(--omda-glow,120,160,255),.48)!important;
+  background:linear-gradient(135deg,rgba(var(--omda-glow,120,160,255),.28),rgba(255,255,255,.075))!important;
+  box-shadow:0 0 22px rgba(var(--omda-glow,120,160,255),.20),inset 0 1px 0 rgba(255,255,255,.15)!important;
+ }
+ .app-shell .content-wrap{padding-bottom:calc(86px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:370px){
+ .app-shell .mobile-nav{gap:2px!important;padding-inline:5px!important}
+ .app-shell .mobile-nav .mobile-nav-link{font-size:8px!important}
+ .app-shell .mobile-nav .mobile-nav-link svg{width:16px!important;height:16px!important}
+}
