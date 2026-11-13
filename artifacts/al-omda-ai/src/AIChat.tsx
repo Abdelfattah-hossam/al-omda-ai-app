@@ -74,6 +74,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showCodeCanvas, setShowCodeCanvas] = useState(false);
+  const [canvasCode, setCanvasCode] = useState('<!doctype html>\\n<html lang="ar" dir="rtl">\\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
+  const [canvasPreviewCode, setCanvasPreviewCode] = useState('');
   const chatTopbarRef = useRef<HTMLElement | null>(null);
   const plusWrapRef = useRef<HTMLDivElement | null>(null);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
@@ -800,6 +805,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     ? Object.entries(usage.providers).filter(([, active]) => active).map(([name]) => name === "gemini" ? "Gemini" : "OpenRouter Free Models")
     : [];
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
+  const openSettings = () => { setShowSettingsModal(true); void loadMemory(); void loadUsage(); };
+  const openCodeCanvas = () => {
+    const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    const match = lastAssistant?.content.match(/\x60\x60\x60(?:html|HTML)?\\s*\\n([\\s\\S]*?)\x60\x60\x60/);
+    if (match?.[1]?.trim()) { setCanvasCode(match[1].trim()); setCanvasPreviewCode(match[1].trim()); }
+    setShowCodeCanvas(true); setShowPlusMenu(false);
+  };
+  const runCanvasCode = () => setCanvasPreviewCode(canvasCode);
 
   if (view === "usage") return <div className="page-enter ai-usage-page">
     <div className="page-heading ai-chat-heading">
@@ -841,8 +854,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <button type="button" onClick={()=>{setInput(ar ? "أنشئ مستند Word احترافيًا عن: " : "Create a professional Word document about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><FileText size={16}/>{ar ? "مستند Word" : "Word document"}</button>
         <button type="button" onClick={()=>{setInput(ar ? "أنشئ جدول Excel منظمًا لـ: " : "Create a structured Excel workbook for: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Sheet size={16}/>{ar ? "جدول Excel" : "Excel spreadsheet"}</button>
         <button type="button" onClick={()=>{setInput(ar ? "أنشئ عرض PowerPoint احترافيًا عن: " : "Create a professional PowerPoint about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Presentation size={16}/>{ar ? "عرض PowerPoint" : "PowerPoint presentation"}</button>
-        <button type="button" onClick={()=>{setInput(ar ? "اكتب كودًا مع شرح طريقة تشغيله: " : "Write code and explain how to run it: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Code2 size={16}/>{ar ? "برمجة وتطوير" : "Code & development"}</button>
-        <button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/ai/usage");}}><Bot size={16}/>{ar ? "ذاكرة العمدة والاستخدام" : "Memory & usage"}</button>
+        <button type="button" onClick={()=>{setChatSidebarOpen(false);openCodeCanvas();}}><Code2 size={16}/>{ar ? "محرر البرمجة (Code Canvas)" : "Code Canvas"}</button>
+        <button type="button" onClick={()=>{setChatSidebarOpen(false);openSettings();}}><Bot size={16}/>{ar ? "ذاكرة العمدة والحد اليومي" : "Memory & daily usage"}</button>
       </div>
       <div className="ai-chat-history-caption"><span>{ar ? "المحادثات السابقة" : "Recent conversations"}</span><button type="button" onClick={()=>setShowConversationList(v=>!v)}>{showConversationList ? (ar ? "إخفاء" : "Hide") : (ar ? "عرض الكل" : "View all")}</button></div>
       <div className="ai-chat-sidebar-history">
@@ -852,7 +865,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           <button type="button" className="ai-chat-sidebar-history-delete" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={13}/></button>
         </div>)}
       </div>
-      <button type="button" className="ai-chat-usage-card" onClick={()=>{setChatSidebarOpen(false);setLocation("/ai/usage");}}>
+      <button type="button" className="ai-chat-usage-card" onClick={()=>{setChatSidebarOpen(false);openSettings();}}>
         <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
         <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
       </button>
@@ -861,13 +874,24 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     <div className="ai-chat-main">
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
-      <div className="ai-chat-topbar-title"><strong>{copy.title}</strong><span>{ar ? "العمدة الذكي" : "AL OMDA AI"}</span></div>
+      <div className="ai-chat-model-wrap">
+        <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "العمدة · التوجيه التلقائي" : "AL OMDA · Auto routing"}</span><i>⌄</i></button>
+        {showModelMenu && <div className="ai-chat-model-menu">
+          <div className="ai-chat-menu-caption">{ar ? "المحركات المجانية المهيأة" : "Configured free engines"}</div>
+          <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "متصل · متاح للتوجيه" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.gemini ? "is-ready" : ""}/></div>
+          <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free</strong><small>{usage?.providers?.openrouter ? (ar ? "متصل · متاح للتوجيه" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.openrouter ? "is-ready" : ""}/></div>
+          <p>{ar ? "العمدة يختار النموذج الأنسب تلقائيًا ويجرّب البدائل عند التعطل." : "AL OMDA chooses the best available model and tries alternatives."}</p>
+        </div>}
+      </div>
+      {agentMode && <span className="ai-chat-agent-badge"><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
+      <button type="button" className="ai-chat-header-icon" onClick={openCodeCanvas} title={ar ? "محرر الأكواد" : "Code Canvas"}><Code2 size={16}/></button>
+      <button type="button" className="ai-chat-header-icon" onClick={openSettings} title={ar ? "الإعدادات والحد اليومي" : "Settings and daily usage"}><Settings2 size={16}/></button>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
       {showChatMenu && <div className="ai-chat-top-menu" role="menu">
         <button type="button" onClick={()=>{setShowRoutingInfo(v=>!v);setShowChatMenu(false)}}><Bot size={16}/>{ar ? "التوجيه التلقائي" : "Auto routing"}</button>
         <button type="button" onClick={()=>{setShowConversationList(v=>!v);setShowChatMenu(false)}}><History size={16}/>{ar ? "المحادثات السابقة" : "Conversation history"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);void createConversation()}} disabled={loading || historyLoading}><Plus size={16}/>{ar ? "محادثة جديدة" : "New chat"}</button>
-        <button type="button" onClick={()=>{setShowChatMenu(false);setLocation("/ai/usage")}}><Settings2 size={16}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
+        <button type="button" onClick={()=>{setShowChatMenu(false);openSettings()}}><Settings2 size={16}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);setShowLiveVoice(v=>!v)}} aria-expanded={showLiveVoice}><Volume2 size={16}/>{ar ? "المحادثة الصوتية" : "Live voice"}</button>
         <div className="ai-chat-menu-divider"/>
         <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع العمدة":"AL OMDA conversation",text:value}).then(()=>setShowChatMenu(false)).catch((shareError)=>{if(shareError instanceof Error && shareError.name!=="AbortError")setError(shareError.message || (ar?"تعذرت مشاركة المحادثة.":"Could not share conversation."));setShowChatMenu(false);});}else if(navigator.clipboard){void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});}else{setError(ar?"المشاركة غير مدعومة في هذا المتصفح.":"Sharing is not supported.");setShowChatMenu(false);}}}><Share2 size={16}/>{ar ? "مشاركة المحادثة" : "Share conversation"}</button>
@@ -891,7 +915,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><span className="muted">{messages.length} {ar ? "رسالة" : "messages"}</span></div>
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
         <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
-          {messages.length === 0 && <div className="chat-message assistant"><strong>AL OMDA AI</strong><p>{copy.empty}</p></div>}
+          {messages.length === 0 && <div className="ai-chat-welcome" id="welcome-screen">
+            <div className="ai-chat-welcome-mark">ع</div>
+            <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to AL OMDA"}</h1>
+            <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
+            <div className="ai-chat-quick-grid">
+              <button type="button" onClick={() => { setInput(ar ? "أنشئ مستند Word احترافيًا جاهزًا للتحميل عن: " : "Create a downloadable Word document about: "); inputRef.current?.focus(); }}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند جاهز للتحميل" : "Create a downloadable document"}</small></span></button>
+              <button type="button" onClick={() => { setInput(ar ? "أنشئ ملف Excel منظمًا وجاهزًا للتحميل عن: " : "Create a downloadable Excel workbook about: "); inputRef.current?.focus(); }}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تنظيم البيانات والجداول" : "Organize data and tables"}</small></span></button>
+              <button type="button" onClick={() => { setInput(ar ? "اكتب كود HTML و CSS مع معاينة مباشرة: " : "Write HTML and CSS with a live preview: "); openCodeCanvas(); }}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح محرر الأكواد والمعاينة" : "Open code editor and preview"}</small></span></button>
+              <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "AL OMDA memory"}</strong><small>{ar ? "إدارة الذاكرة والحد اليومي" : "Manage memory and daily usage"}</small></span></button>
+            </div>
+          </div>
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
@@ -953,11 +987,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
                   {icon:Search,label:ar?"بحث ودراسة":"Research",prompt:ar?"أجرِ بحثًا ودراسة عن: ":"Research and analyze: "},
                   {icon:PenLine,label:ar?"كتابة محتوى":"Content writing",prompt:ar?"اكتب محتوى عن: ":"Write content about: "}
                 ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
+                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);openCodeCanvas();}}><Code2 size={16}/><span>{ar ? "محرر ومعاين الأكواد (Canvas)" : "Code editor & preview"}</span></button>
                 <button type="button" className="ai-plus-option" onClick={()=>{if(signedIn)setAgentMode(true);setShowPlusMenu(false);}} disabled={!signedIn}><Bot size={16}/><span>{ar?"تشغيل وضع الوكيل المحلي":"Enable local Agent mode"}</span></button>
               </div>}
             </div>
             <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
-            <button type="button" className="ai-voice-button" aria-label={ar ? "بدء المحادثة الصوتية المباشرة" : "Start live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice((value)=>!value)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Mic size={19}/></button>
+            <button type="button" className={"ai-chat-mic-button" + (listening ? " is-listening" : "")} aria-label={listening ? copy.stop : copy.mic} title={listening ? copy.stop : copy.mic} onClick={toggleVoiceInput} disabled={!signedIn || loading || historyLoading}><Mic size={17}/></button>
+            <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>
             <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={(!input.trim() && !pendingImage) || loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
           </div>
           {showLiveVoice && signedIn && <section className="panel ai-voice-panel ai-voice-panel-under-input">
@@ -972,6 +1008,44 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         </form>
       </section>
     </>}
+      {showSettingsModal && <div className="ai-chat-modal-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowSettingsModal(false);}}>
+        <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات العمدة" : "AL OMDA settings"}>
+          <header><strong><Settings2 size={16}/>{ar ? "إعدادات العمدة" : "AL OMDA settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
+          <div className="ai-chat-settings-body">
+            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span>{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
+              <div className="ai-chat-settings-stats"><div><small>{ar ? "المتبقي اليوم" : "Remaining"}</small><strong>{usage?.remaining ?? "—"}</strong></div><div><small>{ar ? "المستخدم" : "Used"}</small><strong>{usage?.used ?? "—"}</strong></div><div><small>{ar ? "الحد اليومي" : "Daily limit"}</small><strong>{usage?.limit ?? "—"}</strong></div></div>
+              <div className="ai-chat-settings-progress"><i style={{width:percent + "%"}}/></div>
+              {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US",{hour:"2-digit",minute:"2-digit",timeZone:"UTC",timeZoneName:"short"})}</small>}
+            </section>
+            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{copy.providers}</strong><span>Gemini · OpenRouter</span></div>
+              <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "متصل" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free Models</strong><small>{usage?.providers?.openrouter ? (ar ? "متصل" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <small className="muted">{copy.voiceNote}</small>
+            </section>
+            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "ذاكرة العمدة الخاصة بك" : "Your AL OMDA memory"}</strong><span>{memory.length}/6000</span></div>
+              <p>{ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة. الذاكرة محفوظة في حسابك." : "Save preferences, projects, and important decisions to your account memory."}</p>
+              <textarea className="field ai-chat-memory-field" rows={4} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} disabled={memoryLoading || memorySaving} placeholder={ar ? "اكتب هنا ما تريد أن يتذكره العمدة..." : "What should AL OMDA remember?"}/>
+              <div className="ai-chat-settings-actions"><small>{memoryLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : ""}</small><button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || !memory.trim()}>{ar ? "حذف الذاكرة" : "Delete memory"}</button><button type="button" className="button button-primary button-small" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{ar ? "حفظ الذاكرة" : "Save memory"}</button></div>
+            </section>
+            <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
+          </div>
+          <footer><button type="button" className="button button-primary" onClick={()=>{void saveMemory();setShowSettingsModal(false);}}>{ar ? "إغلاق وحفظ الذاكرة" : "Close & save memory"}</button></footer>
+        </section>
+      </div>}
+      {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
+        <section className="ai-chat-live-modal" role="dialog" aria-modal="true" aria-label={ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}>
+          <header><span><i/> {ar ? "التحدث الصوتي مع العمدة" : "Talk with AL OMDA"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
+          <div className="ai-chat-live-orb"><span><Mic size={30}/></span></div><div className="ai-chat-live-copy"><strong>{ar ? "العمدة يستمع إليك..." : "AL OMDA is listening..."}</strong><p>{ar ? "تحدث مع العمدة مباشرة، وسيجيبك بصوته." : "Speak naturally and AL OMDA will reply by voice."}</p></div>
+          <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/>
+          <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
+        </section>
+      </div>}
+      {showCodeCanvas && <div className="ai-chat-modal-backdrop ai-chat-canvas-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowCodeCanvas(false);}}>
+        <section className="ai-chat-canvas-modal" role="dialog" aria-modal="true" aria-label={ar ? "محرر الأكواد" : "Code Canvas"}>
+          <header><strong><Code2 size={16}/>Code Canvas - {ar ? "محرر ومعاين الأكواد" : "Code editor & preview"}</strong><div><button type="button" className="button button-primary button-small" onClick={runCanvasCode}><Play size={13}/>{ar ? "تشغيل ومعاينة" : "Run preview"}</button><button type="button" onClick={()=>setShowCodeCanvas(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></div></header>
+          <div className="ai-chat-canvas-workspace"><textarea dir="ltr" spellCheck={false} value={canvasCode} onChange={(event)=>setCanvasCode(event.target.value)} aria-label={ar ? "محرر الكود" : "Code editor"}/><div className="ai-chat-canvas-preview"><div>{ar ? "المعاينة" : "Preview"}</div>{canvasPreviewCode ? <iframe title="Code Canvas preview" srcDoc={canvasPreviewCode} sandbox="allow-scripts"/> : <p>{ar ? "اكتب الكود ثم اضغط تشغيل ومعاينة." : "Write code and select Run preview."}</p>}</div></div>
+        </section>
+      </div>}
     </div>
   </div>;
 }
