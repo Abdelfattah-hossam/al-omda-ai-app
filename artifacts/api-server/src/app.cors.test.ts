@@ -94,7 +94,7 @@ test("does not authorize TRACE in a preflight response", async () => {
   });
   assert.equal(response.status, 204);
   assert.equal(response.headers.get("access-control-allow-origin"), allowedOrigins[0]);
-  assert.doesNotMatch(response.headers.get("access-control-allow-methods") || "", /\\bTRACE\\b/i);
+  assert.doesNotMatch(response.headers.get("access-control-allow-methods") || "", /\bTRACE\b/i);
 });
 
 test("does not authorize unlisted headers in a preflight response", async () => {
@@ -108,5 +108,5 @@ test("does not authorize unlisted headers in a preflight response", async () => 
   });
   assert.equal(response.status, 204);
   assert.equal(response.headers.get("access-control-allow-origin"), allowedOrigins[0]);
-  assert.doesNotMatch(response.headers.get("access-control-allow-headers") || "", /\\bX-Unauthorized\\b/i);
+  assert.doesNotMatch(response.headers.get("access-control-allow-headers") || "", /\bX-Unauthorized\b/i);
 });
