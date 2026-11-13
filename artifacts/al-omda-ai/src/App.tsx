@@ -427,10 +427,12 @@ function App() {
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
   const [delegateRoleOne, setDelegateRoleOne] = useState("Code reviewer");
   const [delegateGoalOne, setDelegateGoalOne] = useState("");
+  const [delegateModeOne, setDelegateModeOne] = useState<"read_only" | "proposal">("read_only");
   const [delegateRoleTwo, setDelegateRoleTwo] = useState("Security reviewer");
   const [delegateGoalTwo, setDelegateGoalTwo] = useState("");
+  const [delegateModeTwo, setDelegateModeTwo] = useState<"read_only" | "proposal">("read_only");
   const [delegateBusy, setDelegateBusy] = useState(false);
-  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; result: string; turns?: number; evidence?: Array<{ tool: string; summary: string }> }>>([]);
+  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; mode?: "read_only" | "proposal"; result: string; turns?: number; proposalDirectory?: string; proposalFiles?: Array<{ path: string; bytes: number }>; error?: string; evidence?: Array<{ tool: string; summary: string }> }>>([]);
   const [delegateError, setDelegateError] = useState("");
 
   const [httpFlowUrl, setHttpFlowUrl] = useState("");
@@ -945,8 +947,8 @@ function App() {
   };
   const runLocalAgentDelegation = async () => {
     const tasks = [
-      { role: delegateRoleOne.trim() || "Specialist 1", goal: delegateGoalOne.trim() },
-      { role: delegateRoleTwo.trim() || "Specialist 2", goal: delegateGoalTwo.trim() },
+      { role: delegateRoleOne.trim() || "Specialist 1", goal: delegateGoalOne.trim(), mode: delegateModeOne },
+      { role: delegateRoleTwo.trim() || "Specialist 2", goal: delegateGoalTwo.trim(), mode: delegateModeTwo },
     ];
     if (tasks.some((task) => !task.goal) || delegateBusy || !localAgentToken.trim()) return;
     setDelegateBusy(true); setDelegateError(""); setDelegateResults([]);
@@ -962,13 +964,17 @@ function App() {
       });
       const agents = Array.isArray(result.agents) ? result.agents.map((item: any) => ({
         role: String(item.role || "Specialist"),
+        mode: item.mode === "proposal" ? "proposal" as const : "read_only" as const,
         result: String(item.result || ""),
+        proposalDirectory: typeof item.proposalDirectory === "string" ? item.proposalDirectory : undefined,
+        proposalFiles: Array.isArray(item.proposalFiles) ? item.proposalFiles.map((file: any) => ({ path: String(file.path || ""), bytes: Number(file.bytes || 0) })) : [],
+        error: typeof item.error === "string" ? item.error : undefined,
         turns: typeof item.turns === "number" ? item.turns : undefined,
         evidence: Array.isArray(item.evidence) ? item.evidence.map((entry: any) => ({ tool: String(entry.tool || "tool"), summary: String(entry.summary || "") })) : [],
       })) : [];
       setDelegateResults(agents);
       if (result.sessionId) setLocalAgentSessionId(String(result.sessionId));
-      setLocalAgentMessage(isAr ? "اكتمل تحليل الوكلاء المتوازيين. كل وكيل للقراءة والتحليل فقط." : "Parallel specialist review completed. Specialists had read-only access.");
+      setLocalAgentMessage(isAr ? "اكتمل تشغيل الوكلاء. أي ملفات مقترحة محفوظة في مساحات معزولة ولم تُطبّق على المشروع." : "Delegation completed. Any proposed files remain isolated and were not applied to the project.");
     } catch (error) {
       setDelegateError(error instanceof Error ? error.message : (isAr ? "فشل تشغيل الوكلاء المتوازيين." : "Parallel delegation failed."));
     } finally { setDelegateBusy(false); }
@@ -1163,7 +1169,7 @@ function App() {
       </div>}
       <div className="panel panel-pad" style={{marginTop:18}}>
         <div className="section-head">
-          <div><span className="eyebrow">MULTI-AGENT</span><h3 className="section-title">{isAr?'تشغيل وكيلين بالتوازي':'Parallel specialist review'}</h3><p className="section-meta">{isAr?'قسّم المهمة بين متخصصين مستقلين. صلاحياتهما للقراءة والبحث فقط، ولا يمكنهما تعديل الملفات أو تشغيل الأوامر.':'Split a review between two independent specialists. They can read and research, but cannot edit files or execute commands.'}</p></div>
+          <div><span className="eyebrow">MULTI-AGENT</span><h3 className="section-title">{isAr?'تشغيل وكيلين بالتوازي':'Parallel specialist review'}</h3><p className="section-meta">{isAr?'قسّم المهمة بين متخصصين. يمكنك السماح لكل وكيل بإنشاء مسودات داخل مساحة معزولة؛ لا يمكنه تعديل ملفات المشروع أو تشغيل الأوامر.':'Split work between two specialists. Each can be read-only or create draft files in an isolated workspace; neither can edit project files or run commands.'}</p></div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:12}}>
           <div className="field-group">
@@ -1171,12 +1177,18 @@ function App() {
             <input className="field" value={delegateRoleOne} onChange={event=>setDelegateRoleOne(event.target.value)} maxLength={80}/>
             <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
             <textarea className="field" rows={3} value={delegateGoalOne} onChange={event=>setDelegateGoalOne(event.target.value)} placeholder={isAr?'مثال: راجع بنية الكود واكتشف الأخطاء.':'Example: Review the code structure and identify defects.'}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'وضع الوكيل':'Agent mode'}</label>
+            <select className="field" value={delegateModeOne} onChange={event=>setDelegateModeOne(event.target.value as "read_only"|"proposal")}><option value="read_only">{isAr?'قراءة وتحليل فقط':'Read-only research'}</option><option value="proposal">{isAr?'إنشاء مسودات معزولة':'Draft isolated proposals'}</option></select>
+
           </div>
           <div className="field-group">
             <label className="form-label">{isAr?'دور الوكيل الثاني':'Second specialist role'}</label>
             <input className="field" value={delegateRoleTwo} onChange={event=>setDelegateRoleTwo(event.target.value)} maxLength={80}/>
             <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
             <textarea className="field" rows={3} value={delegateGoalTwo} onChange={event=>setDelegateGoalTwo(event.target.value)} placeholder={isAr?'مثال: راجع الأمان وحدد المخاطر.':'Example: Review security and identify risks.'}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'وضع الوكيل':'Agent mode'}</label>
+            <select className="field" value={delegateModeTwo} onChange={event=>setDelegateModeTwo(event.target.value as "read_only"|"proposal")}><option value="read_only">{isAr?'قراءة وتحليل فقط':'Read-only research'}</option><option value="proposal">{isAr?'إنشاء مسودات معزولة':'Draft isolated proposals'}</option></select>
+
           </div>
         </div>
         <button type="button" className="button button-primary button-small" style={{marginTop:12}} onClick={runLocalAgentDelegation} disabled={delegateBusy||localAgentBusy||localAgentStatus!=='ready'||!delegateGoalOne.trim()||!delegateGoalTwo.trim()}>{delegateBusy?(isAr?'جارٍ تشغيل الوكلاء...':'Running specialists...'):(isAr?'ابدأ التحليل المتوازي':'Run parallel review')}</button>
@@ -1185,6 +1197,8 @@ function App() {
           {delegateResults.map((item,index)=><div key={item.role+index} style={{border:'1px solid var(--border)',borderRadius:12,padding:12}}>
             <strong>{item.role}</strong>{typeof item.turns==='number'&&<span className="section-meta"> · {item.turns} {isAr?'جولات':'turns'}</span>}
             <p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:8}}>{item.result}</p>
+            {item.mode==="proposal"&&<div className="section-meta" style={{marginTop:8}}>{isAr?'مساحة المسودات: ':'Proposal workspace: '}{item.proposalDirectory||'—'}{item.proposalFiles&&item.proposalFiles.length>0&&<ul style={{margin:'6px 0',paddingInlineStart:20}}>{item.proposalFiles.map(file=><li key={file.path}>{file.path} · {file.bytes} bytes</li>)}</ul>}</div>}
+            {item.error&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)'}}>{item.error}</p>}
             {item.evidence&&item.evidence.length>0&&<details style={{marginTop:10}}><summary className="section-meta">{isAr?'الأدلة والأدوات المستخدمة':'Evidence and tools used'} ({item.evidence.length})</summary>
               {item.evidence.map((entry,evidenceIndex)=><div key={entry.tool+evidenceIndex} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{entry.tool}</strong><p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:4}}>{entry.summary}</p></div>)}
             </details>}
