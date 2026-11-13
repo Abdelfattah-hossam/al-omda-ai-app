@@ -887,7 +887,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return <div className="page-enter">
       {pageHeading(t('dashboard'),`${t('hello')} ${name}`,t('welcome'))}
       <section className="panel dashboard-hero">
-        <div className="hero-copy"><div className="eyebrow">{t('preview')}</div><h2>{t('hero')}</h2><p>{t('heroText')}</p><Link href="/workbench" className="button button-primary" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}<ArrowLeft size={14}/></Link></div>
+        <div className="hero-copy"><div className="eyebrow">{t('preview')}</div><h2>{t('hero')}</h2><p>{t('heroText')}</p><div className="dashboard-primary-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?"افتح الشات":"Open chat"}<ArrowLeft size={14}/></Link><Link href="/workbench" className="button button-quiet"><Plus size={15}/>{t('newRequest')}</Link></div></div>
         <div className="hero-side"><WandSparkles size={29} strokeWidth={1.2}/></div>
       </section>
       <div className="stats-grid">
@@ -902,11 +902,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </section>
         <section className="panel panel-pad"><div className="section-head"><h2 className="section-title">{t('specialties')}</h2><span className="section-meta">06</span></div><div className="specialty-list">{specialties.map(({id,icon:Icon})=><Link href="/agents" className="specialty-row" key={id}><span className="specialty-icon"><Icon size={15}/></span><strong>{label(id)}</strong><small>{t(specialtyLabel(id))}</small></Link>)}</div></section>
       </div>
-      <section className="panel developer-console" aria-label={t('developerTitle')}>
-        <div className="developer-console-head"><div><div className="eyebrow">{t('developerTitle')}</div><h2 className="section-title">{t('developerSub')}</h2></div><span className="console-lights" aria-hidden="true"><i/><i/><i/></span></div>
-        <div className="developer-code" dir="ltr"><span className="code-muted">01</span><code><b>const</b> workspace = <em>"AL OMDA AI"</em>;</code><span className="code-muted">02</span><code><b>const</b> approvalRequired = <strong>true</strong>;</code><span className="code-muted">03</span><code><b>const</b> userInControl = <strong>true</strong>;</code></div>
-        <div className="developer-console-foot"><span><i/> {isAr?'واجهة تحت إشراف المستخدم':'USER-GOVERNED WORKSPACE'}</span><span>TSX <span className="code-divider">/</span> CSS</span></div>
-      </section>
+
     </div>;
   };
 
@@ -1176,7 +1172,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     } finally { setHttpFlowBusy(false); }
   };
 
-  const agentsPage = () => <div className="page-enter">
+  const agentsPage = () => <div className="page-enter agent-marketplace-page">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
     <section className="panel panel-pad agent-guide-panel">
       <div className="section-head"><div><span className="eyebrow">{isAr?'دليل الاستخدام':'GETTING STARTED'}</span><h2 className="section-title">{isAr?'تشغيل الوكلاء خطوة بخطوة':'How to use and run agents'}</h2><p className="section-meta">{isAr?'اختر الطريقة المناسبة: تخصص جاهز داخل مساحة العمل، أو وكيل محلي يتصل بمشروعك على الكمبيوتر.':'Choose a ready-made specialty in the workbench, or connect the local runtime to a project on your computer.'}</p></div><Bot size={20}/></div>
@@ -1678,29 +1674,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <div className="profile-settings-layout">
-      <section className="panel panel-pad profile-main-card">
-        <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
-        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
-        <div className="profile-fields-grid">
-          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
-          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
-        </div>
-        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
-        {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
-      </section>
-      <div className="profile-settings-side">
-        <section className="panel panel-pad profile-features-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><Compass size={18}/></div>
-          <div className="profile-feature-grid">
-            <Link href="/ai" className="profile-feature-link"><Bot size={19}/><span><strong>{t('featureChat')}</strong><small>{t('featureChatText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/agents" className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/workbench" className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/history" className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/ai/usage" className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
-          </div>
-        </section>
-
-        <details className="panel panel-pad profile-setting-card profile-accordion">
+              <details className="panel panel-pad profile-setting-card profile-accordion profile-account-first">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'التخصيص':'PERSONALIZATION'}</span><h2>{isAr?'مظهر التطبيق':'App appearance'}</h2><p>{isAr?'اختر لون الواجهة وطريقة عرض المساحات.':'Choose your accent color and workspace density.'}</p></div><Palette size={18}/></div></summary>
           <div className="setting-row"><div><strong>{isAr?'لون الواجهة':'Accent color'}</strong><small>{isAr?'سبعة ألوان زجاجية للاختيار بينها':'Seven glass-inspired colors'}</small></div></div>
           <div className="accent-picker" role="group" aria-label={isAr?'ألوان الواجهة':'Accent colors'}>
@@ -1726,6 +1700,29 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
         </details>
+      <section className="panel panel-pad profile-main-card">
+        <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
+        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
+        <div className="profile-fields-grid">
+          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
+        </div>
+        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
+        {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
+      </section>
+      <div className="profile-settings-side">
+        <section className="panel panel-pad profile-features-card">
+          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><Compass size={18}/></div>
+          <div className="profile-feature-grid">
+            <Link href="/ai" className="profile-feature-link"><Bot size={19}/><span><strong>{t('featureChat')}</strong><small>{t('featureChatText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href="/agents" className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href="/workbench" className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href="/history" className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href="/ai/usage" className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
+          </div>
+        </section>
+
+
         <details className="panel panel-pad profile-setting-card profile-accordion">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الخصوصية والتحكم':'PRIVACY & CONTROL'}</span><h2>{isAr?'كيف يعمل حسابك':'How your account works'}</h2><p>{isAr?'معلومات واضحة عن حفظ البيانات وصلاحيات التطبيق.':'Clear information about data storage and app permissions.'}</p></div><ShieldCheck size={18}/></div></summary>
           {[isAr?'بيانات الملف والمهام المرتبطة بحسابك تُحفظ في مساحة حسابك عند تسجيل الدخول.':'Profile details and tasks are saved to your account when signed in.',isAr?'تفضيلات المظهر واللغة والتنبيهات تُحفظ على هذا الجهاز.':'Appearance, language, and notification preferences are saved on this device.',isAr?'لا يتم تنفيذ إجراءات خارجية دون موافقتك.':'No external action is taken without your approval.'].map((item,index)=><div className="setting-row profile-trust-row" key={index}><span className="specialty-icon"><Check size={14}/></span><strong>{item}</strong></div>)}
