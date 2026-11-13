@@ -2408,3 +2408,82 @@ body:has(.ai-chat-page){
  .app-shell .mobile-nav{gap:3px!important;padding-inline:5px!important}
  .app-shell .mobile-nav .mobile-nav-link{font-size:8px!important}
 }
+
+
+/* Theme-tinted translucent cards — no glass blur, shine, or frosted overlay. */
+.app-shell{
+ --omda-card-tint:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 12%,hsl(var(--card) / 1));
+ --omda-card-border:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 26%,hsl(var(--card-border) / 1));
+}
+.app-shell .panel,
+.app-shell [class*="card"]:not(button),
+.app-shell [class*="panel"]:not(button),
+.app-shell [class*="tile"]:not(button),
+.app-shell [class*="surface"]:not(button),
+.app-shell [class*="stat"],
+.app-shell [class*="kpi"],
+.app-shell [class*="notice-bar"],
+.app-shell [class*="setting-row"],
+.app-shell [class*="history-item"],
+.app-shell [class*="task-row"],
+.app-shell .stats-grid>*,
+.app-shell .dashboard-grid>*,
+.app-shell .dashboard-analytics-grid>*,
+.app-shell .market-grid>*,
+.app-shell .profile-settings-layout>*,
+.app-shell .profile-settings-side>*{
+ background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 12%,hsl(var(--card) / 68%))!important;
+ background-image:none!important;
+ border-color:var(--omda-card-border)!important;
+ box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
+ -webkit-backdrop-filter:none!important;
+ backdrop-filter:none!important;
+}
+.app-shell .panel:hover,
+.app-shell [class*="card"]:not(button):hover,
+.app-shell [class*="tile"]:not(button):hover{
+ border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 42%,hsl(var(--card-border) / 1))!important;
+}
+/* Restore solid theme buttons; keep each button's existing accent/semantic color. */
+.app-shell button:not(:disabled),
+.app-shell .button,
+.app-shell .icon-button,
+.app-shell .lang-button,
+.app-shell .status-button,
+.app-shell .curtain-profile-link{
+ -webkit-backdrop-filter:none!important;
+ backdrop-filter:none!important;
+}
+.app-shell button:not(:disabled):not(.button-primary):not(.button-danger):not(.button-quiet):not(.ai-send-button),
+.app-shell .icon-button:not(.button-primary):not(.button-danger),
+.app-shell .lang-button,
+.app-shell .status-button,
+.app-shell .curtain-profile-link{
+ background-image:none!important;
+ background-color:transparent!important;
+}
+.app-shell .button-primary,.app-shell .ai-send-button{
+ background-image:linear-gradient(115deg,var(--omda-accent,var(--profile-accent,#78a9ff)),var(--omda-accent-2,#a78bfa))!important;
+ border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 55%,transparent)!important;
+}
+.app-shell .button-quiet,.app-shell .icon-button,.app-shell .ai-plus-button,.app-shell .ai-chat-actions .button{
+ background-image:none!important;
+ background-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 9%,hsl(var(--card) / 82%))!important;
+ border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 25%,hsl(var(--card-border) / 1))!important;
+}
+.app-shell .mobile-nav{
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 8%,hsl(var(--card) / 94%))!important;
+ background-image:none!important;
+}
+.app-shell .mobile-chat-launcher{
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 18%,hsl(var(--card) / 90%))!important;
+ background-image:none!important;
+}
+.ai-composer .ai-voice-button{
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+ background-image:none!important;
+ background-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 10%,hsl(var(--card) / 88%))!important;
+ border-color:var(--omda-card-border)!important;
+}
