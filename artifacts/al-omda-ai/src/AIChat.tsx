@@ -79,6 +79,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [showCodeCanvas, setShowCodeCanvas] = useState(false);
   const [canvasCode, setCanvasCode] = useState('<!doctype html>\n<html lang="ar" dir="rtl">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
   const [canvasPreviewCode, setCanvasPreviewCode] = useState('');
+  const [currentMode, setCurrentMode] = useState<null | "word" | "excel" | "ppt" | "office">(null);
   const chatTopbarRef = useRef<HTMLElement | null>(null);
   const plusWrapRef = useRef<HTMLDivElement | null>(null);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
@@ -810,6 +811,19 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     : [];
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
   const openSettings = () => { setShowSettingsModal(true); void loadMemory(); void loadUsage(); };
+  const activateMode = (mode: "word" | "excel" | "ppt" | "office") => {
+    setCurrentMode(mode);
+    setShowPlusMenu(false);
+    const prompts = {
+      word: ar ? "أنشئ مستند Word احترافيًا وجاهزًا للتحميل عن: " : "Create a professional downloadable Word document about: ",
+      excel: ar ? "أنشئ ملف Excel منظمًا وجاهزًا للتحميل عن: " : "Create a structured downloadable Excel workbook about: ",
+      ppt: ar ? "جهّز عرض PowerPoint منظمًا بعناوين الشرائح ومحتواها وملاحظات المتحدث عن: " : "Prepare a PowerPoint presentation with slide titles, slide content and speaker notes about: ",
+      office: ar ? "استخدم أدوات الأوفيس المناسبة لإنجاز: " : "Use the appropriate Office tools to complete: "
+    };
+    setInput((value) => value.trim() ? value + "\n" + prompts[mode] : prompts[mode]);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  };
+  const clearMode = () => setCurrentMode(null);
   const openCodeCanvas = () => {
     const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
     const match = lastAssistant?.content.match(/\x60\x60\x60(?:html|HTML)?\s*\n([\s\S]*?)\x60\x60\x60/);
@@ -855,9 +869,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       </div>
       <div className="ai-chat-tools-caption">{ar ? "أدوات العمدة" : "AL OMDA TOOLS"}</div>
       <div className="ai-chat-tool-list">
-        <button type="button" onClick={()=>{setInput(ar ? "أنشئ مستند Word احترافيًا عن: " : "Create a professional Word document about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><FileText size={16}/>{ar ? "مستند Word" : "Word document"}</button>
-        <button type="button" onClick={()=>{setInput(ar ? "أنشئ جدول Excel منظمًا لـ: " : "Create a structured Excel workbook for: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Sheet size={16}/>{ar ? "جدول Excel" : "Excel spreadsheet"}</button>
-        <button type="button" onClick={()=>{setInput(ar ? "أنشئ عرض PowerPoint احترافيًا عن: " : "Create a professional PowerPoint about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Presentation size={16}/>{ar ? "عرض PowerPoint" : "PowerPoint presentation"}</button>
+        <button type="button" onClick={()=>{activateMode("office");setChatSidebarOpen(false);}}><BriefcaseBusiness size={16}/>{ar ? "حزمة برامج الأوفيس (Office)" : "Office suite"}</button>
         <button type="button" onClick={()=>{setChatSidebarOpen(false);openCodeCanvas();}}><Code2 size={16}/>{ar ? "محرر البرمجة (Code Canvas)" : "Code Canvas"}</button>
         <button type="button" onClick={()=>{setChatSidebarOpen(false);openSettings();}}><Bot size={16}/>{ar ? "ذاكرة العمدة والحد اليومي" : "Memory & daily usage"}</button>
       </div>
@@ -906,6 +918,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       </div>}
     </header>
     {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA selects a free specialist model and tries alternatives when needed."}</span></div>}
+    {currentMode && <div className="ai-chat-mode-banner"><span>{currentMode === "word" ? <FileText size={14}/> : currentMode === "excel" ? <Sheet size={14}/> : currentMode === "ppt" ? <Presentation size={14}/> : <BriefcaseBusiness size={14}/>} {currentMode === "word" ? (ar ? "وضع Word نشط" : "Word mode active") : currentMode === "excel" ? (ar ? "وضع Excel نشط" : "Excel mode active") : currentMode === "ppt" ? (ar ? "إعداد محتوى العرض التقديمي" : "Presentation content mode") : (ar ? "حزمة الأوفيس جاهزة" : "Office suite ready")}</span><button type="button" onClick={clearMode} aria-label={ar ? "إلغاء الوضع" : "Clear mode"}><X size={14}/></button></div>}
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
@@ -924,8 +937,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to AL OMDA"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
-              <button type="button" onClick={() => { setInput(ar ? "أنشئ مستند Word احترافيًا جاهزًا للتحميل عن: " : "Create a downloadable Word document about: "); inputRef.current?.focus(); }}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند جاهز للتحميل" : "Create a downloadable document"}</small></span></button>
-              <button type="button" onClick={() => { setInput(ar ? "أنشئ ملف Excel منظمًا وجاهزًا للتحميل عن: " : "Create a downloadable Excel workbook about: "); inputRef.current?.focus(); }}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تنظيم البيانات والجداول" : "Organize data and tables"}</small></span></button>
+              <button type="button" onClick={() => activateMode("word")}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند جاهز للتحميل" : "Create a downloadable document"}</small></span></button>
+              <button type="button" onClick={() => activateMode("excel")}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تنظيم البيانات والجداول" : "Organize data and tables"}</small></span></button>
               <button type="button" onClick={() => { setInput(ar ? "اكتب كود HTML و CSS مع معاينة مباشرة: " : "Write HTML and CSS with a live preview: "); openCodeCanvas(); }}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح محرر الأكواد والمعاينة" : "Open code editor and preview"}</small></span></button>
               <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "AL OMDA memory"}</strong><small>{ar ? "إدارة الذاكرة والحد اليومي" : "Manage memory and daily usage"}</small></span></button>
             </div>
@@ -981,24 +994,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>{setShowChatMenu(false);setShowPlusMenu((v)=>!v)}}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
                 <button type="button" className="ai-plus-option" onClick={()=>{if(agentMode || loading || historyLoading)return;setShowPlusMenu(false);imageInputRef.current?.click();}} disabled={agentMode || loading || historyLoading}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
-                {[
-                  {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
-                  {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
-                  {icon:Palette,label:ar?"تصميم":"Design",prompt:ar?"أريد تصميم: ":"I want to design: "},
-                  {icon:FileText,label:ar?"مستند Word":"Word document",prompt:ar?"أنشئ مستند Word عن: ":"Create a Word document about: "},
-                  {icon:Sheet,label:"Excel",prompt:ar?"أنشئ ملف Excel لـ: ":"Create an Excel workbook for: "},
-                  {icon:Presentation,label:"PowerPoint",prompt:ar?"أنشئ عرض PowerPoint عن: ":"Create a PowerPoint presentation about: "},
-                  {icon:Search,label:ar?"بحث ودراسة":"Research",prompt:ar?"أجرِ بحثًا ودراسة عن: ":"Research and analyze: "},
-                  {icon:PenLine,label:ar?"كتابة محتوى":"Content writing",prompt:ar?"اكتب محتوى عن: ":"Write content about: "}
-                ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
+                <div className="ai-chat-menu-caption">{ar ? "برامج الأوفيس الكاملة" : "Office tools"}</div>
+                <button type="button" className="ai-plus-option" onClick={()=>activateMode("word")}><FileText size={16}/><span>{ar ? "مستند Word (مع زر تحميل)" : "Word document"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>activateMode("excel")}><Sheet size={16}/><span>{ar ? "جدول Excel (مع زر تحميل)" : "Excel workbook"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>activateMode("ppt")}><Presentation size={16}/><span>{ar ? "عرض PowerPoint (محتوى الشرائح)" : "PowerPoint slide content"}</span></button>
+                <div className="ai-chat-menu-divider"/>
                 <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);openCodeCanvas();}}><Code2 size={16}/><span>{ar ? "محرر ومعاين الأكواد (Canvas)" : "Code editor & preview"}</span></button>
-                <button type="button" className="ai-plus-option" onClick={()=>{if(signedIn)setAgentMode(true);setShowPlusMenu(false);}} disabled={!signedIn}><Bot size={16}/><span>{ar?"تشغيل وضع الوكيل المحلي":"Enable local Agent mode"}</span></button>
               </div>}
             </div>
             <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
             <button type="button" className={"ai-chat-mic-button" + (listening ? " is-listening" : "")} aria-label={listening ? copy.stop : copy.mic} title={listening ? copy.stop : copy.mic} onClick={toggleVoiceInput} disabled={!signedIn || loading || historyLoading}><Mic size={17}/></button>
-            <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>
-            <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={(!input.trim() && !pendingImage) || loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
+            {input.trim() || pendingImage ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
           </div>
 
           <div className="ai-composer-footer">
