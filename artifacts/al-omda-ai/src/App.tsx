@@ -1707,7 +1707,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <div className="profile-settings-layout">
               <section className="panel panel-pad profile-main-card profile-account-profile-card">
-          <div className="profile-section-heading"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div></div>
+          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && authStatus==='unconfigured' && <div className="notice-bar"><ShieldCheck size={15}/><span>{t('authUnavailable')}</span></div>}
           {!authLoading && authStatus==='offline' && <div className="notice-bar"><ShieldCheck size={15}/><span>{authError||t('apiUnavailable')}</span></div>}
