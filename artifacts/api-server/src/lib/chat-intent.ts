@@ -19,11 +19,10 @@ export function isHowToRequest(request: string): boolean {
 }
 
 function isNegatedFileCreationRequest(text: string): boolean {
-  return /(?:^|[\\s،,؛;])(?:مش|موش|لا|بدون|من\\s+غير)\\s*(?:(?:عايز|عاوز|محتاج|اريد|أريد)\\s*)?(?:اعمل|اعملي|اعمللي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|صمم|اكتب|ملف|مستند|شيت|مصنف)/i.test(text) ||
-    /(?:^|[\\s،,؛;])(?:ما|مت)\\s*(?:تعملش|تعمليش|تنشئش|تجهزش)\\s*(?:لي\\s*)?(?:ملف|مستند|شيت|مصنف)/i.test(text) ||
-    /\\b(?:don't|do not|never|no need to)\\s+(?:create|make|generate|prepare|export|download)\\b/i.test(text);
+  return /(?:^|[\s،,؛;])(?:مش|موش|لا|بدون|من\s+غير)\s*(?:(?:عايز|عاوز|محتاج|اريد|أريد)\s*)?(?:اعمل|اعملي|اعمللي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|صمم|اكتب|ملف|مستند|شيت|مصنف)/i.test(text) ||
+    /(?:^|[\s،,؛;])(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تجهزش)\s*(?:لي\s*)?(?:ملف|مستند|شيت|مصنف)/i.test(text) ||
+    /\b(?:don't|do not|never|no need to)\s+(?:create|make|generate|prepare|export|download)\b/i.test(text);
 }
-
 export function isExcelFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
