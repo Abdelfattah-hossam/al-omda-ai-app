@@ -1176,7 +1176,7 @@ function App() {
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:16}}>
         <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowHistory} disabled={httpFlowHistoryBusy||!localAgentToken.trim()}>{isAr?'تحديث السجل':'Refresh history'}</button>
         <button type="button" className="button button-quiet button-small" onClick={exportHttpFlowHistory} disabled={!httpFlowHistory.length}>{isAr?'تصدير JSON':'Export JSON'}</button>
-        <button type="button" className="button button-quiet button-small" onClick={clearHttpFlowHistory} disabled={httpFlowHistoryBusy||!httpFlowHistory.length}>{isAr?'مسح السجل':'Clear history'}</button>
+        <button type="button" className="button button-quiet button-small" onClick={clearHttpFlowHistory} disabled={httpFlowHistoryBusy||!httpFlowHistory.length||!localAgentToken.trim()}>{isAr?'مسح السجل':'Clear history'}</button>
         <span className="section-meta">{isAr?'يُحفظ ملخص آمن لآخر 100 مقارنة، دون تخزين نصوص الاستجابات أو قيم الترويسات أو معاملات الرابط.':'Stores up to 100 sanitized summaries; response bodies, header values, and URL query strings are not persisted.'}</span>
       </div>
       {httpFlowHistoryError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{httpFlowHistoryError}</div>}

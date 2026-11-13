@@ -381,7 +381,7 @@ async function clearHttpFlowHistory(): Promise<void> {
       if (!isInside(workspaceRoot, actual)) throw new Error("HTTPFlow history file escapes the workspace.");
       const info = await stat(actual);
       if (!info.isFile()) throw new Error("HTTPFlow history is not a regular file.");
-      await unlink(actual);
+      await unlink(candidate);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
