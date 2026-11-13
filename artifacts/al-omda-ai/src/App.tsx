@@ -20,7 +20,7 @@ import {
 import {
   Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
-  Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
+  Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard, ClipboardList,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
   X, Menu, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
@@ -151,7 +151,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
 
 const translations = {
   ar: {
-    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
+    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', projectStatus:'حالة المشروع', profile:'الملف الشخصي',
     workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'فوّض المهام بثقة. واحتفظ بزمام كل خطوة.', heroText:'اختر اختصاصاً، راجع الخطة المقترحة، ثم قرر بنفسك ما الذي يتقدم.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لتراجعها قبل التنفيذ.', planDisclaimer:'سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لمراجعتها قبل بدء التنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة وتنفيذ', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'بعد موافقتك على كل خطوة، ينفّذها العمدة تلقائياً ويحفظ مخرجها هنا.',
@@ -164,7 +164,7 @@ const translations = {
     confirmStop:'هل تريد إيقاف هذه المهمة؟', active:'نشط', availableFor:'اختصاص متاح', privacy:'خصوصية وتحكم', assistantLabel:'موجّه AL OMDA', noMore:'هذا العرض لا يتصل بأي خدمة خارجية.', chatWelcome:'أهلاً بك. صف المهمة التي تريد تفويضها، وسأعرض لك تصوراً محلياً لتراجعه.', localResponse:'هذا تصور توضيحي مبني على قالب محلي. لا يتصل بذكاء اصطناعي ولا ينفّذ أي خطوة.',
   },
   en: {
-    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', profile:'Profile',
+    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', projectStatus:'Project status', profile:'Profile',
     workspace:'WORKSPACE', account:'ACCOUNT', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
     developerTitle:'Developer console', developerSub:'A technical view of your workspace', dashboard:'Dashboard', welcome:'Your workspace, in full view.', hello:'Welcome back,', hero:'Delegate with confidence. Keep every decision yours.', heroText:'Choose a specialty, review the proposed plan, then decide what moves forward.', newRequest:'New request', activeTasks:'Awaiting review', approvedPlans:'Plans approved', specialists:'Specialties available', totalTasks:'Total tasks', preview:'LOCAL PREVIEW', recent:'Recent tasks', seeHistory:'View history', specialties:'Agent specialties', allSix:'All six specialties', demoNotice:'Seeded demo data. Plans are deterministic local previews—not AI output and not real execution.',
     marketplace:'Agent marketplace', marketplaceSub:'Specialists for focused work, always under your oversight.', all:'All', available:'Available now', useAgent:'Start a request', request:'Request help', workbenchSub:'Describe what you need, then review every proposed step.', requestLabel:'What would you like to delegate?', requestPlaceholder:'Example: Outline a launch plan for a subscription service for small businesses in Riyadh...', chooseSpecialty:'Choose a specialty', generatePlan:'Propose a plan', yourPlan:'Proposed plan', planEmptyTitle:'Your plan starts here', planEmptyText:'Describe your request and choose a specialty. AL OMDA will create a tailored AI plan for your review before execution.', planDisclaimer:'AL OMDA will create a tailored AI plan for your review before execution begins.', edit:'Edit', save:'Save changes', stepDetails:'Step details', expectedOutput:'Expected output', completionCheck:'Completion check', approve:'Approve & run', reject:'Reject step', approvedStep:'Approved', rejectedStep:'Rejected — edit or approve to continue', pendingStep:'Awaiting your approval', step:'Step', pause:'Pause task', resume:'Resume review', stop:'Stop task', paused:'Paused', stopped:'Stopped', completed:'Plan approved', reviewStatus:'Awaiting review', progress:'Plan progress', allApproved:'All proposed steps have been approved.', noExecution:'Once you approve a step, AL OMDA executes it automatically and saves the deliverable here.',
@@ -343,7 +343,7 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
-  { path:'/workbench', key:'workbench', icon:MessageSquareText }, { path:'/history', key:'history', icon:History },
+  { path:'/workbench', key:'workbench', icon:MessageSquareText }, { path:'/history', key:'history', icon:History }, { path:'/project-status', key:'projectStatus', icon:ClipboardList },
 ];
 const STORE_KEY = 'al-omda-demo-v1';
 const starterTasks: Task[] = [
@@ -445,7 +445,7 @@ function App() {
   const [httpFlowHistory, setHttpFlowHistory] = useState<Array<{ id: string; createdAt: string; target: string; method: string; roles: string[]; responses: Array<{ role: string; status: number; durationMs: number; bodyLength: number }>; comparison: { sameStatus: boolean; sameBody: boolean; bodyDifferenceAt: number | null; changedHeaders: string[] } }>>([]);
   const [httpFlowHistoryBusy, setHttpFlowHistoryBusy] = useState(false);
   const [httpFlowHistoryError, setHttpFlowHistoryError] = useState("");
-  const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean }>>([]);
+  const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean; purposes?: string[]; priority?: number }>>([]);
   const [modelProvidersError, setModelProvidersError] = useState("");
   const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
   const [browserSiteInput, setBrowserSiteInput] = useState("");
@@ -1277,7 +1277,7 @@ function App() {
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
-      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small></div>)}</div>}
+      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
       <p className="section-meta" style={{marginTop:10}}>{isAr?'لإضافة مزود جديد، عدّل .omda/models.json وفق المثال .omda/models.example.json ثم حدّث القائمة.':'Add providers in .omda/models.json using .omda/models.example.json, then refresh this list.'}</p>
     </section>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
@@ -1636,6 +1636,89 @@ function App() {
     </div>
   </div>;
 
+  const projectStatusPage = () => {
+    const sections = isAr ? [
+      { title:'ما تم بناؤه بالفعل', items:[
+        'واجهة ويب عربية وإنجليزية ومساحة عمل للمهام والمحادثات والملف الشخصي.',
+        'Agent Runtime محلي تجريبي مع أدوات الملفات والجلسات واستئناف العمل.',
+        'موافقات قبل عمليات الكتابة وبعض أوامر الطرفية واستدعاءات MCP.',
+        'Browser Workspace بقائمة سماح للمواقع، وتكامل Playwright.',
+        'مساحات مقترحات معزولة للوكلاء بدل تعديل ملفات المشروع مباشرة.',
+        'أدوات HTTPFlow وسجل مقارنات منقح، وأدوات فحص DNS وTLS وترويسات الأمان.',
+        'أساس Supervisor للتحقق من تحديثات Git قبل تطبيقها.',
+        'اختبارات آلية وعمليات CI، وتوجيه مزودي النماذج مع آليات fallback/cooldown.'
+      ]},
+      { title:'المراحل المتبقية', items:[
+        'إكمال Sandbox قوي لتشغيل الوكلاء بحدود للوقت والذاكرة والملفات والشبكة.',
+        'استكمال واختبار تحويل النماذج عند الأعطال والحصص والمهل الزمنية.',
+        'إكمال دورة تعاون الوكلاء: تخطيط وتوزيع وتنفيذ ومراجعة وتجميع النتائج.',
+        'اختبارات تكامل فعلية للمتصفح والملفات والطرفية وMCP.',
+        'استكمال تطبيق سطح المكتب والتحديث الآمن والتوقيع عند توفر الشهادات.',
+        'اختبار فعلي على Windows وmacOS وLinux والهاتف.',
+        'التحقق من نشر Cloudflare وصحة الإنتاج ومزامنة المهام والملفات.'
+      ]},
+      { title:'بوابات الإكمال والقبول', items:[
+        'مراجعة PR رقم 20 ودمجه بعد استكمال التحقق.',
+        'اجتياز اختبارات البناء والوحدات والتكامل والأمان.',
+        'التأكد من عدم خروج الأدوات عن صلاحيات المستخدم أو مساحة العمل المسموح بها.',
+        'اختبار معاينة وتنزيل ملفات Word وExcel على الهاتف والكمبيوتر.',
+        'التحقق من نشر النسخة النهائية قبل إعلان الجاهزية.'
+      ]}
+    ] : [
+      { title:'Built so far', items:[
+        'Arabic/English web workspace for tasks, chats, and profile settings.',
+        'Experimental local Agent Runtime with file tools, sessions, and resume support.',
+        'Approval gates for file writes, selected terminal commands, and MCP calls.',
+        'Browser Workspace with host allowlists and Playwright integration.',
+        'Isolated agent proposal workspaces instead of direct project edits.',
+        'HTTPFlow comparison history and passive DNS/TLS/security-header inspection.',
+        'Supervisor foundation for verifying Git updates before applying them.',
+        'Automated tests and CI, plus model routing with fallback/cooldown foundations.'
+      ]},
+      { title:'Remaining milestones', items:[
+        'Finish a strong execution sandbox with time, memory, file, and network limits.',
+        'Complete and test provider failover for outages, quotas, and timeouts.',
+        'Complete multi-agent planning, delegation, execution, review, and result synthesis.',
+        'Add real integration tests for browser, files, terminal, and MCP.',
+        'Finish desktop packaging and secure updates; sign where certificates are available.',
+        'Test on real Windows, macOS, Linux, and mobile devices.',
+        'Verify Cloudflare production deployment, task/file sync, and runtime health.'
+      ]},
+      { title:'Release acceptance gates', items:[
+        'Complete PR #20 review and merge only after validation.',
+        'Pass build, unit, integration, and security tests.',
+        'Verify tools cannot exceed user permissions or workspace boundaries.',
+        'Test Word/Excel preview and downloads on mobile and desktop.',
+        'Verify the final production deployment before declaring release readiness.'
+      ]}
+    ];
+    return <div className="page-enter">
+      {pageHeading(isAr?'متابعة التطوير':'DEVELOPMENT TRACKER',isAr?'حالة مشروع العمدة':'AL OMDA AI project status',isAr?'هنا تقدر تتابع اللي اتبنى واللي لسه ناقص قبل الإطلاق.':'A transparent view of implemented work and remaining release milestones.')}
+      <div className="notice-bar" style={{marginBottom:16}}><ShieldCheck size={15}/><span>{isAr?'التوثيق لا يعتبر الميزة مكتملة لمجرد وجود الكود؛ لازم اختبار وتشغيل فعلي.':'Code presence alone does not mark a feature complete; testing and real operation are required.'}</span></div>
+      <section className="panel panel-pad" style={{marginBottom:16}}>
+        <div className="section-head"><h2 className="section-title">{isAr?'آخر تحديثات GitHub':'Latest GitHub work'}</h2><span className="status-chip approved">{isAr?'متابعة مباشرة':'Tracked'}</span></div>
+        <p style={{lineHeight:1.9,fontSize:13,color:'var(--text-secondary,#aeb5bf)'}}>{isAr?'تمت إضافة صفحة حالة المشروع داخل التطبيق. كما أُضيف توثيق عربي للمستودع، وتوجد أعمال تقنية حديثة على مزودي النماذج وSupervisor ما زالت تخضع لمراجعة واختبارات حسب حالة كل طلب.':'The project status is now visible in-app. An Arabic repository report was also added. Recent provider-routing and Supervisor work must still be judged by each PR’s review and test status.'}</p>
+        <div style={{display:'flex',gap:9,flexWrap:'wrap'}}>
+          <a className="button button-quiet button-small" href="https://github.com/Abdelfattah-hossam/al-omda-ai-app" target="_blank" rel="noreferrer">GitHub repository <Globe size={13}/></a>
+          <a className="button button-quiet button-small" href="https://github.com/Abdelfattah-hossam/al-omda-ai-app/pull/20" target="_blank" rel="noreferrer">PR #20 <ArrowUpLeft size={13}/></a>
+          <a className="button button-quiet button-small" href="https://github.com/Abdelfattah-hossam/al-omda-ai-app/blob/main/docs/PROJECT_STATUS_AR.md" target="_blank" rel="noreferrer">{isAr?'التقرير التفصيلي':'Full project report'} <FileText size={13}/></a>
+        </div>
+      </section>
+      <div style={{display:'grid',gap:14}}>
+        {sections.map((section,index)=><section className="panel panel-pad" key={section.title}>
+          <div className="section-head"><h2 className="section-title">{section.title}</h2><span className="section-meta">{String(index+1).padStart(2,'0')}</span></div>
+          <div style={{display:'grid',gap:10}}>
+            {section.items.map((item,i)=><div key={i} style={{display:'flex',alignItems:'flex-start',gap:10,lineHeight:1.8,fontSize:13}}>
+              <span style={{flex:'none',width:22,height:22,borderRadius:7,display:'grid',placeItems:'center',background:index===0?'rgba(86,170,125,.14)':'rgba(198,167,108,.12)',color:index===0?'#78c99a':'#c6a76c',fontSize:11,fontWeight:700}}>{index===0?'✓':i+1}</span>
+              <span>{item}</span>
+            </div>)}
+          </div>
+        </section>)}
+      </div>
+      <p style={{fontSize:11,color:'var(--text-muted,#89919c)',lineHeight:1.8,marginTop:14}}>{isAr?'ملاحظة: لا يعني نجاح CI وحده أن التطبيق نُشر أو اختُبر على أجهزة حقيقية.':'Note: CI passing alone does not prove production deployment or real-device testing.'}</p>
+    </div>;
+  };
+
   let page:ReactNode;
   if (detailMatch && currentTask) page = taskDetailPage(currentTask);
   else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} view="usage" />;
@@ -1644,8 +1727,9 @@ function App() {
   else if (path === '/workbench') page = workbenchPage();
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
+  else if (path === '/project-status') page = projectStatusPage();
   else page = dashboardPage();
-  const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : path === '/project-status' ? 'projectStatus' : 'overview';
   return <div className="app-shell" data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
