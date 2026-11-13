@@ -555,15 +555,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const currentProjectSpecialty = detectProjectSpecialty(text);
       const linkedProjectMessage = [...next].reverse().find((message) => message.role === "assistant" && Boolean(message.taskId));
       const explicitlyNewProject = /(?:مشروع جديد|ابدأ مشروع جديد|انشئ مشروع جديد|new project|start a new project)/i.test(text);
-      // Keep follow-up chat messages attached to the existing task. Only an explicit new-project request creates another task.
-      if (linkedProjectMessage?.taskId && !explicitlyNewProject) {
+      const continuesExistingProject = /^(?:كمل|كمّل|استكمل|تابع|نفذ|نفّذ|عدّل|عدل|راجع|اختبر|صلح|أصلح|طوّر|طور|ابدأ|ابدا|continue|resume|proceed|implement|fix|test|review|update)\\b?/i.test(text.trim());
+      // A previous task is linked only when the current message is clearly a project follow-up.
+      // Ordinary questions and greetings must remain ordinary chat replies.
+      if (linkedProjectMessage?.taskId && continuesExistingProject && !explicitlyNewProject) {
         assistantMessage = { ...assistantMessage, taskId: linkedProjectMessage.taskId, taskTitle: linkedProjectMessage.taskTitle };
       }
-      const projectSpecialty = currentProjectSpecialty && (!linkedProjectMessage?.taskId || explicitlyNewProject)
+      const projectSpecialty = currentProjectSpecialty
         ? currentProjectSpecialty
-        : linkedProjectMessage?.taskId
-          ? null
-          : detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n"));
+        : continuesExistingProject && !linkedProjectMessage?.taskId
+          ? detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n"))
+          : null;
       if (projectSpecialty) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
