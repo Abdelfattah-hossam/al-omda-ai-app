@@ -1493,3 +1493,17 @@ body:has(.ai-chat-page){
  .ai-chat-page .chat-message{max-width:100%;font-size:13px}
  .ai-chat-page .ai-composer-tools{gap:4px}
 }
+
+
+/* Preserve the established bounded transcript and fixed mobile chat viewport. */
+@media(min-width:651px){
+ .ai-chat-page>.panel.panel-pad:has(.chat-messages){min-height:0}
+ .ai-chat-page .chat-messages{min-height:0;max-height:52vh!important;flex:1 1 auto}
+ .ai-chat-page .ai-composer{position:relative}
+}
+@media(max-width:650px){
+ .main-area:has(.ai-chat-page) .ai-chat-page{gap:4px!important}
+ .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad:has(.chat-messages){height:0!important;min-height:0!important;flex:1 1 0!important;padding:0!important}
+ .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .chat-messages{height:0!important;min-height:0!important;max-height:none!important;flex:1 1 0!important}
+ .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .ai-composer{position:relative!important;flex:0 0 auto!important}
+}
