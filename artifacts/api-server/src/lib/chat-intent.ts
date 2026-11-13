@@ -3,7 +3,12 @@
  * These functions intentionally prefer a normal chat answer over an unsolicited attachment.
  */
 export function isHowToRequest(request: string): boolean {
-  return /^\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
+  const text = request.trim();
+  return /^(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)\b?/i.test(text) ||
+    /^(?:ممكن|لو سمحت|من فضلك)?\s*(?:تشرح|اشرح|علمني|علّمْني|teach me)\b/i.test(text) ||
+    /^(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:اتعلم|أتعلم|افهم|أفهم|اعرف|أعرف)\b/i.test(text) ||
+    /(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(text) ||
+    /^(?:can you explain|could you explain|show me how)\b/i.test(text);
 }
 
 export function isExcelFileRequest(request: string): boolean {
