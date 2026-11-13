@@ -25,8 +25,8 @@ export type CreateHttpFlowHistoryInput = {
   comparison: {
     sameStatus?: unknown;
     sameBody?: unknown;
-    bodyDiff?: { firstDifferenceAt?: unknown };
-    headerDifferences?: Array<{ header?: unknown }>;
+    bodyDiff?: { firstDifferenceAt?: unknown; [key: string]: unknown };
+    headerDifferences?: Array<{ header?: unknown; [key: string]: unknown }>;
   };
 };
 
