@@ -77,7 +77,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showCodeCanvas, setShowCodeCanvas] = useState(false);
-  const [canvasCode, setCanvasCode] = useState('<!doctype html>\\n<html lang="ar" dir="rtl">\\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
+  const [canvasCode, setCanvasCode] = useState('<!doctype html>\n<html lang="ar" dir="rtl">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
   const [canvasPreviewCode, setCanvasPreviewCode] = useState('');
   const chatTopbarRef = useRef<HTMLElement | null>(null);
   const plusWrapRef = useRef<HTMLDivElement | null>(null);
@@ -812,7 +812,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const openSettings = () => { setShowSettingsModal(true); void loadMemory(); void loadUsage(); };
   const openCodeCanvas = () => {
     const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
-    const match = lastAssistant?.content.match(/\x60\x60\x60(?:html|HTML)?\\s*\\n([\\s\\S]*?)\x60\x60\x60/);
+    const match = lastAssistant?.content.match(/\x60\x60\x60(?:html|HTML)?\s*\n([\s\S]*?)\x60\x60\x60/);
     if (match?.[1]?.trim()) { setCanvasCode(match[1].trim()); setCanvasPreviewCode(match[1].trim()); }
     setShowCodeCanvas(true); setShowPlusMenu(false);
   };
