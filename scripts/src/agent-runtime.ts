@@ -17,6 +17,7 @@ import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
 import { parseModelProviderConfig } from "./model-providers.js";
+import { clearProviderCooldown, getProviderCooldownRemainingMs, recordProviderFailure } from "./provider-health.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
 import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
@@ -660,6 +661,7 @@ async function callMcpTool(serverName: string, toolName: string, args: Record<st
 
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string };
+const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
 const FALLBACK_MODEL_BASE_URL = (process.env.OMDA_AGENT_FALLBACK_MODEL_BASE_URL || "").replace(/\/+$/, "");
@@ -796,8 +798,17 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
   for (const provider of providers) {
+    const providerKey = provider.name + "|" + provider.base + "|" + provider.model;
+    const cooldownRemaining = getProviderCooldownRemainingMs(providerKey, providerCooldowns);
+    if (cooldownRemaining > 0) {
+      failures.push(provider.name + ": cooling down for " + Math.ceil(cooldownRemaining / 1000) + "s");
+      onProgress?.({ type: "status", status: "provider_skipped", provider: provider.name, cooldownMs: cooldownRemaining });
+      continue;
+    }
     const started = Date.now();
     let emitted = false;
+    let responseStatus: number | null = null;
+    let retryAfter: string | null = null;
     try {
       const headers = new Headers({ "content-type": "application/json" });
       if (provider.key) headers.set("authorization", "Bearer " + provider.key);
@@ -806,6 +817,8 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
         body: JSON.stringify({ model: provider.model, messages, tools: availableTools, tool_choice: "auto", temperature: 0.2, stream: true, stream_options: { include_usage: true } }),
         signal: AbortSignal.timeout(90000),
       });
+      responseStatus = response.status;
+      retryAfter = response.headers.get("retry-after");
       if (!response.ok) {
         const detailText = await response.text().catch(() => "");
         let detail = "Model request failed.";
@@ -817,10 +830,13 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
         onProgress?.({ type: "token", text: token, provider: provider.name });
       });
       if (!streamed.message || typeof streamed.message !== "object") throw new Error("Model returned an invalid streaming completion.");
+      clearProviderCooldown(providerKey, providerCooldowns);
       return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, provider: provider.name };
     } catch (error) {
       const message = error instanceof Error ? error.message : "request failed";
+      const cooldownMs = recordProviderFailure(providerKey, responseStatus, retryAfter, providerCooldowns);
       failures.push(provider.name + ": " + message);
+      onProgress?.({ type: "status", status: "provider_cooldown", provider: provider.name, cooldownMs, error: message.slice(0, 240) });
       if (emitted) throw error;
     }
   }
