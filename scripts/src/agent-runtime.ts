@@ -973,7 +973,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (origin) {
     if (!isAllowedBrowserOrigin(origin, ALLOWED_ORIGINS)) { send(res, 403, { error: "This browser origin is not allowed to connect to the local agent runtime." }); return; }
     res.setHeader("access-control-allow-origin", origin);
-    res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
     res.setHeader("access-control-allow-headers", "authorization, content-type");
     if (req.headers["access-control-request-private-network"] === "true") res.setHeader("access-control-allow-private-network", "true");
     res.setHeader("access-control-max-age", "600");

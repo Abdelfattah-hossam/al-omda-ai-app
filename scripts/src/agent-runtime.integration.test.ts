@@ -159,20 +159,83 @@ describe("local Agent runtime HTTP integration", () => {
     }
   });
 
-  test("enforces the exact browser origin allowlist for preflight requests", async () => {
+  test("enforces the exact browser origin allowlist and permits authenticated history deletion preflight", async () => {
     const allowed = await request("/v1/runtime/status", {
       method: "OPTIONS",
-      headers: { origin: allowedOrigin, "access-control-request-private-network": "true" },
+      headers: { origin: allowedOrigin, "access-control-request-private-network": "true", "access-control-request-method": "DELETE" },
     });
     assert.equal(allowed.status, 204);
     assert.equal(allowed.headers.get("access-control-allow-origin"), allowedOrigin);
     assert.equal(allowed.headers.get("access-control-allow-private-network"), "true");
+    assert.match(allowed.headers.get("access-control-allow-methods") || "", /DELETE/);
 
     const denied = await request("/v1/runtime/status", {
       method: "OPTIONS",
       headers: { origin: "https://attacker.example" },
     });
     assert.equal(denied.status, 403);
+  });
+
+  test("persists sanitized HTTPFlow comparisons and supports authenticated history export and clearing", async () => {
+    const target = createHttpServer((req, res) => {
+      const role = String(req.headers["x-role"] || "anonymous");
+      res.writeHead(200, { "content-type": "application/json", "x-audit-value": role });
+      res.end(JSON.stringify({ privateResponse: "private-response-" + role }));
+    });
+    await new Promise<void>((resolve, reject) => {
+      target.once("error", reject);
+      target.listen(0, "127.0.0.1", () => resolve());
+    });
+    const port = (target.address() as AddressInfo).port;
+    const historyRuntime = await startRuntime({
+      OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
+      OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+      OMDA_TEST_ADMIN_ROLE: "admin-secret-value",
+    });
+    try {
+      await mkdir(join(historyRuntime.workspace, ".omda"), { recursive: true });
+      await writeFile(join(historyRuntime.workspace, ".omda", "http-roles.json"), JSON.stringify({
+        roles: [
+          { name: "anonymous" },
+          { name: "admin", headersFromEnv: { "x-role": "OMDA_TEST_ADMIN_ROLE" } },
+        ],
+      }), "utf8");
+
+      const comparison = await fetch(historyRuntime.baseUrl + "/v1/http/compare", {
+        method: "POST",
+        headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+        body: JSON.stringify({ url: "http://127.0.0.1:" + port + "/private?access_token=query-secret#fragment", method: "GET", roles: ["anonymous", "admin"] }),
+      });
+      assert.equal(comparison.status, 200);
+      const comparisonData = await comparison.json() as { historySaved: boolean };
+      assert.equal(comparisonData.historySaved, true);
+
+      const listed = await fetch(historyRuntime.baseUrl + "/v1/http/history", {
+        headers: { authorization: "Bearer " + token },
+      });
+      assert.equal(listed.status, 200);
+      const payload = await listed.json() as { records: Array<{ target: string; responses: unknown[]; comparison: { sameBody: boolean; changedHeaders: string[] } }> };
+      assert.equal(payload.records.length, 1);
+      assert.equal(payload.records[0].target, "http://127.0.0.1:" + port + "/private");
+      assert.equal(payload.records[0].comparison.sameBody, false);
+      assert.ok(payload.records[0].comparison.changedHeaders.includes("x-audit-value"));
+      const serialized = JSON.stringify(payload.records[0]);
+      assert.doesNotMatch(serialized, /query-secret|access_token|fragment|private-response|admin-secret-value/);
+      assert.equal(payload.records[0].responses.length, 2);
+
+      const cleared = await fetch(historyRuntime.baseUrl + "/v1/http/history", {
+        method: "DELETE",
+        headers: { authorization: "Bearer " + token },
+      });
+      assert.equal(cleared.status, 200);
+      const afterClear = await fetch(historyRuntime.baseUrl + "/v1/http/history", {
+        headers: { authorization: "Bearer " + token },
+      });
+      assert.deepEqual((await afterClear.json() as { records: unknown[] }).records, []);
+    } finally {
+      await stopRuntime(historyRuntime);
+      await new Promise<void>((resolve) => target.close(() => resolve()));
+    }
   });
 
   test("persists, lists, and reloads a valid agent session", async () => {
