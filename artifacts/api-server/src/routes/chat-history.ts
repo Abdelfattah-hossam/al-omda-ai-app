@@ -197,7 +197,12 @@ router.put("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise
     if (!messages) { res.status(400).json({ error: "Conversation messages are invalid or too large." }); return; }
     const requestedTitle = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
     const firstUserMessage = messages.find((message) => message.role === "user")?.content ?? "";
-    const title = requestedTitle || firstUserMessage.slice(0, 72) || "محادثة جديدة";
+    const ownerQuery = new URLSearchParams({ select: "id,title", id: `eq.${conversationId}`, user_id: `eq.${session.user.id}`, limit: "1" });
+    const ownerResponse = await supabaseFetch(`/rest/v1/ai_conversations?${ownerQuery.toString()}`, {}, session.accessToken);
+    const existingRows = await readSupabaseJson<Array<{ id: string; title: string }>>(ownerResponse);
+    if (!existingRows[0]) { res.status(404).json({ error: "Conversation not found." }); return; }
+    const existingTitle = typeof existingRows[0].title === "string" ? existingRows[0].title.trim() : "";
+    const title = requestedTitle || (existingTitle && existingTitle !== "محادثة جديدة" ? existingTitle : firstUserMessage.slice(0, 72) || existingTitle || "محادثة جديدة");
     const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
     const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, {
       method: "PATCH",
