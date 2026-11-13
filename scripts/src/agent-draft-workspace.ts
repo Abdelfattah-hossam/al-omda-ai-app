@@ -1,7 +1,7 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
 export function resolveAgentDraftPath(root: string, input: unknown, allowRoot = false): string {
-  if (typeof input !== "string" || !input.trim() || input.includes("\\0") || isAbsolute(input)) {
+  if (typeof input !== "string" || !input.trim() || input.includes("\0") || isAbsolute(input)) {
     throw new Error("A valid relative draft path is required.");
   }
   const candidate = resolve(root, input);
@@ -17,7 +17,7 @@ export function resolveAgentDraftPath(root: string, input: unknown, allowRoot = 
 }
 
 export function isAgentDraftPathAllowed(path: string): boolean {
-  if (!path || path.includes("\\0") || path.startsWith("/") || path.split("/").some((part) => !part || part === "." || part === "..")) return false;
+  if (!path || path.includes("\0") || path.startsWith("/") || path.split("/").some((part) => !part || part === "." || part === "..")) return false;
   const segments = path.split("/").map((part) => part.toLowerCase());
   return !segments.some((part) =>
     part === ".git" || part === ".omda" || part === "node_modules" || part === "dist" ||
