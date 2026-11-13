@@ -2995,3 +2995,19 @@ body:has(.ai-chat-page){
   .ai-chat-sidebar{transform:none!important}
   .ai-chat-sidebar-scrim{display:none!important}
 }
+
+
+/* Last-pass guard: labels, headings, values and text-only wrappers never get card paint. */
+.app-shell .panel :is(h1,h2,h3,h4,h5,h6,p,label,strong,em,b,small),
+.app-shell .panel [class*="stat"]:not(.stat-card),
+.app-shell .panel :is(.setting-row,.task-main,.history-item-open,.section-head,.section-title,.section-meta,.eyebrow,.profile-section-heading,.profile-summary,.profile-fields-grid,.profile-actions-row,.profile-accordion-summary,.profile-feature-grid,.dashboard-task-name,.dashboard-task-table,.dashboard-task-table th,.dashboard-task-table td){
+  background:transparent!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.app-shell .panel :is(h1,h2,h3,h4,h5,h6,p,label,strong,em,b,small) {
+  border-color:transparent!important;
+}
