@@ -147,7 +147,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const title = requested?.trim().slice(0, 100);
     if (!title || title === conversation.title) return;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversation.id), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title, messages: conversation.id === activeConversationId ? messagesRef.current : [] }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversation.id), { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation."));
       setConversations((current) => current.map((item) => item.id === conversation.id ? { ...item, title } : item));
