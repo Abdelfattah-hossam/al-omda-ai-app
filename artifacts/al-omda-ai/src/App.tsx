@@ -1771,7 +1771,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
   return <div className="app-shell" data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
-      <div className="nav-caption">{t('workspace')}</div><nav className="nav-stack">{navItems.map((item)=>navLink(item))}</nav>
+      <div className="sidebar-scroll">
+      <div className="nav-caption">{isAr?'عام':'GENERAL'}</div><nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)).map(item=>navLink(item))}</nav>
+      <div className="nav-caption sidebar-group-caption">{isAr?'الأنظمة والأدوات':'SYSTEMS'}</div><nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)).map(item=>navLink(item))}</nav>
+      <div className="nav-caption sidebar-group-caption">{isAr?'الأخيرة':'RECENTS'}</div><nav className="nav-stack sidebar-recents">{tasks.slice(0,4).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link"><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+      </div>
+      <div className="sidebar-bottom"><Link href="/profile" className="sidebar-settings-link"><Settings2 size={16}/>{isAr?'الإعدادات':'Settings'}</Link><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
       <div className="sidebar-bottom"><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
     </aside>
     <main className="main-area">
