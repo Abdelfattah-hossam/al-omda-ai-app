@@ -32,8 +32,9 @@ A separate Node.js runtime now provides the first local tools:
 - Direct model-visible MCP function discovery from configured tool schemas, with per-call approval and generic call fallback.
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
 - Browser Workspace with exact per-site hostname permissions and local Playwright MCP tool discovery; direct URL checks are an extra guardrail, not a complete browser/network sandbox.
-- Optional cross-platform user-service installer for local Agent auto-start on Linux, macOS, and Windows; platform-specific physical-device validation is still pending.
+- Desktop Workspace discovery for configured local Computer Use MCP tools, plus a cross-platform user-service installer for local Agent auto-start on Linux, macOS, and Windows; physical-device validation is still pending.
 - Optional native desktop control through the MIT-licensed Computer Use MCP companion (screen, accessibility, mouse, keyboard, clipboard, and app/window tools), gated by local Agent MCP approvals.
+- Parallel specialist delegation with per-agent read-only research or isolated proposal mode, persistent per-agent proposal directories, shared run manifests, and lead-agent approval before any proposal is applied.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
 - HTTPFlow panel for comparing configured roles with status/body/header differences, sensitive response-header redaction, persistent sanitized audit history, and JSON export.
 - Passive authorized Web Recon tools for DNS records, pinned TLS certificate inspection, HTTP security headers, and robots.txt.
@@ -63,7 +64,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 - Local Agent runtime integrated with the Agents workspace and regular chat, including authenticated streaming, explicit approval for sensitive actions, saved sessions, resume, and session discovery.
 - Local workspace file tools, optional terminal execution, checkpoint persistence, MCP stdio integration, and built-in Skills.
 - Optional Playwright browser and desktop Computer Use MCP setup scripts. These connect locally installed companions; they are not hosted browser or remote desktop services.
-- Read-only parallel specialist delegation (2–4 agents) with evidence traces. The lead agent retains write and terminal permissions behind the normal approval workflow.
+- Parallel specialist delegation (2–4 agents) with evidence traces, read-only research mode, or isolated proposal mode. Each proposal agent writes only to its own `.omda/delegates/` directory; the lead agent reviews and applies selected changes through the normal approval workflow.
 - Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
 - Authorized HTTP role comparison with bounded inspection, sensitive-header redaction, persistent sanitized HTTPFlow audit history with JSON export, and DNS/IP safety checks for private IPv4/IPv6 destinations.
 - OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
@@ -73,10 +74,10 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 ## Remaining roadmap
 
 1. Browser tab and profile management, tab previews, and optional secure cross-device browser streaming; current Browser Workspace provides local Playwright MCP discovery and per-site permissions, not a hosted browser.
-2. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing; current specialists are read-only and the lead agent owns all changes.
+2. Per-agent approval routing and safer proposal application/conflict resolution; current implementation supports per-agent read-only/proposal modes, isolated directories, shared run manifests, and lead-agent approval.
 3. Broader provider-specific adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
 4. Provider-accurate live token counts and tokens-per-second; current streaming speed is an estimate, and actual usage is shown only when returned by the provider.
-5. Signed update verification and recovery if the supervisor itself exits; current auto-update is opt-in and rolls back failed builds, but does not yet verify signed releases or supervise itself.
+5. Signed update verification; auto-update is opt-in and rolls back failed builds, while installed systemd/LaunchAgent/Task Scheduler services restart failed supervisor processes where supported.
 6. Container-backed execution with resource, network, and filesystem isolation; host terminal execution remains disabled by default and is not a sandbox.
 7. Expanded integration and deployment smoke tests, including physical Linux/macOS/Windows service validation, real local models, browser/desktop companions, and production deployment verification.
 
