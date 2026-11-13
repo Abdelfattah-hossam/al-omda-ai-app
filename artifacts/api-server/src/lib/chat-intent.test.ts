@@ -6,6 +6,9 @@ describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
     const ordinaryMessages = [
       "كيف أعمل ملف Word؟",
+      "ممكن تشرحلي ازاي أعمل ملف Word؟",
+      "عايز أتعلم أعمل ملف Word",
+      "علمني أعمل ملف Excel",
       "ما الفرق بين Word وExcel؟",
       "أنا بستخدم Excel في الشغل",
       "اعمل مقارنة بين Excel وWord",
@@ -36,5 +39,8 @@ describe("chat artifact intent", () => {
   test("recognizes explanatory questions as how-to rather than artifact requests", () => {
     assert.equal(isHowToRequest("كيف أعمل ملف Word؟"), true);
     assert.equal(isHowToRequest("اشرحلي Excel"), true);
+    assert.equal(isHowToRequest("ممكن تشرحلي ازاي أعمل ملف Word؟"), true);
+    assert.equal(isHowToRequest("عايز أتعلم أعمل ملف Word"), true);
+    assert.equal(isHowToRequest("علمني أعمل ملف Excel"), true);
   });
 });
