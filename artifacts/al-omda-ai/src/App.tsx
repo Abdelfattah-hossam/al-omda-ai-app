@@ -440,6 +440,9 @@ function App() {
   const [httpFlowBusy, setHttpFlowBusy] = useState(false);
   const [httpFlowError, setHttpFlowError] = useState("");
   const [httpFlowResult, setHttpFlowResult] = useState<any>(null);
+  const [httpFlowHistory, setHttpFlowHistory] = useState<Array<{ id: string; createdAt: string; target: string; method: string; roles: string[]; responses: Array<{ role: string; status: number; durationMs: number; bodyLength: number }>; comparison: { sameStatus: boolean; sameBody: boolean; bodyDifferenceAt: number | null; changedHeaders: string[] } }>>([]);
+  const [httpFlowHistoryBusy, setHttpFlowHistoryBusy] = useState(false);
+  const [httpFlowHistoryError, setHttpFlowHistoryError] = useState("");
   const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean }>>([]);
   const [modelProvidersError, setModelProvidersError] = useState("");
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
@@ -1038,6 +1041,35 @@ function App() {
       setHttpFlowError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل الأدوار." : "Could not load HTTP roles."));
     } finally { setHttpFlowBusy(false); }
   };
+  const loadHttpFlowHistory = async () => {
+    setHttpFlowHistoryBusy(true); setHttpFlowHistoryError("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/http/history?limit=100");
+      setHttpFlowHistory(Array.isArray(result.records) ? result.records : []);
+    } catch (error) {
+      setHttpFlowHistoryError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل سجل HTTPFlow." : "Could not load HTTPFlow history."));
+    } finally { setHttpFlowHistoryBusy(false); }
+  };
+  const exportHttpFlowHistory = () => {
+    if (!httpFlowHistory.length) return;
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), records: httpFlowHistory }, null, 2)], { type: "application/json" });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = "omda-httpflow-history.json";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  };
+  const clearHttpFlowHistory = async () => {
+    if (!window.confirm(isAr ? "هل تريد مسح سجل HTTPFlow المحفوظ؟" : "Clear the saved HTTPFlow audit history?")) return;
+    setHttpFlowHistoryBusy(true); setHttpFlowHistoryError("");
+    try {
+      await callLocalAgentRuntime("/v1/http/history", "DELETE");
+      setHttpFlowHistory([]);
+    } catch (error) {
+      setHttpFlowHistoryError(error instanceof Error ? error.message : (isAr ? "تعذر مسح السجل." : "Could not clear history."));
+    } finally { setHttpFlowHistoryBusy(false); }
+  };
   const runHttpFlowComparison = async () => {
     if (!httpFlowUrl.trim() || httpFlowSelectedRoles.length < 2 || httpFlowBusy) return;
     setHttpFlowBusy(true); setHttpFlowError(""); setHttpFlowResult(null);
@@ -1046,6 +1078,8 @@ function App() {
         url: httpFlowUrl.trim(), method: httpFlowMethod, roles: httpFlowSelectedRoles,
       });
       setHttpFlowResult(result);
+      await loadHttpFlowHistory();
+      if (result.historySaved === false) setHttpFlowHistoryError(isAr ? "نجحت المقارنة، لكن تعذر حفظها في السجل." : "Comparison succeeded, but it could not be saved to history.");
     } catch (error) {
       setHttpFlowError(error instanceof Error ? error.message : (isAr ? "فشلت مقارنة HTTP." : "HTTP comparison failed."));
     } finally { setHttpFlowBusy(false); }
@@ -1121,7 +1155,10 @@ function App() {
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">HTTPFLOW</span><h2 className="section-title">{isAr?'مقارنة الاستجابات والصلاحيات':'HTTP response & role diff'}</h2><p className="section-meta">{isAr?'قارن نفس المسار بين الزائر والمستخدم والمدير باستخدام بيانات الاعتماد المحلية.':'Compare the same endpoint across anonymous, user, and admin roles using local credentials.'}</p></div>
-        <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowRoles} disabled={httpFlowBusy||!localAgentToken.trim()}>{httpFlowBusy?(isAr?'جارٍ التحميل...':'Loading...'):(isAr?'تحميل الأدوار':'Load roles')}</button>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowRoles} disabled={httpFlowBusy||!localAgentToken.trim()}>{httpFlowBusy?(isAr?'جارٍ التحميل...':'Loading...'):(isAr?'تحميل الأدوار':'Load roles')}</button>
+          <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowHistory} disabled={httpFlowHistoryBusy||!localAgentToken.trim()}>{httpFlowHistoryBusy?(isAr?'جارٍ التحميل...':'Loading...'):(isAr?'سجل المقارنات':'History')}</button>
+        </div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 120px',gap:10,marginTop:12}}>
         <label className="field-group"><span className="form-label">{isAr?'عنوان endpoint المصرح به':'Authorized endpoint URL'}</span><input className="field" type="url" value={httpFlowUrl} onChange={event=>setHttpFlowUrl(event.target.value)} placeholder="https://your-authorized-domain.example/api/me"/></label>
@@ -1135,6 +1172,22 @@ function App() {
         {!httpFlowResult.comparison?.sameBody&&<div className="panel panel-pad"><h3 className="section-title">{isAr?'أول اختلاف في المحتوى':'First body difference'}</h3><p className="section-meta">{isAr?'موضع الاختلاف: ':'Difference offset: '}{httpFlowResult.comparison?.bodyDiff?.firstDifferenceAt}</p><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:10}}>{(httpFlowResult.comparison?.bodyDiff?.snippets||[]).map((item:any)=><div key={item.role}><strong>{item.role} · {item.length} {isAr?'حرف':'chars'}</strong><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:180,overflow:'auto',fontSize:12,marginTop:6}}>{item.excerpt}</pre></div>)}</div></div>}
         {(httpFlowResult.comparison?.headerDifferences||[]).length>0&&<div className="panel panel-pad"><h3 className="section-title">{isAr?'اختلافات الترويسات':'Header differences'}</h3>{httpFlowResult.comparison.headerDifferences.map((item:any)=><div key={item.header} style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}><strong>{item.header}</strong>{item.values.map((entry:any)=><div key={entry.role} className="section-meta">{entry.role}: {entry.value}</div>)}</div>)}</div>}
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))',gap:10}}>{(httpFlowResult.responses||[]).map((response:any)=><div className="panel panel-pad" key={response.role}><div className="section-head"><strong>{response.role}</strong><span className="status-chip">{response.status}</span></div><p className="section-meta">{response.durationMs} ms · {response.body.length} {isAr?'حرف':'chars'}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:240,overflow:'auto',fontSize:11,marginTop:8}}>{response.body||'(empty response)'}</pre></div>)}</div>
+      </div>}
+      {httpFlowResult?.historySaved===false&&<div className="notice-bar notice-error" role="status" style={{marginTop:12}}>{isAr?'نجحت المقارنة، لكن تعذر حفظ سجل التدقيق.':'Comparison completed, but audit history could not be saved.'}</div>}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:16}}>
+        <button type="button" className="button button-quiet button-small" onClick={loadHttpFlowHistory} disabled={httpFlowHistoryBusy||!localAgentToken.trim()}>{isAr?'تحديث السجل':'Refresh history'}</button>
+        <button type="button" className="button button-quiet button-small" onClick={exportHttpFlowHistory} disabled={!httpFlowHistory.length}>{isAr?'تصدير JSON':'Export JSON'}</button>
+        <button type="button" className="button button-quiet button-small" onClick={clearHttpFlowHistory} disabled={httpFlowHistoryBusy||!httpFlowHistory.length}>{isAr?'مسح السجل':'Clear history'}</button>
+        <span className="section-meta">{isAr?'يُحفظ ملخص آمن لآخر 100 مقارنة، دون تخزين نصوص الاستجابات أو قيم الترويسات أو معاملات الرابط.':'Stores up to 100 sanitized summaries; response bodies, header values, and URL query strings are not persisted.'}</span>
+      </div>
+      {httpFlowHistoryError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{httpFlowHistoryError}</div>}
+      {httpFlowHistory.length>0&&<div style={{display:'grid',gap:10,marginTop:12}}>
+        {httpFlowHistory.map(record=><div className="panel panel-pad" key={record.id}>
+          <div className="section-head"><strong style={{overflowWrap:'anywhere'}}>{record.method} · {record.target}</strong><span className="status-chip">{record.comparison.sameBody?(isAr?'المحتوى متطابق':'Bodies match'):(isAr?'اختلاف':'Different')}</span></div>
+          <p className="section-meta">{new Date(record.createdAt).toLocaleString(isAr?'ar':'en')} · {record.roles.join(' / ')}</p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{record.responses.map(response=><span className="status-chip" key={response.role}>{response.role}: {response.status} · {response.durationMs} ms · {response.bodyLength} {isAr?'حرف':'chars'}</span>)}</div>
+          {record.comparison.changedHeaders.length>0&&<p className="section-meta" style={{marginTop:8}}>{isAr?'الترويسات المختلفة: ':'Changed headers: '}{record.comparison.changedHeaders.join(', ')}</p>}
+        </div>)}
       </div>}
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>

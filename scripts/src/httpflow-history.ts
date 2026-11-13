@@ -15,7 +15,7 @@ export type HttpFlowHistoryRecord = {
   };
 };
 
-type CreateHttpFlowHistoryInput = {
+export type CreateHttpFlowHistoryInput = {
   id: string;
   createdAt: string;
   url: string;

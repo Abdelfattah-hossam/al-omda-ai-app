@@ -19,7 +19,7 @@ import { buildCommandEnvironment } from "./command-env.js";
 import { parseModelProviderConfig } from "./model-providers.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
-import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type HttpFlowHistoryRecord } from "./httpflow-history.js";
+import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -1023,8 +1023,8 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
         url: String(result.url || ""),
         method: String(result.method || "GET"),
         roles: Array.isArray(body.roles) ? body.roles.filter((item): item is string => typeof item === "string") : [],
-        responses: Array.isArray(result.responses) ? result.responses as HttpFlowHistoryRecord["responses"] : [],
-        comparison: result.comparison as HttpFlowHistoryRecord["comparison"],
+        responses: Array.isArray(result.responses) ? result.responses as CreateHttpFlowHistoryInput["responses"] : [],
+        comparison: result.comparison as CreateHttpFlowHistoryInput["comparison"],
       });
       await persistHttpFlowHistory(record);
       historySaved = true;
