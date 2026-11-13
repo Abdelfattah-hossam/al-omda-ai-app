@@ -60,3 +60,17 @@ export function serializeServiceEnvironment(environment: ServiceEnvironment): st
     .map(([key, value]) => key + "=" + value)
     .join("\n") + "\n";
 }
+
+export function buildWindowsTaskRegistration(options: { taskName: string; launcherPath: string }): string {
+  const launcherArgs = "-NoProfile -ExecutionPolicy Bypass -File \"" + options.launcherPath.replace(/"/g, "\"\"") + "\"";
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    "$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument " + psQuote(launcherArgs),
+    "$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME",
+    "$settings = New-ScheduledTaskSettingsSet -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew",
+    "$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited",
+    "Register-ScheduledTask -TaskName " + psQuote(options.taskName) + " -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null",
+    "Start-ScheduledTask -TaskName " + psQuote(options.taskName),
+    "",
+  ].join("\n");
+}

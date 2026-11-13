@@ -4,7 +4,7 @@ import { dirname, resolve, join } from "node:path";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { buildLaunchAgentPlist, buildSystemdUserService, buildWindowsAgentLauncher, serializeServiceEnvironment } from "./desktop-service-config.js";
+import { buildLaunchAgentPlist, buildSystemdUserService, buildWindowsAgentLauncher, buildWindowsTaskRegistration, serializeServiceEnvironment } from "./desktop-service-config.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const platform = process.platform;
@@ -20,7 +20,7 @@ function paths() {
   }
   if (platform === "win32") {
     const dir = join(process.env.APPDATA || join(home, "AppData", "Roaming"), "AlOmda");
-    return { dir, service: join(dir, "start-agent.ps1"), dataDir: dir, logs: join(dir, "logs") };
+    return { dir, service: join(dir, "start-agent.ps1"), register: join(dir, "register-task.ps1"), dataDir: dir, logs: join(dir, "logs") };
   }
   const dir = join(home, ".config", "systemd", "user");
   const dataDir = join(home, ".config", "al-omda");
@@ -85,9 +85,9 @@ async function install(): Promise<void> {
     const username = process.env.USERNAME?.trim();
     if (!username) throw new Error("Could not determine the current Windows account to secure the local token file.");
     await run("icacls.exe", [envFile, "/inheritance:r", "/grant:r", username + ":(F)", "*S-1-5-18:(F)"]);
-    const taskCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + locations.service.replace(/"/g, '""') + '"';
-    await run("schtasks.exe", ["/Create", "/SC", "ONLOGON", "/TN", taskName, "/TR", taskCommand, "/F"]);
-    await run("schtasks.exe", ["/Run", "/TN", taskName]);
+    const registration = buildWindowsTaskRegistration({ taskName, launcherPath: locations.service });
+    await writeFile(locations.register, registration, { encoding: "utf8", mode: 0o600 });
+    await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", locations.register]);
   } else {
     throw new Error("Desktop companion auto-start is supported on Windows, macOS, and Linux only.");
   }
