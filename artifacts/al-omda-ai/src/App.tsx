@@ -714,6 +714,12 @@ function App() {
         await saveRemoteTask(updatedTask);
         await executeStep(updatedTask, approvedStep);
       } catch (error) {
+        // Revert the optimistic approval if the server did not confirm the save.
+        setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? task : item) }));
+        try {
+          const workspace = await getWorkspace(apiRequestOptions);
+          if (authUser) applyWorkspace(workspace, authUser.email);
+        } catch { /* Keep the local rollback if the workspace cannot be refreshed. */ }
         setWorkspaceError(readApiError(error, t('saveTaskFailed')));
       }
     }
