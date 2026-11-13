@@ -73,6 +73,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const chatTopbarRef = useRef<HTMLElement | null>(null);
   const plusWrapRef = useRef<HTMLDivElement | null>(null);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
@@ -829,8 +830,37 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
   </div>;
   return <div className="page-enter ai-chat-page">
+    {chatSidebarOpen && <button type="button" className="ai-chat-sidebar-scrim" aria-label={ar ? "إغلاق القائمة" : "Close sidebar"} onClick={()=>setChatSidebarOpen(false)} />}
+    <aside className={"ai-chat-sidebar" + (chatSidebarOpen ? " is-open" : "")} dir={ar ? "rtl" : "ltr"}>
+      <div className="ai-chat-sidebar-head">
+        <button type="button" className="ai-chat-new-button" onClick={()=>{setChatSidebarOpen(false);void createConversation();}} disabled={!signedIn || loading || historyLoading}><Plus size={16}/><span>{ar ? "محادثة جديدة" : "New chat"}</span><PenLine size={14}/></button>
+        <button type="button" className="ai-chat-sidebar-close" onClick={()=>setChatSidebarOpen(false)} aria-label={ar ? "إغلاق القائمة" : "Close sidebar"}><X size={18}/></button>
+      </div>
+      <div className="ai-chat-tools-caption">{ar ? "أدوات العمدة" : "AL OMDA TOOLS"}</div>
+      <div className="ai-chat-tool-list">
+        <button type="button" onClick={()=>{setInput(ar ? "أنشئ مستند Word احترافيًا عن: " : "Create a professional Word document about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><FileText size={16}/>{ar ? "مستند Word" : "Word document"}</button>
+        <button type="button" onClick={()=>{setInput(ar ? "أنشئ جدول Excel منظمًا لـ: " : "Create a structured Excel workbook for: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Sheet size={16}/>{ar ? "جدول Excel" : "Excel spreadsheet"}</button>
+        <button type="button" onClick={()=>{setInput(ar ? "أنشئ عرض PowerPoint احترافيًا عن: " : "Create a professional PowerPoint about: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Presentation size={16}/>{ar ? "عرض PowerPoint" : "PowerPoint presentation"}</button>
+        <button type="button" onClick={()=>{setInput(ar ? "اكتب كودًا مع شرح طريقة تشغيله: " : "Write code and explain how to run it: ");setChatSidebarOpen(false);inputRef.current?.focus();}}><Code2 size={16}/>{ar ? "برمجة وتطوير" : "Code & development"}</button>
+        <button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/ai/usage");}}><Bot size={16}/>{ar ? "ذاكرة العمدة والاستخدام" : "Memory & usage"}</button>
+      </div>
+      <div className="ai-chat-history-caption"><span>{ar ? "المحادثات السابقة" : "Recent conversations"}</span><button type="button" onClick={()=>setShowConversationList(v=>!v)}>{showConversationList ? (ar ? "إخفاء" : "Hide") : (ar ? "عرض الكل" : "View all")}</button></div>
+      <div className="ai-chat-sidebar-history">
+        {conversations.length === 0 && <p>{ar ? "لا توجد محادثات محفوظة بعد" : "No saved conversations yet"}</p>}
+        {conversations.slice(0,showConversationList ? 40 : 12).map((item)=><div className={"ai-chat-sidebar-history-item" + (item.id===activeConversationId ? " active" : "")} key={item.id}>
+          <button type="button" onClick={()=>{setChatSidebarOpen(false);void loadConversation(item.id);}} disabled={loading || historyLoading}><MessageSquareText size={14}/><span>{item.title}</span></button>
+          <button type="button" className="ai-chat-sidebar-history-delete" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={13}/></button>
+        </div>)}
+      </div>
+      <button type="button" className="ai-chat-usage-card" onClick={()=>{setChatSidebarOpen(false);setLocation("/ai/usage");}}>
+        <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
+        <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
+      </button>
+      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar">ع</span><span><strong>{ar ? "حساب العمدة" : "AL OMDA account"}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
+    </aside>
+    <div className="ai-chat-main">
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
-      <button type="button" className="ai-chat-back" onClick={()=>setLocation("/")} aria-label={ar ? "العودة للرئيسية" : "Back to home"}><ArrowLeft size={19}/></button>
+      <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
       <div className="ai-chat-topbar-title"><strong>{copy.title}</strong><span>{ar ? "العمدة الذكي" : "AL OMDA AI"}</span></div>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
       {showChatMenu && <div className="ai-chat-top-menu" role="menu">
@@ -942,5 +972,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         </form>
       </section>
     </>}
+    </div>
   </div>;
 }

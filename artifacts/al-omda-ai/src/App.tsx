@@ -1803,7 +1803,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
       </aside>
     </div>}
-    <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>
+    {path !== '/ai' && path !== '/ai/usage' && <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }
