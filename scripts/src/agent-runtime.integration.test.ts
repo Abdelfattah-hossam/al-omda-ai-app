@@ -224,8 +224,8 @@ async function startMockModel(
     res.setHeader("content-type", "text/event-stream");
     res.setHeader("cache-control", "no-cache");
     const payload = response.payload || { choices: [{ delta: { content: "Mock model completed the task." }, finish_reason: "stop" }] };
-    res.write("data: " + JSON.stringify(payload) + "\\n\\n");
-    res.end("data: [DONE]\\n\\n");
+    res.write("data: " + JSON.stringify(payload) + "\n\n");
+    res.end("data: [DONE]\n\n");
   });
   const mock = { server, baseUrl: "", requests: 0 };
   await new Promise<void>((resolve, reject) => {
@@ -251,7 +251,7 @@ test("approval gate pauses writes and executes only the exact approved call", as
   try {
     const started = await postTo(isolated, "/v1/agent/run", { goal: "Create approved.txt" });
     const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\\n" + isolated.stderr);
+    assert.equal(started.status, 200, startedBody + "\n" + isolated.stderr);
     const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
     assert.equal(pending.status, "approval_required");
     assert.equal(pending.pending.length, 1);
@@ -286,7 +286,7 @@ test("model runtime fails over to the configured fallback without exposing crede
   try {
     const response = await postTo(isolated, "/v1/agent/run", { goal: "Say hello after checking provider availability." });
     const responseBody = await response.text();
-    assert.equal(response.status, 200, responseBody + "\\n" + isolated.stderr);
+    assert.equal(response.status, 200, responseBody + "\n" + isolated.stderr);
     const result = JSON.parse(responseBody) as { status: string; message: string; usage: { provider: string } };
     assert.equal(result.status, "completed");
     assert.equal(result.message, "Fallback provider succeeded.");
