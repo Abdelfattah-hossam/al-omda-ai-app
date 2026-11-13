@@ -19,7 +19,7 @@ export function isAllowedProposalPath(path: string): boolean {
     part === ".turbo" || part === ".env" || part.startsWith(".env.") ||
     [".npmrc", ".netrc", ".pypirc", ".ssh", ".aws", ".azure", ".kube", ".docker",
       "credentials.json", "secrets.json", "service-account.json", "id_rsa", "id_ed25519"].includes(part) ||
-    /\\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
+    /\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
   );
 }
 function safeId(value: string): string {
