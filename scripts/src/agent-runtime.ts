@@ -396,7 +396,9 @@ async function clearHttpFlowHistory(): Promise<void> {
 }
 
 async function executeCommand(body: Json): Promise<Json> {
-  if (EXECUTION_MODE !== "host") throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=host only on a machine where you trust the project and its dependencies.");
+  if (EXECUTION_MODE !== "host" && EXECUTION_MODE !== "container") {
+    throw new Error("Terminal execution is disabled. Set OMDA_AGENT_EXECUTION=container for isolated Docker execution, or host only if you accept direct host access.");
+  }
   const command = typeof body.command === "string" ? body.command : "";
   const args = Array.isArray(body.args) ? body.args : [];
   if (!ALLOWED_COMMANDS.has(command) || args.length > 40 || args.some((arg) => typeof arg !== "string" || arg.length > 2000 || arg.includes("\0"))) {
@@ -405,31 +407,60 @@ async function executeCommand(body: Json): Promise<Json> {
   const cwdInput = typeof body.cwd === "string" ? body.cwd : ".";
   const cwd = await resolveExistingPath(cwdInput);
   const started = Date.now();
+  const useContainer = EXECUTION_MODE === "container";
+  const image = (process.env.OMDA_AGENT_SANDBOX_IMAGE || "al-omda-agent-sandbox:node22").trim();
+  if (useContainer && (!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,200}$/.test(image) || image.includes(".."))) {
+    throw new Error("OMDA_AGENT_SANDBOX_IMAGE must be a valid Docker image reference.");
+  }
+  const runner = useContainer ? "docker" : command;
+  const relativeCwd = relative(workspaceRoot, cwd);
+  const runnerArgs = useContainer ? [
+    "run", "--rm", "--pull=never", "--network=none",
+    "--cpus=1", "--memory=512m", "--memory-swap=512m", "--pids-limit=128",
+    "--read-only", "--tmpfs=/tmp:rw,noexec,nosuid,size=64m",
+    "--cap-drop=ALL", "--security-opt=no-new-privileges",
+    "--mount", "type=bind,source=" + workspaceRoot + ",target=/workspace",
+    "--workdir", "/workspace" + (relativeCwd ? "/" + relativeCwd.split(sep).join("/") : ""),
+    "--env", "HOME=/tmp", "--env", "TMPDIR=/tmp",
+    ...(typeof process.getuid === "function" && typeof process.getgid === "function" ? ["--user", process.getuid() + ":" + process.getgid()] : []),
+    image, command, ...(args as string[]),
+  ] : args as string[];
+  const commandEnv = useContainer ? process.env : buildCommandEnvironment(process.env);
   return await new Promise((resolveResult) => {
-    const child = spawn(command, args as string[], {
-      cwd, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      env: buildCommandEnvironment(process.env),
+    const child = spawn(runner, runnerArgs, {
+      ...(useContainer ? {} : { cwd }),
+      shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
+      env: commandEnv,
     });
     let stdout = "";
     let stderr = "";
     let outputBytes = 0;
     let timedOut = false;
     let capped = false;
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const finish = (result: Json) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolveResult({ ...result, durationMs: Date.now() - started });
+    };
     const collect = (target: "stdout" | "stderr") => (chunk: Buffer) => {
       outputBytes += chunk.length;
-      const remaining = Math.max(0, OUTPUT_LIMIT - (stdout.length + stderr.length));
+      const remaining = Math.max(0, OUTPUT_LIMIT - Buffer.byteLength(stdout) - Buffer.byteLength(stderr));
       const text = chunk.toString("utf8").slice(0, remaining);
       if (target === "stdout") stdout += text; else stderr += text;
       if (outputBytes > OUTPUT_LIMIT && !capped) { capped = true; child.kill("SIGTERM"); }
     };
     child.stdout.on("data", collect("stdout"));
     child.stderr.on("data", collect("stderr"));
-    const timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, COMMAND_TIMEOUT_MS);
-    child.on("error", (error) => { clearTimeout(timer); resolveResult({ ok: false, error: error.message, stdout, stderr, durationMs: Date.now() - started }); });
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolveResult({ ok: code === 0 && !timedOut && !capped, exitCode: code, signal, timedOut, outputTruncated: capped, stdout, stderr, durationMs: Date.now() - started });
-    });
+    timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, COMMAND_TIMEOUT_MS);
+    child.on("error", (error) => finish({ ok: false, error: useContainer ? "Docker execution could not start: " + error.message : error.message, stdout, stderr }));
+    child.on("close", (code, signal) => finish({
+      ok: code === 0 && !timedOut && !capped,
+      exitCode: code, signal, timedOut, outputTruncated: capped, stdout, stderr,
+      ...(useContainer ? { isolation: "docker", image } : { isolation: "host" }),
+    }));
   });
 }
 async function sessionPath(id: unknown): Promise<string> {
