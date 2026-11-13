@@ -90,6 +90,12 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Isolated multi-agent implementation proposals
+
+Parallel delegation supports two modes per specialist: `read_only` for research/review, or `proposal` for draft implementation. Proposal-mode agents can read the project but may write only into their own isolated directory under `.omda/delegates/<run-id>/<agent-id>/`. They cannot write project files, execute terminal commands, or call MCP tools. Each run writes a shared `manifest.json` with per-agent status and proposal-file metadata. Proposal workspaces are excluded from Git.
+
+The lead agent receives the proposal paths and must inspect the draft files before applying anything. Applying changes to the actual project remains in the lead agent's normal explicit approval flow. Each agent is limited to 40 files and 4 MB total, with individual files capped at 1 MB. This is filesystem-level workspace isolation, not an OS/container sandbox; do not ask agents to process untrusted code as trusted.
+
 ### Install the desktop companion as a user service
 
 The optional service installer can start the local Agent supervisor automatically when the current user signs in. It does not install a graphical desktop app and it does not enable terminal execution.

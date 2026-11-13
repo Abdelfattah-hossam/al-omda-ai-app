@@ -62,3 +62,5 @@ Thumbs.db
 .omda/httpflow-history.json
 .omda/browser-workspace.json
 .omda/models.json
+
+.omda/delegates/
