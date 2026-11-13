@@ -575,7 +575,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             taskId: taskData.id,
             taskTitle: taskData.title,
           };
-          if (plan.usage) setUsage(plan.usage);
+          if (taskData.usage) setUsage(taskData.usage);
         } catch (taskError) {
           const detail = taskError instanceof Error ? taskError.message : "تعذر تسجيل المشروع.";
           assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\n\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
