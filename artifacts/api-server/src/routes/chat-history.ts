@@ -10,7 +10,8 @@ import {
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; taskId?: string; taskTitle?: string };
+type SavedAppData = { title: string; html: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -128,6 +129,12 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
       if (JSON.stringify(doc).length > 70000) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
     }
+    if (item.appData !== undefined) {
+      const app = item.appData;
+      if (!app || typeof app !== "object" || typeof app.title !== "string" || app.title.length > 180 ||
+        typeof app.html !== "string" || app.html.length > 100000 || JSON.stringify(app).length > 110000) return null;
+      saved.appData = { title: app.title, html: app.html };
+    }
     if (item.spreadsheetData !== undefined) {
       const sheet = item.spreadsheetData;
       if (!sheet || typeof sheet !== "object" || typeof sheet.title !== "string" || sheet.title.length > 180 ||
@@ -190,7 +197,12 @@ router.put("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise
     if (!messages) { res.status(400).json({ error: "Conversation messages are invalid or too large." }); return; }
     const requestedTitle = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
     const firstUserMessage = messages.find((message) => message.role === "user")?.content ?? "";
-    const title = requestedTitle || firstUserMessage.slice(0, 72) || "محادثة جديدة";
+    const ownerQuery = new URLSearchParams({ select: "id,title", id: `eq.${conversationId}`, user_id: `eq.${session.user.id}`, limit: "1" });
+    const ownerResponse = await supabaseFetch(`/rest/v1/ai_conversations?${ownerQuery.toString()}`, {}, session.accessToken);
+    const existingRows = await readSupabaseJson<Array<{ id: string; title: string }>>(ownerResponse);
+    if (!existingRows[0]) { res.status(404).json({ error: "Conversation not found." }); return; }
+    const existingTitle = typeof existingRows[0].title === "string" ? existingRows[0].title.trim() : "";
+    const title = requestedTitle || (existingTitle && existingTitle !== "محادثة جديدة" ? existingTitle : firstUserMessage.slice(0, 72) || existingTitle || "محادثة جديدة");
     const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
     const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, {
       method: "PATCH",
@@ -201,6 +213,26 @@ router.put("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise
     if (!rows[0]) { res.status(404).json({ error: "Conversation not found." }); return; }
     res.json({ saved: true, conversation: rows[0] });
   } catch (error) { reportSupabaseError(req, res, error, "Could not save this conversation."); }
+});
+
+router.patch("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to rename this conversation." }); return; }
+    const conversationId = req.params.id;
+    if (typeof conversationId !== "string" || !validConversationId(conversationId)) { res.status(400).json({ error: "Invalid conversation ID." }); return; }
+    const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
+    if (!title) { res.status(400).json({ error: "Conversation title is required." }); return; }
+    const query = new URLSearchParams({ id: `eq.${conversationId}`, user_id: `eq.${session.user.id}` });
+    const response = await supabaseFetch(`/rest/v1/ai_conversations?${query.toString()}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ title, updated_at: new Date().toISOString() }),
+    }, session.accessToken);
+    const rows = await readSupabaseJson<Array<{ id: string; title: string; updated_at: string }>>(response);
+    if (!rows[0]) { res.status(404).json({ error: "Conversation not found." }); return; }
+    res.json({ updated: true, conversation: rows[0] });
+  } catch (error) { reportSupabaseError(req, res, error, "Could not rename this conversation."); }
 });
 
 router.delete("/ai/conversations/:id", requireSameOrigin, async (req, res): Promise<void> => {

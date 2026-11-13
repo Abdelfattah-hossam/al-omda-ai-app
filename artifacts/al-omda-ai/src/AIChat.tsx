@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -57,6 +57,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [showConversationList, setShowConversationList] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [pinnedConversationIds, setPinnedConversationIds] = useState<string[]>([]);
+  const [pinnedPreferencesLoaded, setPinnedPreferencesLoaded] = useState(false);
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [agentMode, setAgentMode] = useState(false);
   const [agentRuntimeUrl, setAgentRuntimeUrl] = useState("http://127.0.0.1:4318");
@@ -92,6 +95,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
+
+  useLayoutEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    const maxHeight = window.matchMedia("(max-width: 650px)").matches ? 128 : 180;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
 
   const copy = {
     title: ar ? "شات العمدة الذكي" : "AL OMDA AI Chat",
@@ -140,6 +152,25 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     finally { setHistoryLoading(false); }
   };
 
+  const renameConversation = async (conversation: Conversation) => {
+    const requested = window.prompt(ar ? "اكتب اسم المحادثة الجديد:" : "Enter a new conversation title:", conversation.title);
+    const title = requested?.trim().slice(0, 100);
+    if (!title || title === conversation.title) return;
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+      let response: Response;
+      try { response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversation.id), { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title }), signal: controller.signal }); }
+      finally { window.clearTimeout(timeoutId); }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation."));
+      setConversations((current) => current.map((item) => item.id === conversation.id ? { ...item, title } : item));
+    } catch (err) { setError(err instanceof Error && err.name === "AbortError" ? (ar ? "استغرق تغيير اسم المحادثة وقتًا أطول من اللازم." : "Renaming the conversation timed out.") : err instanceof Error ? err.message : (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation.")); }
+  };
+  const togglePinnedConversation = (id: string) => setPinnedConversationIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [id, ...current]);
+  useEffect(() => { try { const value = JSON.parse(window.localStorage.getItem("omda-pinned-conversations") || "[]"); if (Array.isArray(value)) setPinnedConversationIds(value.filter((id): id is string => typeof id === "string")); } catch { /* Use an empty pinned list when storage is unavailable. */ } finally { setPinnedPreferencesLoaded(true); } }, []);
+  useEffect(() => { if (!pinnedPreferencesLoaded) return; try { window.localStorage.setItem("omda-pinned-conversations", JSON.stringify(pinnedConversationIds)); } catch { /* Local preference only. */ } }, [pinnedConversationIds, pinnedPreferencesLoaded]);
+
   const createConversation = async () => {
     if (!signedIn) return "";
     try {
@@ -179,6 +210,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const deleteConversation = async (id: string) => {
+    if (loadingRef.current || historyLoadingRef.current) return;
     if (!window.confirm(ar ? "هل تريد حذف هذه المحادثة نهائيًا؟" : "Delete this conversation permanently?")) return;
     try {
       const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { method: "DELETE", credentials: "same-origin" });
@@ -781,6 +813,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <button type="button" className="button button-quiet button-small" onClick={()=>setShowConversationList((value)=>!value)} aria-expanded={showConversationList}><History size={14}/>{ar ? "المحادثات" : "Chats"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>void createConversation()} disabled={loading || historyLoading}><Plus size={14}/>{ar ? "محادثة جديدة" : "New chat"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai/usage")}><Settings2 size={14}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
+        <div className="ai-chat-more-wrap"><button type="button" className="button button-quiet button-small ai-chat-more-button" aria-label={ar?"خيارات المحادثة":"Conversation options"} aria-expanded={showChatMenu} onClick={()=>setShowChatMenu(v=>!v)}><MoreHorizontal size={17}/></button>{showChatMenu && <div className="ai-chat-more-menu" role="menu"><button type="button" onClick={()=>{const text=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع العمدة":"AL OMDA conversation",text}).catch((shareError)=>{if(shareError instanceof Error && shareError.name!=="AbortError")setError(shareError.message || (ar?"تعذرت مشاركة المحادثة.":"Could not share this conversation."));}).finally(()=>setShowChatMenu(false));}else if(navigator.clipboard){void navigator.clipboard.writeText(text).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy this conversation.");setShowChatMenu(false);});}else{setError(ar?"المشاركة غير مدعومة في هذا المتصفح.":"Sharing is not supported in this browser.");setShowChatMenu(false);}}}><Share2 size={15}/>{ar?"مشاركة المحادثة":"Share conversation"}</button><button type="button" onClick={()=>{const text=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA")+": "+m.content).join("\n\n");if(navigator.clipboard){void navigator.clipboard.writeText(text).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy this conversation.");setShowChatMenu(false);});}else{setError(ar?"النسخ غير مدعوم في هذا المتصفح.":"Clipboard is not supported in this browser.");setShowChatMenu(false);}}}><Copy size={15}/>{ar?"نسخ المحادثة":"Copy conversation"}</button><button type="button" onClick={()=>{togglePinnedConversation(activeConversationId);setShowChatMenu(false);}} disabled={!activeConversationId}><Pin size={15}/>{pinnedConversationIds.includes(activeConversationId)?(ar?"إلغاء تثبيت المحادثة":"Unpin conversation"):(ar?"تثبيت المحادثة":"Pin conversation")}</button><button type="button" onClick={()=>{const item=conversations.find(entry=>entry.id===activeConversationId);if(item)void renameConversation(item);setShowChatMenu(false);}} disabled={!activeConversationId}><Pencil size={15}/>{ar?"إعادة تسمية المحادثة":"Rename conversation"}</button><button type="button" className="danger" onClick={()=>{if(loadingRef.current || historyLoadingRef.current || !activeConversationId)return;setShowChatMenu(false);void deleteConversation(activeConversationId);}} disabled={loading || historyLoading || !activeConversationId}><Trash2 size={15}/>{ar?"حذف المحادثة":"Delete conversation"}</button><button type="button" onClick={()=>{if(loadingRef.current || historyLoadingRef.current)return;setShowChatMenu(false);void createConversation();}} disabled={loading || historyLoading}><Plus size={15}/>{ar?"محادثة جديدة":"New chat"}</button></div>}</div>
         <button type="button" className="button button-quiet button-small ai-live-voice-button" onClick={()=>setShowLiveVoice((value)=>!value)} aria-expanded={showLiveVoice}><Volume2 size={14}/>{ar ? "المحادثة الصوتية" : "Live voice"}{showLiveVoice ? <X size={13}/> : null}</button>
       </div>
     </div>
@@ -789,9 +822,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
         {conversations.length === 0 && <p className="muted">{ar ? "لا توجد محادثات محفوظة بعد." : "No saved conversations yet."}</p>}
-        {conversations.map((item)=><div className={"ai-conversation-item " + (item.id===activeConversationId ? "active" : "")} key={item.id}>
+        {[...conversations].sort((a,b)=>Number(pinnedConversationIds.includes(b.id))-Number(pinnedConversationIds.includes(a.id))).map((item)=><div className={"ai-conversation-item " + (item.id===activeConversationId ? "active" : "")} key={item.id}>
           <button type="button" className="ai-conversation-open" onClick={()=>void loadConversation(item.id)} disabled={loading || historyLoading}><MessageSquareText size={15}/><span>{item.title}</span></button>
-          <button type="button" className="icon-button" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={14}/></button>
+          <button type="button" className="icon-button" onClick={()=>togglePinnedConversation(item.id)} aria-label={pinnedConversationIds.includes(item.id)?(ar?"إلغاء التثبيت":"Unpin"):(ar?"تثبيت":"Pin")}><Pin size={14}/></button><button type="button" className="icon-button" onClick={()=>void renameConversation(item)} disabled={loading || historyLoading} aria-label={ar ? "إعادة تسمية المحادثة" : "Rename conversation"}><Pencil size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={14}/></button>
         </div>)}
       </section>}
       <section className="panel panel-pad">
@@ -827,7 +860,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
 
-        <div className="panel" style={{padding:12,marginBottom:10,borderColor:agentMode?"rgba(198,167,108,.65)":undefined}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><small className="muted" style={{display:"block",marginTop:3}}>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك." : "Inspect project files, edit them and run commands with your approval."}</small></div><button type="button" className={"button button-small " + (agentMode?"button-primary":"button-quiet")} onClick={()=>setAgentMode((value)=>!value)}>{agentMode?(ar?"مفعّل":"Enabled"):(ar?"تفعيل Agent":"Enable Agent")}</button></div>{agentMode && <div style={{display:"grid",gap:8,marginTop:10}}><input className="field" value={agentRuntimeUrl} onChange={(event)=>setAgentRuntimeUrl(event.target.value)} placeholder="http://127.0.0.1:4318" aria-label={ar?"عنوان الوكيل المحلي":"Local runtime URL"}/><input className="field" type="password" autoComplete="off" value={agentToken} onChange={(event)=>setAgentToken(event.target.value)} placeholder={ar?"رمز الاتصال المحلي (32 حرفًا على الأقل)":"Local access token (at least 32 characters)"} aria-label={ar?"رمز الاتصال":"Access token"}/><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><small className="muted">{agentSessionId ? (ar?"جلسة محفوظة: ":"Saved session: ")+agentSessionId.slice(0,12) : (ar?"لا توجد جلسة Agent محفوظة بعد.":"No saved Agent session yet.")}</small><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button type="button" className="button button-quiet button-small" onClick={()=>void checkLocalAgentConnection()}>{ar?"اختبار الاتصال":"Test connection"}</button><button type="button" className="button button-quiet button-small" onClick={()=>void loadAgentSessions()}>{ar?"الجلسات المحفوظة":"Saved sessions"}</button><button type="button" className="button button-quiet button-small" onClick={()=>{setAgentSessionId("");try{window.localStorage.removeItem("omda-agent-session");}catch{}}}>{ar?"جلسة جديدة":"New agent session"}</button></div></div>{agentConnectionStatus && <small className="muted">{agentConnectionStatus}</small>}{agentSessions.length>0 && <select className="field" value={agentSessionId} onChange={(event)=>{setAgentSessionId(event.target.value);try{window.localStorage.setItem("omda-agent-session",event.target.value);}catch{}}}><option value="">{ar?"اختر جلسة محفوظة":"Select a saved session"}</option>{agentSessions.map((session)=><option key={session.id} value={session.id}>{session.pending?"● ":""}{session.lastMessage || session.id} · {session.id.slice(0,8)}</option>)}</select>}<small className="muted">{ar?"يعمل الوكيل على الكمبيوتر الذي يشغّل Runtime فقط. من الهاتف لن يصل إلى ملفات الكمبيوتر إلا عبر ربط آمن منفصل. الرمز يبقى في ذاكرة الصفحة ولا يُحفظ بالحساب.":"The agent runs on the computer hosting the runtime. A phone cannot access that computer's files without a separate secure bridge. The token stays in page memory and is not saved to your account."}</small></div>}</div>
+        <div className="panel ai-agent-runtime-panel" data-agent-active={agentMode ? "true" : "false"} style={{padding:12,marginBottom:10,borderColor:agentMode?"rgba(198,167,108,.65)":undefined}}><div className="ai-agent-runtime-summary"><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><small className="muted" style={{display:"block",marginTop:3}}>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك." : "Inspect project files, edit them and run commands with your approval."}</small></div><button type="button" className={"button button-small " + (agentMode?"button-primary":"button-quiet")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode((value)=>!value);}} disabled={!signedIn} title={!signedIn?(ar?"سجّل الدخول أولاً":"Sign in first"):undefined}>{agentMode?(ar?"مفعّل":"Enabled"):(ar?"تفعيل Agent":"Enable Agent")}</button></div></div>{agentMode && <div style={{display:"grid",gap:8,marginTop:10}}><input className="field" value={agentRuntimeUrl} onChange={(event)=>setAgentRuntimeUrl(event.target.value)} placeholder="http://127.0.0.1:4318" aria-label={ar?"عنوان الوكيل المحلي":"Local runtime URL"}/><input className="field" type="password" autoComplete="off" value={agentToken} onChange={(event)=>setAgentToken(event.target.value)} placeholder={ar?"رمز الاتصال المحلي (32 حرفًا على الأقل)":"Local access token (at least 32 characters)"} aria-label={ar?"رمز الاتصال":"Access token"}/><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><small className="muted">{agentSessionId ? (ar?"جلسة محفوظة: ":"Saved session: ")+agentSessionId.slice(0,12) : (ar?"لا توجد جلسة Agent محفوظة بعد.":"No saved Agent session yet.")}</small><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button type="button" className="button button-quiet button-small" onClick={()=>void checkLocalAgentConnection()}>{ar?"اختبار الاتصال":"Test connection"}</button><button type="button" className="button button-quiet button-small" onClick={()=>void loadAgentSessions()}>{ar?"الجلسات المحفوظة":"Saved sessions"}</button><button type="button" className="button button-quiet button-small" onClick={()=>{setAgentSessionId("");try{window.localStorage.removeItem("omda-agent-session");}catch{}}}>{ar?"جلسة جديدة":"New agent session"}</button></div></div>{agentConnectionStatus && <small className="muted">{agentConnectionStatus}</small>}{agentSessions.length>0 && <select className="field" value={agentSessionId} onChange={(event)=>{setAgentSessionId(event.target.value);try{window.localStorage.setItem("omda-agent-session",event.target.value);}catch{}}}><option value="">{ar?"اختر جلسة محفوظة":"Select a saved session"}</option>{agentSessions.map((session)=><option key={session.id} value={session.id}>{session.pending?"● ":""}{session.lastMessage || session.id} · {session.id.slice(0,8)}</option>)}</select>}<small className="muted">{ar?"يعمل الوكيل على الكمبيوتر الذي يشغّل Runtime فقط. من الهاتف لن يصل إلى ملفات الكمبيوتر إلا عبر ربط آمن منفصل. الرمز يبقى في ذاكرة الصفحة ولا يُحفظ بالحساب.":"The agent runs on the computer hosting the runtime. A phone cannot access that computer's files without a separate secure bridge. The token stays in page memory and is not saved to your account."}</small></div>}</div>
         <form onSubmit={sendMessage} className="ai-composer">
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:"none"}} onChange={(event)=>{
             const file=event.currentTarget.files?.[0];
@@ -846,10 +879,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <button type="button" className="icon-button" onClick={()=>setPendingImage(null)} aria-label={ar?"إزالة الصورة":"Remove image"}><X size={15}/></button>
           </div>}
           <div className="ai-composer-tools">
-            <button type="button" className="ai-plus-button" onClick={()=>imageInputRef.current?.click()} aria-label={ar?"إرفاق صورة":"Attach image"} title={ar?"تحليل صورة باستخدام نموذج مجاني":"Analyze an image with a free model"} disabled={loading || historyLoading || !signedIn || agentMode || usage?.remaining === 0}><ImagePlus size={18}/></button>
             <div className="ai-plus-wrap">
-              <button type="button" className="ai-plus-button" aria-label={ar ? "خيارات العمل" : "Work options"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
+              <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
+                <button type="button" className="ai-plus-option" onClick={()=>{if(agentMode || loading || historyLoading)return;setShowPlusMenu(false);imageInputRef.current?.click();}} disabled={agentMode || loading || historyLoading}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
                 {[
                   {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
                   {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
@@ -860,6 +893,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
                   {icon:Search,label:ar?"بحث ودراسة":"Research",prompt:ar?"أجرِ بحثًا ودراسة عن: ":"Research and analyze: "},
                   {icon:PenLine,label:ar?"كتابة محتوى":"Content writing",prompt:ar?"اكتب محتوى عن: ":"Write content about: "}
                 ].map((item,index)=><button type="button" className="ai-plus-option" key={index} onClick={()=>{setInput(item.prompt);setShowPlusMenu(false);inputRef.current?.focus();}}><item.icon size={16}/><span>{item.label}</span></button>)}
+                <button type="button" className="ai-plus-option" onClick={()=>{if(signedIn)setAgentMode(true);setShowPlusMenu(false);}} disabled={!signedIn}><Bot size={16}/><span>{ar?"تشغيل وضع الوكيل المحلي":"Enable local Agent mode"}</span></button>
               </div>}
             </div>
             <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 

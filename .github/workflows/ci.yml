@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  checks: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -50,5 +51,25 @@ jobs:
       - name: Test API CORS policy
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/app.cors.test.ts
 
-      - name: Typecheck and build application
-        run: pnpm build
+      - name: Set up reviewdog
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-setup@d8edfce3dd5e1ec6978745e801f9c50b5ef80252 # v1.4.0
+
+      - name: Typecheck, annotate changed lines, and build application
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          pnpm run typecheck 2>&1 | tee /tmp/typecheck.log
+          typecheck_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            reviewdog -efm='%f(%l,%c): error TS%*[0-9]: %m' -name='TypeScript' -reporter=github-pr-check -filter-mode=added < /tmp/typecheck.log
+          fi
+
+          if [ "$typecheck_status" -ne 0 ]; then
+            exit "$typecheck_status"
+          fi
+
+          pnpm --filter @workspace/al-omda-ai run build

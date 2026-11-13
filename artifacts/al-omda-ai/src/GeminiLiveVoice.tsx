@@ -40,6 +40,7 @@ function toBase64(samples: Int16Array): string {
 export default function GeminiLiveVoice({ language, disabled, onTranscript }: Props) {
   const ar = language === "ar";
   const [active, setActive] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
@@ -54,6 +55,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const assistantTranscriptRef = useRef("");
   const speechActiveRef = useRef(false);
   const silenceFramesRef = useRef(0);
+  const pendingPcmPlaybackRef = useRef(0);
+  const assistantTurnCompleteRef = useRef(false);
+  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const labels = {
     start: ar ? "محادثة صوتية مباشرة" : "Live voice conversation",
@@ -78,9 +82,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     socketRef.current = null;
     contextRef.current = null;
     nextPlayTimeRef.current = 0;
+    pendingPcmPlaybackRef.current = 0;
+    assistantTurnCompleteRef.current = false;
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    fallbackUtteranceRef.current = null;
     if (mountedRef.current) {
       setActive(false);
       setConnecting(false);
+      setSpeaking(false);
     }
   };
 
@@ -273,25 +282,49 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             player.buffer = buffer;
             player.connect(context.destination);
             const startAt = Math.max(context.currentTime + 0.03, nextPlayTimeRef.current);
+            pendingPcmPlaybackRef.current += 1;
+            assistantTurnCompleteRef.current = false;
+            player.onended = () => {
+              pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
+              if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
+            };
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
             receivedAudioChunks++;
-            if (mountedRef.current) setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...");
+            if (mountedRef.current) { setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
           }
         }
         if (serverContent.turnComplete) {
+          assistantTurnCompleteRef.current = true;
+          if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
           if (userText) onTranscript("user", userText);
           if (assistantText) {
             onTranscript("assistant", assistantText);
             if (receivedAudioChunks === 0 && "speechSynthesis" in window) {
+              window.speechSynthesis.cancel();
               const utterance = new SpeechSynthesisUtterance(assistantText);
               utterance.lang = ar ? "ar-EG" : "en-US";
               utterance.rate = 0.96;
-              window.speechSynthesis.cancel();
+              fallbackUtteranceRef.current = utterance;
+              utterance.onend = () => {
+                if (fallbackUtteranceRef.current === utterance) {
+                  fallbackUtteranceRef.current = null;
+                  if (mountedRef.current) setSpeaking(false);
+                }
+              };
+              utterance.onerror = () => {
+                if (fallbackUtteranceRef.current === utterance) {
+                  fallbackUtteranceRef.current = null;
+                  if (mountedRef.current) setSpeaking(false);
+                }
+              };
               window.speechSynthesis.speak(utterance);
-              if (mountedRef.current) setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
+              if (mountedRef.current) {
+                setSpeaking(true);
+                setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
+              }
             } else if (mountedRef.current) {
               setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
             }
@@ -316,6 +349,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   };
 
   const stop = () => {
+    if (mountedRef.current) setSpeaking(false);
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
     }
@@ -323,11 +357,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     setStatus(ar ? "انتهت المحادثة الصوتية." : "Voice conversation ended.");
   };
 
-  return <div style={{ display: "grid", gap: 6 }}>
-    <button type="button" className={active ? "button button-primary button-small" : "button button-quiet button-small"} onClick={active ? stop : start} disabled={disabled || connecting}>
-      {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={14} /> : <Mic size={14} />}
+  return <div className="omda-live-voice" data-active={active} data-speaking={speaking} data-connecting={connecting}>
+    <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
+      <div className="omda-voice-orb"><span/><span/><span/><i/></div>
+    </div>
+    <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
+    <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
+      {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       {connecting ? labels.connecting : active ? labels.stop : labels.start}
     </button>
-    {status && <small className="muted" role="status">{status}</small>}
   </div>;
 }
