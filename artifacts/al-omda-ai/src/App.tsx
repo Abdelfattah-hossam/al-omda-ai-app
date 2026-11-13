@@ -1769,7 +1769,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else page = dashboardPage();
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
-  return <div className="app-shell" data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-chat-active={location.startsWith("/ai") ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
       <div className="sidebar-scroll">
