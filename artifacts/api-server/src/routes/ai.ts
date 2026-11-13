@@ -487,9 +487,9 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       res.status(502).json({ error: "تعذر اعتماد خطة المشروع بعد مراجعة المحركين. لم يتم خصم وحدات؛ احتفظنا بطلبك ويمكنك المحاولة دون إعادة كتابته." });
       return;
     }
-    const chargedUsage = await reserveUnits(session.accessToken, 1);
-    if (!chargedUsage.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: chargedUsage }); return; }
-    res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model, usage: chargedUsage });
+    // The planning unit is charged atomically with task creation by /workspace/tasks.
+    // If the client cannot persist the plan, no quota is consumed.
+    res.json({ title: parsed.title.trim().slice(0, 120), steps: parsed.steps.map((step: any) => ({ text: step.text.trim(), output: step.output.trim(), complete: step.complete.trim() })), provider, model: answer.model });
   } catch (error) { reportSupabaseError(req, res, error, "Could not generate the AI project plan."); }
 });
 router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<void> => {
