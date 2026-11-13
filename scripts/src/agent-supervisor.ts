@@ -127,7 +127,18 @@ async function checkAndApplyUpdate(): Promise<void> {
       console.info("[AL OMDA supervisor] Auto-update skipped: origin must be an HTTPS GitHub remote.");
       return;
     }
+    const originMain = await runCommand("git", ["ls-remote", "--heads", "origin", "main"], 30000);
+    const advertisedMain = originMain.trim().split(/\s+/)[0] || "";
+    if (!/^[a-f0-9]{40}$/i.test(advertisedMain)) {
+      console.info("[AL OMDA supervisor] Auto-update skipped: could not verify the advertised origin/main commit.");
+      return;
+    }
     await runCommand("git", ["fetch", "--quiet", "origin", "main"], 120000);
+    const fetchedMain = await runCommand("git", ["rev-parse", "refs/remotes/origin/main"], 15000);
+    if (fetchedMain !== advertisedMain) {
+      console.info("[AL OMDA supervisor] Auto-update skipped: origin/main changed during verification; retrying next interval.");
+      return;
+    }
     const behind = Number(await runCommand("git", ["rev-list", "--count", "HEAD..origin/main"], 15000));
     const ahead = Number(await runCommand("git", ["rev-list", "--count", "origin/main..HEAD"], 15000));
     const activeRuns = await getActiveRunCount();
