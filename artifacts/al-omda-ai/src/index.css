@@ -1975,3 +1975,163 @@ body:has(.ai-chat-page){
   .app-shell::before{animation:none!important;filter:none!important}
   .app-shell button,.app-shell a.button,.app-shell [role="button"]{animation:none!important;transition:none!important}
 }
+
+
+/* AL OMDA glass system: consistent translucent surfaces across every workspace. */
+:root{--omda-glass-fill:rgba(19,27,43,.52);--omda-glass-line:rgba(190,207,255,.17);--omda-glass-shadow:0 14px 38px rgba(0,0,0,.2)}
+.app-shell .panel,
+.app-shell .stat-card,
+.app-shell .agent-card,
+.app-shell .dashboard-chart-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .profile-main-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .project-kpi,
+.app-shell .profile-summary-large,
+.app-shell .history-item,
+.app-shell .history-detail,
+.app-shell .task-row,
+.app-shell .ai-conversations-panel,
+.app-shell .ai-voice-panel,
+.app-shell .ai-routing-note{
+  background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025)),var(--omda-glass-fill)!important;
+  border-color:var(--omda-glass-line)!important;
+  box-shadow:var(--omda-glass-shadow),inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter:blur(22px) saturate(155%);
+  -webkit-backdrop-filter:blur(22px) saturate(155%);
+}
+.app-shell .dashboard-hero{
+  background:linear-gradient(115deg,rgba(30,47,77,.64),rgba(36,30,67,.55),rgba(17,56,62,.58))!important;
+  border:1px solid var(--omda-glass-line);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+}
+.app-shell .field,
+.app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-shell textarea,
+.app-shell select{
+  background:rgba(9,15,27,.38)!important;
+  border-color:rgba(190,207,255,.18)!important;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.app-shell .ai-composer{
+  background:linear-gradient(125deg,rgba(24,39,67,.68),rgba(37,29,68,.62),rgba(15,51,58,.64))!important;
+  border-color:rgba(176,199,255,.25)!important;
+  backdrop-filter:blur(28px) saturate(175%)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(175%)!important;
+}
+.app-shell .ai-plus-menu,
+.app-shell .ai-chat-top-menu,
+.app-shell .dropdown-menu,
+.app-shell .popover-content{
+  background:rgba(12,19,32,.88)!important;
+  border-color:rgba(190,207,255,.2)!important;
+  backdrop-filter:blur(28px) saturate(170%)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(170%)!important;
+  box-shadow:0 22px 55px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+
+/* Idle shimmer is always visible; hover and press briefly intensify it. */
+@keyframes omdaIdleShimmer{
+  0%,100%{box-shadow:0 0 0 1px rgba(var(--omda-glow),.09),0 0 7px rgba(var(--omda-glow),.1),inset 0 1px 0 rgba(255,255,255,.09)}
+  50%{box-shadow:0 0 0 1px rgba(var(--omda-glow),.24),0 0 17px rgba(var(--omda-glow),.26),0 0 28px rgba(var(--omda-glow),.1),inset 0 1px 0 rgba(255,255,255,.17)}
+}
+@keyframes omdaPageGlassReveal{
+  from{opacity:0;transform:translate3d(0,13px,0) scale(.988);filter:blur(7px)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}
+}
+@keyframes omdaMessageReveal{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .app-shell button:not(:disabled):not(.toggle),
+  .app-shell a.button,
+  .app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle){
+    animation:omdaIdleShimmer 4.2s ease-in-out infinite!important;
+  }
+  .app-shell button:not(:disabled):not(.toggle):hover,
+  .app-shell a.button:hover,
+  .app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle):hover{
+    animation:omdaControlFlash 1.05s ease-in-out infinite!important;
+  }
+  .app-shell .ai-chat-top-menu button,
+  .app-shell .ai-plus-menu button{
+    animation:omdaIdleShimmer 5.2s ease-in-out infinite!important;
+  }
+  .page-enter>.panel,
+  .page-enter>.stats-grid>*,
+  .page-enter>.dashboard-grid>*,
+  .page-enter>.market-grid>*,
+  .page-enter>.dashboard-analytics-grid>*,
+  .page-enter .profile-settings-layout>*,
+  .page-enter .profile-settings-side>*{
+    animation:omdaPageGlassReveal .58s cubic-bezier(.2,.75,.25,1) both;
+  }
+  .page-enter>.stats-grid>*:nth-child(2),
+  .page-enter>.dashboard-grid>*:nth-child(2),
+  .page-enter>.market-grid>*:nth-child(2),
+  .page-enter>.dashboard-analytics-grid>*:nth-child(2),
+  .page-enter .profile-settings-layout>*:nth-child(2),
+  .page-enter .profile-settings-side>*:nth-child(2){animation-delay:70ms}
+  .page-enter>.stats-grid>*:nth-child(3),
+  .page-enter>.market-grid>*:nth-child(3),
+  .page-enter>.dashboard-analytics-grid>*:nth-child(3),
+  .page-enter .profile-settings-side>*:nth-child(3){animation-delay:140ms}
+  .page-enter>.stats-grid>*:nth-child(4),
+  .page-enter>.market-grid>*:nth-child(4){animation-delay:210ms}
+  .page-enter .chat-message{animation:omdaMessageReveal .32s ease-out both}
+  .page-enter .chat-message:nth-child(2){animation-delay:35ms}
+  .page-enter .chat-message:nth-child(3){animation-delay:70ms}
+  .page-enter .chat-message:nth-child(4){animation-delay:105ms}
+  .page-enter .chat-message:nth-child(5){animation-delay:140ms}
+  .page-enter .chat-message:nth-child(n+6){animation-delay:0ms}
+}
+@media(prefers-reduced-motion:reduce){
+  .app-shell button,.app-shell a.button,.app-shell [role="button"],
+  .page-enter>.panel,.page-enter>.stats-grid>*,.page-enter>.dashboard-grid>*,
+  .page-enter>.market-grid>*,.page-enter .profile-settings-layout>*,
+  .page-enter .profile-settings-side>*,.page-enter .chat-message{
+    animation:none!important;transition:none!important
+  }
+}
+
+/* Correct chat hierarchy after removing the old crowded heading. */
+.ai-chat-page{gap:8px!important}
+.ai-chat-page .ai-chat-topbar{flex:none;z-index:35;overflow:visible}
+.ai-chat-page>.panel{
+  flex:1 1 0;min-height:0!important;height:auto!important;
+  overflow:visible!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.02)),rgba(15,23,38,.46)!important;
+  border-color:var(--omda-glass-line)!important;
+  backdrop-filter:blur(22px) saturate(155%);
+  -webkit-backdrop-filter:blur(22px) saturate(155%);
+}
+.ai-chat-page>.panel>.section-head{display:none!important}
+.ai-chat-page>.panel .chat-messages{
+  flex:1 1 0;min-height:0!important;height:auto!important;max-height:none!important;
+  overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;
+}
+.ai-chat-page>.panel .ai-composer{position:sticky!important;inset:auto!important;bottom:0;z-index:25;flex:none;width:100%;margin-top:8px}
+.ai-chat-page .ai-plus-wrap{z-index:32}
+.ai-chat-page .ai-plus-menu{z-index:100;max-height:min(58dvh,430px);overflow-y:auto}
+.ai-chat-page .ai-chat-top-menu{z-index:110}
+.ai-chat-page .chat-message{border-color:rgba(190,207,255,.15)!important;background:rgba(255,255,255,.045)!important;backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+.ai-chat-page .chat-message.user{background:linear-gradient(120deg,rgba(80,119,190,.19),rgba(111,83,166,.15))!important}
+.ai-chat-page .chat-message.assistant{background:rgba(255,255,255,.035)!important}
+.ai-chat-page .ai-composer-footer{align-items:center;flex-wrap:wrap}
+.ai-chat-page .ai-composer-tools{min-width:0}
+.ai-chat-page .ai-composer-input{min-width:0;overflow-wrap:anywhere}
+.ai-chat-page .ai-chat-topbar-title{overflow:hidden}
+.ai-chat-page .ai-chat-topbar-title strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){
+  .ai-chat-page{height:calc(100dvh - 150px);min-height:420px}
+  .ai-chat-page>.panel{padding:10px!important}
+  .ai-chat-page>.panel .chat-messages{padding:9px 3px 14px}
+  .ai-chat-page>.panel .ai-composer{padding:7px!important;margin-top:6px}
+  .ai-chat-page .ai-plus-menu{width:min(280px,calc(100vw - 34px));inset-inline-start:0;max-height:52dvh}
+  .ai-chat-page .chat-message{max-width:96%;padding:11px 12px}
+}
