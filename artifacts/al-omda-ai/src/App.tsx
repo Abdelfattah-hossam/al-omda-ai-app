@@ -1204,6 +1204,13 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <li>{isAr?'اضغط اختبار الاتصال، ثم اكتب المهمة واضغط ابدأ تنفيذ المهمة.':'Select Test connection, enter a task, then choose Run agent task.'}</li>
         <li>{isAr?'أي كتابة ملفات أو أوامر أو استدعاء MCP هيتوقف لحد ما توافق عليها.':'File writes, terminal commands, and MCP calls pause until you approve them.'}</li>
       </ol></div>
+      <details className="agent-guide-code agent-guide-terminal">
+        <summary>{isAr?'تفعيل تشغيل أوامر الكمبيوتر (اختياري ومتقدم)':'Enable computer terminal commands (optional, advanced)'}</summary>
+        <p className="section-meta">{isAr?'التشغيل الآمن الافتراضي لا يسمح بتنفيذ أوامر Terminal. لو محتاج تفعّلها، أضف السطر المناسب في نفس نافذة الأوامر قبل تشغيل الـ Runtime أو أوقفه وأعد تشغيله بعد التغيير.':'The safe default does not allow terminal execution. If you need it, add the matching line in the same terminal before starting the runtime, or restart the runtime after changing it.'}</p>
+        <div className="agent-guide-terminal-row"><strong>Windows PowerShell</strong><pre><code>$env:OMDA_AGENT_EXECUTION = "host"</code></pre><button type="button" className="button button-quiet button-small" onClick={()=>void copyAgentSetup('$env:OMDA_AGENT_EXECUTION = "host"')}>{isAr?'نسخ الأمر':'Copy command'}</button></div>
+        <div className="agent-guide-terminal-row"><strong>macOS / Linux</strong><pre><code>export OMDA_AGENT_EXECUTION="host"</code></pre><button type="button" className="button button-quiet button-small" onClick={()=>void copyAgentSetup('export OMDA_AGENT_EXECUTION="host"')}>{isAr?'نسخ الأمر':'Copy command'}</button></div>
+        <div className="agent-guide-warning"><ShieldCheck size={17}/><span>{isAr?'تحذير أمان: ده مش Sandbox لنظام التشغيل. الأوامر المسموح بها تشتغل بصلاحيات حساب الكمبيوتر نفسه وقد تصل لملفاتك. فعّلها فقط على مشروع موثوق أو جهاز/حساب تجريبي، وراجع كل طلب موافقة قبل تنفيذه. لا تفتح خدمة Runtime للإنترنت.':'Security warning: this is not an OS sandbox. Allowed commands run with your computer account permissions and may access your files. Enable only for trusted projects or a disposable device/account, review every approval, and never expose the runtime to the public internet.'}</span></div>
+      </details>
       {agentGuideNotice&&<p className="agent-guide-notice" role="status">{agentGuideNotice}</p>}
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
