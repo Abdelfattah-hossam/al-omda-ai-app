@@ -1520,3 +1520,10 @@ body:has(.ai-chat-page){
  .profile-settings-layout .profile-main-card{order:1}
  .profile-settings-layout>.profile-setting-card:not(.profile-account-first){order:2}
 }
+
+
+.sidebar-search{display:flex;align-items:center;gap:8px;min-height:36px;margin:8px 0 20px;padding:0 10px;border:1px solid rgba(137,157,220,.2);border-radius:9px;background:rgba(8,13,26,.55);color:#8996b5}
+.sidebar-search input{width:100%;min-width:0;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;color:var(--text-primary,#e8edff);font:inherit;font-size:11px}
+.sidebar-search kbd{flex:none;padding:2px 4px;border:1px solid rgba(137,157,220,.16);border-radius:4px;color:#8996b5;font-size:9px}
+.sidebar-search:focus-within{border-color:rgba(var(--omda-glow),.5);box-shadow:0 0 0 3px rgba(var(--omda-glow),.08)}
+@media(max-width:760px){.sidebar-search{margin-top:6px}}
