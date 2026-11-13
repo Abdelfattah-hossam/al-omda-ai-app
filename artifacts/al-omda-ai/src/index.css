@@ -1367,3 +1367,31 @@ body:has(.ai-chat-page){
   .main-area:has(.ai-chat-page) > .content-wrap { min-height:0 !important; }
   .main-area:has(.ai-chat-page) .ai-chat-page { min-height:0 !important; }
 }
+
+.ai-chat-more-wrap{position:relative;flex:none}
+.ai-chat-more-button{min-width:34px!important;padding-inline:8px!important}
+.ai-chat-more-menu{position:absolute;z-index:130;top:calc(100% + 7px);inset-inline-end:0;width:min(230px,82vw);display:grid;gap:3px;padding:7px;border:1px solid rgba(140,165,230,.28);border-radius:15px;background:rgba(13,19,35,.98);box-shadow:0 16px 42px rgba(0,0,0,.48);backdrop-filter:blur(22px)}
+.ai-chat-more-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:11px;border:0;border-radius:9px;background:transparent;color:var(--text-primary,#e7ecfa);text-align:start;font:inherit;font-size:12px;cursor:pointer}
+.ai-chat-more-menu button:hover{background:rgba(120,155,240,.12)}
+.omda-live-voice{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:260px;padding:20px 12px;text-align:center}
+.omda-voice-orb-wrap{position:relative;display:grid;place-items:center;width:190px;height:190px}
+.omda-voice-orb-wrap:before,.omda-voice-orb-wrap:after{content:"";position:absolute;inset:12px;border:1px solid rgba(137,165,255,.28);border-radius:50%;animation:omdaVoiceRing 3.4s ease-out infinite}
+.omda-voice-orb-wrap:after{animation-delay:1.7s}
+.omda-voice-orb{position:relative;display:grid;place-items:center;width:116px;height:116px;border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(166,190,255,.92),rgba(91,113,198,.75) 28%,rgba(55,42,105,.9) 62%,rgba(12,22,45,.98));box-shadow:0 0 28px rgba(113,145,255,.4),inset 0 0 25px rgba(202,218,255,.28);animation:omdaOrbFloat 5s ease-in-out infinite;overflow:hidden}
+.omda-voice-orb span{position:absolute;width:150%;height:60%;border-radius:50%;border:1px solid rgba(211,222,255,.38);transform:rotate(-28deg);animation:omdaOrbWave 4s ease-in-out infinite}
+.omda-voice-orb span:nth-child(2){transform:rotate(48deg);animation-delay:-1.3s}
+.omda-voice-orb span:nth-child(3){transform:rotate(90deg);animation-delay:-2.5s}
+.omda-voice-orb i{width:28px;height:28px;border-radius:50%;background:rgba(220,230,255,.75);filter:blur(12px)}
+.omda-voice-status{max-width:90%;font-size:13px;color:var(--text-primary,#e8edff)}
+.omda-voice-start,.omda-voice-end{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:0 20px;border:1px solid rgba(141,169,255,.42);border-radius:999px;background:rgba(94,123,211,.18);color:var(--text-primary,#eef2ff);font:inherit;font-size:12px;cursor:pointer;box-shadow:0 0 18px rgba(115,145,255,.16)}
+.omda-voice-end{border-color:rgba(230,115,135,.4);background:rgba(140,45,70,.2)}
+.omda-live-voice[data-active="true"] .omda-voice-orb{animation:omdaOrbFloat 2.2s ease-in-out infinite,omdaOrbGlow 2s ease-in-out infinite}
+.omda-live-voice[data-speaking="true"] .omda-voice-orb{transform:scale(1.08);filter:saturate(1.3)}
+.omda-live-voice[data-speaking="true"] .omda-voice-orb-wrap:before,.omda-live-voice[data-speaking="true"] .omda-voice-orb-wrap:after{animation-duration:1.2s}
+.omda-live-voice[data-connecting="true"] .omda-voice-orb{filter:grayscale(.25);animation:omdaOrbGlow 1s ease-in-out infinite}
+@keyframes omdaVoiceRing{0%{transform:scale(.72);opacity:.65}100%{transform:scale(1.18);opacity:0}}
+@keyframes omdaOrbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.035)}}
+@keyframes omdaOrbWave{0%,100%{transform:rotate(-28deg) translateY(-5px)}50%{transform:rotate(-28deg) translateY(7px)}}
+@keyframes omdaOrbGlow{0%,100%{box-shadow:0 0 24px rgba(113,145,255,.32),inset 0 0 25px rgba(202,218,255,.22)}50%{box-shadow:0 0 48px rgba(113,145,255,.65),inset 0 0 35px rgba(202,218,255,.4)}}
+@media(prefers-reduced-motion:reduce){.omda-live-voice *{animation:none!important;transition:none!important}}
+@media(max-width:650px){.omda-live-voice{min-height:230px;padding:14px 8px}.omda-voice-orb-wrap{width:170px;height:170px}.omda-voice-orb{width:104px;height:104px}.ai-chat-more-menu{position:fixed;top:auto;inset-inline:12px;bottom:calc(70px + env(safe-area-inset-bottom));width:auto}}
