@@ -1174,8 +1174,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const agentsPage = () => <div className="page-enter agent-marketplace-page">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
-    <section className="panel panel-pad agent-guide-panel">
-      <div className="section-head"><div><span className="eyebrow">{isAr?'دليل الاستخدام':'GETTING STARTED'}</span><h2 className="section-title">{isAr?'تشغيل الوكلاء خطوة بخطوة':'How to use and run agents'}</h2><p className="section-meta">{isAr?'اختر الطريقة المناسبة: تخصص جاهز داخل مساحة العمل، أو وكيل محلي يتصل بمشروعك على الكمبيوتر.':'Choose a ready-made specialty in the workbench, or connect the local runtime to a project on your computer.'}</p></div><Bot size={20}/></div>
+    <details className="panel panel-pad agent-guide-panel">
+      <summary className="profile-accordion-summary"><div className="section-head"><div><span className="eyebrow">{isAr?'دليل الاستخدام':'GETTING STARTED'}</span><h2 className="section-title">{isAr?'تشغيل الوكلاء خطوة بخطوة':'How to use and run agents'}</h2><p className="section-meta">{isAr?'اختر الطريقة المناسبة: تخصص جاهز داخل مساحة العمل، أو وكيل محلي يتصل بمشروعك على الكمبيوتر.':'Choose a ready-made specialty in the workbench, or connect the local runtime to a project on your computer.'}</p></div><Bot size={20}/></div>
       <div className="agent-guide-steps">
         <div><span className="agent-guide-number">1</span><div><strong>{isAr?'استخدام أحد التخصصات الستة':'Use one of the six specialties'}</strong><p>{isAr?'اضغط «استخدم الوكيل» أسفل التخصص. هتنتقل لمساحة العمل والتخصص متحدد تلقائيًا.':'Select “Use agent” on a specialty card. The workbench opens with that specialty selected.'}</p></div></div>
         <div><span className="agent-guide-number">2</span><div><strong>{isAr?'اكتب المطلوب وراجع الخطة':'Describe the task and review the plan'}</strong><p>{isAr?'اكتب المهمة في مساحة العمل واضغط إنشاء الخطة. راجع الخطوات قبل الموافقة. التخصصات دي قوالب لتوجيه الطلب وليست برامج مستقلة يتم تنزيلها.':'Describe the task in the workbench and generate a plan. Review it before approval. These specialties guide a request; they are not separate downloadable programs.'}</p></div></div>
@@ -1216,7 +1216,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="agent-guide-warning"><ShieldCheck size={17}/><span>{isAr?'تحذير أمان: ده مش Sandbox لنظام التشغيل. الأوامر المسموح بها تشتغل بصلاحيات حساب الكمبيوتر نفسه وقد تصل لملفاتك. فعّلها فقط على مشروع موثوق أو جهاز/حساب تجريبي، وراجع كل طلب موافقة قبل تنفيذه. لا تفتح خدمة Runtime للإنترنت.':'Security warning: this is not an OS sandbox. Allowed commands run with your computer account permissions and may access your files. Enable only for trusted projects or a disposable device/account, review every approval, and never expose the runtime to the public internet.'}</span></div>
       </details>
       {agentGuideNotice&&<p className="agent-guide-notice" role="status">{agentGuideNotice}</p>}
-    </section>
+    </details>
     <details className="panel panel-pad agent-advanced-tools">
       <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
       <div className="agent-advanced-tools-content">
