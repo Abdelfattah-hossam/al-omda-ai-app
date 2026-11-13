@@ -969,10 +969,14 @@ async function runDraftSpecialistTool(call: AgentToolCall, draftRoot: string): P
     case "files.list": {
       const input = typeof args.path === "string" ? args.path : ".";
       if (input !== "." && !isAgentDraftPathAllowed(input)) throw new Error("This source path is not available to draft specialists.");
-      const sourceEntries = await resolveExistingPath(input).then((path) => readdir(path, { withFileTypes: true })).catch((error) => {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      const sourceDirectory = await resolveExistingPath(input).catch((error) => {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw error;
       });
+      if (sourceDirectory && !isAgentDraftPathAllowed(relative(workspaceRoot, sourceDirectory).split(sep).join("/"))) {
+        throw new Error("This resolved source directory is not available to draft specialists.");
+      }
+      const sourceEntries = sourceDirectory ? await readdir(sourceDirectory, { withFileTypes: true }) : [];
       const draftPath = resolveAgentDraftPath(draftRoot, input, true);
       const draftEntries = await readdir(draftPath, { withFileTypes: true }).catch((error) => {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
@@ -1003,6 +1007,7 @@ async function runDraftSpecialistTool(call: AgentToolCall, draftRoot: string): P
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
       const actual = await resolveExistingPath(input);
+      if (!isAgentDraftPathAllowed(relative(workspaceRoot, actual).split(sep).join("/"))) throw new Error("This resolved source file is not available to draft specialists.");
       const info = await stat(actual);
       if (!info.isFile() || info.size > 2 * 1024 * 1024) throw new Error("Only source files up to 2 MB can be read.");
       return { path: relative(workspaceRoot, actual), content: await readFile(actual, "utf8"), proposed: false };
