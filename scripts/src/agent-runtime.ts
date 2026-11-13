@@ -968,6 +968,7 @@ async function runDraftSpecialistTool(call: AgentToolCall, draftRoot: string): P
       return { skills: (await loadWorkspaceSkills()).map((skill) => ({ name: skill.name, description: skill.instructions.slice(0, 500) })) };
     case "files.list": {
       const input = typeof args.path === "string" ? args.path : ".";
+      if (input !== "." && !isAgentDraftPathAllowed(input)) throw new Error("This source path is not available to draft specialists.");
       const sourceEntries = await resolveExistingPath(input).then((path) => readdir(path, { withFileTypes: true })).catch((error) => {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
         throw error;
@@ -978,12 +979,19 @@ async function runDraftSpecialistTool(call: AgentToolCall, draftRoot: string): P
         throw error;
       });
       const entries = new Map<string, { name: string; type: string; proposed?: boolean }>();
-      for (const entry of sourceEntries) entries.set(entry.name, { name: entry.name, type: entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other" });
-      for (const entry of draftEntries) entries.set(entry.name, { name: entry.name, type: entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other", proposed: true });
+      for (const entry of sourceEntries) {
+        const entryPath = (input === "." ? "" : input.replace(/\\/g, "/") + "/") + entry.name;
+        if (isAgentDraftPathAllowed(entryPath)) entries.set(entry.name, { name: entry.name, type: entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other" });
+      }
+      for (const entry of draftEntries) {
+        const entryPath = (input === "." ? "" : input.replace(/\\/g, "/") + "/") + entry.name;
+        if (isAgentDraftPathAllowed(entryPath)) entries.set(entry.name, { name: entry.name, type: entry.isDirectory() ? "directory" : entry.isFile() ? "file" : "other", proposed: true });
+      }
       return { path: input, entries: [...entries.values()].slice(0, 500) };
     }
     case "files.read": {
       const input = args.path;
+      if (!isAgentDraftPathAllowed(typeof input === "string" ? input.replace(/\\/g, "/") : "")) throw new Error("This source path is not available to draft specialists.");
       const draftPath = resolveAgentDraftPath(draftRoot, input);
       try {
         const actualDraft = await realpath(draftPath);

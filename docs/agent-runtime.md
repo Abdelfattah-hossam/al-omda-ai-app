@@ -148,6 +148,14 @@ Before updating, it requires the runtime to be idle, the checkout to be on a cle
 
 The supervisor updates the local Git checkout and restarts the local runtime; it does **not** deploy the Cloudflare website. Keep the supervisor process running. Closing its terminal stops supervision; a platform-specific user service/Task Scheduler installer is still a future improvement. Use a dedicated checkout and review your Git remote before enabling automatic updates.
 
+### Isolated draft mode for parallel specialists
+
+The `agent.delegate` tool supports an optional `mode`:
+- `research` (default): specialists use read-only project and research tools.
+- `draft`: each specialist receives a private temporary workspace. It can read permitted source files and write proposed text files there, but it cannot run commands, call MCP servers, or write to the real project.
+
+Draft workspaces exclude secrets and runtime/build directories (including `.env*`, `.git`, `.omda`, `node_modules`, and build outputs). Returned proposals are bounded in size and are deleted from temporary storage after collection. The lead agent must inspect proposals and apply selected files through the existing `files.write` action, which still pauses for explicit user approval. Draft mode is not a merge, commit, or test runner.
+
 ### Parallel specialist agents
 
 The main Agent can call `agent.delegate` to split a complex request into 2–4 independent specialist investigations. They run concurrently and can read workspace files, use Skills, inspect allowlisted HTTPS targets, and use the configured web search. Specialists are deliberately read-only: they cannot write files, execute terminal commands, or call arbitrary MCP tools. The lead Agent combines their evidence and performs any required changes through its normal approval gate. The Agents workspace also exposes a manual two-specialist delegation form with live progress.
