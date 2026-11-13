@@ -1553,3 +1553,10 @@ body:has(.ai-chat-page){
 .profile-settings-layout .profile-settings-side{order:3}
 @media(max-width:650px){.profile-settings-layout .profile-settings-side{order:3}}
 @media(max-width:760px){.ai-chat-actions>.button,.ai-chat-actions .ai-chat-more-button{font-size:12px}}
+@media(max-width:650px){
+  .ai-chat-page .ai-chat-actions .button,
+  .ai-chat-page .ai-chat-actions .ai-chat-more-button{
+    min-height:36px!important;
+    font-size:12px!important;
+  }
+}
