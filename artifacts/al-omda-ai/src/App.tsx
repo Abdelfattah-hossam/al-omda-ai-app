@@ -18,7 +18,7 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
@@ -427,10 +427,12 @@ function App() {
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
   const [delegateRoleOne, setDelegateRoleOne] = useState("Code reviewer");
   const [delegateGoalOne, setDelegateGoalOne] = useState("");
+  const [delegateModeOne, setDelegateModeOne] = useState<"read_only" | "proposal">("read_only");
   const [delegateRoleTwo, setDelegateRoleTwo] = useState("Security reviewer");
   const [delegateGoalTwo, setDelegateGoalTwo] = useState("");
+  const [delegateModeTwo, setDelegateModeTwo] = useState<"read_only" | "proposal">("read_only");
   const [delegateBusy, setDelegateBusy] = useState(false);
-  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; result: string; turns?: number; evidence?: Array<{ tool: string; summary: string }> }>>([]);
+  const [delegateResults, setDelegateResults] = useState<Array<{ role: string; mode?: "read_only" | "proposal"; result: string; turns?: number; proposalDirectory?: string; proposalFiles?: Array<{ path: string; bytes: number }>; error?: string; evidence?: Array<{ tool: string; summary: string }> }>>([]);
   const [delegateError, setDelegateError] = useState("");
 
   const [httpFlowUrl, setHttpFlowUrl] = useState("");
@@ -449,6 +451,9 @@ function App() {
   const [browserSiteInput, setBrowserSiteInput] = useState("");
   const [browserWorkspaceBusy, setBrowserWorkspaceBusy] = useState(false);
   const [browserWorkspaceError, setBrowserWorkspaceError] = useState("");
+  const [desktopWorkspace, setDesktopWorkspace] = useState<{ configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
+  const [desktopWorkspaceBusy, setDesktopWorkspaceBusy] = useState(false);
+  const [desktopWorkspaceError, setDesktopWorkspaceError] = useState("");
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
@@ -942,8 +947,8 @@ function App() {
   };
   const runLocalAgentDelegation = async () => {
     const tasks = [
-      { role: delegateRoleOne.trim() || "Specialist 1", goal: delegateGoalOne.trim() },
-      { role: delegateRoleTwo.trim() || "Specialist 2", goal: delegateGoalTwo.trim() },
+      { role: delegateRoleOne.trim() || "Specialist 1", goal: delegateGoalOne.trim(), mode: delegateModeOne },
+      { role: delegateRoleTwo.trim() || "Specialist 2", goal: delegateGoalTwo.trim(), mode: delegateModeTwo },
     ];
     if (tasks.some((task) => !task.goal) || delegateBusy || !localAgentToken.trim()) return;
     setDelegateBusy(true); setDelegateError(""); setDelegateResults([]);
@@ -959,13 +964,17 @@ function App() {
       });
       const agents = Array.isArray(result.agents) ? result.agents.map((item: any) => ({
         role: String(item.role || "Specialist"),
+        mode: item.mode === "proposal" ? "proposal" as const : "read_only" as const,
         result: String(item.result || ""),
+        proposalDirectory: typeof item.proposalDirectory === "string" ? item.proposalDirectory : undefined,
+        proposalFiles: Array.isArray(item.proposalFiles) ? item.proposalFiles.map((file: any) => ({ path: String(file.path || ""), bytes: Number(file.bytes || 0) })) : [],
+        error: typeof item.error === "string" ? item.error : undefined,
         turns: typeof item.turns === "number" ? item.turns : undefined,
         evidence: Array.isArray(item.evidence) ? item.evidence.map((entry: any) => ({ tool: String(entry.tool || "tool"), summary: String(entry.summary || "") })) : [],
       })) : [];
       setDelegateResults(agents);
       if (result.sessionId) setLocalAgentSessionId(String(result.sessionId));
-      setLocalAgentMessage(isAr ? "اكتمل تحليل الوكلاء المتوازيين. كل وكيل للقراءة والتحليل فقط." : "Parallel specialist review completed. Specialists had read-only access.");
+      setLocalAgentMessage(isAr ? "اكتمل تشغيل الوكلاء. أي ملفات مقترحة محفوظة في مساحات معزولة ولم تُطبّق على المشروع." : "Delegation completed. Any proposed files remain isolated and were not applied to the project.");
     } catch (error) {
       setDelegateError(error instanceof Error ? error.message : (isAr ? "فشل تشغيل الوكلاء المتوازيين." : "Parallel delegation failed."));
     } finally { setDelegateBusy(false); }
@@ -1029,6 +1038,13 @@ function App() {
     } catch (error) {
       setModelProvidersError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مزودي الموديلات." : "Could not load model providers."));
     }
+  };
+
+  const loadDesktopWorkspace = async () => {
+    setDesktopWorkspaceBusy(true); setDesktopWorkspaceError("");
+    try { setDesktopWorkspace(await callLocalAgentRuntime("/v1/desktop/workspace") as typeof desktopWorkspace); }
+    catch (error) { setDesktopWorkspaceError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مساحة سطح المكتب." : "Could not load Desktop Workspace.")); }
+    finally { setDesktopWorkspaceBusy(false); }
   };
 
   const loadBrowserWorkspace = async () => {
@@ -1153,7 +1169,7 @@ function App() {
       </div>}
       <div className="panel panel-pad" style={{marginTop:18}}>
         <div className="section-head">
-          <div><span className="eyebrow">MULTI-AGENT</span><h3 className="section-title">{isAr?'تشغيل وكيلين بالتوازي':'Parallel specialist review'}</h3><p className="section-meta">{isAr?'قسّم المهمة بين متخصصين مستقلين. صلاحياتهما للقراءة والبحث فقط، ولا يمكنهما تعديل الملفات أو تشغيل الأوامر.':'Split a review between two independent specialists. They can read and research, but cannot edit files or execute commands.'}</p></div>
+          <div><span className="eyebrow">MULTI-AGENT</span><h3 className="section-title">{isAr?'تشغيل وكيلين بالتوازي':'Parallel specialist review'}</h3><p className="section-meta">{isAr?'قسّم المهمة بين متخصصين. يمكنك السماح لكل وكيل بإنشاء مسودات داخل مساحة معزولة؛ لا يمكنه تعديل ملفات المشروع أو تشغيل الأوامر.':'Split work between two specialists. Each can be read-only or create draft files in an isolated workspace; neither can edit project files or run commands.'}</p></div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:12}}>
           <div className="field-group">
@@ -1161,12 +1177,18 @@ function App() {
             <input className="field" value={delegateRoleOne} onChange={event=>setDelegateRoleOne(event.target.value)} maxLength={80}/>
             <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
             <textarea className="field" rows={3} value={delegateGoalOne} onChange={event=>setDelegateGoalOne(event.target.value)} placeholder={isAr?'مثال: راجع بنية الكود واكتشف الأخطاء.':'Example: Review the code structure and identify defects.'}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'وضع الوكيل':'Agent mode'}</label>
+            <select className="field" value={delegateModeOne} onChange={event=>setDelegateModeOne(event.target.value as "read_only"|"proposal")}><option value="read_only">{isAr?'قراءة وتحليل فقط':'Read-only research'}</option><option value="proposal">{isAr?'إنشاء مسودات معزولة':'Draft isolated proposals'}</option></select>
+
           </div>
           <div className="field-group">
             <label className="form-label">{isAr?'دور الوكيل الثاني':'Second specialist role'}</label>
             <input className="field" value={delegateRoleTwo} onChange={event=>setDelegateRoleTwo(event.target.value)} maxLength={80}/>
             <label className="form-label" style={{marginTop:8}}>{isAr?'مهمته':'Its task'}</label>
             <textarea className="field" rows={3} value={delegateGoalTwo} onChange={event=>setDelegateGoalTwo(event.target.value)} placeholder={isAr?'مثال: راجع الأمان وحدد المخاطر.':'Example: Review security and identify risks.'}/>
+            <label className="form-label" style={{marginTop:8}}>{isAr?'وضع الوكيل':'Agent mode'}</label>
+            <select className="field" value={delegateModeTwo} onChange={event=>setDelegateModeTwo(event.target.value as "read_only"|"proposal")}><option value="read_only">{isAr?'قراءة وتحليل فقط':'Read-only research'}</option><option value="proposal">{isAr?'إنشاء مسودات معزولة':'Draft isolated proposals'}</option></select>
+
           </div>
         </div>
         <button type="button" className="button button-primary button-small" style={{marginTop:12}} onClick={runLocalAgentDelegation} disabled={delegateBusy||localAgentBusy||localAgentStatus!=='ready'||!delegateGoalOne.trim()||!delegateGoalTwo.trim()}>{delegateBusy?(isAr?'جارٍ تشغيل الوكلاء...':'Running specialists...'):(isAr?'ابدأ التحليل المتوازي':'Run parallel review')}</button>
@@ -1175,6 +1197,8 @@ function App() {
           {delegateResults.map((item,index)=><div key={item.role+index} style={{border:'1px solid var(--border)',borderRadius:12,padding:12}}>
             <strong>{item.role}</strong>{typeof item.turns==='number'&&<span className="section-meta"> · {item.turns} {isAr?'جولات':'turns'}</span>}
             <p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:8}}>{item.result}</p>
+            {item.mode==="proposal"&&<div className="section-meta" style={{marginTop:8}}>{isAr?'مساحة المسودات: ':'Proposal workspace: '}{item.proposalDirectory||'—'}{item.proposalFiles&&item.proposalFiles.length>0&&<ul style={{margin:'6px 0',paddingInlineStart:20}}>{item.proposalFiles.map(file=><li key={file.path}>{file.path} · {file.bytes} bytes</li>)}</ul>}</div>}
+            {item.error&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)'}}>{item.error}</p>}
             {item.evidence&&item.evidence.length>0&&<details style={{marginTop:10}}><summary className="section-meta">{isAr?'الأدلة والأدوات المستخدمة':'Evidence and tools used'} ({item.evidence.length})</summary>
               {item.evidence.map((entry,evidenceIndex)=><div key={entry.tool+evidenceIndex} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{entry.tool}</strong><p className="section-meta" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',marginTop:4}}>{entry.summary}</p></div>)}
             </details>}
@@ -1182,6 +1206,20 @@ function App() {
         </div>}
       </div>
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
+    </section>
+    <section className="panel panel-pad" style={{marginBottom:20}}>
+      <div className="section-head">
+        <div><span className="eyebrow">DESKTOP WORKSPACE</span><h2 className="section-title">{isAr?'مساحة سطح المكتب والتحكم المحلي':'Desktop Workspace & local control'}</h2><p className="section-meta">{isAr?'اكتشاف أدوات التحكم في التطبيقات والنوافذ على جهازك المحلي. كل إجراء يتطلب موافقتك، كما يجب منح صلاحيات نظام التشغيل يدويًا.':'Discover local app and window control tools. Every action requires your approval, and operating-system permissions must be granted manually.'}</p></div>
+        <button type="button" className="button button-quiet button-small" onClick={loadDesktopWorkspace} disabled={desktopWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{desktopWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
+      </div>
+      {!desktopWorkspace&&<p className="section-meta" style={{marginTop:12}}>{isAr?'اضغط تحديث بعد إعداد computer-use وإعادة تشغيل الوكيل المحلي.':'Refresh after configuring computer-use and restarting the local runtime.'}</p>}
+      {desktopWorkspace&&<>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}><span className="status-chip"><span className={desktopWorkspace.connected?'online-dot':'offline-dot'}/>{desktopWorkspace.connected?(isAr?'أدوات سطح المكتب متصلة':'Desktop tools connected'):(desktopWorkspace.configured?(isAr?'الخدمة غير متصلة':'Service not connected'):(isAr?'computer-use غير مُعد':'computer-use not configured'))}</span><span className="status-chip">{desktopWorkspace.tools.length} {isAr?'أداة':'tools'}</span></div>
+        {desktopWorkspace.connectionError&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)',marginTop:10}}>{desktopWorkspace.connectionError}</p>}
+        {desktopWorkspace.tools.length>0&&<details style={{marginTop:12}}><summary className="section-meta">{isAr?'أدوات التحكم المتاحة':'Available control tools'} ({desktopWorkspace.tools.length})</summary>{desktopWorkspace.tools.map(tool=><div key={tool.name} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{tool.name}</strong>{tool.description&&<p className="section-meta">{tool.description}</p>}</div>)}</details>}
+        <p className="section-meta" style={{marginTop:12}}>{isAr?'هذه اللوحة لا تمنح صلاحيات نظام التشغيل تلقائيًا ولا تنفذ تحكمًا عن بُعد. شغّل الوكيل على الكمبيوتر نفسه وامنح الصلاحيات المطلوبة من إعدادات النظام.':'This panel does not grant OS permissions or enable remote control by itself. Run the agent on the target computer and grant requested permissions in system settings.'}</p>
+      </>}
+      {desktopWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{desktopWorkspaceError}</div>}
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head">
