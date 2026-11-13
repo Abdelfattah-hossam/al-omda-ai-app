@@ -32,7 +32,7 @@ test("requires authentication before renaming a saved conversation", async () =>
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      origin: "https://al-omda-ai-app.abdelfattahhossam1.workers.dev",
+      origin: baseUrl,
     },
     body: JSON.stringify({ title: "Renamed conversation" }),
   });
