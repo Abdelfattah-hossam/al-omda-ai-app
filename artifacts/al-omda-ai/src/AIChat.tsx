@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
 import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
@@ -308,12 +308,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     };
   }, [signedIn, view, activeConversationId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = chatScrollRef.current;
     if (!container || !shouldAutoScrollRef.current) return;
-    // Scroll only inside the message list, and only while the reader is already at its end.
-    // This avoids moving the whole page or pulling someone away from older messages.
-    container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+    // Only pin a genuinely scrollable transcript. On mobile the transcript grows
+    // with the page, so scrolling this element would fight the browser's page scroll.
+    if (container.scrollHeight <= container.clientHeight + 1) return;
+    // Apply the position before paint; scrollTo on every streamed token caused
+    // repeated asynchronous scroll operations and visible jitter on some devices.
+    container.scrollTop = container.scrollHeight;
   }, [messages, loading]);
   useEffect(() => () => {
     recognitionRef.current?.stop?.();
