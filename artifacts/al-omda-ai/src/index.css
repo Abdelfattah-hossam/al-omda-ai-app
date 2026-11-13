@@ -2684,9 +2684,3 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
-/* Preserve semantic chips, icon tiles and form controls as intentional UI controls. */
-.app-shell :is(.status-chip,.task-icon,.specialty-icon,.agent-symbol,.empty-mark,.profile-avatar,.avatar,.button,.button-primary,.button-quiet,.button-danger,.icon-button,input,select,textarea,[role="switch"]) {
-  box-shadow: revert-layer;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
