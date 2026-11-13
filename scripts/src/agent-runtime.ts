@@ -1139,7 +1139,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
         const listed = await listMcpTools("computer-use");
         const desktopServer = Array.isArray(listed.servers) ? listed.servers.find((item: any) => item.server === "computer-use") : null;
-        tools = Array.isArray(desktopServer?.tools) ? desktopServer.tools.slice(0, 60).map((item: any) => ({ name: String(item.name || ""), description: typeof item.description === "string" ? item.description.slice(0, 240) : "" })).filter((item) => item.name) : [];
+        tools = Array.isArray(desktopServer?.tools) ? desktopServer.tools.slice(0, 60).map((item: any) => ({ name: String(item.name || ""), description: typeof item.description === "string" ? item.description.slice(0, 240) : "" })).filter((item: { name: string; description: string }) => item.name) : [];
       } catch (error) { connectionError = error instanceof Error ? error.message : "Desktop MCP connection failed."; }
     }
     send(res, 200, { configured, connected: configured && tools.length > 0 && !connectionError, tools, connectionError }); return;
