@@ -940,10 +940,10 @@ async function runDelegatedSubagent(role: string, goal: string, mode: "read_only
 async function delegateAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const tasks = Array.isArray(body.tasks) ? body.tasks : [];
   if (tasks.length < 2 || tasks.length > 4) throw new Error("Provide between 2 and 4 specialist tasks.");
-  const normalized = tasks.map((task: any, index: number) => {
+  const normalized: Array<{ role: string; goal: string; mode: "read_only" | "proposal" }> = tasks.map((task: any, index: number) => {
     if (!task || typeof task.goal !== "string" || !task.goal.trim() || task.goal.length > 8000) throw new Error("Each specialist task needs a goal up to 8,000 characters.");
     const role = typeof task.role === "string" && task.role.trim() ? task.role.trim().slice(0, 80) : "Specialist " + (index + 1);
-    const mode = task.mode === "proposal" ? "proposal" : "read_only";
+    const mode: "read_only" | "proposal" = task.mode === "proposal" ? "proposal" : "read_only";
     return { role, goal: task.goal.trim(), mode };
   });
   const id = randomUUID().replace(/-/g, "");
