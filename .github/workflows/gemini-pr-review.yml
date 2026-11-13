@@ -22,7 +22,7 @@ jobs:
       ${{ github.event.pull_request.head.repo.full_name == github.repository &&
           github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Fetch pull request diff without checking out or running PR code
         env:
@@ -53,12 +53,32 @@ jobs:
             '{contents:[{parts:[{text:($prompt + "\n\nPULL REQUEST DIFF:\n" + $diff)}]}],generationConfig:{maxOutputTokens:8192}}' \
             > gemini-request.json
 
-          curl --silent --show-error --fail-with-body --max-time 90 \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -H "x-goog-api-key: ${GEMINI_API_KEY}" \
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent" \
-            --data-binary @gemini-request.json > gemini-response.json
+          attempt=1
+          max_attempts=4
+          while true; do
+            http_code="$(curl --silent --show-error --max-time 120 \
+              -o gemini-response.json -w '%{http_code}' \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -H "x-goog-api-key: ${GEMINI_API_KEY}" \
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent" \
+              --data-binary @gemini-request.json || true)"
+
+            if [ "${http_code}" = "200" ]; then
+              break
+            fi
+
+            if [[ ! "${http_code}" =~ ^(000|429|500|502|503|504)$ ]] || [ "${attempt}" -ge "${max_attempts}" ]; then
+              echo "Gemini API request failed with HTTP ${http_code} after ${attempt} attempt(s)." >&2
+              jq -r '.error.message // empty' gemini-response.json 2>/dev/null || true
+              exit 1
+            fi
+
+            delay=$((attempt * 10))
+            echo "Gemini temporarily unavailable (HTTP ${http_code}); retrying in ${delay}s (${attempt}/${max_attempts})."
+            sleep "${delay}"
+            attempt=$((attempt + 1))
+          done
 
           jq -er '[.candidates[0].content.parts[]? | .text // empty] | join("\n") | select(length > 0)' \
             gemini-response.json > gemini-review.md
