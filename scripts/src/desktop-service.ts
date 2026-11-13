@@ -77,10 +77,14 @@ async function install(): Promise<void> {
     const content = buildLaunchAgentPlist({ label, repoRoot, path: process.env.PATH || "/usr/bin:/bin", environment, logPath: join(locations.logs, "agent.log") });
     await writeFile(locations.service, content, { encoding: "utf8", mode: 0o600 });
     await chmod(locations.service, 0o600);
+    await run("launchctl", ["bootout", "gui/" + process.getuid?.() + "/" + label]).catch(() => undefined);
     await run("launchctl", ["bootstrap", "gui/" + process.getuid?.(), locations.service]);
   } else if (platform === "win32") {
     const content = buildWindowsAgentLauncher({ repoRoot, envFile });
     await writeFile(locations.service, content, { encoding: "utf8", mode: 0o600 });
+    const username = process.env.USERNAME?.trim();
+    if (!username) throw new Error("Could not determine the current Windows account to secure the local token file.");
+    await run("icacls.exe", [envFile, "/inheritance:r", "/grant:r", username + ":(F)", "*S-1-5-18:(F)"]);
     const taskCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + locations.service.replace(/"/g, '""') + '"';
     await run("schtasks.exe", ["/Create", "/SC", "ONLOGON", "/TN", taskName, "/TR", taskCommand, "/F"]);
     await run("schtasks.exe", ["/Run", "/TN", taskName]);
