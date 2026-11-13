@@ -86,7 +86,12 @@ async function stopRuntime(handle: RuntimeHandle): Promise<void> {
   await rm(handle.workspace, { recursive: true, force: true });
 }
 
-async function writeFileForMcp(path: string, content: string): Promise<void> {\n  await mkdir(dirname(path), { recursive: true });\n  await writeFile(path, content, "utf8");\n}\n\nasync function request(path: string, options: RequestInit = {}): Promise<Response> {
+async function writeFileForMcp(path: string, content: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, content, "utf8");
+}
+
+async function request(path: string, options: RequestInit = {}): Promise<Response> {
   return fetch(runtime.baseUrl + path, options);
 }
 
