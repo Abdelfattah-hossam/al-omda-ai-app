@@ -991,18 +991,7 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .main-area:has(.ai-chat-page) .ai-chat-page .ai-routing-note,
 .main-area:has(.ai-chat-page) .ai-chat-page .ai-voice-panel,
 .main-area:has(.ai-chat-page) .ai-chat-page .ai-conversations-panel{flex:0 0 auto!important;max-height:22vh!important;overflow:auto!important}
-@media(max-width:650px){
-  .main-area:has(.ai-chat-page){padding-bottom:90px!important}
-  .main-area:has(.ai-chat-page)>.topbar{flex-basis:56px!important;min-height:56px!important;height:56px!important}
-  .main-area:has(.ai-chat-page)>.content-wrap{padding:7px 8px 8px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page{gap:7px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.ai-chat-heading{padding:7px 8px!important;gap:7px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.panel{padding:8px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.panel .chat-messages{padding:8px 3px 12px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.panel .ai-composer{margin-top:6px!important;padding:8px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.panel .ai-composer-input{min-height:42px!important;max-height:104px!important}
-  .main-area:has(.ai-chat-page) .ai-chat-page>.panel .chat-message{max-width:96%!important;min-width:0!important;padding:11px!important}
-}
+
 
 
 /* Compact mobile bottom bar: keep the safe-area clear without inflating the dock */
@@ -1036,7 +1025,7 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .app-shell>.mobile-nav>a span{font-size:7.5px!important;line-height:1.1!important}
   .app-shell>.mobile-nav>a svg{width:16px!important;height:16px!important}
   .main-area{padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
-  .main-area:has(.ai-chat-page){padding-bottom:calc(64px + env(safe-area-inset-bottom))!important}
+
 }
 
 /* Desktop navigation: keep the sidebar as the only desktop menu.
@@ -1522,12 +1511,7 @@ body:has(.ai-chat-page){
  .ai-chat-page .chat-messages{min-height:0;max-height:52vh!important;flex:1 1 auto}
  .ai-chat-page .ai-composer{position:relative}
 }
-@media(max-width:650px){
- .main-area:has(.ai-chat-page) .ai-chat-page{gap:4px!important}
- .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad:has(.chat-messages){height:0!important;min-height:0!important;flex:1 1 0!important;padding:0!important}
- .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .chat-messages{height:0!important;min-height:0!important;max-height:none!important;flex:1 1 0!important}
- .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .ai-composer{position:relative!important;flex:0 0 auto!important}
-}
+
 
 /* Keep account entry first, then personal details, then preferences. */
 .profile-settings-layout .profile-account-first{order:0}
