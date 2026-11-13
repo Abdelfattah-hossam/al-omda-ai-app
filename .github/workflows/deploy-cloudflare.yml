@@ -8,7 +8,7 @@ on:
       - "artifacts/al-omda-ai/**"
       - "artifacts/api-server/**"
       - "lib/**"
-      - "wrangler.jsonc"
+      - "artifacts/al-omda-ai/wrangler.jsonc"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/deploy-cloudflare.yml"
@@ -53,3 +53,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --keep-vars
+          workingDirectory: artifacts/al-omda-ai
