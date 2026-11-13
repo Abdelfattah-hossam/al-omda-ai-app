@@ -1658,7 +1658,7 @@ function App() {
         'التحقق من نشر Cloudflare وصحة الإنتاج ومزامنة المهام والملفات.'
       ]},
       { title:'بوابات الإكمال والقبول', items:[
-        'مراجعة PR رقم 20 ودمجه بعد استكمال التحقق.',
+        'تم دمج PR رقم 20 الخاص بسلامة تحديثات Supervisor؛ وتبقى اختبارات القبول والنشر.',
         'اجتياز اختبارات البناء والوحدات والتكامل والأمان.',
         'التأكد من عدم خروج الأدوات عن صلاحيات المستخدم أو مساحة العمل المسموح بها.',
         'اختبار معاينة وتنزيل ملفات Word وExcel على الهاتف والكمبيوتر.',
@@ -1685,7 +1685,7 @@ function App() {
         'Verify Cloudflare production deployment, task/file sync, and runtime health.'
       ]},
       { title:'Release acceptance gates', items:[
-        'Complete PR #20 review and merge only after validation.',
+        'PR #20 for Supervisor update integrity has been merged; release acceptance and deployment checks remain.',
         'Pass build, unit, integration, and security tests.',
         'Verify tools cannot exceed user permissions or workspace boundaries.',
         'Test Word/Excel preview and downloads on mobile and desktop.',
