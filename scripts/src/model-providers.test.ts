@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { parseModelProviderConfig } from "./model-providers.js";
+import { orderModelProvidersByPurpose, parseModelProviderConfig } from "./model-providers.js";
 
 test("parses multiple OpenAI-compatible and local model providers without exposing keys", () => {
   const providers = parseModelProviderConfig([
@@ -27,4 +27,31 @@ test("rejects insecure remote endpoints, embedded credentials, and invalid confi
   assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://user:pass@example.com/v1", model: "x" }], {}), /HTTPS/);
   assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://example.com/v1?key=secret", model: "x" }], {}), /HTTPS/);
   assert.throws(() => parseModelProviderConfig({ name: "not-array" }, {}), /JSON array/);
+});
+
+test("parses purpose and priority policies with backward-compatible defaults", () => {
+  const providers = parseModelProviderConfig([
+    { name: "research", baseUrl: "https://research.example/v1", model: "r1", purposes: ["research"], priority: 20 },
+    { name: "coding", baseUrl: "https://coding.example/v1", model: "c1", purposes: ["coding"], priority: 5 },
+    { name: "global", baseUrl: "https://global.example/v1", model: "g1" }
+  ], {});
+  assert.deepEqual(providers.map(p => [p.name, p.priority, p.purposes]), [
+    ["research", 20, ["research"]], ["coding", 5, ["coding"]], ["global", 102, ["all"]]
+  ]);
+});
+
+test("rejects invalid provider priority and purpose policies", () => {
+  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://a.example/v1", model: "x", priority: 0 }], {}), /priority/);
+  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://a.example/v1", model: "x", purposes: ["vision"] }], {}), /purposes/);
+  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://a.example/v1", model: "x", purposes: ["coding", "coding"] }], {}), /purposes/);
+});
+
+test("orders purpose-specific providers before global providers and uses priority within each group", () => {
+  const providers = parseModelProviderConfig([
+    { name: "global", baseUrl: "https://global.example/v1", model: "g", priority: 1 },
+    { name: "coding-late", baseUrl: "https://late.example/v1", model: "l", purposes: ["coding"], priority: 20 },
+    { name: "coding-early", baseUrl: "https://early.example/v1", model: "e", purposes: ["coding"], priority: 5 },
+  ], {});
+  assert.deepEqual(orderModelProvidersByPurpose(providers, "coding").map((p) => p.name), ["coding-early", "coding-late", "global"]);
+  assert.deepEqual(orderModelProvidersByPurpose(providers, "all").map((p) => p.name), ["global", "coding-early", "coding-late"]);
 });
