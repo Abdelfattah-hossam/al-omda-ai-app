@@ -884,25 +884,44 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const dashboardPage = () => {
     const active = tasks.filter((task) => task.status === 'review' || task.status === 'paused').length;
     const approved = tasks.filter((task) => task.status === 'approved').length;
-    return <div className="page-enter">
-      {pageHeading(t('dashboard'),`${t('hello')} ${name}`,t('welcome'))}
-      <section className="panel dashboard-hero">
-        <div className="hero-copy"><div className="eyebrow">{t('preview')}</div><h2>{t('hero')}</h2><p>{t('heroText')}</p><div className="dashboard-primary-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?"افتح الشات":"Open chat"}<ArrowLeft size={14}/></Link><Link href="/workbench" className="button button-quiet"><Plus size={15}/>{t('newRequest')}</Link></div></div>
-        <div className="hero-side"><WandSparkles size={29} strokeWidth={1.2}/></div>
+    const stopped = tasks.filter((task) => task.status === 'stopped').length;
+    const total = tasks.length;
+    const statusRows = [
+      { label:isAr?'بانتظار المراجعة':'Needs review', value:tasks.filter(task=>task.status==='review').length, color:'var(--omda-accent)' },
+      { label:isAr?'متوقفة مؤقتًا':'Paused', value:tasks.filter(task=>task.status==='paused').length, color:'var(--omda-accent-2)' },
+      { label:isAr?'معتمدة':'Approved', value:approved, color:'#27d6b1' },
+      { label:isAr?'متوقفة':'Stopped', value:stopped, color:'#ec6ca8' },
+    ];
+    const maxStatus = Math.max(1,...statusRows.map(row=>row.value));
+    const specialtyRows = specialties.map(item=>({id:item.id,label:label(item.id),value:tasks.filter(task=>task.specialty===item.id).length,icon:item.icon})).sort((x,y)=>y.value-x.value);
+    const maxSpecialty = Math.max(1,...specialtyRows.map(row=>row.value));
+    const trend = [0,1,2,3,4,5,6].map((offset)=>tasks.filter(task=>{
+      const date=new Date(task.createdAt); const now=new Date();
+      return date.getMonth()===new Date(now.getFullYear(),now.getMonth()-offset,1).getMonth() && date.getFullYear()===new Date(now.getFullYear(),now.getMonth()-offset,1).getFullYear();
+    }).length);
+    const trendMax=Math.max(1,...trend);
+    const trendPoints=trend.slice().reverse().map((value,index)=>`${24+index*44},${92-(value/trendMax)*72}`).join(' ');
+    return <div className="page-enter dashboard-overview">
+      <div className="dashboard-toolbar">
+        <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
+        <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet"><Plus size={15}/>{t('newRequest')}</Link></div>
+      </div>
+      <section className="dashboard-section">
+        <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
+        <div className="stats-grid dashboard-kpis">
+          {[{label:t('activeTasks'),value:active,foot:isAr?'تحتاج متابعة أو استكمال':'Need attention',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:t('specialists'),value:6,foot:isAr?'وكلاء متخصصون':'Available agents',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
+        </div>
       </section>
-      <div className="stats-grid">
-        {[{label:t('activeTasks'),value:active,foot:t('reviewStatus'),icon:Activity,href:'/history?status=review'},{label:t('approvedPlans'),value:approved,foot:t('noExecution'),icon:BadgeCheck,href:'/history?status=approved'},{label:t('specialists'),value:6,foot:t('allSix'),icon:Bot,href:'/agents'},{label:t('totalTasks'),value:tasks.length,foot:t('preview'),icon:FileText,href:'/history'}].map((stat,index)=><Link href={stat.href} className="panel stat-card stat-card-link" key={stat.label} data-testid={`stat-card-${index}`} aria-label={stat.label}><div className="stat-label">{stat.label}</div><div className="stat-value"><span>{stat.value}</span><stat.icon size={16} color="#c6a76c"/></div><div className="stat-foot">{stat.foot}</div></Link>)}
+      <div className="dashboard-analytics-grid">
+        <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'مسار المهام':'Task pipeline'}</h2><p className="dashboard-card-subtitle">{isAr?'توزيع المهام حسب حالتها':'Tasks by current status'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="pipeline-chart" role="img" aria-label={isAr?'رسم يوضح أعداد المهام حسب الحالة':'Chart of task counts by status'}>{statusRows.map((row,index)=><div className="pipeline-column" key={row.label}><span className="pipeline-value">{row.value}</span><div className="pipeline-track"><span style={{height:`${Math.max(5,row.value/maxStatus*100)}%`,background:row.color}}/></div><small>{row.label}</small></div>)}</div></section>
+        <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'نشاط المهام':'Task activity'}</h2><p className="dashboard-card-subtitle">{isAr?'المهام المسجلة خلال الأشهر الماضية':'Tasks created over recent months'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="activity-chart" role="img" aria-label={isAr?'منحنى نشاط المهام':'Task activity trend'}><div className="activity-chart-scale"><span>{trendMax}</span><span>{Math.ceil(trendMax/2)}</span><span>0</span></div><svg viewBox="0 0 288 112" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="omdaTrendFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--omda-accent)" stopOpacity=".32"/><stop offset="100%" stopColor="var(--omda-accent)" stopOpacity="0"/></linearGradient></defs><path d={`M ${trendPoints.replaceAll(' ',', ')} L 288,112 L 24,112 Z`} fill="url(#omdaTrendFill)"/><polyline points={trendPoints} fill="none" stroke="var(--omda-accent)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round"/></svg><div className="activity-chart-labels">{[6,5,4,3,2,1,0].map(offset=><span key={offset}>{new Date(new Date().getFullYear(),new Date().getMonth()-offset,1).toLocaleDateString(language==='ar'?'ar':'en',{month:'short'})}</span>)}</div></div></section>
+        <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'المهام حسب التخصص':'Tasks by specialty'}</h2><p className="dashboard-card-subtitle">{isAr?'توزيع العمل على الوكلاء':'Workload across specialists'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="specialty-chart-list">{specialtyRows.map((row,index)=><div className="specialty-chart-row" key={row.id}><div className="specialty-chart-label"><span>{row.label}</span><strong>{row.value}</strong></div><div className="specialty-chart-track"><span style={{width:`${row.value/maxSpecialty*100}%`}} data-tone={index%4}/></div></div>)}</div></section>
       </div>
-      <div className="notice-bar" style={{marginBottom:16}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{authUser?t('authConfigured'):t('demoNotice')}</span></div>
-      <div className="dashboard-grid">
-        <section className="panel panel-pad"><div className="section-head"><h2 className="section-title">{t('recent')}</h2><Link href="/history" className="section-meta">{t('seeHistory')} <ArrowLeft size={12} style={{display:'inline'}}/></Link></div>
-          {tasks.slice(0,4).map((task)=><Link href={`/history/${task.id}`} className="task-row" key={task.id} data-testid={`task-row-${task.id}`}>
-            <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)}{task.demo ? ` · ${t('demoTask')}` : ''}</small></span>{statusBadge(task.status)}
-          </Link>)}
-        </section>
-        <section className="panel panel-pad"><div className="section-head"><h2 className="section-title">{t('specialties')}</h2><span className="section-meta">06</span></div><div className="specialty-list">{specialties.map(({id,icon:Icon})=><Link href="/agents" className="specialty-row" key={id}><span className="specialty-icon"><Icon size={15}/></span><strong>{label(id)}</strong><small>{t(specialtyLabel(id))}</small></Link>)}</div></section>
-      </div>
-
+      <section className="panel dashboard-history-panel">
+        <div className="dashboard-section-heading"><div><h2>{isAr?'سجل المهام':'Task history'}</h2><p>{isAr?'آخر المهام التي عملت عليها مع العمدة':'Your latest work with AL OMDA'}</p></div><Link href="/history" className="button button-quiet">{isAr?'عرض الكل':'View all'} <ArrowLeft size={14}/></Link></div>
+        <div className="dashboard-table-wrap"><table className="dashboard-task-table"><thead><tr><th>{isAr?'المهمة':'Task'}</th><th>{isAr?'التخصص':'Specialty'}</th><th>{isAr?'تاريخ الإنشاء':'Created'}</th><th>{isAr?'التقدم':'Progress'}</th><th>{isAr?'الحالة':'Status'}</th></tr></thead><tbody>{tasks.slice(0,6).map(task=><tr key={task.id}><td><Link href={`/history/${task.id}`} className="dashboard-task-name"><span className="task-icon">{taskIcon(task.specialty,15)}</span><strong>{task.title}</strong></Link></td><td>{label(task.specialty)}</td><td>{dateLabel(task.createdAt,language)}</td><td><span className="dashboard-progress-cell"><span><i style={{width:`${task.steps.length?count(task)/task.steps.length*100:0}%`}}/></span>{count(task)}/{task.steps.length}</span></td><td>{statusBadge(task.status)}</td></tr>)}</tbody></table>{tasks.length===0&&<div className="dashboard-empty">{isAr?'لا توجد مهام بعد. ابدأ محادثة جديدة لإنشاء أول مهمة.':'No tasks yet. Start a chat to create your first task.'}</div>}</div>
+      </section>
+      <div className="notice-bar dashboard-security-note"><ShieldCheck size={15} style={{flex:'none'}}/><span>{authUser?t('authConfigured'):t('demoNotice')}</span></div>
     </div>;
   };
 
