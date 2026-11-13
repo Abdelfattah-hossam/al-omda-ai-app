@@ -327,7 +327,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   };
 
   return <div className="omda-live-voice" data-active={active} data-speaking={speaking} data-connecting={connecting}>
-    <div className="omda-voice-orb-wrap" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
+    <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
       <div className="omda-voice-orb"><span/><span/><span/><i/></div>
     </div>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
