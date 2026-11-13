@@ -57,11 +57,13 @@ function isHowToRequest(request: string): boolean {
 }
 function isExcelRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  if (isHowToRequest(request)) return false;
-  const mentionsExcel = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|ملف\s*(?:جداول|جدول بيانات)|جدول\s*بيانات|شيت\s*اكسل/i.test(request);
-  const explicitCreation = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|إنشاء|جهز|جهزي|صمم|حوّل|حول|export|create|generate|make|build|prepare|download)/i.test(request);
-  const directFileRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|جدول بيانات|مصنف|excel|xlsx|spreadsheet|workbook)/i.test(request);
-  return mentionsExcel && (explicitCreation || directFileRequest);
+  if (!request || isHowToRequest(request)) return false;
+  // Mentioning Excel is not a file request. Require both a clear Excel format
+  // reference and an action asking us to create/export/prepare that deliverable.
+  const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|شيت\s*اكسل/i.test(request);
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(request);
+  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|مصنف|excel|xlsx|spreadsheet|workbook)/i.test(request);
+  return mentionsExcelFormat && (asksToCreate || directlyRequestsFile);
 }
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
@@ -99,9 +101,10 @@ function parseHtmlApp(text: string): string | null {
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   if (isExcelRequest(messages)) return false;
   const request = getLatestUserRequest(messages);
-  const asksForSevenFieldTable = /جدول.{0,70}(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول)?|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول).{0,70}جدول/i.test(request);
-  const asksForDownloadableDocument = /(?:ملف|مستند).{0,55}(?:تحميل|جاهز|اعمل|اعملي|عايز|عاوز|محتاج|انشئ|أنشئ)|(?:تحميل|جاهز للتحميل).{0,55}(?:ملف|مستند)/i.test(request);
-  return asksForSevenFieldTable || isExplicitWordFileRequest(request) || asksForDownloadableDocument;
+  if (!request || isHowToRequest(request)) return false;
+  // A table, report, document topic, or the word "Word" in a question must
+  // stay in normal chat unless the user explicitly asks for a Word deliverable.
+  return isExplicitWordFileRequest(request);
 }
 function isTableOnlyRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
