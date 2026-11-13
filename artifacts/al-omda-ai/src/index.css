@@ -2684,3 +2684,72 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+
+
+/* Page-specific final pass: history and profile were still inheriting legacy
+   panel/row fills. Limit the tint to their outer card surfaces only. */
+.app-shell .history-layout > .history-item,
+.app-shell .dashboard-history-panel,
+.app-shell .profile-settings-layout > .profile-main-card,
+.app-shell .profile-settings-layout > .profile-setting-card,
+.app-shell .profile-settings-side > .profile-features-card {
+  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
+  background-color: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 32%, transparent) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.10) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* History rows: the clickable content is not a separate card. */
+.app-shell .history-item-open,
+.app-shell .history-item-open .task-main,
+.app-shell .history-item-open .task-main strong,
+.app-shell .history-item-open .task-main small,
+.app-shell .dashboard-history-panel .dashboard-section-heading,
+.app-shell .dashboard-history-panel .dashboard-section-heading h2,
+.app-shell .dashboard-history-panel .dashboard-section-heading p,
+.app-shell .dashboard-history-panel .dashboard-task-table,
+.app-shell .dashboard-history-panel .dashboard-task-table th,
+.app-shell .dashboard-history-panel .dashboard-task-table td,
+.app-shell .dashboard-history-panel .dashboard-task-name,
+.app-shell .dashboard-history-panel .dashboard-task-name strong {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Profile: inner headings, descriptions, field groups and setting rows stay
+   unboxed; only the containing profile cards carry the translucent theme. */
+.app-shell .profile-settings-layout .profile-section-heading,
+.app-shell .profile-settings-layout .profile-section-heading > div,
+.app-shell .profile-settings-layout .profile-section-heading h2,
+.app-shell .profile-settings-layout .profile-section-heading h3,
+.app-shell .profile-settings-layout .profile-section-heading p,
+.app-shell .profile-settings-layout .profile-summary,
+.app-shell .profile-settings-layout .profile-summary-large,
+.app-shell .profile-settings-layout .profile-fields-grid,
+.app-shell .profile-settings-layout .profile-actions-row,
+.app-shell .profile-settings-layout .profile-accordion-summary,
+.app-shell .profile-settings-layout .setting-row,
+.app-shell .profile-settings-layout .setting-row > div,
+.app-shell .profile-settings-layout .profile-feature-grid,
+.app-shell .profile-settings-layout .profile-feature-link > span,
+.app-shell .profile-settings-layout .profile-feature-link strong,
+.app-shell .profile-settings-layout .profile-feature-link small {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Keep each profile feature link as a subtle themed row, not text-sized boxes. */
+.app-shell .profile-settings-layout .profile-feature-link {
+  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 12%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
+}
