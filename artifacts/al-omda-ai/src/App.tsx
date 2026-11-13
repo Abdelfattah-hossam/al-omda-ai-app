@@ -1057,7 +1057,9 @@ function App() {
     const link = document.createElement("a");
     link.href = objectUrl;
     link.download = "omda-httpflow-history.json";
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   };
   const clearHttpFlowHistory = async () => {
