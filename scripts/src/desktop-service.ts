@@ -85,9 +85,11 @@ async function install(): Promise<void> {
     const username = process.env.USERNAME?.trim();
     if (!username) throw new Error("Could not determine the current Windows account to secure the local token file.");
     await run("icacls.exe", [envFile, "/inheritance:r", "/grant:r", username + ":(F)", "*S-1-5-18:(F)"]);
+    const registerScript = locations.register;
+    if (!registerScript) throw new Error("Windows task registration path is unavailable.");
     const registration = buildWindowsTaskRegistration({ taskName, launcherPath: locations.service });
-    await writeFile(locations.register, registration, { encoding: "utf8", mode: 0o600 });
-    await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", locations.register]);
+    await writeFile(registerScript, registration, { encoding: "utf8", mode: 0o600 });
+    await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", registerScript]);
   } else {
     throw new Error("Desktop companion auto-start is supported on Windows, macOS, and Linux only.");
   }
