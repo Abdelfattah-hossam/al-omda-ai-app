@@ -20,6 +20,7 @@ test("creates a project task for explicit build requests", () => {
 test("does not create project tasks for ordinary questions or explanations", () => {
   for (const request of [
     "إيه المشاريع اللي تقدر تعملها؟",
+    "إيه رأيك أعمل تطبيق؟",
     "ممكن تشرحلي إزاي أعمل موقع؟",
     "كيف أبدأ مشروعًا؟",
     "What projects can you build?",
