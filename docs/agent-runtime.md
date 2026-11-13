@@ -70,6 +70,32 @@ The Agent includes read-only tools for DNS A/AAAA/CNAME/MX/NS/TXT lookups, valid
 
 These are passive reconnaissance and configuration-review helpers for authorized bug bounty and lab work. They do not perform port scanning, brute-force discovery, exploitation, or out-of-scope testing. The user remains responsible for confirming program scope and authorization before adding a target to the allowlist.
 
+### Optional Docker-isolated terminal execution
+
+The runtime defaults to `OMDA_AGENT_EXECUTION=disabled`. For terminal tasks, Docker mode is the recommended option over direct host execution. It starts each approved command in a disposable container with no network, a read-only container root, a read/write bind mount of only the configured project workspace, dropped Linux capabilities, no-new-privileges, and CPU, memory, process-count, time, and output limits. The project workspace remains writable so approved build/test commands can update project files.
+
+Build the supplied image once from the repository root:
+
+```sh
+docker build -t al-omda-agent-sandbox:node22 -f scripts/docker/agent-sandbox.Dockerfile .
+export OMDA_AGENT_SANDBOX_IMAGE="al-omda-agent-sandbox:node22"
+export OMDA_AGENT_EXECUTION="container"
+```
+
+Windows PowerShell:
+
+```powershell
+docker build -t al-omda-agent-sandbox:node22 -f scripts/docker/agent-sandbox.Dockerfile .
+$env:OMDA_AGENT_SANDBOX_IMAGE = "al-omda-agent-sandbox:node22"
+$env:OMDA_AGENT_EXECUTION = "container"
+```
+
+Run the runtime after setting these variables. The image must already exist locally: runtime execution uses `--pull=never` and does not fetch images. The supplied image includes Node.js 22, pnpm 9, Git, Python 3, and pytest. Other project-specific tools must be installed into a custom image you build and review yourself.
+
+Docker Desktop or a working Docker Engine is required. Prefer rootless Docker where supported. Container isolation shares the host kernel and is not a guarantee against kernel or container-runtime vulnerabilities; do not run untrusted workloads on a sensitive host. The container receives no model/API keys or host environment variables. The only writable host path mounted into it is the configured project workspace. Network access from the command container is disabled, so commands that need to download packages must be prepared in the image or run through a separately reviewed workflow.
+
+Direct host mode (`OMDA_AGENT_EXECUTION=host`) remains available only as an explicit advanced opt-in. It is not sandboxed and runs approved commands with the current OS account's permissions. Keep the default disabled unless you deliberately choose one of these modes. Every terminal call still requires approval of the exact command and arguments in the app.
+
 ### Dynamic MCP tool discovery
 
 The runtime advertises configured MCP tools directly to the model as function tools when their input schemas are valid and within size limits. This lets the Agent choose a specific browser or desktop action without a separate discovery round-trip. Every direct MCP tool call still pauses for explicit user approval; the generic `mcp.call_tool` remains available as a fallback. MCP servers are local programs, so configure only servers you trust.

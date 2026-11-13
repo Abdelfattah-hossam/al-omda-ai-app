@@ -2,9 +2,9 @@ import { strict as assert } from "node:assert";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer, type AddressInfo } from "node:net";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, describe, test } from "node:test";
 
@@ -404,6 +404,47 @@ test("model runtime fails over to the configured fallback without exposing crede
     await stopRuntime(isolated);
     await stopMockModel(primary);
     await stopMockModel(fallback);
+  }
+});
+
+test("container execution invokes Docker with restrictive isolation flags and only the approved command", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "omda-docker-runtime-test-"));
+  const bin = join(workspace, "bin");
+  const markerPath = join(workspace, "docker-args.json");
+  await mkdir(bin, { recursive: true });
+  const fakeDocker = join(bin, "docker");
+  await writeFile(fakeDocker, `#!/usr/bin/env node
+const fs = require("node:fs");
+fs.writeFileSync(process.env.OMDA_DOCKER_TEST_ARGS, JSON.stringify(process.argv.slice(2)));
+process.stdout.write("container-command-ok");
+`, "utf8");
+  await chmod(fakeDocker, 0o755);
+  const isolated = await startRuntime({
+    OMDA_AGENT_EXECUTION: "container",
+    OMDA_AGENT_SANDBOX_IMAGE: "node:22-bookworm-slim",
+    OMDA_DOCKER_TEST_ARGS: markerPath,
+    PATH: bin + delimiter + (process.env.PATH || ""),
+  });
+  try {
+    const response = await postTo(isolated, "/v1/terminal/execute", { command: "pnpm", args: ["--version"], cwd: "." });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { ok: boolean; stdout: string; isolation: string; image: string };
+    assert.equal(result.ok, true);
+    assert.equal(result.stdout, "container-command-ok");
+    assert.equal(result.isolation, "docker");
+    assert.equal(result.image, "node:22-bookworm-slim");
+    const args = JSON.parse(await readFile(markerPath, "utf8")) as string[];
+    for (const flag of ["--network=none", "--cpus=1", "--memory=512m", "--memory-swap=512m", "--pids-limit=128", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges"]) {
+      assert.ok(args.includes(flag), "missing Docker isolation flag: " + flag);
+    }
+    assert.ok(args.includes("--pull=never"), "the runtime must not pull arbitrary images during execution");
+    assert.ok(args.includes("pnpm"));
+    assert.ok(args.includes("--version"));
+    assert.equal(args.includes("--privileged"), false);
+    assert.equal(args.some((arg) => arg.includes("primary-secret-test-value")), false);
+  } finally {
+    await stopRuntime(isolated);
+    await rm(workspace, { recursive: true, force: true });
   }
 });
 
