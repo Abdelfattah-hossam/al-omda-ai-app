@@ -52,5 +52,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --keep-vars
-          workingDirectory: artifacts/al-omda-ai
+          command: deploy --config ../../artifacts/al-omda-ai/wrangler.jsonc --keep-vars
+          workingDirectory: .github/workflows
