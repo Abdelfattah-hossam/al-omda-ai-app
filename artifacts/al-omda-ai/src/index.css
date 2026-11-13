@@ -3011,3 +3011,7 @@ body:has(.ai-chat-page){
 .app-shell .panel :is(h1,h2,h3,h4,h5,h6,p,label,strong,em,b,small) {
   border-color:transparent!important;
 }
+
+.ai-agent-runtime-panel[data-agent-active="false"]{display:none!important}
+.ai-agent-runtime-panel[data-agent-active="true"]{display:block!important}
+.ai-chat-live-test{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:1px solid var(--omda-reference-line);border-radius:999px;background:var(--omda-reference-soft);color:var(--foreground,#eee);font-size:11px}
