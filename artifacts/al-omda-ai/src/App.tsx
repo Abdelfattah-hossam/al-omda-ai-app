@@ -1217,6 +1217,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </details>
       {agentGuideNotice&&<p className="agent-guide-notice" role="status">{agentGuideNotice}</p>}
     </section>
+    <details className="panel panel-pad agent-advanced-tools">
+      <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
+      <div className="agent-advanced-tools-content">
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">LOCAL EXECUTION</span><h2 className="section-title">{isAr?'الوكيل الذكي المحلي':'Local AI Agent'}</h2><p className="section-meta">{isAr?'وصّل بيئة التنفيذ على جهازك ليقرأ المشروع وينفذ المهام بموافقتك.':'Connect the runtime on your computer to inspect projects and execute approved tasks.'}</p></div>
@@ -1363,6 +1366,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
       <p className="section-meta" style={{marginTop:10}}>{isAr?'لإضافة مزود جديد، عدّل .omda/models.json وفق المثال .omda/models.example.json ثم حدّث القائمة.':'Add providers in .omda/models.json using .omda/models.example.json, then refresh this list.'}</p>
     </section>
+      </div>
+    </details>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
     <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
     <div className="market-grid">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
