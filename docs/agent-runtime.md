@@ -111,21 +111,6 @@ When the local runtime is connected in the Agents workspace, open **Browser Work
 
 The policy is deny-by-default: direct browser-tool navigation requires an explicit URL and an exact approved hostname; browser actions are blocked until at least one hostname is approved. MCP tool calls still require their normal per-action approval. This is an additional guardrail, not a complete network sandbox: a page may navigate through its own links or scripts, and this hostname check does not replace operating-system/network isolation. Use a dedicated browser profile, avoid sensitive sessions, and approve only sites you are authorized to access. Browser profile switching, tab thumbnails, and cross-device browser streaming are not implemented by this workspace yet.
 
-### Install the desktop companion as a user service
-
-The optional service installer can start the local Agent supervisor automatically when the current user signs in. It does not install a graphical desktop app and it does not enable terminal execution.
-
-From the repository root:
-
-```sh
-pnpm --filter @workspace/scripts desktop:service -- install
-pnpm --filter @workspace/scripts desktop:service -- status
-pnpm --filter @workspace/scripts desktop:service -- restart
-pnpm --filter @workspace/scripts desktop:service -- uninstall
-```
-
-Supported targets are Linux user-level systemd, macOS LaunchAgents, and Windows Task Scheduler (current user). The installer generates a 256-bit local bearer token if one does not already exist and stores it in a private per-user environment file. The workspace is set to the current repository; execution remains disabled by default. Uninstall removes the auto-start entry but intentionally preserves the token and environment file. On Linux and macOS, the service definition contains a private copy of the environment values, so rerun the install command after editing the environment file; on Windows the launcher reads the file at each sign-in, and the installer restricts the token file ACL to the current account and SYSTEM. Review the generated service and environment file before enabling this on a shared computer. This setup has not yet been validated on physical Windows/macOS/Linux devices in CI.
-
 ### Multiple remote and local model providers
 
 The runtime tries providers in this order: the primary environment configuration, providers listed in `.omda/models.json`, then the optional fallback environment configuration. All providers use the OpenAI-compatible Chat Completions streaming interface. Configure no more than eight additional providers.
