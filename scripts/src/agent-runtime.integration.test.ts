@@ -33,7 +33,9 @@ async function reservePort(): Promise<number> {
 }
 
 async function startRuntime(extraEnv: NodeJS.ProcessEnv = {}): Promise<RuntimeHandle> {
-  const workspace = typeof extraEnv.OMDA_AGENT_WORKSPACE === "string"\n    ? extraEnv.OMDA_AGENT_WORKSPACE\n    : await mkdtemp(join(tmpdir(), "omda-agent-runtime-test-"));
+  const workspace = typeof extraEnv.OMDA_AGENT_WORKSPACE === "string"
+    ? extraEnv.OMDA_AGENT_WORKSPACE
+    : await mkdtemp(join(tmpdir(), "omda-agent-runtime-test-"));
   const port = await reservePort();
   const child = spawn(process.execPath, ["--import", "tsx", runtimePath], {
     cwd: dirname(dirname(runtimePath)),
