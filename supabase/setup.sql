@@ -500,6 +500,7 @@ begin
   if p_daily_limit is distinct from 1000
      or p_title is null or char_length(btrim(p_title)) not between 1 and 160
      or p_request is null or char_length(btrim(p_request)) not between 1 and 10000
+     or p_specialty is null
      or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
      or jsonb_typeof(p_steps) is distinct from 'array'
      or jsonb_array_length(p_steps) not between 3 and 5 then
