@@ -55,6 +55,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const assistantTranscriptRef = useRef("");
   const speechActiveRef = useRef(false);
   const silenceFramesRef = useRef(0);
+  const pendingPcmPlaybackRef = useRef(0);
+  const assistantTurnCompleteRef = useRef(false);
+  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const labels = {
     start: ar ? "محادثة صوتية مباشرة" : "Live voice conversation",
@@ -79,6 +82,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     socketRef.current = null;
     contextRef.current = null;
     nextPlayTimeRef.current = 0;
+    pendingPcmPlaybackRef.current = 0;
+    assistantTurnCompleteRef.current = false;
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    fallbackUtteranceRef.current = null;
     if (mountedRef.current) {
       setActive(false);
       setConnecting(false);
@@ -275,6 +282,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             player.buffer = buffer;
             player.connect(context.destination);
             const startAt = Math.max(context.currentTime + 0.03, nextPlayTimeRef.current);
+            pendingPcmPlaybackRef.current += 1;
+            assistantTurnCompleteRef.current = false;
+            player.onended = () => {
+              pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
+              if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
+            };
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
             receivedAudioChunks++;
@@ -282,7 +295,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           }
         }
         if (serverContent.turnComplete) {
-          if (mountedRef.current) setSpeaking(false);
+          assistantTurnCompleteRef.current = true;
+          if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
           if (userText) onTranscript("user", userText);
@@ -292,9 +306,21 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               const utterance = new SpeechSynthesisUtterance(assistantText);
               utterance.lang = ar ? "ar-EG" : "en-US";
               utterance.rate = 0.96;
+              fallbackUtteranceRef.current = utterance;
+              utterance.onend = () => {
+                if (fallbackUtteranceRef.current === utterance) fallbackUtteranceRef.current = null;
+                if (mountedRef.current) setSpeaking(false);
+              };
+              utterance.onerror = () => {
+                if (fallbackUtteranceRef.current === utterance) fallbackUtteranceRef.current = null;
+                if (mountedRef.current) setSpeaking(false);
+              };
               window.speechSynthesis.cancel();
               window.speechSynthesis.speak(utterance);
-              if (mountedRef.current) setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
+              if (mountedRef.current) {
+                setSpeaking(true);
+                setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
+              }
             } else if (mountedRef.current) {
               setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
             }
