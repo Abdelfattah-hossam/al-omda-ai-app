@@ -1542,3 +1542,8 @@ body:has(.ai-chat-page){
 .agent-card-stats{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:12px 0 4px;padding:9px 10px;border:1px solid rgba(var(--omda-glow),.13);border-radius:10px;background:rgba(8,14,29,.28);color:var(--text-muted,#98a4c0);font-size:10px}
 .agent-card-stats span+span{color:var(--text-secondary,#b8c5e2)}
 @media(max-width:650px){.agent-card-stats{font-size:9px;gap:6px;padding:8px}.agent-marketplace-page .market-grid{grid-template-columns:1fr}}
+
+
+.profile-settings-layout .profile-settings-side{order:3}
+@media(max-width:650px){.profile-settings-layout .profile-settings-side{order:3}}
+@media(max-width:760px){.ai-chat-actions>.button,.ai-chat-actions .ai-chat-more-button{font-size:12px}}
