@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer, type AddressInfo } from "node:net";
+import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -31,7 +32,7 @@ async function reservePort(): Promise<number> {
   return port;
 }
 
-async function startRuntime(): Promise<RuntimeHandle> {
+async function startRuntime(extraEnv: NodeJS.ProcessEnv = {}): Promise<RuntimeHandle> {
   const workspace = await mkdtemp(join(tmpdir(), "omda-agent-runtime-test-"));
   const port = await reservePort();
   const child = spawn(process.execPath, ["--import", "tsx", runtimePath], {
@@ -45,6 +46,7 @@ async function startRuntime(): Promise<RuntimeHandle> {
       OMDA_AGENT_APP_ORIGINS: allowedOrigin,
       OMDA_AGENT_ALLOWED_HOSTS: "",
       OMDA_AGENT_MCP_COMMANDS: "",
+      ...extraEnv,
     },
     stdio: ["ignore", "ignore", "pipe"],
   });
@@ -201,3 +203,108 @@ describe("local Agent runtime HTTP integration", () => {
   });
 
 });
+
+
+type MockModelHandle = { server: HttpServer; baseUrl: string; requests: number };
+async function startMockModel(
+  responder: (requestNumber: number, body: Record<string, unknown>) => { status?: number; payload?: unknown },
+): Promise<MockModelHandle> {
+  const server = createHttpServer(async (req, res) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(Buffer.from(chunk));
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as Record<string, unknown>;
+    mock.requests++;
+    const response = responder(mock.requests, body);
+    res.statusCode = response.status || 200;
+    if (response.status && response.status >= 400) {
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(response.payload || { error: { message: "mock provider unavailable" } }));
+      return;
+    }
+    res.setHeader("content-type", "text/event-stream");
+    res.setHeader("cache-control", "no-cache");
+    const payload = response.payload || { choices: [{ delta: { content: "Mock model completed the task." }, finish_reason: "stop" }] };
+    res.write("data: " + JSON.stringify(payload) + "\\n\\n");
+    res.end("data: [DONE]\\n\\n");
+  });
+  const mock = { server, baseUrl: "", requests: 0 };
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  mock.baseUrl = "http://127.0.0.1:" + (server.address() as AddressInfo).port + "/v1";
+  return mock;
+}
+
+async function stopMockModel(mock: MockModelHandle): Promise<void> {
+  await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
+}
+
+test("approval gate pauses writes and executes only the exact approved call", async () => {
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "write-call-1", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "approved.txt", content: "approved content" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The requested action was handled." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+  });
+  try {
+    const started = await postTo(isolated, "/v1/agent/run", { goal: "Create approved.txt" });
+    assert.equal(started.status, 200);
+    const pending = await started.json() as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.pending[0].id, "write-call-1");
+    await assert.rejects(readFile(join(isolated.workspace, "approved.txt"), "utf8"));
+
+    const denied = await postTo(isolated, "/v1/agent/continue", { sessionId: pending.sessionId, approvedCallIds: [] });
+    assert.equal(denied.status, 200);
+    assert.equal((await denied.json() as { status: string }).status, "completed");
+    await assert.rejects(readFile(join(isolated.workspace, "approved.txt"), "utf8"));
+    assert.equal(mock.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+  }
+});
+
+test("model runtime fails over to the configured fallback without exposing credentials", async () => {
+  const primary = await startMockModel(() => ({ status: 503, payload: { error: { message: "primary unavailable" } } }));
+  const fallback = await startMockModel((_requestNumber, body) => {
+    assert.equal(body.model, "fallback-test-model");
+    return { payload: { choices: [{ delta: { content: "Fallback provider succeeded." }, finish_reason: "stop" }] } };
+  });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "primary-test-model",
+    OMDA_AGENT_MODEL_API_KEY: "primary-secret-test-value",
+    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+    OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-test-model",
+    OMDA_AGENT_FALLBACK_MODEL_API_KEY: "fallback-secret-test-value",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Say hello after checking provider availability." });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { status: string; message: string; usage: { provider: string } };
+    assert.equal(result.status, "completed");
+    assert.equal(result.message, "Fallback provider succeeded.");
+    assert.equal(result.usage.provider, "fallback");
+    assert.equal(primary.requests, 1);
+    assert.equal(fallback.requests, 1);
+    const serialized = JSON.stringify(result);
+    assert.equal(serialized.includes("primary-secret-test-value"), false);
+    assert.equal(serialized.includes("fallback-secret-test-value"), false);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(primary);
+    await stopMockModel(fallback);
+  }
+});
+
+async function postTo(handle: RuntimeHandle, path: string, body: unknown): Promise<Response> {
+  return fetch(handle.baseUrl + path, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: "Bearer " + token },
+    body: JSON.stringify(body),
+  });
+}
