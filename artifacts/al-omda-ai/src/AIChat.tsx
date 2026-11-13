@@ -929,7 +929,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <button type="button" onClick={() => { setInput(ar ? "اكتب كود HTML و CSS مع معاينة مباشرة: " : "Write HTML and CSS with a live preview: "); openCodeCanvas(); }}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح محرر الأكواد والمعاينة" : "Open code editor and preview"}</small></span></button>
               <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "AL OMDA memory"}</strong><small>{ar ? "إدارة الذاكرة والحد اليومي" : "Manage memory and daily usage"}</small></span></button>
             </div>
-          </div>
+          </div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
