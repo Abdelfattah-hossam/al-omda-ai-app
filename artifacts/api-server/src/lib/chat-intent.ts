@@ -42,3 +42,17 @@ export function isWordFileRequest(request: string): boolean {
   const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|مستند|document|file)/i.test(text);
   return mentionsWordFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
 }
+
+
+/** Return the latest user-authored turn, ignoring assistant messages. */
+export type ChatIntentMessage = { role: "user" | "assistant"; content: string };
+
+export function getLatestUserRequest(messages: ChatIntentMessage[]): string {
+  return messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
+}
+
+/** Exact standalone greetings must not inherit artifact intent from older turns. */
+export function isStandaloneGreeting(request: string): boolean {
+  const normalized = normalizeRequest(request).replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
+  return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
+}
