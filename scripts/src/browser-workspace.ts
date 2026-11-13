@@ -27,8 +27,10 @@ export function assertBrowserUrlAllowed(serverName: string, toolName: string, ar
     if (typeof value === "string") { if (/^https?:\/\//i.test(value.trim())) urls.push(value.trim()); return; }
     if (Array.isArray(value)) { for (const item of value.slice(0, 100)) visit(item, depth + 1); return; }
     if (typeof value === "object") for (const [key, item] of Object.entries(value as Record<string, unknown>).slice(0, 100)) {
-      if (/^(url|href|uri|targetUrl)$/i.test(key)) visit(item, depth + 1);
-      else if (typeof item === "object") visit(item, depth + 1);
+      if (/^(url|href|uri|targetUrl)$/i.test(key)) {
+        if (typeof item !== "string" || !/^https?:\/\//i.test(item.trim())) throw new Error("Browser URLs must use HTTP or HTTPS.");
+        visit(item, depth + 1);
+      } else if (typeof item === "object") visit(item, depth + 1);
     }
   };
   visit(args, 0);
