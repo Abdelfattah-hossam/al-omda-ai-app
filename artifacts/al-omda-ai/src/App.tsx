@@ -1674,7 +1674,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <div className="profile-settings-layout">
-              <details className="panel panel-pad profile-setting-card profile-accordion profile-account-first" open">
+              <details className="panel panel-pad profile-setting-card profile-accordion profile-account-first" open>
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div></summary>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && authStatus==='unconfigured' && <div className="notice-bar"><ShieldCheck size={15}/><span>{t('authUnavailable')}</span></div>}
