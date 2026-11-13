@@ -8,6 +8,8 @@ test("creates a project task for explicit build requests", () => {
     "عايز موقع إلكتروني لمتجري",
     "ممكن تعمل لي تطبيق",
     "هل يمكنك إنشاء تطبيق؟",
+    "هل تقدر تعمل لي تطبيق؟",
+    "هل ممكن تعمل لي تطبيق؟",
     "ابدأ مشروع جديد من الصفر",
     "Build me a website",
     "Can you create a mobile app?",
