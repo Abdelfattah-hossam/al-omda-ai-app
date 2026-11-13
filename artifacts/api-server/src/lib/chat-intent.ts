@@ -4,29 +4,29 @@
  */
 export function isHowToRequest(request: string): boolean {
   const text = request.trim();
-  return /^(?:كيف|ازاي|ازاى|ما هو|ما هي|شرح|طريقة|what is|how to|explain|teach me)(?:\\s|$)/i.test(text) ||
-    /^(?:اشرح|تشرح)(?:لي|لى)?(?:\\s|$)/i.test(text) ||
-    /^(?:ممكن|لو سمحت|من فضلك)?\\s*(?:تشرح|اشرح)(?:لي|لى)?(?:\\s|$)/i.test(text) ||
-    /^(?:ممكن|لو سمحت|من فضلك)?\\s*(?:علمني|علّمْني)(?:\\s|$)/i.test(text) ||
-    /^(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:اتعلم|أتعلم|افهم|أفهم|اعرف|أعرف)(?:\\s|$)/i.test(text) ||
+  return /^(?:كيف|ازاي|ازاى|ما هو|ما هي|شرح|طريقة|what is|how to|explain|teach me)(?:\s|$)/i.test(text) ||
+    /^(?:اشرح|تشرح)(?:لي|لى)?(?:\s|$)/i.test(text) ||
+    /^(?:ممكن|لو سمحت|من فضلك)?\s*(?:تشرح|اشرح)(?:لي|لى)?(?:\s|$)/i.test(text) ||
+    /^(?:ممكن|لو سمحت|من فضلك)?\s*(?:علمني|علّمْني)(?:\s|$)/i.test(text) ||
+    /^(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:اتعلم|أتعلم|افهم|أفهم|اعرف|أعرف)(?:\s|$)/i.test(text) ||
     /(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(text) ||
-    /^(?:can you explain|could you explain|show me how)\\b/i.test(text);
+    /^(?:can you explain|could you explain|show me how)\b/i.test(text);
 }
 
 export function isExcelFileRequest(request: string): boolean {
   if (!request.trim() || isHowToRequest(request)) return false;
-  const mentionsExcelFormat = /\\b(excel|xlsx|spreadsheet|workbook)\\b|إكسل|اكسيل|اكسل/i.test(request);
-  const namesFileDeliverable = /(?:ملف|شيت|مصنف|spreadsheet|workbook|excel\\s*file|xlsx\\s*file)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\\s+لي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(request);
-  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:لي\\s*)?(?:ملف|شيت|مصنف)/i.test(request);
+  const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل/i.test(request);
+  const namesFileDeliverable = /(?:ملف|شيت|مصنف|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(request);
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(request);
+  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|مصنف)/i.test(request);
   return mentionsExcelFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
 }
 
 export function isWordFileRequest(request: string): boolean {
   if (!request.trim() || isHowToRequest(request)) return false;
-  const mentionsWordFormat = /(?:و?ورد|\\bword\\b|\\bdocx\\b)/i.test(request);
+  const mentionsWordFormat = /(?:و?ورد|\bword\b|\bdocx\b)/i.test(request);
   const namesFileDeliverable = /(?:ملف|مستند|document|file|docx)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\\s+لي|اكتب|اكتبلي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(request);
-  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:لي\\s*)?(?:ملف|مستند|document|file)/i.test(request);
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(request);
+  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|مستند|document|file)/i.test(request);
   return mentionsWordFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
 }
