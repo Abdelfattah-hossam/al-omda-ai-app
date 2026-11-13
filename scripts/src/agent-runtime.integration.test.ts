@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer, type AddressInfo } from "node:net";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +86,7 @@ async function stopRuntime(handle: RuntimeHandle): Promise<void> {
   await rm(handle.workspace, { recursive: true, force: true });
 }
 
-async function request(path: string, options: RequestInit = {}): Promise<Response> {
+async function writeFileForMcp(path: string, content: string): Promise<void> {\n  await mkdir(dirname(path), { recursive: true });\n  await writeFile(path, content, "utf8");\n}\n\nasync function request(path: string, options: RequestInit = {}): Promise<Response> {
   return fetch(runtime.baseUrl + path, options);
 }
 
@@ -344,3 +344,63 @@ async function postTo(handle: RuntimeHandle, path: string, body: unknown): Promi
     body: JSON.stringify(body),
   });
 }
+
+
+describe("MCP runtime integration", () => {
+  let isolated: RuntimeHandle;
+  let counterPath: string;
+
+  before(async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-runtime-test-"));
+    const scriptPath = join(workspace, "mock-mcp-server.mjs");
+    counterPath = join(workspace, "mcp-starts.txt");
+    const mockServer = `
+import { createReadStream, appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import readline from "node:readline";
+const counter = process.env.MCP_TEST_COUNTER;
+let starts = 0;
+try { starts = Number(readFileSync(counter, "utf8")) || 0; } catch {}
+starts += 1;
+writeFileSync(counter, String(starts));
+const rl = readline.createInterface({ input: process.stdin });
+rl.on("line", (line) => {
+  let message;
+  try { message = JSON.parse(line); } catch { return; }
+  if (message.method === "initialize" && message.id !== undefined) {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock", version: "1.0" } } }) + "\\n");
+  } else if (message.method === "tools/list" && message.id !== undefined) {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "ping", description: "Mock health tool", inputSchema: { type: "object", properties: {} } }] } }) + "\\n");
+    if (starts === 1) setTimeout(() => process.exit(0), 30);
+  }
+});
+`;
+    await writeFileForMcp(scriptPath, mockServer);
+    await writeFileForMcp(join(workspace, ".omda", "mcp-servers.json"), JSON.stringify({
+      servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_COUNTER"] }]
+    }));
+    isolated = await startRuntime({
+      OMDA_AGENT_WORKSPACE: workspace,
+      OMDA_AGENT_MCP_COMMANDS: process.execPath,
+      MCP_TEST_COUNTER: counterPath,
+    });
+  });
+
+  after(async () => {
+    await stopRuntime(isolated);
+  });
+
+  test("reconnects to an MCP server after its process exits", async () => {
+    const first = await fetch(isolated.baseUrl + "/v1/mcp/tools", { headers: { authorization: "Bearer " + token } });
+    assert.equal(first.status, 200);
+    const firstBody = await first.json() as { tools: Array<{ name: string }> };
+    assert.ok(firstBody.tools.some((tool) => tool.name.includes("ping")));
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const second = await fetch(isolated.baseUrl + "/v1/mcp/tools", { headers: { authorization: "Bearer " + token } });
+    assert.equal(second.status, 200);
+    const secondBody = await second.json() as { tools: Array<{ name: string }> };
+    assert.ok(secondBody.tools.some((tool) => tool.name.includes("ping")));
+    assert.equal(await readFile(counterPath, "utf8"), "2");
+  });
+});
