@@ -47,6 +47,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/project-intent.test.ts
       - name: Test chat Agent stream parser
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
+      - name: Test API CORS policy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/app.cors.test.ts
 
       - name: Typecheck and build application
         run: pnpm build
