@@ -7,8 +7,11 @@ describe("chat artifact intent", () => {
     const ordinaryMessages = [
       "كيف أعمل ملف Word؟",
       "ممكن تشرحلي ازاي أعمل ملف Word؟",
+      "ممكن تقولي ازاي أعمل ملف Word؟",
       "عايز أتعلم أعمل ملف Word",
       "علمني أعمل ملف Excel",
+      "How do I create an Excel file?",
+      "How can I make a Word document?",
       "ما الفرق بين Word وExcel؟",
       "أنا بستخدم Excel في الشغل",
       "اعمل مقارنة بين Excel وWord",
@@ -23,24 +26,45 @@ describe("chat artifact intent", () => {
   });
 
   test("creates Word only when the user explicitly asks for a Word file", () => {
-    assert.equal(isWordFileRequest("اعمل ملف Word فيه خطة تنفيذ"), true);
-    assert.equal(isWordFileRequest("عايز ملف Word للتحميل"), true);
-    assert.equal(isWordFileRequest("جهزلي مستند وورد"), true);
+    for (const message of [
+      "اعمل ملف Word فيه خطة تنفيذ",
+      "عايز ملف Word للتحميل",
+      "جهزلي مستند وورد",
+      "ممكن تعمل لي ملف Word",
+      "أنشئ ملف Word",
+      "Create a Word document",
+      "Make a Word doc",
+    ]) {
+      assert.equal(isWordFileRequest(message), true, "missed Word file intent: " + message);
+    }
     assert.equal(isWordFileRequest("كيف أعمل ملف Word؟"), false);
   });
 
   test("creates Excel only when the user explicitly asks for an Excel file", () => {
-    assert.equal(isExcelFileRequest("جهزلي شيت Excel للميزانية"), true);
-    assert.equal(isExcelFileRequest("اعمل ملف Excel"), true);
+    for (const message of [
+      "جهزلي شيت Excel للميزانية",
+      "اعمل ملف Excel",
+      "تعمل لي ملف Excel للمبيعات",
+      "Create an Excel spreadsheet",
+      "Generate an XLSX workbook",
+    ]) {
+      assert.equal(isExcelFileRequest(message), true, "missed Excel file intent: " + message);
+    }
     assert.equal(isExcelFileRequest("ما الفرق بين Word وExcel؟"), false);
     assert.equal(isExcelFileRequest("كيف أعمل ملف Excel؟"), false);
   });
 
   test("recognizes explanatory questions as how-to rather than artifact requests", () => {
-    assert.equal(isHowToRequest("كيف أعمل ملف Word؟"), true);
-    assert.equal(isHowToRequest("اشرحلي Excel"), true);
-    assert.equal(isHowToRequest("ممكن تشرحلي ازاي أعمل ملف Word؟"), true);
-    assert.equal(isHowToRequest("عايز أتعلم أعمل ملف Word"), true);
-    assert.equal(isHowToRequest("علمني أعمل ملف Excel"), true);
+    for (const message of [
+      "كيف أعمل ملف Word؟",
+      "اشرحلي Excel",
+      "ممكن تشرحلي ازاي أعمل ملف Word؟",
+      "ممكن تقولي ازاي أعمل ملف Word؟",
+      "عايز أتعلم أعمل ملف Word",
+      "علمني أعمل ملف Excel",
+      "How do I create an Excel file?",
+    ]) {
+      assert.equal(isHowToRequest(message), true, "missed how-to intent: " + message);
+    }
   });
 });
