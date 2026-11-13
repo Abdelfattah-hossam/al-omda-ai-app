@@ -27,6 +27,15 @@ after(async () => {
   );
 });
 
+test("requires authentication before renaming a saved conversation", async () => {
+  const response = await fetch(`${baseUrl}/api/ai/conversations/00000000-0000-4000-8000-000000000000`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ title: "Renamed conversation" }),
+  });
+  assert.equal(response.status, 401);
+});
+
 test("returns exact CORS origins only for configured app and development origins", async () => {
   for (const origin of allowedOrigins) {
     const response = await fetch(`${baseUrl}/api/healthz`, { headers: { origin } });
