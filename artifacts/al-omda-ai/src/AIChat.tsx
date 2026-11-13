@@ -73,6 +73,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
+  const chatTopbarRef = useRef<HTMLElement | null>(null);
+  const plusWrapRef = useRef<HTMLDivElement | null>(null);
   const [previewingDocument, setPreviewingDocument] = useState<number | null>(null);
   const [generatedSpeech, setGeneratedSpeech] = useState<Record<number, string>>({});
   const [speechLoadingIndex, setSpeechLoadingIndex] = useState<number | null>(null);
@@ -95,6 +97,27 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      const chatMenu = chatTopbarRef.current?.querySelector(".ai-chat-top-menu");
+      const chatMenuTrigger = chatTopbarRef.current?.querySelector(".ai-chat-menu-trigger");
+      if (!chatMenu?.contains(target) && !chatMenuTrigger?.contains(target)) setShowChatMenu(false);
+      if (!plusWrapRef.current?.contains(target)) setShowPlusMenu(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShowChatMenu(false);
+      setShowPlusMenu(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const textarea = inputRef.current;
@@ -806,10 +829,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
   </div>;
   return <div className="page-enter ai-chat-page">
-    <header className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
+    <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>setLocation("/")} aria-label={ar ? "العودة للرئيسية" : "Back to home"}><ArrowLeft size={19}/></button>
       <div className="ai-chat-topbar-title"><strong>{copy.title}</strong><span>{ar ? "العمدة الذكي" : "AL OMDA AI"}</span></div>
-      <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>setShowChatMenu(v=>!v)}><MoreHorizontal size={21}/></button>
+      <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
       {showChatMenu && <div className="ai-chat-top-menu" role="menu">
         <button type="button" onClick={()=>{setShowRoutingInfo(v=>!v);setShowChatMenu(false)}}><Bot size={16}/>{ar ? "التوجيه التلقائي" : "Auto routing"}</button>
         <button type="button" onClick={()=>{setShowConversationList(v=>!v);setShowChatMenu(false)}}><History size={16}/>{ar ? "المحادثات السابقة" : "Conversation history"}</button>
@@ -886,8 +909,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <button type="button" className="icon-button" onClick={()=>setPendingImage(null)} aria-label={ar?"إزالة الصورة":"Remove image"}><X size={15}/></button>
           </div>}
           <div className="ai-composer-tools">
-            <div className="ai-plus-wrap">
-              <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
+            <div ref={plusWrapRef} className="ai-plus-wrap">
+              <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>{setShowChatMenu(false);setShowPlusMenu((v)=>!v)}}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
                 <button type="button" className="ai-plus-option" onClick={()=>{if(agentMode || loading || historyLoading)return;setShowPlusMenu(false);imageInputRef.current?.click();}} disabled={agentMode || loading || historyLoading}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
                 {[
