@@ -269,6 +269,40 @@ test("approval gate pauses writes and executes only the exact approved call", as
   }
 });
 
+test("approval gate executes a write only after the exact pending call is approved", async () => {
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "write-call-approved", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "approved-after-consent.txt", content: "written only after approval" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The approved file was created." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+  });
+  try {
+    const started = await postTo(isolated, "/v1/agent/run", { goal: "Create approved-after-consent.txt" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    await assert.rejects(readFile(join(isolated.workspace, "approved-after-consent.txt"), "utf8"));
+
+    const continued = await postTo(isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["write-call-approved"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + isolated.stderr);
+    const result = JSON.parse(continuedBody) as { status: string; message: string };
+    assert.equal(result.status, "completed");
+    assert.equal(result.message, "The approved file was created.");
+    assert.equal(await readFile(join(isolated.workspace, "approved-after-consent.txt"), "utf8"), "written only after approval");
+    assert.equal(mock.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+  }
+});
+
 test("model runtime fails over to the configured fallback without exposing credentials", async () => {
   const primary = await startMockModel(() => ({ status: 503, payload: { error: { message: "primary unavailable" } } }));
   const fallback = await startMockModel((_requestNumber, body) => {
