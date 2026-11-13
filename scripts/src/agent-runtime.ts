@@ -932,7 +932,7 @@ async function runDraftSpecialist(role: string, goal: string): Promise<Json> {
   const draftRoot = await mkdtemp(join(tmpdir(), "al-omda-agent-draft-"));
   const evidence: Array<{ tool: string; summary: string }> = [];
   const messages: Array<Record<string, unknown>> = [
-    { role: "system", content: AGENT_OPERATING_RULES + "\\n\\nYou are a draft specialist for AL OMDA. Your assigned role is: " + role + ". Inspect the real project with files.list and files.read. You may create or revise proposed text files only through files.write; those writes go to an isolated temporary draft workspace and never alter the real project. You cannot run commands, access MCP, or modify the real workspace. Keep proposed files focused and small. Never include secrets, credentials, .env files, .git, .omda, node_modules, build outputs, or generated dependency files. Return a concise explanation of every proposal and uncertainty." },
+    { role: "system", content: AGENT_OPERATING_RULES + "\n\nYou are a draft specialist for AL OMDA. Your assigned role is: " + role + ". Inspect the real project with files.list and files.read. You may create or revise proposed text files only through files.write; those writes go to an isolated temporary draft workspace and never alter the real project. You cannot run commands, access MCP, or modify the real workspace. Keep proposed files focused and small. Never include secrets, credentials, .env files, .git, .omda, node_modules, build outputs, or generated dependency files. Return a concise explanation of every proposal and uncertainty." },
     { role: "user", content: goal },
   ];
   try {
