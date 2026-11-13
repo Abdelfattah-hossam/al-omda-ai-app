@@ -39,7 +39,7 @@ export function createHttpFlowHistoryRecord(input: CreateHttpFlowHistoryInput): 
     role: String(response.role).slice(0, 40),
     status: Number.isInteger(response.status) ? response.status : 0,
     durationMs: Number.isFinite(response.durationMs) ? Math.max(0, Math.round(response.durationMs)) : 0,
-    bodyLength: Number.isFinite(response.bodyLength) ? Math.max(0, Math.round(response.bodyLength)) : typeof response.body === "string" ? response.body.length : 0,
+    bodyLength: typeof response.bodyLength === "number" && Number.isFinite(response.bodyLength) ? Math.max(0, Math.round(response.bodyLength)) : typeof response.body === "string" ? response.body.length : 0,
   }));
   const changedHeaders = [...new Set((input.comparison.headerDifferences || [])
     .map((item) => typeof item.header === "string" ? item.header.toLowerCase().slice(0, 64) : "")
