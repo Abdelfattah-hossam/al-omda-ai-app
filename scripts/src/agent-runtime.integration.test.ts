@@ -399,15 +399,15 @@ rl.on("line", (line) => {
   test("reconnects to an MCP server after its process exits", async () => {
     const first = await fetch(isolated.baseUrl + "/v1/mcp/tools", { headers: { authorization: "Bearer " + token } });
     assert.equal(first.status, 200);
-    const firstBody = await first.json() as { tools: Array<{ name: string }> };
-    assert.ok(firstBody.tools.some((tool) => tool.name.includes("ping")));
+    const firstBody = await first.json() as { servers: Array<{ tools: Array<{ name: string }> }> };
+    assert.ok(firstBody.servers.some((server) => server.tools.some((tool) => tool.name === "ping")));
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const second = await fetch(isolated.baseUrl + "/v1/mcp/tools", { headers: { authorization: "Bearer " + token } });
     assert.equal(second.status, 200);
-    const secondBody = await second.json() as { tools: Array<{ name: string }> };
-    assert.ok(secondBody.tools.some((tool) => tool.name.includes("ping")));
+    const secondBody = await second.json() as { servers: Array<{ tools: Array<{ name: string }> }> };
+    assert.ok(secondBody.servers.some((server) => server.tools.some((tool) => tool.name === "ping")));
     assert.equal(await readFile(counterPath, "utf8"), "2");
   });
 });
