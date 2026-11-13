@@ -9,6 +9,14 @@ function isInside(root: string, target: string): boolean {
   const rel = relative(root, target);
   return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep));
 }
+function isAllowedProposalPath(path: string): boolean {
+  const segments = path.split("/").map((part) => part.toLowerCase());
+  return !segments.some((part) =>
+    part === ".git" || part === ".omda" || part === "node_modules" || part === "dist" ||
+    part === "build" || part === "coverage" || part === ".next" || part === ".wrangler" ||
+    part === ".turbo" || part === ".env" || part.startsWith(".env.")
+  );
+}
 function safeId(value: string): string {
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(value)) throw new Error("Invalid delegation workspace ID.");
   return value;
@@ -51,6 +59,7 @@ export async function writeAgentProposal(agentRoot: string, relativePath: unknow
   }
   const segments = relativePath.split("/");
   if (segments.some((part) => !part || part === "." || part === ".." || part.length > 100)) throw new Error("Proposal path contains an unsafe segment.");
+  if (!isAllowedProposalPath(relativePath)) throw new Error("Proposal path targets secrets, runtime state, dependencies, or generated build output and is not allowed.");
   if (typeof content !== "string" || Buffer.byteLength(content, "utf8") > 1024 * 1024) throw new Error("Each proposal file must contain at most 1 MB of UTF-8 text.");
   const root = await realpath(agentRoot);
   const target = resolve(root, ...segments);
@@ -85,7 +94,9 @@ export async function listAgentProposalFiles(agentRoot: string): Promise<Proposa
       if (result.length >= 40) return;
       if (entry.isSymbolicLink()) continue;
       const full = resolve(directory, entry.name);
-      if (entry.isDirectory()) await walk(full, prefix ? prefix + "/" + entry.name : entry.name);
+      const relativePath = prefix ? prefix + "/" + entry.name : entry.name;
+      if (!isAllowedProposalPath(relativePath)) continue;
+      if (entry.isDirectory()) await walk(full, relativePath);
       else if (entry.isFile()) {
         const info = await stat(full);
         if (info.size <= 1024 * 1024) result.push({ path: prefix ? prefix + "/" + entry.name : entry.name, bytes: info.size });

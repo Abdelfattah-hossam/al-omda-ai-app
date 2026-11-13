@@ -23,7 +23,7 @@ test("rejects traversal, absolute paths, backslashes, and unsafe IDs", async () 
   try {
     const dir = await createAgentProposalDirectory(root, "run_123", "agent_1");
     const budget: ProposalBudget = { files: new Map(), totalBytes: 0 };
-    for (const value of ["../escape.txt", "/tmp/escape.txt", "a\\..\\escape.txt", "a//b.txt"]) {
+    for (const value of ["../escape.txt", "/tmp/escape.txt", "a\\..\\escape.txt", "a//b.txt", ".env", ".env.local", ".git/config", ".omda/models.json", "node_modules/pkg/index.js", "dist/app.js"]) {
       await assert.rejects(() => writeAgentProposal(dir, value, "no", budget));
     }
     await assert.rejects(() => createAgentProposalDirectory(root, "../escape", "agent_1"), /Invalid delegation workspace ID/);
