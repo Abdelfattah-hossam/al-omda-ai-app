@@ -1748,7 +1748,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <button className="lang-button" onClick={toggleLanguage} data-testid="button-language">{t('languageSwitch')}</button>
         <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
       </div></header>
-      <div className="content-wrap"><div key={path} className="route-page-transition">{page}</div></div>
+      <div className="content-wrap">{path === '/ai' || path === '/ai/usage' ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
