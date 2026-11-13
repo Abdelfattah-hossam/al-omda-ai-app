@@ -18,6 +18,8 @@ jobs:
       agent-mode: off
       review-on-synchronize: true
     secrets:
-      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-      LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      # Prefer OpenRouter when its repository secret is configured; otherwise keep Gemini.
+      # OPENROUTER_MODEL is optional and defaults to the free router.
+      LLM_API_KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.LLM_API_KEY }}
+      LLM_BASE_URL: ${{ secrets.OPENROUTER_API_KEY && 'https://openrouter.ai/api/v1' || secrets.LLM_BASE_URL }}
+      LLM_MODEL: ${{ secrets.OPENROUTER_API_KEY && (secrets.OPENROUTER_MODEL || 'openrouter/free') || secrets.LLM_MODEL }}
