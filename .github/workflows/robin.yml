@@ -15,6 +15,7 @@ jobs:
   review:
     uses: antongulin/robin/.github/workflows/review.yml@main
     with:
+      agent-mode: off
       review-on-synchronize: true
     secrets:
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
