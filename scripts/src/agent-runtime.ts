@@ -22,7 +22,7 @@ import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
 import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
-import { isAgentDraftPathAllowed, resolveAgentDraftPath } from "./agent-draft-workspace.js";
+import { isAgentDraftPathAllowed, isAgentDraftSourcePathAllowed, resolveAgentDraftPath } from "./agent-draft-workspace.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -973,7 +973,7 @@ async function runDraftSpecialistTool(call: AgentToolCall, draftRoot: string): P
         if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
         throw error;
       });
-      if (sourceDirectory && !isAgentDraftPathAllowed(relative(workspaceRoot, sourceDirectory).split(sep).join("/"))) {
+      if (sourceDirectory && !isAgentDraftSourcePathAllowed(relative(workspaceRoot, sourceDirectory).split(sep).join("/"))) {
         throw new Error("This resolved source directory is not available to draft specialists.");
       }
       const sourceEntries = sourceDirectory ? await readdir(sourceDirectory, { withFileTypes: true }) : [];

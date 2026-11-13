@@ -27,3 +27,7 @@ export function isAgentDraftPathAllowed(path: string): boolean {
     /\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
   );
 }
+
+export function isAgentDraftSourcePathAllowed(path: string): boolean {
+  return path === "" || isAgentDraftPathAllowed(path);
+}

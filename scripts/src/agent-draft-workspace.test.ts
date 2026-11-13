@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { isAgentDraftPathAllowed, resolveAgentDraftPath } from "./agent-draft-workspace.js";
+import { isAgentDraftPathAllowed, isAgentDraftSourcePathAllowed, resolveAgentDraftPath } from "./agent-draft-workspace.js";
 import { resolve } from "node:path";
 
 test("resolves ordinary relative paths only inside the isolated draft workspace", () => {
@@ -18,4 +18,10 @@ test("blocks secrets, runtime state, dependencies, and generated build directori
   }
   assert.equal(isAgentDraftPathAllowed("src/agent.ts"), true);
   assert.equal(isAgentDraftPathAllowed("docs/README.md"), true);
+});
+
+test("allows the project root listing while still blocking protected nested paths", () => {
+  assert.equal(isAgentDraftSourcePathAllowed(""), true);
+  assert.equal(isAgentDraftSourcePathAllowed("src"), true);
+  assert.equal(isAgentDraftSourcePathAllowed(".env"), false);
 });
