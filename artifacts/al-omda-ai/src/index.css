@@ -1395,3 +1395,14 @@ body:has(.ai-chat-page){
 @keyframes omdaOrbGlow{0%,100%{box-shadow:0 0 24px rgba(113,145,255,.32),inset 0 0 25px rgba(202,218,255,.22)}50%{box-shadow:0 0 48px rgba(113,145,255,.65),inset 0 0 35px rgba(202,218,255,.4)}}
 @media(prefers-reduced-motion:reduce){.omda-live-voice *{animation:none!important;transition:none!important}}
 @media(max-width:650px){.omda-live-voice{min-height:230px;padding:14px 8px}.omda-voice-orb-wrap{width:170px;height:170px}.omda-voice-orb{width:104px;height:104px}.ai-chat-more-menu{position:fixed;top:auto;inset-inline:12px;bottom:calc(70px + env(safe-area-inset-bottom));width:auto}}
+
+/* Ambient motion uses the existing navy/blue/violet palette without changing theme colors. */
+@media(prefers-reduced-motion:no-preference){
+  body:has(.ai-chat-page){background-size:180% 180%;animation:omdaAmbientBackground 28s ease-in-out infinite}
+  .app-shell:has(.ai-chat-page) .button-primary,
+  .app-shell:has(.ai-chat-page) .ai-send-button,
+  .app-shell:has(.ai-chat-page) .ai-plus-button{animation:omdaButtonAura 4.6s ease-in-out infinite}
+}
+@keyframes omdaAmbientBackground{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
+.ai-agent-runtime-panel[data-agent-active="false"]{display:none!important}
+.ai-agent-runtime-panel[data-agent-active="true"]{margin:4px 0 8px!important;padding:10px!important;border-radius:16px!important}
