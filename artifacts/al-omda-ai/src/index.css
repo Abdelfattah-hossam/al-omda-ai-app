@@ -1426,3 +1426,7 @@ body:has(.ai-chat-page){
 .agent-marketplace-page>section.panel{order:5}
 .agent-marketplace-page>.agent-guide-panel{margin-top:8px}
 @media(prefers-reduced-motion:reduce){body:has(.ai-chat-page){animation:none!important}.app-shell:has(.ai-chat-page) .button-primary,.app-shell:has(.ai-chat-page) .ai-send-button,.app-shell:has(.ai-chat-page) .ai-plus-button{animation:none!important}}
+
+.app-shell[data-reduced-motion="true"] *,
+.app-shell[data-reduced-motion="true"] *::before,
+.app-shell[data-reduced-motion="true"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
