@@ -11,6 +11,11 @@ test("creates a project task for explicit build requests", () => {
     "هل تقدر تعمل لي تطبيق؟",
     "هل ممكن تعمل لي تطبيق؟",
     "ابدأ مشروع جديد من الصفر",
+    "جهزلي موقع إلكتروني",
+    "جهز لي متجر إلكتروني",
+    "سوي لي تطبيق لإدارة المخزون",
+    "سويلي نظام للحجوزات",
+    "صمملي شعار للمتجر",
     "Build me a website",
     "Can you create a mobile app?",
     "I want a website for my business",
@@ -29,6 +34,8 @@ test("does not create project tasks for ordinary questions or explanations", () 
     "Can you explain how to create a website?",
     "What is a project management app?",
     "Tell me about building websites",
+    "إيه معنى تجهيز موقع إلكتروني؟",
+    "إزاي أسوي تطبيق بنفسي؟",
   ]) {
     assert.equal(detectProjectSpecialty(request), null, "misclassified information request: " + request);
   }
@@ -40,6 +47,8 @@ test("does not create project tasks for negated build requests", () => {
     "لا تنشئ تطبيق",
     "لا أريد إنشاء تطبيق",
     "ما تبنيش موقع",
+    "ما تجهزش موقع",
+    "متسويش تطبيق",
     "من غير ما تبني مشروع",
     "Don't build a website",
     "Do not create an app",
