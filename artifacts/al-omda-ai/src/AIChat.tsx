@@ -58,7 +58,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [activeConversationId, setActiveConversationId] = useState("");
   const [showConversationList, setShowConversationList] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
-  const [pinnedConversationIds, setPinnedConversationIds] = useState<string[]>(() => { try { const value = JSON.parse(window.localStorage.getItem("omda-pinned-conversations") || "[]"); return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []; } catch { return []; } });
+  const [pinnedConversationIds, setPinnedConversationIds] = useState<string[]>([]);
+  const [pinnedPreferencesLoaded, setPinnedPreferencesLoaded] = useState(false);
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [agentMode, setAgentMode] = useState(false);
   const [agentRuntimeUrl, setAgentRuntimeUrl] = useState("http://127.0.0.1:4318");
@@ -147,14 +148,19 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const title = requested?.trim().slice(0, 100);
     if (!title || title === conversation.title) return;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversation.id), { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title }) });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+      let response: Response;
+      try { response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversation.id), { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title }), signal: controller.signal }); }
+      finally { window.clearTimeout(timeoutId); }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation."));
       setConversations((current) => current.map((item) => item.id === conversation.id ? { ...item, title } : item));
-    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation.")); }
+    } catch (err) { setError(err instanceof Error && err.name === "AbortError" ? (ar ? "استغرق تغيير اسم المحادثة وقتًا أطول من اللازم." : "Renaming the conversation timed out.") : err instanceof Error ? err.message : (ar ? "تعذر تغيير اسم المحادثة." : "Could not rename conversation.")); }
   };
   const togglePinnedConversation = (id: string) => setPinnedConversationIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [id, ...current]);
-  useEffect(() => { try { window.localStorage.setItem("omda-pinned-conversations", JSON.stringify(pinnedConversationIds)); } catch { /* Local preference only. */ } }, [pinnedConversationIds]);
+  useEffect(() => { try { const value = JSON.parse(window.localStorage.getItem("omda-pinned-conversations") || "[]"); if (Array.isArray(value)) setPinnedConversationIds(value.filter((id): id is string => typeof id === "string")); } catch { /* Use an empty pinned list when storage is unavailable. */ } finally { setPinnedPreferencesLoaded(true); } }, []);
+  useEffect(() => { if (!pinnedPreferencesLoaded) return; try { window.localStorage.setItem("omda-pinned-conversations", JSON.stringify(pinnedConversationIds)); } catch { /* Local preference only. */ } }, [pinnedConversationIds, pinnedPreferencesLoaded]);
 
   const createConversation = async () => {
     if (!signedIn) return "";
