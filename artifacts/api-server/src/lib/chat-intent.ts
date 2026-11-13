@@ -45,9 +45,9 @@ export function isWordFileRequest(request: string): boolean {
 
 
 /** Return the latest user-authored turn, ignoring assistant messages. */
-export type ChatIntentMessage = { role: "user" | "assistant"; content: string };
+export type ChatIntentMessage = { role: string; content: string };
 
-export function getLatestUserRequest(messages: ChatIntentMessage[]): string {
+export function getLatestUserRequest(messages: ReadonlyArray<ChatIntentMessage>): string {
   return messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
 }
 
