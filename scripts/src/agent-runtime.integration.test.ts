@@ -165,4 +165,39 @@ describe("local Agent runtime HTTP integration", () => {
     });
     assert.equal(denied.status, 403);
   });
+
+  test("persists, lists, and reloads a valid agent session", async () => {
+    const state = {
+      createdAt: "2026-11-13T00:00:00.000Z",
+      messages: [
+        { role: "user", content: "Continue the integration test task" },
+        { role: "assistant", content: "Checkpoint saved" },
+      ],
+    };
+    const saved = await post("/v1/sessions/save", { id: "integration-session-1", state });
+    assert.equal(saved.status, 200);
+    assert.equal((await saved.json() as { ok: boolean }).ok, true);
+
+    const loaded = await post("/v1/sessions/load", { id: "integration-session-1" });
+    assert.equal(loaded.status, 200);
+    const payload = await loaded.json() as { state: { messages: Array<{ content: string }> } };
+    assert.equal(payload.state.messages[0].content, "Continue the integration test task");
+
+    const listed = await request("/v1/agent/sessions", {
+      headers: { authorization: "Bearer " + token },
+    });
+    assert.equal(listed.status, 200);
+    const sessions = (await listed.json() as { sessions: Array<{ id: string; lastMessage: string }> }).sessions;
+    assert.ok(sessions.some((session) => session.id === "integration-session-1" && session.lastMessage === "Continue the integration test task"));
+  });
+
+  test("rejects malformed session identifiers and keeps terminal execution disabled", async () => {
+    const invalidSession = await post("/v1/sessions/load", { id: "../outside" });
+    assert.equal(invalidSession.status, 400);
+
+    const terminal = await post("/v1/terminal/execute", { command: "git", args: ["status", "--short"] });
+    assert.equal(terminal.status, 400);
+    assert.match((await terminal.json() as { error: string }).error, /execution is disabled/i);
+  });
+
 });
