@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { isExcelFileRequest, isHowToRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -52,19 +53,8 @@ function isStandaloneGreeting(request: string): boolean {
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim().replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
   return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
 }
-function isHowToRequest(request: string): boolean {
-  return /^\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
-}
 function isExcelRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  // Require a concrete file/container noun as well as an explicit creation intent.
-  // "Compare Excel and Word" or "How does Excel work?" must remain normal chat.
-  const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل/i.test(request);
-  const namesFileDeliverable = /(?:ملف|شيت|مصنف|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(request);
-  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|مصنف)/i.test(request);
-  return mentionsExcelFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
+  return isExcelFileRequest(getLatestUserRequest(messages));
 }
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
@@ -73,12 +63,7 @@ function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
 }
 
 function isExplicitWordFileRequest(request: string): boolean {
-  if (isHowToRequest(request)) return false;
-  const mentionsWordFormat = /(?:و?ورد|\bword\b|\bdocx\b)/i.test(request);
-  const namesFileDeliverable = /(?:ملف|مستند|document|file|docx)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|إنشاء|جهز|جهزلي|جهز\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(request);
-  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|مستند|document|file)/i.test(request);
-  return mentionsWordFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
+  return isWordFileRequest(request);
 }
 function isWordTableRequest(request: string): boolean {
   if (/(?:بدون|من غير|لا تضف|لا تعمل|مش عايز|مش محتاج|without|no)\s*(?:أي\s*)?(?:جدول|table)/i.test(request)) return false;
