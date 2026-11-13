@@ -25,7 +25,7 @@ export function detectProjectSpecialty(request: string): ProjectSpecialty | null
   const value = normalizeProjectRequest(request);
   if (!value || isNegatedProjectRequest(value)) return null;
 
-  const explicitBuildQuestion = /^(?:ممكن|هل يمكنك|تقدر|بتقدر)\s*(?:انك\s*)?(?:تعمل|تعملي|تنشئ|انشئ|انشاء|تبني|تصمم|تطور)/i.test(value) ||
+  const explicitBuildQuestion = /^(?:(?:هل)\\s*)?(?:ممكن|يمكنك|تقدر|بتقدر)\\s*(?:انك\\s*)?(?:تعمل|تعملي|تنشئ|انشئ|انشاء|تبني|تصمم|تطور)/i.test(value) ||
     /^(?:can|could|would)\s+you\s+(?:please\s+)?(?:build|create|develop|make|implement|design|start)\b/i.test(value);
   if (isInformationRequest(value) && !explicitBuildQuestion) return null;
 
