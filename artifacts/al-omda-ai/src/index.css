@@ -1349,7 +1349,8 @@ body:has(.ai-chat-page){
   .app-shell[data-chat-active="true"] > .main-area .ai-chat-page > .panel:not(.ai-conversations-panel) > .section-head { display:none !important; }
   .app-shell[data-chat-active="true"] > .main-area .ai-chat-page > .panel:not(.ai-conversations-panel) .chat-messages {
     flex:1 1 0 !important; height:0 !important; min-height:0 !important;
-    overflow-y:auto !important; -webkit-overflow-scrolling:touch;
+    max-height:none !important; overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
     padding:10px 3px 14px !important; gap:14px !important;
   }
   .app-shell[data-chat-active="true"] > .main-area .ai-chat-page > .panel .chat-message {
@@ -1360,9 +1361,12 @@ body:has(.ai-chat-page){
     font-size:14px !important; line-height:1.85 !important;
   }
   .app-shell[data-chat-active="true"] > .main-area .ai-chat-page > .panel .ai-composer {
-    flex:0 0 auto !important; margin:6px 0 2px !important; padding:9px !important;
+    position:static !important; inset:auto !important; bottom:auto !important;
+    z-index:auto !important; width:100% !important; flex:0 0 auto !important;
+    margin:6px 0 2px !important; padding:9px !important;
     border:1px solid var(--border,rgba(130,150,190,.35)) !important;
     border-radius:22px !important; background:var(--surface,rgba(18,22,32,.96)) !important;
+    -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
     box-shadow:0 5px 22px rgba(0,0,0,.18) !important;
   }
   .app-shell[data-chat-active="true"] > .main-area .ai-chat-page > .panel .ai-composer-tools {
