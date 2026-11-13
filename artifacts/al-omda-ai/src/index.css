@@ -1656,3 +1656,182 @@ body:has(.ai-chat-page){
 @media(min-width:651px) and (max-width:900px){
  .profile-settings-layout>.profile-settings-side{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* AL OMDA visual refinement: balanced full-width profile sections, clear chat controls,
+   animated ambient color and a consistently sized mobile workspace dock. */
+.app-shell::before{
+  background-size:180% 180%;
+  animation:omdaWallpaperDrift 34s ease-in-out infinite alternate;
+}
+@keyframes omdaWallpaperDrift{
+  0%{background-position:0% 15%;filter:hue-rotate(0deg)}
+  50%{background-position:65% 85%;filter:hue-rotate(12deg)}
+  100%{background-position:100% 20%;filter:hue-rotate(-8deg)}
+}
+@media(prefers-reduced-motion:reduce){
+  .app-shell::before{animation:none!important}
+}
+
+/* A single, consistent content width prevents the profile from looking like
+   a mix of oversized and undersized cards on desktop and mobile. */
+.profile-settings-page{width:100%;max-width:1240px;margin-inline:auto}
+.profile-settings-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:14px!important;
+  width:100%;
+}
+.profile-settings-layout>*,
+.profile-settings-layout>.profile-settings-side,
+.profile-settings-layout .profile-settings-side>*{
+  grid-column:1/-1!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+.profile-settings-layout>.profile-settings-side{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:14px!important;
+}
+.profile-settings-layout .profile-main-card,
+.profile-settings-layout .profile-setting-card,
+.profile-settings-layout .profile-features-card{
+  min-height:0;
+  height:auto!important;
+  border-radius:16px;
+}
+.profile-fields-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.profile-feature-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  align-items:stretch;
+}
+.profile-feature-link{
+  display:flex!important;
+  align-items:center;
+  min-height:82px;
+  height:100%!important;
+  gap:10px;
+}
+.profile-feature-link>span{flex:1;min-width:0}
+.profile-setting-card{overflow:visible}
+
+/* Chat controls form a deliberate hierarchy; voice is prominent and never
+   pushed off-screen by the other actions. */
+.ai-chat-page .ai-chat-heading{
+  grid-template-columns:minmax(0,1fr) minmax(300px,420px)!important;
+  padding:18px 20px!important;
+  gap:18px!important;
+}
+.ai-chat-page .ai-chat-actions{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch;
+}
+.ai-chat-page .ai-chat-actions .ai-live-voice-button{
+  grid-column:1/-1;
+  min-height:42px!important;
+  border-color:rgba(var(--omda-glow),.55)!important;
+  color:var(--profile-accent,#d7bd83)!important;
+  background:linear-gradient(110deg,rgba(var(--omda-glow),.16),rgba(255,255,255,.035))!important;
+  box-shadow:0 0 16px rgba(var(--omda-glow),.14),inset 0 0 14px rgba(var(--omda-glow),.06);
+}
+.ai-chat-page .ai-chat-actions .ai-live-voice-button:hover{
+  box-shadow:0 0 24px rgba(var(--omda-glow),.28),inset 0 0 16px rgba(var(--omda-glow),.1);
+  transform:translateY(-1px);
+}
+.ai-chat-page .ai-routing-note{
+  display:flex;align-items:center;gap:10px;
+  border-color:rgba(var(--omda-glow),.22);
+  background:linear-gradient(110deg,rgba(var(--omda-glow),.08),rgba(255,255,255,.025));
+}
+.ai-chat-page .ai-composer{
+  border-color:rgba(var(--omda-glow),.42);
+  box-shadow:0 0 0 1px rgba(var(--omda-glow),.07),0 10px 34px rgba(0,0,0,.24);
+}
+.ai-chat-page .ai-send-button{
+  box-shadow:0 0 16px rgba(var(--omda-glow),.25);
+  transition:transform .18s,box-shadow .18s,filter .18s;
+}
+.ai-chat-page .ai-send-button:not(:disabled):hover{
+  transform:translateY(-2px) scale(1.04);
+  filter:brightness(1.08);
+  box-shadow:0 0 26px rgba(var(--omda-glow),.42);
+}
+.ai-chat-page .ai-plus-button:hover,
+.ai-chat-page .icon-button:hover,
+.ai-chat-page .button-quiet:hover{
+  box-shadow:0 0 16px rgba(var(--omda-glow),.16);
+}
+
+/* Restore the bottom dock as an evenly spaced, safe-area-aware navigation row. */
+@media(max-width:760px){
+  .mobile-nav{
+    display:grid!important;
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    align-items:stretch;
+    gap:2px;
+    padding:7px 5px max(7px,env(safe-area-inset-bottom));
+    min-height:62px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+  }
+  .mobile-nav a{
+    display:flex!important;
+    min-width:0;
+    min-height:46px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    padding:4px 2px!important;
+    border-radius:10px;
+    font-size:9px;
+    line-height:1.15;
+    white-space:nowrap;
+  }
+  .mobile-nav a svg{width:17px;height:17px;flex:none}
+  .mobile-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:650px){
+  .app-shell:not([data-chat-active="true"])>.main-area>.content-wrap{
+    padding:18px 12px 90px!important;
+  }
+  .profile-settings-page .page-heading{align-items:flex-start}
+  .profile-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .profile-fields-grid{grid-template-columns:minmax(0,1fr)!important}
+  .ai-chat-page .ai-chat-heading{
+    display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;padding:12px!important;gap:10px!important;
+  }
+  .ai-chat-page .ai-chat-actions{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%;gap:7px!important;
+  }
+  .ai-chat-page .ai-chat-actions>.button,
+  .ai-chat-page .ai-chat-actions .ai-chat-more-button{
+    width:100%;min-width:0;min-height:40px!important;
+    justify-content:center;padding-inline:7px!important;
+    white-space:normal;font-size:10px!important;
+  }
+  .ai-chat-page .ai-chat-actions .ai-live-voice-button{grid-column:1/-1}
+  .ai-chat-page .ai-chat-heading .page-subtitle{
+    display:block!important;position:static!important;
+    width:auto!important;height:auto!important;margin:4px 0 0!important;
+    clip:auto!important;overflow:visible!important;
+    white-space:normal!important;font-size:10px!important;
+    line-height:1.6!important;color:var(--muted-foreground,#a3aab8);
+  }
+}
+@media(max-width:380px){
+  .mobile-nav{grid-template-columns:repeat(7,minmax(50px,1fr))}
+  .profile-feature-grid{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(prefers-reduced-motion:no-preference){
+  .app-shell:not([data-reduced-motion="true"]) .button-primary,
+  .app-shell:not([data-reduced-motion="true"]) .ai-live-voice-button,
+  .app-shell:not([data-reduced-motion="true"]) .ai-send-button{
+    animation:omdaButtonAura 4.2s ease-in-out infinite;
+  }
+}
