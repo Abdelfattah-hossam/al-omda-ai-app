@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { isExcelFileRequest, isHowToRequest, isWordFileRequest } from "./chat-intent.js";
+import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
@@ -77,5 +77,42 @@ describe("chat artifact intent", () => {
     ]) {
       assert.equal(isHowToRequest(message), true, "missed how-to intent: " + message);
     }
+  });
+});
+
+
+describe("latest-turn intent isolation", () => {
+  test("a greeting stays a greeting even after an earlier file request", () => {
+    const messages = [
+      { role: "user" as const, content: "اعمل ملف Word لخطة المشروع" },
+      { role: "assistant" as const, content: "حاضر، ما التفاصيل؟" },
+      { role: "user" as const, content: "صباح الخير" },
+    ];
+    const latest = getLatestUserRequest(messages);
+    assert.equal(latest, "صباح الخير");
+    assert.equal(isStandaloneGreeting(latest), true);
+    assert.equal(isWordFileRequest(latest), false);
+    assert.equal(isExcelFileRequest(latest), false);
+  });
+
+  test("a new explicit file request is recognized as the current turn", () => {
+    const messages = [
+      { role: "user" as const, content: "كيفك؟" },
+      { role: "assistant" as const, content: "بخير، شكرًا" },
+      { role: "user" as const, content: "جهزلي ملف Excel للمبيعات" },
+    ];
+    const latest = getLatestUserRequest(messages);
+    assert.equal(isStandaloneGreeting(latest), false);
+    assert.equal(isExcelFileRequest(latest), true);
+  });
+
+  test("greeting phrases embedded in a real request are not treated as standalone greetings", () => {
+    assert.equal(isStandaloneGreeting("صباح الخير، اعمل ملف Word"), false);
+    assert.equal(isStandaloneGreeting("Hello, create an Excel workbook"), false);
+  });
+
+  test("normalizes Arabic diacritics and trailing punctuation in greetings", () => {
+    assert.equal(isStandaloneGreeting("السَّلَامُ عَلَيْكُمْ!"), true);
+    assert.equal(isStandaloneGreeting("كيفك؟؟"), true);
   });
 });
