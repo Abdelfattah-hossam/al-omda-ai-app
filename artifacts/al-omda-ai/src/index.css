@@ -1912,3 +1912,7 @@ body:has(.ai-chat-page){
   .ai-chat-page .ai-chat-actions{gap:6px!important}
   .ai-chat-page .ai-chat-actions>.button{font-size:10px!important;padding-inline:5px!important}
 }
+
+/* Six destinations: overview, chat, agents, workbench, history and profile. */
+@media(max-width:760px){.mobile-nav{grid-template-columns:repeat(6,minmax(0,1fr))!important;overflow-x:visible!important}}
+@media(max-width:390px){.mobile-nav{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
