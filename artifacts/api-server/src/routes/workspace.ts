@@ -262,30 +262,53 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
   }
   try {
     const response = await supabaseFetch(
-      "/rest/v1/tasks?select=id,title,request,specialty,steps,status,created_at",
+      "/rest/v1/rpc/create_ai_task_with_quota",
       {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          prefer: "return=representation",
-        },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          user_id: session.user.id,
-          title: plan.title,
-          request: plan.request,
-          specialty: plan.specialty,
-          steps: plan.steps,
-          status: "review",
+          p_title: plan.title,
+          p_request: plan.request,
+          p_specialty: plan.specialty,
+          p_steps: plan.steps,
+          p_daily_limit: 1000,
         }),
       },
       session.accessToken,
     );
-    const rows = await readSupabaseJson<DbTask[]>(response);
-    if (!rows[0]) {
+    const completion = await readSupabaseJson<{
+      saved: boolean;
+      allowed?: boolean;
+      task?: DbTask;
+      used?: number;
+      remaining?: number;
+      limit?: number;
+      resetAt?: string;
+    }>(response);
+    if (!completion.saved) {
+      if (completion.allowed === false) {
+        res.status(429).json({
+          error: "Your shared daily AI limit is used up. It will reset at the next UTC day.",
+          usage: completion,
+        });
+        return;
+      }
+      res.status(502).json({ error: "Supabase did not save the project task. No AI units were charged." });
+      return;
+    }
+    if (!completion.task) {
       res.status(502).json({ error: "Supabase did not return the saved task." });
       return;
     }
-    res.status(201).json(CreateTaskResponse.parse(mapTask(rows[0])));
+    res.status(201).json({
+      ...CreateTaskResponse.parse(mapTask(completion.task)),
+      usage: {
+        used: completion.used ?? 0,
+        remaining: completion.remaining ?? 0,
+        limit: completion.limit ?? 1000,
+        resetAt: completion.resetAt ?? "",
+      },
+    });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not save the task.");
   }
