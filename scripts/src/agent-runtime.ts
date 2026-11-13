@@ -1297,7 +1297,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   if (req.method === "GET" && url.pathname === "/v1/tools") {
     send(res, 200, { tools: [
-      { name: "agent.delegate", description: "Run 2 to 4 specialist agents concurrently with read-only tools." },
+      { name: "agent.delegate", description: "Run 2 to 4 specialists concurrently in read-only research mode or isolated draft mode." },
       { name: "agent.run", description: "Run a model-driven agent loop with tool calls and approval gates." },
       { name: "agent.continue", description: "Resume a saved agent run after approving or denying pending actions." },
       { name: "agent.resume", description: "Restore a saved agent session after the runtime or terminal was restarted." },

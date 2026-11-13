@@ -12,7 +12,7 @@ test("resolves ordinary relative paths only inside the isolated draft workspace"
 });
 
 test("blocks secrets, runtime state, dependencies, and generated build directories", () => {
-  for (const path of [".env", ".env.local", ".git/config", ".omda/models.json", "node_modules/pkg/index.js", "dist/app.js", "build/output.js", "coverage/report.txt"]) {
+  for (const path of [".env", ".env.local", ".git/config", ".omda/models.json", ".npmrc", "credentials.json", "id_rsa", "tls/private-key.pem", "node_modules/pkg/index.js", "dist/app.js", "build/output.js", "coverage/report.txt"]) {
     assert.equal(isAgentDraftPathAllowed(path), false, path);
     assert.throws(() => resolveAgentDraftPath(resolve("/tmp/omda-draft"), path), /not allowed/);
   }
