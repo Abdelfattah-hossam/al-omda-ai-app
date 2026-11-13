@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -927,6 +927,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               </div>}
             </div>
             <textarea ref={inputRef} className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
+            <button type="button" className="ai-voice-button" aria-label={ar ? "بدء المحادثة الصوتية المباشرة" : "Start live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice((value)=>!value)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Mic size={19}/></button>
             <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={(!input.trim() && !pendingImage) || loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button>
           </div>
           {showLiveVoice && signedIn && <section className="panel ai-voice-panel ai-voice-panel-under-input">

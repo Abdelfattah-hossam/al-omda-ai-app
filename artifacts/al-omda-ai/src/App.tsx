@@ -348,7 +348,6 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
   { path:'/agents', key:'agents', icon:Compass },
-  { path:'/ai', key:'aiChat', icon:Bot },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness },
   { path:'/history', key:'history', icon:History },
   { path:'/profile', key:'profile', icon:UserRound },
@@ -1707,15 +1706,24 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <div className="profile-settings-layout">
-              <details className="panel panel-pad profile-setting-card profile-accordion profile-account-first" open>
-          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div></summary>
+              <section className="panel panel-pad profile-main-card profile-account-profile-card">
+          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && authStatus==='unconfigured' && <div className="notice-bar"><ShieldCheck size={15}/><span>{t('authUnavailable')}</span></div>}
           {!authLoading && authStatus==='offline' && <div className="notice-bar"><ShieldCheck size={15}/><span>{authError||t('apiUnavailable')}</span></div>}
           {!authLoading && authStatus==='configured' && !authUser && <><p className="account-copy">{t('authConfigured')}</p><form className="account-form" onSubmit={handleAuthSubmit}><div className="field-group"><label className="form-label" htmlFor="auth-email">{t('email')}</label><input id="auth-email" type="email" className="field" autoComplete="email" required maxLength={254} value={authEmail} onChange={(event)=>setAuthEmail(event.target.value)} data-testid="input-auth-email"/></div><div className="field-group"><label className="form-label" htmlFor="auth-password">{t('password')}</label><input id="auth-password" type="password" className="field" autoComplete={authMode==='login'?'current-password':'new-password'} required minLength={8} maxLength={128} value={authPassword} onChange={(event)=>setAuthPassword(event.target.value)} data-testid="input-auth-password"/></div>{authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}<button className="button button-primary" type="submit" disabled={authWorking} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?t('signIn'):t('signUp')}</button></form><button type="button" className="text-button" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-mode">{authMode==='login'?t('switchToSignUp'):t('switchToSignIn')}</button></>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
-        </details>
+        
+        <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
+        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
+        <div className="profile-fields-grid">
+          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
+        </div>
+        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
+        {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
+      </section>
               <details className="panel panel-pad profile-setting-card profile-accordion">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'التخصيص':'PERSONALIZATION'}</span><h2>{isAr?'مظهر التطبيق':'App appearance'}</h2><p>{isAr?'اختر لون الواجهة وطريقة عرض المساحات.':'Choose your accent color and workspace density.'}</p></div><Palette size={18}/></div></summary>
           <div className="setting-row"><div><strong>{isAr?'لون الواجهة':'Accent color'}</strong><small>{isAr?'سبعة ألوان زجاجية للاختيار بينها':'Seven glass-inspired colors'}</small></div></div>
@@ -1735,16 +1743,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="setting-row"><div><strong>{isAr?"تقليل الحركة والمؤثرات":"Reduce motion"}</strong><small>{isAr?"إيقاف حركات الخلفيات والوميض والانتقالات لتجربة أهدأ.":"Reduce animated backgrounds, button glow, and transitions."}</small></div><button type="button" role="switch" aria-checked={Boolean(saved.reduceMotion)} className={"toggle "+(saved.reduceMotion?"on":"")} onClick={()=>setSaved((prev)=>({...prev,reduceMotion:!prev.reduceMotion}))} aria-label={isAr?"تقليل الحركة":"Reduce motion"}/></div>
         </details>
 
-      <section className="panel panel-pad profile-main-card">
-        <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
-        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
-        <div className="profile-fields-grid">
-          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
-          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
-        </div>
-        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
-        {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
-      </section>
+      
       <div className="profile-settings-side">
         <section className="panel panel-pad profile-features-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><Compass size={18}/></div>
@@ -1804,6 +1803,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
       </aside>
     </div>}
+    <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }
