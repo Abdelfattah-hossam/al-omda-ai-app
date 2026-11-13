@@ -1430,3 +1430,9 @@ body:has(.ai-chat-page){
 .app-shell[data-reduced-motion="true"] *,
 .app-shell[data-reduced-motion="true"] *::before,
 .app-shell[data-reduced-motion="true"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+
+.agent-marketplace-page>.agent-advanced-tools{order:5;margin-top:4px}
+.agent-advanced-tools>summary{cursor:pointer;list-style:none}
+.agent-advanced-tools>summary::-webkit-details-marker{display:none}
+.agent-advanced-tools-content{display:grid;gap:14px;padding-top:16px}
+.agent-marketplace-page>.agent-guide-panel{order:4}
