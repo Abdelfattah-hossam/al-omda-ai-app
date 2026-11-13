@@ -9,12 +9,17 @@ function isInside(root: string, target: string): boolean {
   const rel = relative(root, target);
   return rel === "" || (!rel.startsWith("..") && !rel.startsWith(sep));
 }
-function isAllowedProposalPath(path: string): boolean {
-  const segments = path.split("/").map((part) => part.toLowerCase());
+export function isAllowedProposalPath(path: string): boolean {
+  const normalized = path.replace(/\\/g, "/");
+  if (normalized.startsWith("/") || normalized.split("/").some((part) => part === "." || part === ".." || !part)) return false;
+  const segments = normalized.split("/").map((part) => part.toLowerCase());
   return !segments.some((part) =>
     part === ".git" || part === ".omda" || part === "node_modules" || part === "dist" ||
     part === "build" || part === "coverage" || part === ".next" || part === ".wrangler" ||
-    part === ".turbo" || part === ".env" || part.startsWith(".env.")
+    part === ".turbo" || part === ".env" || part.startsWith(".env.") ||
+    [".npmrc", ".netrc", ".pypirc", ".ssh", ".aws", ".azure", ".kube", ".docker",
+      "credentials.json", "secrets.json", "service-account.json", "id_rsa", "id_ed25519"].includes(part) ||
+    /\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
   );
 }
 function safeId(value: string): string {

@@ -3,7 +3,7 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, mkdir, readFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgentProposalDirectory, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
+import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 
 test("creates isolated proposal directories and writes bounded files", async () => {
   const root = await mkdtemp(join(tmpdir(), "omda-proposals-"));
@@ -57,4 +57,12 @@ test("enforces per-agent file and byte budgets and writes a shared manifest", as
     assert.equal(path, ".omda/delegates/run_123/manifest.json");
     assert.match(await readFile(join(root, path), "utf8"), /agent_1/);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("blocks credential files and unsafe source paths from delegated agents", () => {
+  for (const path of [".npmrc", ".netrc", ".pypirc", ".ssh/config", ".aws/credentials", ".kube/config", ".docker/config.json", "credentials.json", "secrets.json", "service-account.json", "id_rsa", "tls/private-key.pem", "certs/client.p12", "../outside.ts", "/etc/passwd"]) {
+    assert.equal(isAllowedProposalPath(path), false, path);
+  }
+  assert.equal(isAllowedProposalPath("src/agent-runtime.ts"), true);
+  assert.equal(isAllowedProposalPath("docs/agent-runtime.md"), true);
 });
