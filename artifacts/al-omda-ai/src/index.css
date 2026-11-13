@@ -1257,3 +1257,13 @@ body:has(.ai-chat-page){
   touch-action:pan-y!important;
   overscroll-behavior-y:contain!important;
 }
+
+.profile-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.profile-feature-link{display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid var(--glass-line);border-radius:12px;background:rgba(255,255,255,.025);color:var(--text-primary,#edf1fa);text-decoration:none;transition:border-color .18s,background .18s,transform .18s}
+.profile-feature-link:hover{border-color:var(--profile-accent);background:rgba(255,255,255,.055);transform:translateY(-1px)}
+.profile-feature-link>svg:first-child{flex:none;color:var(--profile-accent)}
+.profile-feature-link>svg:last-child{flex:none;margin-inline-start:auto;color:var(--text-muted,#89919c)}
+.profile-feature-link>span{display:grid;gap:3px;min-width:0}
+.profile-feature-link strong{font-size:11px;line-height:1.5}
+.profile-feature-link small{font-size:9px;line-height:1.6;color:var(--text-secondary,#aeb5bf)}
+@media(max-width:650px){.profile-feature-grid{grid-template-columns:1fr}}
