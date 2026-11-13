@@ -2562,3 +2562,87 @@ body:has(.ai-chat-page){
 .app-shell .ai-send-button {
   color: hsl(var(--primary-foreground)) !important;
 }
+
+
+/* Final correction: alpha belongs to the card surface only.
+   Broad legacy [class*="card"] selectors also matched card-title/text/stat
+   descendants. Explicitly neutralize those content classes, then whitelist
+   actual surface containers with the current theme accent and real alpha. */
+.app-shell [class*="card"]:not(.panel):not(.stat-card):not(.dashboard-chart-card):not(.dashboard-history-panel):not(.agent-card):not(.request-card):not(.plan-card):not(.profile-main-card):not(.profile-account-profile-card):not(.profile-setting-card):not(.profile-features-card):not(.profile-feature-link):not(.task-detail-card) {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.app-shell [class*="card-title"],
+.app-shell [class*="card-subtitle"],
+.app-shell [class*="card-label"],
+.app-shell [class*="card-value"],
+.app-shell [class*="card-text"],
+.app-shell [class*="card-desc"],
+.app-shell [class*="card-meta"],
+.app-shell [class*="card-count"],
+.app-shell [class*="card-stats"],
+.app-shell [class*="card-heading"],
+.app-shell [class*="card-caption"],
+.app-shell .stat-card-top,
+.app-shell .stat-label,
+.app-shell .stat-value,
+.app-shell .stat-foot,
+.app-shell .dashboard-card-subtitle,
+.app-shell .agent-card-stats,
+.app-shell .agent-card-stats *,
+.app-shell .stat-label *,
+.app-shell .stat-value *,
+.app-shell .stat-foot * {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Theme-colored card surfaces: same theme hue, genuinely translucent fill. */
+.app-shell .panel,
+.app-shell .stat-card,
+.app-shell .dashboard-chart-card,
+.app-shell .dashboard-history-panel,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .history-item,
+.app-shell .profile-main-card,
+.app-shell .profile-account-profile-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .specialty-row,
+.app-shell .notice-bar,
+.app-shell .task-detail-card,
+.app-shell .profile-feature-link,
+.app-shell .workbench-step,
+.app-shell .plan-empty {
+  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 16%, hsl(var(--card) / 46%)) !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 28%, transparent) !important;
+  box-shadow: 0 7px 20px rgba(0,0,0,.10) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.app-shell .panel > :not(button):not(input):not(select):not(textarea),
+.app-shell .stat-card > *,
+.app-shell .dashboard-chart-card > *,
+.app-shell .dashboard-history-panel > *,
+.app-shell .agent-card > *,
+.app-shell .request-card > *,
+.app-shell .plan-card > *,
+.app-shell .history-item > *,
+.app-shell .profile-main-card > *,
+.app-shell .profile-account-profile-card > *,
+.app-shell .profile-setting-card > *,
+.app-shell .profile-features-card > * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
