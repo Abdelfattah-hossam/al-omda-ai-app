@@ -1406,3 +1406,23 @@ body:has(.ai-chat-page){
 @keyframes omdaAmbientBackground{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
 .ai-agent-runtime-panel[data-agent-active="false"]{display:none!important}
 .ai-agent-runtime-panel[data-agent-active="true"]{margin:4px 0 8px!important;padding:10px!important;border-radius:16px!important}
+
+/* Profile: account and sign-in are the first, full-width section. */
+.profile-settings-layout .profile-account-first{grid-column:1/-1;order:-1}
+.profile-settings-layout .profile-account-first .account-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
+.profile-settings-layout .profile-account-first .account-form .notice-bar,
+.profile-settings-layout .profile-account-first .account-form button{grid-column:1/-1}
+@media(max-width:650px){.profile-settings-layout .profile-account-first .account-form{grid-template-columns:1fr}}
+/* Home is an end-user launchpad, not a developer console. */
+.dashboard-primary-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.dashboard-hero .hero-copy{max-width:760px}
+/* Marketplace hierarchy: discover agents first; setup and technical controls later. */
+.agent-marketplace-page{display:flex;flex-direction:column;gap:14px}
+.agent-marketplace-page>.page-heading{order:0}
+.agent-marketplace-page>.filter-row{order:1;margin:0}
+.agent-marketplace-page>.market-grid{order:2}
+.agent-marketplace-page>.notice-bar{order:3}
+.agent-marketplace-page>.agent-guide-panel{order:4}
+.agent-marketplace-page>section.panel{order:5}
+.agent-marketplace-page>.agent-guide-panel{margin-top:8px}
+@media(prefers-reduced-motion:reduce){body:has(.ai-chat-page){animation:none!important}.app-shell:has(.ai-chat-page) .button-primary,.app-shell:has(.ai-chat-page) .ai-send-button,.app-shell:has(.ai-chat-page) .ai-plus-button{animation:none!important}}
