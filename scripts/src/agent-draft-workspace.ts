@@ -24,6 +24,6 @@ export function isAgentDraftPathAllowed(path: string): boolean {
     part === "build" || part === "coverage" || part === ".next" || part === ".wrangler" ||
     part === ".turbo" || part === ".env" || part.startsWith(".env.") ||
     [".npmrc", ".netrc", ".pypirc", ".ssh", ".aws", ".azure", "credentials.json", "secrets.json", "service-account.json", "id_rsa", "id_ed25519"].includes(part) ||
-    /\\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
+    /\.(pem|key|p12|pfx|jks|keystore)$/i.test(part)
   );
 }
