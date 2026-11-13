@@ -90,6 +90,21 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Install the desktop companion as a user service
+
+The optional service installer can start the local Agent supervisor automatically when the current user signs in. It does not install a graphical desktop app and it does not enable terminal execution.
+
+From the repository root:
+
+```sh
+pnpm --filter @workspace/scripts desktop:service -- install
+pnpm --filter @workspace/scripts desktop:service -- status
+pnpm --filter @workspace/scripts desktop:service -- restart
+pnpm --filter @workspace/scripts desktop:service -- uninstall
+```
+
+Supported targets are Linux user-level systemd, macOS LaunchAgents, and Windows Task Scheduler (current user). The installer generates a 256-bit local bearer token if one does not already exist and stores it in a private per-user environment file. The workspace is set to the current repository; execution remains disabled by default. Uninstall removes the auto-start entry but intentionally preserves the token and environment file. Review the generated service and environment file before enabling this on a shared computer. This setup has not yet been validated on physical Windows/macOS/Linux devices in CI.
+
 ### Browser Workspace and site permissions
 
 The Agents workspace includes a Browser Workspace panel that reads the configured `playwright-browser` MCP server and displays its advertised tools. It stores an exact hostname allowlist in `.omda/browser-workspace.json`; wildcard domains, URL paths, ports, and credentials are rejected. Direct HTTP(S) URLs passed to Playwright MCP tools are checked against this allowlist before the tool call. Every browser MCP action still requires explicit approval.
