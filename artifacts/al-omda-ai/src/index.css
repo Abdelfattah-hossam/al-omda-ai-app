@@ -1560,3 +1560,9 @@ body:has(.ai-chat-page){
     font-size:12px!important;
   }
 }
+
+/* Keep message sides intuitive in both Arabic RTL and English LTR chats. */
+.app-shell[dir="ltr"] .ai-chat-page>.panel .chat-message.user{align-self:flex-end}
+.app-shell[dir="ltr"] .ai-chat-page>.panel .chat-message.assistant{align-self:flex-start}
+.app-shell[dir="rtl"] .ai-chat-page>.panel .chat-message.user{align-self:flex-start}
+.app-shell[dir="rtl"] .ai-chat-page>.panel .chat-message.assistant{align-self:flex-end}
