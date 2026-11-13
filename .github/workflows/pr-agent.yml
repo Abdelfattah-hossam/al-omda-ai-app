@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   review:
-    if: ${{ github.event.sender.type != 'Bot' && (github.event_name != 'issue_comment' || github.event.issue.pull_request) }}
+    if: ${{ github.event.sender.type != 'Bot' && ((github.event_name == 'issue_comment' && github.event.issue.pull_request) || (github.event_name == 'pull_request' && !github.event.pull_request.draft)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -33,7 +33,7 @@ jobs:
           config.num_retries: "2"
           github_action_config.auto_review: "true"
           github_action_config.pr_actions: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          github_action_config.feedback_on_draft_pr: "true"
+          github_action_config.feedback_on_draft_pr: "false"
           github_action_config.auto_describe: "false"
           github_action_config.auto_improve: "false"
           pr_reviewer.extra_instructions: "Review only the pull request diff. Report only verifiable defects with file paths, line references, impact, and a concise fix. Prioritize security, authentication and authorization, data integrity, concurrency, error handling, accessibility, and missing regression tests. Do not modify code or create commits."
