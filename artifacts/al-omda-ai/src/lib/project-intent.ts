@@ -9,7 +9,7 @@ function normalizeProjectRequest(request: string): string {
 
 function isNegatedProjectRequest(value: string): boolean {
   return /^(?:مش|موش|لا|بدون|من\s+غير)\s*(?:(?:عايز|عاوز|محتاج|اريد|أريد|احتاج|أحتاج)\s*)?(?:ان\s*|ما\s*)?(?:اعمل|اعملي|تعمل|تعملي|تنشئ|انشئ|انشاء|ابني|تبني|صمم|طور|برمج|نفذ|جهز|سوي|ابدأ|ابدا)/i.test(value) ||
-    /^(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تبنيش|تصممش|تطورش|تبرمجش|تنفذش|تجهزش|تسويش)(?=\s|$)/i.test(value) ||
+    /^(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تبنيش|تصممش|تطورش|تبرمجش|تنفذش|تجهزش|تسويش|جهزش|سويش)(?=\s|$)/i.test(value) ||
     /\b(?:don't|do not|never|not asking you to|no need to|i don't want(?: you to)?|i do not want(?: you to)?)\s+(?:build|create|develop|make|implement|design|start)\b/i.test(value);
 }
 function isInformationRequest(value: string): boolean {
