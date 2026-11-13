@@ -555,7 +555,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const currentProjectSpecialty = detectProjectSpecialty(text);
       const linkedProjectMessage = [...next].reverse().find((message) => message.role === "assistant" && Boolean(message.taskId));
       const explicitlyNewProject = /(?:مشروع جديد|ابدأ مشروع جديد|انشئ مشروع جديد|new project|start a new project)/i.test(text);
-      const continuesExistingProject = /^(?:كمل|كمّل|استكمل|تابع|نفذ|نفّذ|عدّل|عدل|راجع|اختبر|صلح|أصلح|طوّر|طور|ابدأ|ابدا|continue|resume|proceed|implement|fix|test|review|update)(?:\\s|$)/i.test(text.trim());
+      const continuesExistingProject = /^(?:كمل|كمّل|استكمل|تابع|نفذ|نفّذ|عدّل|عدل|راجع|اختبر|صلح|أصلح|طوّر|طور|ابدأ|ابدا|continue|resume|proceed|implement|fix|test|review|update)(?:\s|$)/i.test(text.trim());
       // A previous task is linked only when the current message is clearly a project follow-up.
       // Ordinary questions and greetings must remain ordinary chat replies.
       if (linkedProjectMessage?.taskId && continuesExistingProject && !explicitlyNewProject) {
