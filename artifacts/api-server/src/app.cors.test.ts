@@ -30,7 +30,10 @@ after(async () => {
 test("requires authentication before renaming a saved conversation", async () => {
   const response = await fetch(`${baseUrl}/api/ai/conversations/00000000-0000-4000-8000-000000000000`, {
     method: "PATCH",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      origin: "https://al-omda-ai-app.abdelfattahhossam1.workers.dev",
+    },
     body: JSON.stringify({ title: "Renamed conversation" }),
   });
   assert.equal(response.status, 401);
