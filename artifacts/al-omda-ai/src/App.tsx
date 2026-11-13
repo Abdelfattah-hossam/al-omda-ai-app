@@ -357,7 +357,7 @@ function readInitial(): { language:Language; tasks:Task[]; name:string; org:stri
     const stored = localStorage.getItem(STORE_KEY);
     if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false }, ...JSON.parse(stored) };
   } catch { /* use seeded local preview */ }
-  return { language:'ar', tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight' };
+  return { language:'ar', tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false };
 }
 const apiRequestOptions = { credentials:'same-origin' as const };
 function readApiError(error:unknown, fallback:string):string {
