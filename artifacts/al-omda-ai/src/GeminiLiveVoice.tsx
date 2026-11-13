@@ -319,6 +319,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   };
 
   const stop = () => {
+    if (mountedRef.current) setSpeaking(false);
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
     }
