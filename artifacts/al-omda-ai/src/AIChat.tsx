@@ -101,7 +101,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (!chatTopbarRef.current?.contains(target)) setShowChatMenu(false);
+      const chatMenu = chatTopbarRef.current?.querySelector(".ai-chat-top-menu");
+      const chatMenuTrigger = chatTopbarRef.current?.querySelector(".ai-chat-menu-trigger");
+      if (!chatMenu?.contains(target) && !chatMenuTrigger?.contains(target)) setShowChatMenu(false);
       if (!plusWrapRef.current?.contains(target)) setShowPlusMenu(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
