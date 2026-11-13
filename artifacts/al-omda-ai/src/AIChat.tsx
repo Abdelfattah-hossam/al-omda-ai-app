@@ -163,7 +163,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   useEffect(() => { if (!pinnedPreferencesLoaded) return; try { window.localStorage.setItem("omda-pinned-conversations", JSON.stringify(pinnedConversationIds)); } catch { /* Local preference only. */ } }, [pinnedConversationIds, pinnedPreferencesLoaded]);
 
   const createConversation = async () => {
-    if (!signedIn || loadingRef.current || historyLoadingRef.current) return "";
+    if (!signedIn) return "";
     try {
       const response = await fetch("/api/ai/conversations", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: ar ? "محادثة جديدة" : "New chat" }) });
       const data = await response.json();
@@ -873,7 +873,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <div className="ai-plus-wrap">
               <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
-                <button type="button" className="ai-plus-option" onClick={()=>{if(agentMode)return;setShowPlusMenu(false);imageInputRef.current?.click();}} disabled={agentMode}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>{if(agentMode || loading || historyLoading)return;setShowPlusMenu(false);imageInputRef.current?.click();}} disabled={agentMode || loading || historyLoading}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
                 {[
                   {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
                   {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
