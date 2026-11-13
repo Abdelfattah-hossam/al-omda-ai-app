@@ -22,7 +22,11 @@ function isInformationRequest(value: string): boolean {
 
 export function detectProjectSpecialty(request: string): ProjectSpecialty | null {
   const value = normalizeProjectRequest(request);
-  if (!value || isNegatedProjectRequest(value) || isInformationRequest(value)) return null;
+  if (!value || isNegatedProjectRequest(value)) return null;
+
+  const explicitBuildQuestion = /^(?:ممكن|هل يمكنك|تقدر|بتقدر)\\s*(?:انك\\s*)?(?:تعمل|تعملي|تنشئ|انشئ|إنشاء|تبني|تصمم|تطور)/i.test(value) ||
+    /^(?:can|could|would)\\s+you\\s+(?:please\\s+)?(?:build|create|develop|make|implement|design|start)\\b/i.test(value);
+  if (isInformationRequest(value) && !explicitBuildQuestion) return null;
 
   const buildVerb = /(?:اعمل|اعملي|تعمل|تعملي|تعمللي|اعملوا|انشئ|إنشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|build|create|develop|make|implement|start|design)/i.test(value);
   const directRequest = /(?:عايز|عاوز|محتاج|اريد)\s+(?:(?:اعمل|اعمللي|انشئ|إنشاء|ابني|بناء|نفذ|صمم|طور)\s+)?(?:مشروع(?:\s+جديد)?|تطبيق|ابلكيشن|موقع(?:\s+الكتروني)?|برنامج|متجر(?:\s+الكتروني)?|نظام|منصة|لعبة|website|web app|mobile app|application|software|project|store|platform|system)/i.test(value) ||
