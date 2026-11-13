@@ -52,13 +52,13 @@ async function ensureEnvironment(): Promise<Record<string, string>> {
   try { current = parseEnvironment(await readFile(envFile, "utf8")); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   const environment = {
+    ...current,
     OMDA_AGENT_TOKEN: current.OMDA_AGENT_TOKEN || randomBytes(32).toString("hex"),
     OMDA_AGENT_WORKSPACE: current.OMDA_AGENT_WORKSPACE || repoRoot,
     OMDA_AGENT_EXECUTION: current.OMDA_AGENT_EXECUTION || "disabled",
     OMDA_AGENT_PORT: current.OMDA_AGENT_PORT || "4318",
     OMDA_AGENT_APP_ORIGINS: current.OMDA_AGENT_APP_ORIGINS || appOrigin,
     OMDA_AGENT_MCP_COMMANDS: current.OMDA_AGENT_MCP_COMMANDS || "node,npx",
-    ...current,
   };
   await writeFile(envFile, serializeServiceEnvironment(environment), { encoding: "utf8", mode: 0o600 });
   if (platform !== "win32") await chmod(envFile, 0o600);
