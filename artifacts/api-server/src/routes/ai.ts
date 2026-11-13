@@ -49,7 +49,7 @@ function getLatestUserRequest(messages: ChatMessage[]): string {
   return messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
 }
 function isStandaloneGreeting(request: string): boolean {
-  const normalized = request.normalize("NFKC").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "").trim().replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
+  const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim().replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
   return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
 }
 function isHowToRequest(request: string): boolean {
