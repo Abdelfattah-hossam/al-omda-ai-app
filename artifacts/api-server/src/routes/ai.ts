@@ -45,7 +45,12 @@ function getProviders() {
 
 
 function getLatestUserRequest(messages: ChatMessage[]): string {
-  return messages.filter((message) => message.role === "user").slice(-2).map((message) => message.content).join("\n");
+  // Artifact modes must be triggered by the current turn, never by an older request.
+  return messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
+}
+function isStandaloneGreeting(request: string): boolean {
+  const normalized = request.normalize("NFKC").replace(/[\\u064B-\\u065F\\u0670\\u0640]/g, "").trim().replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
+  return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
 }
 function isHowToRequest(request: string): boolean {
   return /^\s*(?:كيف|ازاي|ازاى|ما هو|ما هي|اشرح|شرح|طريقة|what is|how to|explain|teach me)|(?:عايز اعرف|محتاج افهم|I want to know how)/i.test(request.trim());
@@ -955,9 +960,13 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       currentUsage(accessToken),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
+    const latestCustomerRequest = getLatestUserRequest(messages);
+    const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
+    // A greeting is a fresh conversational turn; do not let an old file request in
+    // the transcript steer the provider into producing an unrelated attachment.
+    const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
-    const latestCustomerRequest = messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
@@ -992,7 +1001,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "The JSON must be valid. paragraphs must contain the complete document text; columns and rows must be empty unless a table was explicitly requested.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
-    ] : messages;
+    ] : modelConversation;
     const providers = chooseProviders(modelMessages);
     if (providers.length === 0) {
       res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
