@@ -20,6 +20,7 @@ import { parseModelProviderConfig } from "./model-providers.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
 import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
+import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -40,6 +41,7 @@ let workspaceRoot = "";
 
 let activeAgentRuns = 0;
 const HTTP_FLOW_HISTORY_FILE = ".omda/httpflow-history.json";
+const BROWSER_WORKSPACE_POLICY_FILE = ".omda/browser-workspace.json";
 let httpFlowHistoryQueue: Promise<void> = Promise.resolve();
 async function withActiveAgentRun<T>(operation: () => Promise<T>): Promise<T> {
   activeAgentRuns++;
@@ -615,10 +617,38 @@ async function getAgentTools(): Promise<Array<Record<string, unknown>>> {
   }
 }
 
+async function loadBrowserWorkspacePolicy(): Promise<BrowserWorkspacePolicy> {
+  const path = await resolveWritePath(BROWSER_WORKSPACE_POLICY_FILE);
+  try {
+    const actual = await realpath(path);
+    if (!isInside(workspaceRoot, actual)) throw new Error("Browser workspace policy escapes the workspace.");
+    const info = await stat(actual);
+    if (!info.isFile() || info.size > 32 * 1024) throw new Error("Browser workspace policy is not a valid small file.");
+    return normalizeBrowserWorkspacePolicy(JSON.parse(await readFile(actual, "utf8")));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return normalizeBrowserWorkspacePolicy({});
+    throw error;
+  }
+}
+async function saveBrowserWorkspacePolicy(input: unknown): Promise<BrowserWorkspacePolicy> {
+  const policy = normalizeBrowserWorkspacePolicy(input);
+  const path = await resolveWritePath(BROWSER_WORKSPACE_POLICY_FILE);
+  await mkdir(dirname(path), { recursive: true });
+  const temporary = path + "." + randomUUID() + ".tmp";
+  try {
+    await writeFile(temporary, JSON.stringify(policy, null, 2) + "\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await rename(temporary, path);
+  } catch (error) {
+    try { await unlink(temporary); } catch { /* Best-effort cleanup. */ }
+    throw error;
+  }
+  return policy;
+}
 async function callMcpTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
   const configs = await loadMcpConfig();
   const config = configs.find((item) => item.name === serverName);
   if (!config) throw new Error("MCP server is not configured.");
+  if (serverName === "playwright-browser") assertBrowserUrlAllowed(serverName, toolName, args, await loadBrowserWorkspacePolicy());
   const connection = await getMcpConnection(config);
   const listed = await mcpRequest(connection, "tools/list");
   const tool = Array.isArray(listed?.tools) ? listed.tools.find((item: any) => item?.name === toolName) : null;
@@ -1101,6 +1131,20 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "GET" && url.pathname === "/v1/mcp/tools") {
     send(res, 200, await listMcpTools()); return;
   }
+  if (req.method === "GET" && url.pathname === "/v1/browser/workspace") {
+    const policy = await loadBrowserWorkspacePolicy();
+    const configured = (await loadMcpConfig()).some((item) => item.name === "playwright-browser");
+    let tools: Array<{ name: string; description: string }> = [];
+    let connectionError: string | null = null;
+    if (configured) {
+      try {
+        const listed = await listMcpTools("playwright-browser");
+        const browserServer = Array.isArray(listed.servers) ? listed.servers.find((item: any) => item.server === "playwright-browser") : null;
+        tools = Array.isArray(browserServer?.tools) ? browserServer.tools.slice(0, 60).map((item: any) => ({ name: String(item.name || ""), description: typeof item.description === "string" ? item.description.slice(0, 240) : "" })) : [];
+      } catch (error) { connectionError = error instanceof Error ? error.message : "Browser MCP connection failed."; }
+    }
+    send(res, 200, { policy, configured, connected: configured && tools.length > 0 && !connectionError, tools, connectionError }); return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/tools") {
     send(res, 200, { tools: [
       { name: "agent.delegate", description: "Run 2 to 4 specialist agents concurrently with read-only tools." },
@@ -1124,6 +1168,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   if (req.method !== "POST") { send(res, 405, { error: "Method not allowed." }); return; }
   const body = await readBody(req);
+  if (url.pathname === "/v1/browser/policy") {
+    const policy = await saveBrowserWorkspacePolicy(body);
+    send(res, 200, { policy }); return;
+  }
   if (url.pathname === "/v1/files/read") {
     const path = await resolveExistingPath(body.path);
     const info = await stat(path);
