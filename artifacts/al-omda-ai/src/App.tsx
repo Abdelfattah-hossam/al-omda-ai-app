@@ -864,7 +864,7 @@ function App() {
     } catch { /* Session ID persistence is optional when browser storage is unavailable. */ }
   }, [localAgentSessionId]);
 
-  const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" = "GET", body?: Record<string, unknown>) => {
+  const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" | "DELETE" = "GET", body?: Record<string, unknown>) => {
     const base = new URL(localAgentUrl.trim());
     if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) {
       throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");

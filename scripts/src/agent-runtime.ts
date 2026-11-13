@@ -362,9 +362,10 @@ async function persistHttpFlowHistory(record: HttpFlowHistoryRecord): Promise<vo
     const next = [record, ...records.filter((item) => item.id !== record.id)].slice(0, 100);
     const path = await resolveWritePath(HTTP_FLOW_HISTORY_FILE);
     const temporary = path + "." + randomUUID() + ".tmp";
-    await writeFile(temporary, JSON.stringify({ version: 1, records: next }), { encoding: "utf8", mode: 0o600, flag: "wx" });
-    try { await rename(temporary, path); }
-    catch (error) {
+    try {
+      await writeFile(temporary, JSON.stringify({ version: 1, records: next }), { encoding: "utf8", mode: 0o600, flag: "wx" });
+      await rename(temporary, path);
+    } catch (error) {
       try { await unlink(temporary); } catch { /* Best-effort cleanup. */ }
       throw error;
     }
