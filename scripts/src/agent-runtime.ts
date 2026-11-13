@@ -20,7 +20,7 @@ import { parseModelProviderConfig } from "./model-providers.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
 import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } from "./ctf-tools.js";
 import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
-import { createAgentProposalDirectory, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
+import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
 
 const HOST = "127.0.0.1";
@@ -918,7 +918,20 @@ async function runDelegatedSubagent(role: string, goal: string, mode: "read_only
       const name = call.function?.name || "";
       try {
         let result: unknown;
-        if (readOnlyNames.has(name)) result = await runTool(call);
+        if (name === "files.read") {
+          const args = JSON.parse(call.function.arguments || "{}") as Json;
+          const actual = await resolveExistingPath(args.path);
+          const sourcePath = relative(workspaceRoot, actual).split(sep).join("/");
+          if (!isAllowedProposalPath(sourcePath)) throw new Error("This source file is protected and cannot be read by delegated specialists.");
+          result = await runTool(call);
+        } else if (name === "files.list") {
+          const args = JSON.parse(call.function.arguments || "{}") as Json;
+          const actual = await resolveExistingPath(typeof args.path === "string" ? args.path : ".");
+          const sourcePath = relative(workspaceRoot, actual).split(sep).join("/");
+          if (sourcePath && !isAllowedProposalPath(sourcePath)) throw new Error("This source directory is protected and cannot be listed by delegated specialists.");
+          const listing = await runTool(call) as { path: string; entries: Array<{ name: string; type: string }> };
+          result = { ...listing, entries: listing.entries.filter((entry) => entry.type !== "other" && isAllowedProposalPath([sourcePath, entry.name].filter(Boolean).join("/"))) };
+        } else if (readOnlyNames.has(name)) result = await runTool(call);
         else if (name === "proposal.write" && mode === "proposal" && proposalRoot) {
           const args = JSON.parse(call.function.arguments || "{}") as Json;
           result = await writeAgentProposal(proposalRoot, args.path, args.content, budget);
