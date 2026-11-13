@@ -1404,7 +1404,6 @@ body:has(.ai-chat-page){
   .app-shell:has(.ai-chat-page) .ai-plus-button{animation:omdaButtonAura 4.6s ease-in-out infinite}
 }
 @keyframes omdaAmbientBackground{0%,100%{background-position:0% 0%}50%{background-position:100% 100%}}
-.ai-agent-runtime-panel[data-agent-active="false"]{display:none!important}
 .ai-agent-runtime-panel[data-agent-active="true"]{margin:4px 0 8px!important;padding:10px!important;border-radius:16px!important}
 
 /* Profile: account and sign-in are the first, full-width section. */
@@ -1506,4 +1505,18 @@ body:has(.ai-chat-page){
  .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad:has(.chat-messages){height:0!important;min-height:0!important;flex:1 1 0!important;padding:0!important}
  .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .chat-messages{height:0!important;min-height:0!important;max-height:none!important;flex:1 1 0!important}
  .main-area:has(.ai-chat-page) .ai-chat-page>.panel.panel-pad .ai-composer{position:relative!important;flex:0 0 auto!important}
+}
+
+/* Keep account entry first, then personal details, then preferences. */
+.profile-settings-layout .profile-account-first{order:0}
+.profile-settings-layout .profile-main-card{order:1}
+.profile-settings-layout>.profile-setting-card:not(.profile-account-first){order:2}
+.ai-agent-runtime-panel{display:block!important;margin:0 0 8px!important;padding:9px 12px!important;border-radius:15px!important}
+.ai-agent-runtime-summary{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-agent-runtime-summary>div{width:100%}
+@media(max-width:650px){
+ .profile-settings-layout{display:flex!important;flex-direction:column!important;gap:12px}
+ .profile-settings-layout .profile-account-first{order:0}
+ .profile-settings-layout .profile-main-card{order:1}
+ .profile-settings-layout>.profile-setting-card:not(.profile-account-first){order:2}
 }
