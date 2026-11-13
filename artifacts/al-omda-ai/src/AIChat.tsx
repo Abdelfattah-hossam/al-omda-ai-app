@@ -865,7 +865,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           <div className="ai-composer-tools">
             <div className="ai-plus-wrap">
               <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
-              {showPlusMenu && <div className="ai-plus-menu" role="menu">\n                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);imageInputRef.current?.click();}}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
+              {showPlusMenu && <div className="ai-plus-menu" role="menu">
+                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);imageInputRef.current?.click();}}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
                 {[
                   {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
                   {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
