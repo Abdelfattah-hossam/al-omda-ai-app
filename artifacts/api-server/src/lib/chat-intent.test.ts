@@ -114,5 +114,16 @@ describe("latest-turn intent isolation", () => {
   test("normalizes Arabic diacritics and trailing punctuation in greetings", () => {
     assert.equal(isStandaloneGreeting("السَّلَامُ عَلَيْكُمْ!"), true);
     assert.equal(isStandaloneGreeting("كيفك؟؟"), true);
+    assert.equal(isStandaloneGreeting("كيفك؟ "), true);
+    assert.equal(isStandaloneGreeting("hello! "), true);
+  });
+
+  test("ignores non-user roles when selecting the latest request", () => {
+    const messages = [
+      { role: "user", content: "اعمل ملف Word" },
+      { role: "system", content: "system context" },
+      { role: "assistant", content: "حاضر" },
+    ];
+    assert.equal(getLatestUserRequest(messages), "اعمل ملف Word");
   });
 });
