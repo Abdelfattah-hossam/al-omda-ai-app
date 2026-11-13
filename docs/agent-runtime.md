@@ -124,6 +124,10 @@ The main Agent can call `agent.delegate` to split a complex request into 2–4 i
 
 The current browser bridge is Playwright MCP over local stdio. It provides browser control through the MCP tools; it is not yet a native browser panel with integrated tab thumbnails, profile management, or cross-device remote control.
 
+### Desktop Workspace discovery
+
+The Agents workspace includes a **Desktop Workspace** panel. After configuring the `computer-use` MCP server and restarting the local runtime, select **Refresh** to inspect whether the server is reachable and list its advertised tools. This is discovery and status visibility only; it does not grant operating-system permissions, initiate desktop control, or provide remote streaming. Each MCP action still pauses for explicit user approval. Grant Accessibility, Screen Recording, or other requested permissions only to software you trust.
+
 ### Desktop control through Computer Use MCP
 
 The optional desktop companion uses the MIT-licensed `@zavora-ai/computer-use-mcp` MCP server for native app discovery, screenshots, accessibility controls, mouse, keyboard, clipboard, window targeting, and app scripting on supported Windows, macOS, and Linux desktops.

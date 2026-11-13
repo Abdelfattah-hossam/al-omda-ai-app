@@ -1131,6 +1131,19 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "GET" && url.pathname === "/v1/mcp/tools") {
     send(res, 200, await listMcpTools()); return;
   }
+  if (req.method === "GET" && url.pathname === "/v1/desktop/workspace") {
+    const configured = (await loadMcpConfig()).some((item) => item.name === "computer-use");
+    let tools: Array<{ name: string; description: string }> = [];
+    let connectionError: string | null = null;
+    if (configured) {
+      try {
+        const listed = await listMcpTools("computer-use");
+        const desktopServer = Array.isArray(listed.servers) ? listed.servers.find((item: any) => item.server === "computer-use") : null;
+        tools = Array.isArray(desktopServer?.tools) ? desktopServer.tools.slice(0, 60).map((item: any) => ({ name: String(item.name || ""), description: typeof item.description === "string" ? item.description.slice(0, 240) : "" })).filter((item) => item.name) : [];
+      } catch (error) { connectionError = error instanceof Error ? error.message : "Desktop MCP connection failed."; }
+    }
+    send(res, 200, { configured, connected: configured && tools.length > 0 && !connectionError, tools, connectionError }); return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/browser/workspace") {
     const policy = await loadBrowserWorkspacePolicy();
     const configured = (await loadMcpConfig()).some((item) => item.name === "playwright-browser");

@@ -18,7 +18,7 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
@@ -449,6 +449,9 @@ function App() {
   const [browserSiteInput, setBrowserSiteInput] = useState("");
   const [browserWorkspaceBusy, setBrowserWorkspaceBusy] = useState(false);
   const [browserWorkspaceError, setBrowserWorkspaceError] = useState("");
+  const [desktopWorkspace, setDesktopWorkspace] = useState<{ configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
+  const [desktopWorkspaceBusy, setDesktopWorkspaceBusy] = useState(false);
+  const [desktopWorkspaceError, setDesktopWorkspaceError] = useState("");
   const taskWriteQueue = useRef(new Map<string, Promise<void>>());
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
@@ -1031,6 +1034,13 @@ function App() {
     }
   };
 
+  const loadDesktopWorkspace = async () => {
+    setDesktopWorkspaceBusy(true); setDesktopWorkspaceError("");
+    try { setDesktopWorkspace(await callLocalAgentRuntime("/v1/desktop/workspace") as typeof desktopWorkspace); }
+    catch (error) { setDesktopWorkspaceError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مساحة سطح المكتب." : "Could not load Desktop Workspace.")); }
+    finally { setDesktopWorkspaceBusy(false); }
+  };
+
   const loadBrowserWorkspace = async () => {
     setBrowserWorkspaceBusy(true); setBrowserWorkspaceError("");
     try { setBrowserWorkspace(await callLocalAgentRuntime("/v1/browser/workspace") as typeof browserWorkspace); }
@@ -1182,6 +1192,20 @@ function App() {
         </div>}
       </div>
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
+    </section>
+    <section className="panel panel-pad" style={{marginBottom:20}}>
+      <div className="section-head">
+        <div><span className="eyebrow">DESKTOP WORKSPACE</span><h2 className="section-title">{isAr?'مساحة سطح المكتب والتحكم المحلي':'Desktop Workspace & local control'}</h2><p className="section-meta">{isAr?'اكتشاف أدوات التحكم في التطبيقات والنوافذ على جهازك المحلي. كل إجراء يتطلب موافقتك، كما يجب منح صلاحيات نظام التشغيل يدويًا.':'Discover local app and window control tools. Every action requires your approval, and operating-system permissions must be granted manually.'}</p></div>
+        <button type="button" className="button button-quiet button-small" onClick={loadDesktopWorkspace} disabled={desktopWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{desktopWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
+      </div>
+      {!desktopWorkspace&&<p className="section-meta" style={{marginTop:12}}>{isAr?'اضغط تحديث بعد إعداد computer-use وإعادة تشغيل الوكيل المحلي.':'Refresh after configuring computer-use and restarting the local runtime.'}</p>}
+      {desktopWorkspace&&<>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}><span className="status-chip"><span className={desktopWorkspace.connected?'online-dot':'offline-dot'}/>{desktopWorkspace.connected?(isAr?'أدوات سطح المكتب متصلة':'Desktop tools connected'):(desktopWorkspace.configured?(isAr?'الخدمة غير متصلة':'Service not connected'):(isAr?'computer-use غير مُعد':'computer-use not configured'))}</span><span className="status-chip">{desktopWorkspace.tools.length} {isAr?'أداة':'tools'}</span></div>
+        {desktopWorkspace.connectionError&&<p className="section-meta" role="alert" style={{color:'var(--danger,#d66)',marginTop:10}}>{desktopWorkspace.connectionError}</p>}
+        {desktopWorkspace.tools.length>0&&<details style={{marginTop:12}}><summary className="section-meta">{isAr?'أدوات التحكم المتاحة':'Available control tools'} ({desktopWorkspace.tools.length})</summary>{desktopWorkspace.tools.map(tool=><div key={tool.name} style={{padding:'7px 0',borderTop:'1px solid var(--border)'}}><strong className="section-meta">{tool.name}</strong>{tool.description&&<p className="section-meta">{tool.description}</p>}</div>)}</details>}
+        <p className="section-meta" style={{marginTop:12}}>{isAr?'هذه اللوحة لا تمنح صلاحيات نظام التشغيل تلقائيًا ولا تنفذ تحكمًا عن بُعد. شغّل الوكيل على الكمبيوتر نفسه وامنح الصلاحيات المطلوبة من إعدادات النظام.':'This panel does not grant OS permissions or enable remote control by itself. Run the agent on the target computer and grant requested permissions in system settings.'}</p>
+      </>}
+      {desktopWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{desktopWorkspaceError}</div>}
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head">
