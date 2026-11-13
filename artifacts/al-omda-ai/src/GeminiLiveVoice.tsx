@@ -303,19 +303,23 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           if (assistantText) {
             onTranscript("assistant", assistantText);
             if (receivedAudioChunks === 0 && "speechSynthesis" in window) {
+              window.speechSynthesis.cancel();
               const utterance = new SpeechSynthesisUtterance(assistantText);
               utterance.lang = ar ? "ar-EG" : "en-US";
               utterance.rate = 0.96;
               fallbackUtteranceRef.current = utterance;
               utterance.onend = () => {
-                if (fallbackUtteranceRef.current === utterance) fallbackUtteranceRef.current = null;
-                if (mountedRef.current) setSpeaking(false);
+                if (fallbackUtteranceRef.current === utterance) {
+                  fallbackUtteranceRef.current = null;
+                  if (mountedRef.current) setSpeaking(false);
+                }
               };
               utterance.onerror = () => {
-                if (fallbackUtteranceRef.current === utterance) fallbackUtteranceRef.current = null;
-                if (mountedRef.current) setSpeaking(false);
+                if (fallbackUtteranceRef.current === utterance) {
+                  fallbackUtteranceRef.current = null;
+                  if (mountedRef.current) setSpeaking(false);
+                }
               };
-              window.speechSynthesis.cancel();
               window.speechSynthesis.speak(utterance);
               if (mountedRef.current) {
                 setSpeaking(true);
