@@ -1267,3 +1267,23 @@ body:has(.ai-chat-page){
 .profile-feature-link strong{font-size:11px;line-height:1.5}
 .profile-feature-link small{font-size:9px;line-height:1.6;color:var(--text-secondary,#aeb5bf)}
 @media(max-width:650px){.profile-feature-grid{grid-template-columns:1fr}}
+
+.route-page-transition{animation:route-page-fade .24s ease-out both;min-width:0}
+@keyframes route-page-fade{from{opacity:0}to{opacity:1}}
+.agent-guide-panel{margin-bottom:20px}
+.agent-guide-steps{display:grid;gap:12px;margin:16px 0}
+.agent-guide-steps>div{display:flex;align-items:flex-start;gap:11px}
+.agent-guide-number{display:grid;place-items:center;flex:none;width:25px;height:25px;border:1px solid var(--glass-line);border-radius:50%;color:var(--profile-accent);font-size:11px;font-weight:800}
+.agent-guide-steps strong,.agent-guide-next strong{font-size:12px}
+.agent-guide-steps p,.agent-guide-next li{margin:4px 0 0;color:var(--text-secondary,#aeb5bf);font-size:11px;line-height:1.8}
+.agent-guide-warning{display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid rgba(208,169,102,.25);border-radius:10px;background:rgba(208,169,102,.06);color:var(--text-secondary,#c4c8d0);font-size:11px;line-height:1.8}
+.agent-guide-warning svg{flex:none;color:#d0ad70;margin-top:2px}
+.agent-guide-code{margin-top:12px;padding:12px;border:1px solid var(--glass-line);border-radius:10px;background:rgba(255,255,255,.02)}
+.agent-guide-code summary{cursor:pointer;font-size:12px;font-weight:700}
+.agent-guide-code p{margin:9px 0}
+.agent-guide-code pre{max-width:100%;max-height:340px;overflow:auto;padding:12px;border-radius:8px;background:#080b12;color:#dce5f7;direction:ltr;text-align:left;white-space:pre;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.agent-guide-code code{font:10px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}
+.agent-guide-next{margin-top:15px}
+.agent-guide-next ol{padding-inline-start:22px;margin:7px 0}
+.agent-guide-notice{color:#cbb17e;font-size:11px;margin:9px 0 0}
+@media(prefers-reduced-motion:reduce){.route-page-transition{animation:none}}

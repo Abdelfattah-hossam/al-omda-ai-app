@@ -422,6 +422,7 @@ function App() {
   const [localAgentGoal, setLocalAgentGoal] = useState("");
   const [localAgentStatus, setLocalAgentStatus] = useState<"idle" | "checking" | "ready" | "running" | "approval" | "error">("idle");
   const [localAgentMessage, setLocalAgentMessage] = useState("");
+  const [agentGuideNotice, setAgentGuideNotice] = useState("");
   const [localAgentSessionId, setLocalAgentSessionId] = useState(() => { try { return localStorage.getItem("al-omda-agent-session") || ""; } catch { return ""; } });
   const [localAgentPending, setLocalAgentPending] = useState<Array<{ id: string; tool: string; arguments: Record<string, unknown> }>>([]);
   const [localAgentBusy, setLocalAgentBusy] = useState(false);
@@ -459,6 +460,49 @@ function App() {
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
+
+  const copyAgentSetup = async (value:string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setAgentGuideNotice(isAr ? 'تم نسخ الأوامر. الصقها في Terminal على الكمبيوتر.' : 'Commands copied. Paste them into your computer terminal.');
+    } catch {
+      setAgentGuideNotice(isAr ? 'تعذر النسخ تلقائيًا. اضغط مطولًا على الأوامر لنسخها.' : 'Clipboard access is unavailable. Select the commands and copy them manually.');
+    }
+  };
+  const linuxMacAgentSetup = `git clone https://github.com/Abdelfattah-hossam/al-omda-ai-app.git
+cd al-omda-ai-app
+pnpm install
+export OMDA_AGENT_TOKEN="$(openssl rand -hex 32)"
+export OMDA_AGENT_WORKSPACE="$PWD"
+export OMDA_AGENT_EXECUTION="disabled"
+export OMDA_AGENT_APP_ORIGINS="https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
+export OMDA_AGENT_MODEL_BASE_URL="http://127.0.0.1:1234/v1"
+export OMDA_AGENT_MODEL_NAME="your-loaded-lm-studio-model-id"
+echo "Your token: $OMDA_AGENT_TOKEN"
+pnpm --filter @workspace/scripts agent:runtime`;
+  const windowsAgentSetup = `git clone https://github.com/Abdelfattah-hossam/al-omda-ai-app.git
+cd al-omda-ai-app
+pnpm install
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+$env:OMDA_AGENT_TOKEN = [Convert]::ToHexString($bytes).ToLower()
+$env:OMDA_AGENT_WORKSPACE = (Get-Location).Path
+$env:OMDA_AGENT_EXECUTION = "disabled"
+$env:OMDA_AGENT_APP_ORIGINS = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev"
+$env:OMDA_AGENT_MODEL_BASE_URL = "http://127.0.0.1:1234/v1"
+$env:OMDA_AGENT_MODEL_NAME = "your-loaded-lm-studio-model-id"
+Write-Host "Your token: $env:OMDA_AGENT_TOKEN"
+pnpm --filter @workspace/scripts agent:runtime`;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const mainArea = document.querySelector<HTMLElement>('.main-area');
+    if (mainArea) mainArea.scrollTop = 0;
+    const contentWrap = document.querySelector<HTMLElement>('.main-area > .content-wrap');
+    if (contentWrap) contentWrap.scrollTop = 0;
+  }, [path]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -1134,6 +1178,34 @@ function App() {
 
   const agentsPage = () => <div className="page-enter">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
+    <section className="panel panel-pad agent-guide-panel">
+      <div className="section-head"><div><span className="eyebrow">{isAr?'دليل الاستخدام':'GETTING STARTED'}</span><h2 className="section-title">{isAr?'تشغيل الوكلاء خطوة بخطوة':'How to use and run agents'}</h2><p className="section-meta">{isAr?'اختر الطريقة المناسبة: تخصص جاهز داخل مساحة العمل، أو وكيل محلي يتصل بمشروعك على الكمبيوتر.':'Choose a ready-made specialty in the workbench, or connect the local runtime to a project on your computer.'}</p></div><Bot size={20}/></div>
+      <div className="agent-guide-steps">
+        <div><span className="agent-guide-number">1</span><div><strong>{isAr?'استخدام أحد التخصصات الستة':'Use one of the six specialties'}</strong><p>{isAr?'اضغط «استخدم الوكيل» أسفل التخصص. هتنتقل لمساحة العمل والتخصص متحدد تلقائيًا.':'Select “Use agent” on a specialty card. The workbench opens with that specialty selected.'}</p></div></div>
+        <div><span className="agent-guide-number">2</span><div><strong>{isAr?'اكتب المطلوب وراجع الخطة':'Describe the task and review the plan'}</strong><p>{isAr?'اكتب المهمة في مساحة العمل واضغط إنشاء الخطة. راجع الخطوات قبل الموافقة. التخصصات دي قوالب لتوجيه الطلب وليست برامج مستقلة يتم تنزيلها.':'Describe the task in the workbench and generate a plan. Review it before approval. These specialties guide a request; they are not separate downloadable programs.'}</p></div></div>
+        <div><span className="agent-guide-number">3</span><div><strong>{isAr?'تشغيل الوكيل المحلي الحقيقي':'Connect the actual local agent runtime'}</strong><p>{isAr?'لو عايز الوكيل يفحص ملفات مشروعك ويستخدم أدوات الكمبيوتر، شغّل الـ Runtime على نفس الكمبيوتر، وبعدها أدخل عنوانه ومفتاح الاتصال بالأسفل واختبر الاتصال.':'To let the agent inspect project files and use computer tools, run the runtime on the same computer, then enter its URL and token below and test the connection.'}</p></div></div>
+      </div>
+      <div className="agent-guide-warning"><ShieldCheck size={17}/><span>{isAr?'مهم: تشغيل الـ Runtime يحتاج كمبيوتر عليه Node.js 22 وpnpm 9. تشغيله على الكمبيوتر وربط التطبيق المفتوح على الهاتف عبر localhost غير مدعوم حاليًا؛ لازم تفتح التطبيق على نفس الكمبيوتر. الربط الآمن عن بُعد لم يُنفذ بعد.':'Important: the runtime requires a computer with Node.js 22 and pnpm 9. A runtime on a desktop cannot be reached from the phone app through localhost; open the app on the same computer. Secure remote pairing is not implemented yet.'}</span></div>
+      <details className="agent-guide-code">
+        <summary>{isAr?'أوامر التشغيل على Windows (PowerShell)':'Windows setup commands (PowerShell)'}</summary>
+        <p className="section-meta">{isAr?'ثبّت Node.js 22 وpnpm 9 أولًا، ثم نفّذ الأوامر من PowerShell. ستحتاج صلاحية الوصول إلى مستودع GitHub الخاص.':'Install Node.js 22 and pnpm 9 first, then run these in PowerShell. You need access to the private GitHub repository.'}</p>
+        <pre><code>{windowsAgentSetup}</code></pre>
+        <button type="button" className="button button-quiet button-small" onClick={()=>void copyAgentSetup(windowsAgentSetup)}><Code2 size={14}/>{isAr?'نسخ أوامر Windows':'Copy Windows commands'}</button>
+      </details>
+      <details className="agent-guide-code">
+        <summary>{isAr?'أوامر التشغيل على macOS / Linux':'macOS / Linux setup commands'}</summary>
+        <p className="section-meta">{isAr?'ثبّت Node.js 22 وpnpm 9 أولًا، ثم نفّذ الأوامر من Terminal.':'Install Node.js 22 and pnpm 9 first, then run these in Terminal.'}</p>
+        <pre><code>{linuxMacAgentSetup}</code></pre>
+        <button type="button" className="button button-quiet button-small" onClick={()=>void copyAgentSetup(linuxMacAgentSetup)}><Code2 size={14}/>{isAr?'نسخ أوامر Mac / Linux':'Copy Mac / Linux commands'}</button>
+      </details>
+      <div className="agent-guide-next"><strong>{isAr?'بعد تشغيل الأوامر':'After starting the runtime'}</strong><ol>
+        <li>{isAr?'افتح التطبيق على نفس الكمبيوتر. عنوان التشغيل الافتراضي هو http://127.0.0.1:4318.':'Open the app on that same computer. The default runtime URL is http://127.0.0.1:4318.'}</li>
+        <li>{isAr?'انسخ قيمة Your token من نافذة الأوامر والصقها في خانة مفتاح الاتصال في بطاقة الوكيل المحلي.':'Copy the “Your token” value from the terminal and paste it into the Local runtime token field.'}</li>
+        <li>{isAr?'اضغط اختبار الاتصال، ثم اكتب المهمة واضغط ابدأ تنفيذ المهمة.':'Select Test connection, enter a task, then choose Run agent task.'}</li>
+        <li>{isAr?'أي كتابة ملفات أو أوامر أو استدعاء MCP هيتوقف لحد ما توافق عليها.':'File writes, terminal commands, and MCP calls pause until you approve them.'}</li>
+      </ol></div>
+      {agentGuideNotice&&<p className="agent-guide-notice" role="status">{agentGuideNotice}</p>}
+    </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">LOCAL EXECUTION</span><h2 className="section-title">{isAr?'الوكيل الذكي المحلي':'Local AI Agent'}</h2><p className="section-meta">{isAr?'وصّل بيئة التنفيذ على جهازك ليقرأ المشروع وينفذ المهام بموافقتك.':'Connect the runtime on your computer to inspect projects and execute approved tasks.'}</p></div>
@@ -1669,7 +1741,7 @@ function App() {
         <button className="lang-button" onClick={toggleLanguage} data-testid="button-language">{t('languageSwitch')}</button>
         <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
       </div></header>
-      <div className="content-wrap">{page}</div>
+      <div className="content-wrap"><div key={path} className="route-page-transition">{page}</div></div>
     </main>
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
