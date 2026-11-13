@@ -1468,7 +1468,7 @@ body:has(.ai-chat-page){
 .ai-chat-page .chat-messages{flex:1 1 auto;min-height:280px;max-height:none!important;height:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px 2px 12px}
 .ai-chat-page .ai-composer{position:sticky;bottom:0;z-index:4;display:flex;flex-direction:column;gap:8px;margin-top:auto;padding:9px;border:1px solid rgba(var(--omda-glow),.3);border-radius:22px;background:color-mix(in srgb,var(--panel,#111827) 94%,transparent);box-shadow:0 8px 28px rgba(0,0,0,.16);backdrop-filter:blur(18px)}
 .ai-chat-page .ai-composer-tools{display:flex;align-items:flex-end;gap:9px;min-width:0}
-.ai-chat-page .ai-composer-input{flex:1 1 auto;min-width:0;min-height:48px;max-height:180px;padding:13px 14px;border:0!important;background:transparent!important;box-shadow:none!important;resize:vertical}
+.ai-chat-page .ai-composer-input{flex:1 1 auto;min-width:0;min-height:48px;max-height:180px;padding:13px 14px;border:0!important;background:transparent!important;box-shadow:none!important;resize:none!important;overflow-y:hidden}
 .ai-chat-page .ai-plus-button,.ai-chat-page .ai-send-button{width:42px;height:42px;flex:0 0 42px;border-radius:50%;display:grid;place-items:center}
 .ai-chat-page .ai-composer-footer{padding:0 6px 2px}
 .ai-chat-page .ai-agent-runtime-panel{order:3;margin:0!important;border-radius:14px}
