@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.10.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test local Agent utilities
+        run: pnpm --filter @workspace/scripts test
+      - name: Test chat intent classification
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/chat-intent.test.ts
+      - name: Test project intent classification
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/project-intent.test.ts
+      - name: Test chat Agent stream parser
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
+
+      - name: Typecheck and build application
+        run: pnpm build

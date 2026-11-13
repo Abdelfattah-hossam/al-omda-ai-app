@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "tsx ./src/hello.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "agent:runtime": "tsx ./src/agent-runtime.ts",
+    "browser:setup": "tsx ./src/setup-browser.ts",
+    "test": "tsx --test ./src/browser-config.test.ts ./src/mcp-content.test.ts ./src/mcp-env.test.ts ./src/web-search.test.ts ./src/http-diff.test.ts ./src/openai-stream.test.ts ./src/network-safety.test.ts ./src/mcp-tool-alias.test.ts ./src/http-request-safety.test.ts ./src/origin-policy.test.ts ./src/command-env.test.ts ./src/update-policy.test.ts ./src/model-providers.test.ts ./src/security-recon.test.ts ./src/ctf-tools.test.ts ./src/agent-runtime.integration.test.ts ./src/agent-supervisor.integration.test.ts",
+    "desktop:setup": "tsx ./src/setup-desktop.ts",
+    "agent:supervisor": "tsx ./src/agent-supervisor.ts"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  }
+}

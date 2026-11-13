@@ -1,0 +1,10 @@
+{
+  "servers": [
+    {
+      "name": "project-tools",
+      "command": "node",
+      "args": ["./tools/mcp-server.js"],
+      "envFrom": ["PROJECT_MCP_TOKEN"]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AL OMDA AI"
+description = "An Arabic-first AI agent marketplace where people can discover specialized agents, review proposed task plans, and explicitly approve each step before execution."
+version = "1.0.0"
+id = "artifacts/al-omda-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24441
+
+[services.development]
+run = "pnpm --filter @workspace/al-omda-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/al-omda-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/al-omda-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24441"
+BASE_PATH = "/"

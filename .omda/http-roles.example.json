@@ -1,0 +1,20 @@
+{
+  "roles": [
+    {
+      "name": "anonymous",
+      "headersFromEnv": {}
+    },
+    {
+      "name": "signed-in-user",
+      "headersFromEnv": {
+        "Authorization": "BUGBOUNTY_USER_AUTH"
+      }
+    },
+    {
+      "name": "administrator",
+      "headersFromEnv": {
+        "Authorization": "BUGBOUNTY_ADMIN_AUTH"
+      }
+    }
+  ]
+}

@@ -1,0 +1,436 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Server-side Supabase authentication
+  - name: workspace
+    description: User-scoped workspace data
+  - name: storage
+    description: Private user file storage
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/status:
+    get:
+      operationId: getAuthStatus
+      tags: [auth]
+      summary: Check Supabase configuration
+      responses:
+        "200":
+          description: Auth configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Read the current server-managed session
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+  /auth/signup:
+    post:
+      operationId: signUp
+      tags: [auth]
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthActionResult"
+        "400":
+          description: Invalid credentials or Supabase rejected the request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/login:
+    post:
+      operationId: signIn
+      tags: [auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthActionResult"
+        "400":
+          description: Invalid credentials or Supabase rejected the request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      operationId: signOut
+      tags: [auth]
+      summary: End the current session
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+  /workspace:
+    get:
+      operationId: getWorkspace
+      tags: [workspace]
+      summary: Load the signed-in user's profile and tasks
+      responses:
+        "200":
+          description: User-scoped workspace data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /profile:
+    put:
+      operationId: updateProfile
+      tags: [workspace]
+      summary: Update the signed-in user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tasks:
+    post:
+      operationId: createTask
+      tags: [workspace]
+      summary: Save a proposed task plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCreate"
+      responses:
+        "201":
+          description: Saved task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /tasks/{id}:
+    put:
+      operationId: updateTask
+      tags: [workspace]
+      summary: Save an approved or edited plan step
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /storage/avatar:
+    put:
+      operationId: uploadAvatar
+      tags: [storage]
+      summary: Upload the signed-in user's private avatar
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/webp:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Uploaded avatar path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarResult"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    OkResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+      required: [id, email]
+    AuthStatus:
+      type: object
+      properties:
+        configured:
+          type: boolean
+      required: [configured]
+    AuthSession:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+      required: [configured, user]
+    AuthCredentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [email, password]
+    AuthActionResult:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+        emailConfirmationRequired:
+          type: boolean
+      required: [user, emailConfirmationRequired]
+    Profile:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        organization:
+          type: string
+          maxLength: 120
+        avatarPath:
+          oneOf:
+            - type: string
+            - type: "null"
+      required: [displayName, organization, avatarPath]
+    ProfileUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        organization:
+          type: string
+          maxLength: 120
+      required: [displayName, organization]
+    PlanStep:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        output:
+          type: string
+          maxLength: 2000
+        complete:
+          type: string
+          maxLength: 2000
+        result:
+          type: string
+          maxLength: 12000
+        executedAt:
+          type: string
+          format: date-time
+        executionStatus:
+          type: string
+          enum: [succeeded, failed]
+        executionError:
+          type: string
+          maxLength: 500
+        state:
+          type: string
+          enum: [pending, approved, rejected]
+      required: [id, text, state]
+    Specialty:
+      type: string
+      enum: [business, development, design, marketing, research, assistant]
+    TaskStatus:
+      type: string
+      enum: [review, paused, approved, stopped]
+    TaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        request:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        specialty:
+          $ref: "#/components/schemas/Specialty"
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PlanStep"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+      required: [title, request, specialty, steps, status]
+    TaskUpdate:
+      allOf:
+        - $ref: "#/components/schemas/TaskCreate"
+    Task:
+      allOf:
+        - $ref: "#/components/schemas/TaskCreate"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+          required: [id, createdAt]
+    Workspace:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/Profile"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+      required: [profile, tasks]
+    AvatarResult:
+      type: object
+      properties:
+        path:
+          type: string
+      required: [path]
+

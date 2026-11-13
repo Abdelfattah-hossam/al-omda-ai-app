@@ -1,0 +1,18 @@
+[
+  {
+    "name": "openrouter",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "model": "provider/model",
+    "apiKeyEnv": "OPENROUTER_API_KEY"
+  },
+  {
+    "name": "lm-studio",
+    "baseUrl": "http://127.0.0.1:1234/v1",
+    "model": "local-model"
+  },
+  {
+    "name": "ollama",
+    "baseUrl": "http://127.0.0.1:11434/v1",
+    "model": "qwen2.5-coder"
+  }
+]
