@@ -863,7 +863,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <button type="button" className="icon-button" onClick={()=>setPendingImage(null)} aria-label={ar?"إزالة الصورة":"Remove image"}><X size={15}/></button>
           </div>}
           <div className="ai-composer-tools">
-            <button type="button" className="ai-plus-button" onClick={()=>imageInputRef.current?.click()} aria-label={ar?"إرفاق صورة":"Attach image"} title={ar?"تحليل صورة باستخدام نموذج مجاني":"Analyze an image with a free model"} disabled={loading || historyLoading || !signedIn || agentMode || usage?.remaining === 0}><ImagePlus size={18}/></button>
             <div className="ai-plus-wrap">
               <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">\n                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);imageInputRef.current?.click();}}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
