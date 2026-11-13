@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "al-omda-ai-app",
   "compatibility_date": "2026-11-11",
+  "previews": {},
   "assets": {
     "directory": "./artifacts/al-omda-ai/dist/public",
     "not_found_handling": "single-page-application"
