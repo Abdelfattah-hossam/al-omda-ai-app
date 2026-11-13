@@ -35,10 +35,13 @@ test("does not create project tasks for negated build requests", () => {
   for (const request of [
     "مش عايز تعمل لي موقع",
     "لا تنشئ تطبيق",
+    "لا أريد إنشاء تطبيق",
+    "ما تبنيش موقع",
     "من غير ما تبني مشروع",
     "Don't build a website",
     "Do not create an app",
     "I'm not asking you to develop a platform",
+    "I don't want you to create a website",
   ]) {
     assert.equal(detectProjectSpecialty(request), null, "misclassified negated request: " + request);
   }
