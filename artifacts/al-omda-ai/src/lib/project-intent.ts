@@ -14,7 +14,8 @@ function isNegatedProjectRequest(value: string): boolean {
 }
 function isInformationRequest(value: string): boolean {
   if (/^(?:ممكن|لو سمحت|من فضلك)\s*(?:تشرح|اشرح|تقولي|تقول لي|توضح|تشرحلي|تشرح لي|تفهمني)/i.test(value)) return true;
-  if (/^(?:هل|ايه|ما هو|ما هي|ازاي|ازاى|كيف|ليه|لماذا|اشرح|شرح|طريقة|what|which|who|why|how|explain|tell me|teach me|do you|does your|what can you)\b/i.test(value)) return true;
+  if (/^(?:هل|ايه|ما هو|ما هي|ازاي|ازاى|كيف|ليه|لماذا|اشرح|شرح|طريقة)(?=\s|[؟?!,.،;:]|$)/i.test(value)) return true;
+  if (/^(?:what|which|who|why|how|explain|tell me|teach me|do you|does your|what can you)\b/i.test(value)) return true;
   if (/^(?:can|could|would)\s+you\b/i.test(value) &&
       !/^(?:can|could|would)\s+you\s+(?:please\s+)?(?:build|create|develop|make|implement|design|start)\b/i.test(value)) return true;
   return false;
