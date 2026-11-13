@@ -42,7 +42,7 @@ jobs:
       - name: Test local Agent utilities
         run: pnpm --filter @workspace/scripts test
       - name: Test chat intent classification
-        run: pnpm --filter @workspace/api-server exec tsx --test src/lib/chat-intent.test.ts
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/chat-intent.test.ts
       - name: Test chat Agent stream parser
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
 
