@@ -2410,346 +2410,135 @@ body:has(.ai-chat-page){
 }
 
 
-/* Theme-tinted translucent cards — no glass blur, shine, or frosted overlay. */
-.app-shell{
- --omda-card-tint:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 12%,hsl(var(--card) / 1));
- --omda-card-border:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 26%,hsl(var(--card-border) / 1));
-}
-.app-shell .panel,
-.app-shell [class*="card"]:not(button),
-.app-shell [class*="panel"]:not(button),
-.app-shell [class*="tile"]:not(button),
-.app-shell [class*="surface"]:not(button),
-.app-shell [class*="stat"],
-.app-shell [class*="kpi"],
-.app-shell [class*="notice-bar"],
-.app-shell [class*="setting-row"],
-.app-shell [class*="history-item"],
-.app-shell [class*="task-row"],
-.app-shell .stats-grid>*,
-.app-shell .dashboard-grid>*,
-.app-shell .dashboard-analytics-grid>*,
-.app-shell .market-grid>*,
-.app-shell .profile-settings-layout>*,
-.app-shell .profile-settings-side>*{
- background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 12%,hsl(var(--card) / 68%))!important;
- background-image:none!important;
- border-color:var(--omda-card-border)!important;
- box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
- -webkit-backdrop-filter:none!important;
- backdrop-filter:none!important;
-}
-.app-shell .panel:hover,
-.app-shell [class*="card"]:not(button):hover,
-.app-shell [class*="tile"]:not(button):hover{
- border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 42%,hsl(var(--card-border) / 1))!important;
-}
-/* Restore solid theme buttons; keep each button's existing accent/semantic color. */
-.app-shell button:not(:disabled),
-.app-shell .button,
-.app-shell .icon-button,
-.app-shell .lang-button,
-.app-shell .status-button,
-.app-shell .curtain-profile-link{
- -webkit-backdrop-filter:none!important;
- backdrop-filter:none!important;
-}
-.app-shell button:not(:disabled):not(.button-primary):not(.button-danger):not(.button-quiet):not(.ai-send-button),
-.app-shell .icon-button:not(.button-primary):not(.button-danger),
-.app-shell .lang-button,
-.app-shell .status-button,
-.app-shell .curtain-profile-link{
- background-image:none!important;
- background-color:transparent!important;
-}
-.app-shell .button-primary,.app-shell .ai-send-button{
- background-image:linear-gradient(115deg,var(--omda-accent,var(--profile-accent,#78a9ff)),var(--omda-accent-2,#a78bfa))!important;
- border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 55%,transparent)!important;
-}
-.app-shell .button-quiet,.app-shell .icon-button,.app-shell .ai-plus-button,.app-shell .ai-chat-actions .button{
- background-image:none!important;
- background-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 9%,hsl(var(--card) / 82%))!important;
- border-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 25%,hsl(var(--card-border) / 1))!important;
-}
-.app-shell .mobile-nav{
- -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
- background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 8%,hsl(var(--card) / 94%))!important;
- background-image:none!important;
-}
-.app-shell .mobile-chat-launcher{
- -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
- background:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 18%,hsl(var(--card) / 90%))!important;
- background-image:none!important;
-}
-.ai-composer .ai-voice-button{
- -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
- background-image:none!important;
- background-color:color-mix(in srgb,var(--profile-accent,var(--omda-accent,#78a9ff)) 10%,hsl(var(--card) / 88%))!important;
- border-color:var(--omda-card-border)!important;
-}
 
-
-/* Precise card-only transparency correction.
-   Never style text, numeric labels, badges, or inner card content as surfaces. */
-.app-shell .panel,
-.app-shell .stat-card,
-.app-shell .dashboard-chart-card,
-.app-shell .dashboard-history-panel,
-.app-shell .agent-card,
-.app-shell .request-card,
-.app-shell .plan-card,
-.app-shell .history-item,
-.app-shell .profile-main-card,
-.app-shell .profile-account-profile-card,
-.app-shell .profile-setting-card,
-.app-shell .profile-features-card,
-.app-shell .specialty-row,
-.app-shell .notice-bar,
-.app-shell .task-detail-card,
-.app-shell .profile-feature-link,
-.app-shell .workbench-step {
-  background-color: color-mix(in srgb, var(--primary) 10%, hsl(var(--card) / 72%)) !important;
-  background-image: none !important;
-  border-color: color-mix(in srgb, var(--primary) 24%, hsl(var(--card-border) / 1)) !important;
-  box-shadow: 0 7px 20px rgba(0,0,0,.10) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Dashboard stat cards are surfaces; their labels and values are plain text. */
-.app-shell .stat-card-top,
-.app-shell .stat-label,
-.app-shell .stat-value,
-.app-shell .stat-foot,
-.app-shell .dashboard-card-subtitle,
-.app-shell .agent-card-stats,
-.app-shell .agent-card-stats *,
-.app-shell .stat-label *,
-.app-shell .stat-value *,
-.app-shell .stat-foot * {
-  background: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Keep nested content transparent so only the outer card carries the tint. */
-.app-shell .panel > *,
-.app-shell .stat-card > *,
-.app-shell .dashboard-chart-card > *,
-.app-shell .dashboard-history-panel > *,
-.app-shell .agent-card > *,
-.app-shell .request-card > *,
-.app-shell .plan-card > *,
-.app-shell .history-item > *,
-.app-shell .profile-main-card > *,
-.app-shell .profile-account-profile-card > *,
-.app-shell .profile-setting-card > *,
-.app-shell .profile-features-card > * {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Preserve the original theme button fills and all existing chat behavior. */
-.app-shell .button-primary,
-.app-shell .ai-send-button {
-  background-image: none !important;
-  background-color: hsl(var(--primary)) !important;
-}
-.app-shell .button-primary,
-.app-shell .ai-send-button {
-  color: hsl(var(--primary-foreground)) !important;
-}
-
-
-/* Final correction: alpha belongs to the card surface only.
-   Broad legacy [class*="card"] selectors also matched card-title/text/stat
-   descendants. Explicitly neutralize those content classes, then whitelist
-   actual surface containers with the current theme accent and real alpha. */
-.app-shell [class*="card"]:not(.panel):not(.stat-card):not(.dashboard-chart-card):not(.dashboard-history-panel):not(.agent-card):not(.request-card):not(.plan-card):not(.profile-main-card):not(.profile-account-profile-card):not(.profile-setting-card):not(.profile-features-card):not(.profile-feature-link):not(.task-detail-card) {
-  background: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-.app-shell [class*="card-title"],
-.app-shell [class*="card-subtitle"],
-.app-shell [class*="card-label"],
-.app-shell [class*="card-value"],
-.app-shell [class*="card-text"],
-.app-shell [class*="card-desc"],
-.app-shell [class*="card-meta"],
-.app-shell [class*="card-count"],
-.app-shell [class*="card-stats"],
-.app-shell [class*="card-heading"],
-.app-shell [class*="card-caption"],
-.app-shell .stat-card-top,
-.app-shell .stat-label,
-.app-shell .stat-value,
-.app-shell .stat-foot,
-.app-shell .dashboard-card-subtitle,
-.app-shell .agent-card-stats,
-.app-shell .agent-card-stats *,
-.app-shell .stat-label *,
-.app-shell .stat-value *,
-.app-shell .stat-foot * {
-  background: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* Theme-colored card surfaces: same theme hue, genuinely translucent fill. */
-.app-shell .panel,
-.app-shell .stat-card,
-.app-shell .dashboard-chart-card,
-.app-shell .dashboard-history-panel,
-.app-shell .agent-card,
-.app-shell .request-card,
-.app-shell .plan-card,
-.app-shell .history-item,
-.app-shell .profile-main-card,
-.app-shell .profile-account-profile-card,
-.app-shell .profile-setting-card,
-.app-shell .profile-features-card,
-.app-shell .specialty-row,
-.app-shell .notice-bar,
-.app-shell .task-detail-card,
-.app-shell .profile-feature-link,
-.app-shell .workbench-step,
-.app-shell .plan-empty {
-  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 16%, hsl(var(--card) / 46%)) !important;
-  background-image: none !important;
-  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 28%, transparent) !important;
-  box-shadow: 0 7px 20px rgba(0,0,0,.10) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-.app-shell .panel > :not(button):not(input):not(select):not(textarea),
-.app-shell .stat-card > *,
-.app-shell .dashboard-chart-card > *,
-.app-shell .dashboard-history-panel > *,
-.app-shell .agent-card > *,
-.app-shell .request-card > *,
-.app-shell .plan-card > *,
-.app-shell .history-item > *,
-.app-shell .profile-main-card > *,
-.app-shell .profile-account-profile-card > *,
-.app-shell .profile-setting-card > *,
-.app-shell .profile-features-card > * {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-
-/* User-requested finish: translucent theme-tinted CARD SURFACES only.
-   Text, values, labels and inline content must never become boxed surfaces. */
+/* Unified theme-tinted translucent surfaces.
+   Uses the active data-accent -> --profile-accent mapping already defined above.
+   Keep all text and controls separate from the card surface. */
 .app-shell {
-  --omda-surface-tint: color-mix(in srgb, var(--profile-accent, #78a9ff) 22%, transparent);
-  --omda-surface-line: color-mix(in srgb, var(--profile-accent, #78a9ff) 30%, transparent);
+  --omda-surface-fill: color-mix(in srgb, var(--profile-accent, var(--omda-accent, #78a9ff)) 18%, hsl(var(--card) / 56%));
+  --omda-surface-border: color-mix(in srgb, var(--profile-accent, var(--omda-accent, #78a9ff)) 38%, hsl(var(--card-border) / 1));
+  --omda-surface-soft: color-mix(in srgb, var(--profile-accent, var(--omda-accent, #78a9ff)) 12%, hsl(var(--card) / 44%));
 }
+
+/* Primary surfaces across home, agents, workbench, history, profile and chat. */
 .app-shell :is(
-  .panel, .stat-card, .dashboard-chart-card, .dashboard-history-panel,
-  .agent-card, .request-card, .plan-card, .history-item,
-  .profile-main-card, .profile-account-profile-card, .profile-setting-card,
-  .profile-features-card, .specialty-row, .notice-bar, .task-detail-card,
-  .profile-feature-link, .workbench-step, .plan-empty,
-  .ai-conversations-panel, .ai-agent-runtime-panel, .ai-voice-panel
+  .panel,
+  .dashboard-hero,
+  .stat-card,
+  .dashboard-chart-card,
+  .dashboard-history-panel,
+  .agent-card,
+  .request-card,
+  .plan-card,
+  .plan-empty,
+  .history-item,
+  .profile-main-card,
+  .profile-account-profile-card,
+  .profile-setting-card,
+  .profile-features-card,
+  .specialty-row,
+  .notice-bar,
+  .task-detail-card,
+  .workbench-step,
+  .ai-conversations-panel,
+  .ai-agent-runtime-panel,
+  .ai-voice-panel,
+  .ai-composer
 ) {
-  background: var(--omda-surface-tint) !important;
+  background: var(--omda-surface-fill) !important;
+  background-color: var(--omda-surface-fill) !important;
   background-image: none !important;
-  border-color: var(--omda-surface-line) !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-/* Clear accidental text-sized rectangles left by broad legacy card selectors. */
-.app-shell :is(
-  h1,h2,h3,h4,h5,h6,p,label,strong,em,b,i,small,
-  [class*="title"],[class*="subtitle"],[class*="heading"],
-  [class*="label"],[class*="value"],[class*="text"],
-  [class*="desc"],[class*="meta"],[class*="count"],
-  [class*="caption"],[class*="stat"]
-):not(.stat-card):not(.agent-card):not(.panel) {
-  background-color: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
+  border-color: var(--omda-surface-border) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .14) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
-
-/* Page-specific final pass: history and profile were still inheriting legacy
-   panel/row fills. Limit the tint to their outer card surfaces only. */
-.app-shell .history-layout > .history-item,
-.app-shell .dashboard-history-panel,
-.app-shell .profile-settings-layout > .profile-main-card,
-.app-shell .profile-settings-layout > .profile-setting-card,
-.app-shell .profile-settings-side > .profile-features-card {
-  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
-  background-color: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
-  background-image: none !important;
-  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 32%, transparent) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,.10) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-/* History rows: the clickable content is not a separate card. */
-.app-shell .history-item-open,
-.app-shell .history-item-open .task-main,
-.app-shell .history-item-open .task-main strong,
-.app-shell .history-item-open .task-main small,
-.app-shell .dashboard-history-panel .dashboard-section-heading,
-.app-shell .dashboard-history-panel .dashboard-section-heading h2,
-.app-shell .dashboard-history-panel .dashboard-section-heading p,
-.app-shell .dashboard-history-panel .dashboard-task-table,
-.app-shell .dashboard-history-panel .dashboard-task-table th,
-.app-shell .dashboard-history-panel .dashboard-task-table td,
-.app-shell .dashboard-history-panel .dashboard-task-name,
-.app-shell .dashboard-history-panel .dashboard-task-name strong {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-/* Profile: inner headings, descriptions, field groups and setting rows stay
-   unboxed; only the containing profile cards carry the translucent theme. */
-.app-shell .profile-settings-layout .profile-section-heading,
-.app-shell .profile-settings-layout .profile-section-heading > div,
-.app-shell .profile-settings-layout .profile-section-heading h2,
-.app-shell .profile-settings-layout .profile-section-heading h3,
-.app-shell .profile-settings-layout .profile-section-heading p,
-.app-shell .profile-settings-layout .profile-summary,
-.app-shell .profile-settings-layout .profile-summary-large,
-.app-shell .profile-settings-layout .profile-fields-grid,
-.app-shell .profile-settings-layout .profile-actions-row,
-.app-shell .profile-settings-layout .profile-accordion-summary,
-.app-shell .profile-settings-layout .setting-row,
-.app-shell .profile-settings-layout .setting-row > div,
-.app-shell .profile-settings-layout .profile-feature-grid,
-.app-shell .profile-settings-layout .profile-feature-link > span,
-.app-shell .profile-settings-layout .profile-feature-link strong,
-.app-shell .profile-settings-layout .profile-feature-link small {
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-/* Keep each profile feature link as a subtle themed row, not text-sized boxes. */
+/* Small interactive rows remain secondary surfaces, not separate text boxes. */
 .app-shell .profile-settings-layout .profile-feature-link {
-  background: color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 12%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--omda-accent, var(--profile-accent, #78a9ff)) 20%, transparent) !important;
+  background: var(--omda-surface-soft) !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, var(--profile-accent, var(--omda-accent, #78a9ff)) 28%, transparent) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
+
+/* Text, values and labels are always plain content inside their parent surface. */
+.app-shell :is(
+  .panel,
+  .dashboard-hero,
+  .stat-card,
+  .agent-card,
+  .request-card,
+  .plan-card,
+  .history-item,
+  .profile-main-card,
+  .profile-setting-card,
+  .profile-features-card,
+  .notice-bar,
+  .task-detail-card,
+  .ai-conversations-panel,
+  .ai-agent-runtime-panel,
+  .ai-voice-panel,
+  .ai-composer
+) :is(h1, h2, h3, h4, h5, h6, p, label, strong, em, b, i, small) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Remove legacy text-sized backgrounds while preserving separators and badges. */
+.app-shell :is(
+  .section-head,
+  .section-title,
+  .section-meta,
+  .eyebrow,
+  .stat-card-top,
+  .stat-label,
+  .stat-value,
+  .stat-foot,
+  .dashboard-card-subtitle,
+  .agent-card-stats,
+  .task-main,
+  .history-item-open,
+  .profile-section-heading,
+  .profile-summary,
+  .profile-fields-grid,
+  .profile-actions-row,
+  .profile-accordion-summary,
+  .setting-row,
+  .profile-feature-grid,
+  .profile-feature-link > span,
+  .dashboard-task-table,
+  .dashboard-task-table th,
+  .dashboard-task-table td,
+  .dashboard-task-name
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.app-shell .agent-card-stats *,
+.app-shell .task-main *,
+.app-shell .history-item-open *,
+.app-shell .profile-section-heading *,
+.app-shell .profile-feature-link strong,
+.app-shell .profile-feature-link small,
+.app-shell .dashboard-task-name * {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Preserve existing button colors, chat layout and scroll behavior unchanged. */
