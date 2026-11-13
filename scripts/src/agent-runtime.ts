@@ -787,9 +787,9 @@ function isLocalModelProvider(base: string): boolean {
 async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Promise<ModelProviderConfig[]> {
   const configuredProviders = await loadAdditionalModelProviders();
   const all: ModelProviderConfig[] = [
-    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all"], priority: 0 },
+    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all" as const], priority: 0 },
     ...configuredProviders,
-    { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all"], priority: 1000 },
+    { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all" as const], priority: 1000 },
   ].filter((item, index, allItems) => item.base && item.model && allItems.findIndex((other) => other.base === item.base && other.model === item.model) === index);
   return orderModelProvidersByPurpose(all, purpose);
 }
