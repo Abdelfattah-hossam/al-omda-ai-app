@@ -175,7 +175,9 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `GET /health` — local runtime status.
 - `GET /v1/tools` — tool discovery, including available Skills.
 - `GET /v1/http/roles` — list configured role names without exposing credential environment variables.
-- `POST /v1/http/compare` — compare an allowlisted endpoint across two or more named roles configured in `.omda/http-roles.json`.
+- `POST /v1/http/compare` — compare an allowlisted endpoint across two or more named roles configured in `.omda/http-roles.json`; save a sanitized audit summary.
+- `GET /v1/http/history?limit=100` — list up to 100 saved HTTPFlow audit summaries.
+- `DELETE /v1/http/history` — clear the saved HTTPFlow audit history.
 - `POST /v1/agent/run` — start a tool-using run with `{ "goal": "..." }`.
 - `POST /v1/agent/stream` — stream `token`, `status`, `complete`, and `error` events for `{ "action": "run|resume|continue|delegate", ... }`; the existing JSON endpoints remain available for compatibility.
 - `POST /v1/agent/delegate` — run 2–4 concurrent read-only specialists with `{ "tasks": [{ "role": "Code reviewer", "goal": "..." }, { "role": "Security reviewer", "goal": "..." }] }`.
@@ -191,6 +193,8 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 - `web.search` agent tool — query a configured Bing-compatible Search API over HTTPS; the endpoint hostname must be allowlisted and the API key remains in the local runtime environment.
 - `POST /v1/http/request` — make a bounded HTTPS GET, HEAD, or OPTIONS request to an exact allowlisted hostname.
 - `POST /v1/terminal/execute` — run an approved executable with an argument array; disabled unless explicitly enabled.
+
+HTTPFlow audit summaries are stored in `.omda/httpflow-history.json` inside the configured workspace, capped at 100 records, and written with restrictive permissions and atomic replacement. They retain the target origin/path, method, role names, status codes, timings, body lengths, and names of changed headers; URL query strings/fragments, response bodies, and header values are not persisted. The Agents workspace can export the summaries as JSON or clear them. All history endpoints require the bearer token.
 
 All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` is an explicit exception for isolated local CTF labs; exact allowlisting is still required. Redirects are revalidated.
 

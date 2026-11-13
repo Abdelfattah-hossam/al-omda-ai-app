@@ -59,4 +59,5 @@ Thumbs.db
 .omda/mcp-servers.json
 .omda/*.tmp
 .omda/http-roles.json
+.omda/httpflow-history.json
 .omda/models.json

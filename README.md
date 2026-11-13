@@ -35,7 +35,7 @@ A separate Node.js runtime now provides the first local tools:
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
 - Optional native desktop control through the MIT-licensed Computer Use MCP companion (screen, accessibility, mouse, keyboard, clipboard, and app/window tools), gated by local Agent MCP approvals.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
-- HTTPFlow panel for comparing configured roles with status/body/header differences and sensitive response-header redaction.
+- HTTPFlow panel for comparing configured roles with status/body/header differences, sensitive response-header redaction, persistent sanitized audit history, and JSON export.
 - Passive authorized Web Recon tools for DNS records, pinned TLS certificate inspection, HTTP security headers, and robots.txt.
 - Local CTF analysis helpers for common encodings, Caesar shifts, hash-format hints, and explicitly unverified JWT decoding.
 - Optional Bing-compatible web search with HTTPS-only endpoint validation, exact hostname allowlisting, bounded results, and API keys kept in the local runtime environment.
@@ -65,7 +65,7 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 - Optional Playwright browser and desktop Computer Use MCP setup scripts. These connect locally installed companions; they are not hosted browser or remote desktop services.
 - Read-only parallel specialist delegation (2–4 agents) with evidence traces. The lead agent retains write and terminal permissions behind the normal approval workflow.
 - Optional Bing-compatible web search with bounded results, HTTPS-only provider endpoint, allowlisted host, disabled redirects, timeout, and response-size limits.
-- Authorized HTTP role comparison, bounded HTTP inspection, sensitive-header redaction, and DNS/IP safety checks for private IPv4/IPv6 destinations.
+- Authorized HTTP role comparison with bounded inspection, sensitive-header redaction, persistent sanitized HTTPFlow audit history with JSON export, and DNS/IP safety checks for private IPv4/IPv6 destinations.
 - OpenAI-compatible streamed model output, primary/fallback endpoint support, and provider usage metrics when returned by the model.
 - Multi-provider model routing through `.omda/models.json`, including HTTPS remote providers, LM Studio/Ollama loopback models, and environment-only API key references.
 - Optional local supervisor with crash-restart backoff and safe auto-update checks; updates are deferred for dirty worktrees or active Agent runs and rolled back if the build fails.
@@ -76,7 +76,6 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 2. A dedicated desktop companion installer, clear permission controls, secure remote access, and polished cross-platform UX beyond the optional Computer Use MCP integration.
 3. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing.
 4. Broader provider adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
-5. Persistent HTTPFlow history, export, and audit trail; the current Agents workspace already provides visual role/body/header diffs.
 6. Provider-accurate live token counts and live tokens-per-second; current UI speed while streaming is an estimate, with actual usage metrics when the provider returns them.
 7. Platform service/Task Scheduler installation, signed update verification, and recovery if the supervisor itself exits; the current local supervisor supports opt-in fast-forward updates and runtime crash restarts.
 8. Container-backed execution with resource, network, and filesystem isolation.
