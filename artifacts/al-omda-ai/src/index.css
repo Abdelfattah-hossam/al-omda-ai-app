@@ -2646,3 +2646,47 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+
+
+/* User-requested finish: translucent theme-tinted CARD SURFACES only.
+   Text, values, labels and inline content must never become boxed surfaces. */
+.app-shell {
+  --omda-surface-tint: color-mix(in srgb, var(--profile-accent, #78a9ff) 22%, transparent);
+  --omda-surface-line: color-mix(in srgb, var(--profile-accent, #78a9ff) 30%, transparent);
+}
+.app-shell :is(
+  .panel, .stat-card, .dashboard-chart-card, .dashboard-history-panel,
+  .agent-card, .request-card, .plan-card, .history-item,
+  .profile-main-card, .profile-account-profile-card, .profile-setting-card,
+  .profile-features-card, .specialty-row, .notice-bar, .task-detail-card,
+  .profile-feature-link, .workbench-step, .plan-empty,
+  .ai-conversations-panel, .ai-agent-runtime-panel, .ai-voice-panel
+) {
+  background: var(--omda-surface-tint) !important;
+  background-image: none !important;
+  border-color: var(--omda-surface-line) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Clear accidental text-sized rectangles left by broad legacy card selectors. */
+.app-shell :is(
+  h1,h2,h3,h4,h5,h6,p,label,strong,em,b,i,small,
+  [class*="title"],[class*="subtitle"],[class*="heading"],
+  [class*="label"],[class*="value"],[class*="text"],
+  [class*="desc"],[class*="meta"],[class*="count"],
+  [class*="caption"],[class*="stat"]
+):not(.stat-card):not(.agent-card):not(.panel) {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Preserve semantic chips, icon tiles and form controls as intentional UI controls. */
+.app-shell :is(.status-chip,.task-icon,.specialty-icon,.agent-symbol,.empty-mark,.profile-avatar,.avatar,.button,.button-primary,.button-quiet,.button-danger,.icon-button,input,select,textarea,[role="switch"]) {
+  box-shadow: revert-layer;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
