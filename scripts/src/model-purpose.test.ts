@@ -9,9 +9,11 @@ test("infers model purpose from explicit coding, review, and research requests",
   assert.equal(inferModelPurpose("راجع الكود واكتشف الثغرات"), "review");
   assert.equal(inferModelPurpose("ابحث وقارن بين مزودي النماذج"), "research");
   assert.equal(inferModelPurpose("عدل الكود وأصلح المشكلة"), "coding");
+  assert.equal(inferModelPurpose("Build a website for a small business"), "coding");
 });
 
 test("defaults conversational and general requests to the general provider pool", () => {
   assert.equal(inferModelPurpose("Hello, how are you?"), "general");
   assert.equal(inferModelPurpose("Create a personal weekly plan"), "general");
+  assert.equal(inferModelPurpose("Create a Word document"), "general");
 });
