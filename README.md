@@ -27,12 +27,12 @@ A separate Node.js runtime now provides the first local tools:
 - Tool discovery through `GET /v1/tools` and project Skills from `.omda/skills/`.
 - A model-driven tool loop with saved sessions and approval gates for file writes and terminal commands.
 - Cross-platform terminal child-process environment with Windows system/temp/app-data and desktop session support, while excluding API secrets.
-- Automatic parallel delegation to 2–4 read-only specialist agents; the lead Agent synthesizes findings and owns all approved writes.
 - Streaming local Agent responses in the main chat and Agents workspace, with a live estimated tokens-per-second indicator and final provider usage when available.
-- Parallel read-only delegation to 2–4 specialist agents.
 - Opt-in MCP stdio tool discovery and calls, with user approval for MCP actions.
 - Direct model-visible MCP function discovery from configured tool schemas, with per-call approval and generic call fallback.
 - One-command Playwright MCP setup for Chromium, Firefox, or WebKit, preserving other configured MCP servers.
+- Browser Workspace with exact per-site hostname permissions and local Playwright MCP tool discovery; direct URL checks are an extra guardrail, not a complete browser/network sandbox.
+- Optional cross-platform user-service installer for local Agent auto-start on Linux, macOS, and Windows; platform-specific physical-device validation is still pending.
 - Optional native desktop control through the MIT-licensed Computer Use MCP companion (screen, accessibility, mouse, keyboard, clipboard, and app/window tools), gated by local Agent MCP approvals.
 - Authorized HTTP role comparison using credentials loaded from local environment variables, plus explicit local CTF lab mode.
 - HTTPFlow panel for comparing configured roles with status/body/header differences, sensitive response-header redaction, persistent sanitized audit history, and JSON export.
@@ -72,14 +72,13 @@ The Cloudflare Worker serves the web application and API. It cannot directly con
 
 ## Remaining roadmap
 
-1. Native browser workspace with built-in tab/profile management and per-site permissions beyond the optional Playwright MCP companion.
-2. A dedicated desktop companion installer, clear permission controls, secure remote access, and polished cross-platform UX beyond the optional Computer Use MCP integration.
-3. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing.
-4. Broader provider adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
-6. Provider-accurate live token counts and live tokens-per-second; current UI speed while streaming is an estimate, with actual usage metrics when the provider returns them.
-7. Platform service/Task Scheduler installation, signed update verification, and recovery if the supervisor itself exits; the current local supervisor supports opt-in fast-forward updates and runtime crash restarts.
-8. Container-backed execution with resource, network, and filesystem isolation.
-9. Expanded runtime integration tests, including real local model, browser, desktop, and deployment smoke tests.
+1. Browser tab and profile management, tab previews, and optional secure cross-device browser streaming; current Browser Workspace provides local Playwright MCP discovery and per-site permissions, not a hosted browser.
+2. Write-capable multi-agent delegation with isolated workspaces, shared task state, and per-agent approval routing; current specialists are read-only and the lead agent owns all changes.
+3. Broader provider-specific adapters and policy-based routing across Gemini, OpenRouter, Anthropic, OpenAI-compatible endpoints, and local model managers.
+4. Provider-accurate live token counts and tokens-per-second; current streaming speed is an estimate, and actual usage is shown only when returned by the provider.
+5. Signed update verification and recovery if the supervisor itself exits; current auto-update is opt-in and rolls back failed builds, but does not yet verify signed releases or supervise itself.
+6. Container-backed execution with resource, network, and filesystem isolation; host terminal execution remains disabled by default and is not a sandbox.
+7. Expanded integration and deployment smoke tests, including physical Linux/macOS/Windows service validation, real local models, browser/desktop companions, and production deployment verification.
 
 ## Security model
 
