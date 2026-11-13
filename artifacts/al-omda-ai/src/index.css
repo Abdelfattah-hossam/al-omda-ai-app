@@ -2135,3 +2135,35 @@ body:has(.ai-chat-page){
   .ai-chat-page .ai-plus-menu{width:min(280px,calc(100vw - 34px));inset-inline-start:0;max-height:52dvh}
   .ai-chat-page .chat-message{max-width:96%;padding:11px 12px}
 }
+
+
+/* Consistent app-wide glass surfaces and stable control lighting (Nov 2026). */
+:root{--omda-glass-surface:rgba(20,28,43,.42);--omda-glass-border:rgba(205,218,245,.19);--omda-glass-elevation:0 12px 34px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.075)}
+.app-shell .panel,.app-shell .card,.app-shell [class~="stat-card"],.app-shell [class~="agent-card"],.app-shell [class~="request-card"],.app-shell [class~="plan-card"],.app-shell [class~="profile-main-card"],.app-shell [class~="profile-setting-card"],.app-shell [class~="profile-features-card"],.app-shell [class~="dashboard-chart-card"],.app-shell [class~="history-item"],.app-shell [class~="history-detail"],.app-shell [class~="task-row"],.app-shell [class~="project-kpi"],.app-shell [class~="profile-summary-large"],.app-shell [class~="market-card"],.app-shell [class~="workbench-card"],.app-shell [class~="settings-card"],.app-shell [class~="agent-detail-card"],.app-shell [class~="feature-card"]{
+ background-color:var(--omda-glass-surface)!important;background-image:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.018))!important;border:1px solid var(--omda-glass-border)!important;box-shadow:var(--omda-glass-elevation)!important;-webkit-backdrop-filter:blur(20px) saturate(145%)!important;backdrop-filter:blur(20px) saturate(145%)!important
+}
+.app-shell .dashboard-hero,.app-shell .hero-card,.app-shell .profile-header-card,.app-shell .market-hero,.app-shell .workbench-hero{background-color:rgba(23,34,55,.48)!important;background-image:linear-gradient(120deg,rgba(255,255,255,.09),rgba(255,255,255,.025))!important;border-color:var(--omda-glass-border)!important;-webkit-backdrop-filter:blur(24px) saturate(150%)!important;backdrop-filter:blur(24px) saturate(150%)!important}
+.ai-chat-page .ai-chat-topbar{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important;overflow:visible!important;isolation:isolate}
+.ai-chat-page .ai-chat-back,.ai-chat-page .ai-chat-menu-trigger{box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 44px!important;width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;margin:0!important;overflow:visible!important;line-height:1!important;position:relative;z-index:2}
+.ai-chat-page .ai-chat-back svg,.ai-chat-page .ai-chat-menu-trigger svg{display:block!important;flex:0 0 22px!important;width:22px!important;min-width:22px!important;height:22px!important;min-height:22px!important;overflow:visible!important;stroke-width:2.25}
+.ai-chat-page .ai-chat-topbar-title{flex:1 1 0!important;min-width:0!important}
+.ai-chat-page .ai-chat-top-menu{inset-inline-end:0!important;max-width:calc(100vw - 24px)!important}
+.ai-chat-page .ai-plus-wrap{position:relative;flex:none;overflow:visible!important}
+.ai-chat-page .ai-plus-menu{max-width:calc(100vw - 24px)!important}
+@media(max-width:650px){.ai-chat-page .ai-chat-back,.ai-chat-page .ai-chat-menu-trigger{flex-basis:42px!important;width:42px!important;min-width:42px!important;max-width:42px!important;height:42px!important;min-height:42px!important}.ai-chat-page .ai-chat-topbar{gap:8px!important;padding-inline:2px!important}}
+@keyframes omdaUniformControlPulse{0%,100%{box-shadow:0 0 0 1px rgba(var(--omda-glow,176,199,255),.07),0 0 7px rgba(var(--omda-glow,176,199,255),.09),inset 0 1px 0 rgba(255,255,255,.07)}50%{box-shadow:0 0 0 1px rgba(var(--omda-glow,176,199,255),.18),0 0 13px rgba(var(--omda-glow,176,199,255),.17),inset 0 1px 0 rgba(255,255,255,.13)}}
+@media(prefers-reduced-motion:no-preference){.app-shell button:not(:disabled):not(.toggle),.app-shell a.button,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle){animation:omdaUniformControlPulse 3.8s ease-in-out infinite!important;transition:filter .18s ease,border-color .18s ease,transform .18s ease!important}.app-shell button:not(:disabled):not(.toggle):hover,.app-shell a.button:hover,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle):hover{filter:brightness(1.12)}.app-shell button:not(:disabled):not(.toggle):active,.app-shell a.button:active,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle):active{filter:brightness(1.18);transform:translateY(1px)}}
+@media(prefers-reduced-motion:reduce){.app-shell button,.app-shell a.button,.app-shell [role="button"]{animation:none!important}}
+
+/* Extend the same glass material to page-specific cards and panels. */
+.app-shell [class*="-card"]:not(button),
+.app-shell [class*="-panel"]:not(button),
+.app-shell [class*="-tile"]:not(button),
+.app-shell [class*="-surface"]:not(button){
+ background-color:rgba(20,28,43,.43)!important;
+ background-image:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.018))!important;
+ border-color:var(--omda-glass-border,rgba(205,218,245,.19))!important;
+ box-shadow:var(--omda-glass-elevation,0 12px 34px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.075));
+ -webkit-backdrop-filter:blur(18px) saturate(145%);
+ backdrop-filter:blur(18px) saturate(145%);
+}
