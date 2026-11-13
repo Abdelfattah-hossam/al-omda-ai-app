@@ -10,7 +10,8 @@ import {
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; taskId?: string; taskTitle?: string };
+type SavedAppData = { title: string; html: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -127,6 +128,12 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
         doc.rows.some((row: unknown) => !Array.isArray(row) || row.length !== doc.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 2000))) return null;
       if (JSON.stringify(doc).length > 70000) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
+    }
+    if (item.appData !== undefined) {
+      const app = item.appData;
+      if (!app || typeof app !== "object" || typeof app.title !== "string" || app.title.length > 180 ||
+        typeof app.html !== "string" || app.html.length > 100000 || JSON.stringify(app).length > 110000) return null;
+      saved.appData = { title: app.title, html: app.html };
     }
     if (item.spreadsheetData !== undefined) {
       const sheet = item.spreadsheetData;
