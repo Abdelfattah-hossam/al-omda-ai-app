@@ -39,7 +39,8 @@ function toBase64(samples: Int16Array): string {
 
 export default function GeminiLiveVoice({ language, disabled, onTranscript }: Props) {
   const ar = language === "ar";
-  const [active, setActive] = useState(false);\n  const [speaking, setSpeaking] = useState(false);
+  const [active, setActive] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
@@ -279,7 +280,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             if (mountedRef.current) { setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
           }
         }
-        if (serverContent.turnComplete) {\n          if (mountedRef.current) setSpeaking(false);
+        if (serverContent.turnComplete) {
+          if (mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
           if (userText) onTranscript("user", userText);
