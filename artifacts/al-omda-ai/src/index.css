@@ -1835,3 +1835,80 @@ body:has(.ai-chat-page){
     animation:omdaButtonAura 4.2s ease-in-out infinite;
   }
 }
+
+
+/* Follow-up: make the chat action layout a real grid (not flex), and keep
+   every profile section aligned to the same content width. */
+.profile-settings-page{width:100%;max-width:1240px;margin-inline:auto;min-width:0}
+.profile-settings-layout{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  align-items:stretch!important;
+  gap:14px!important;
+}
+.profile-settings-layout>.profile-setting-card,
+.profile-settings-layout>.profile-main-card,
+.profile-settings-layout>details,
+.profile-settings-layout>section{
+  width:100%!important;max-width:none!important;min-width:0!important;
+  grid-column:1/-1!important;margin:0!important;
+}
+.profile-settings-layout>.profile-setting-card,
+.profile-settings-layout>.profile-main-card{
+  min-height:0!important;height:auto!important;align-self:stretch;
+}
+.profile-settings-layout .profile-section-heading{align-items:flex-start}
+.profile-settings-layout .profile-accordion-summary{min-height:0}
+.profile-settings-layout .profile-fields-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.profile-settings-layout .wallpaper-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.profile-settings-layout .wallpaper-choice{min-width:0;min-height:66px}
+.ai-chat-page .ai-chat-heading{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(280px,390px)!important;
+  align-items:start!important;
+  gap:16px!important;
+}
+.ai-chat-page .ai-chat-actions{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  gap:8px!important;
+  min-width:0;
+}
+.ai-chat-page .ai-chat-actions>.button,
+.ai-chat-page .ai-chat-actions>div,
+.ai-chat-page .ai-chat-actions .ai-chat-more-button{
+  width:100%;min-width:0;justify-content:center;
+}
+.ai-chat-page .ai-chat-actions .ai-live-voice-button{
+  grid-column:1/-1!important;
+  min-height:44px!important;
+  justify-content:center!important;
+}
+.ai-chat-page .ai-chat-heading .page-subtitle{
+  max-width:62ch;line-height:1.75;
+}
+.app-shell::before{
+  background-size:220% 220%!important;
+  animation:omdaWallpaperDrift 32s ease-in-out infinite alternate!important;
+}
+@media(max-width:850px){
+  .ai-chat-page .ai-chat-heading{grid-template-columns:minmax(0,1fr)!important}
+  .ai-chat-page .ai-chat-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:650px){
+  .profile-settings-layout .profile-fields-grid{grid-template-columns:minmax(0,1fr)!important}
+  .profile-settings-layout .wallpaper-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ai-chat-page .ai-chat-heading{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
+  .ai-chat-page .ai-chat-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ai-chat-page .ai-chat-actions>.button,
+  .ai-chat-page .ai-chat-actions>div{min-height:42px}
+  .ai-chat-page .ai-chat-actions .ai-live-voice-button{grid-column:1/-1!important}
+  .mobile-nav{grid-template-columns:repeat(8,minmax(0,1fr))!important}
+}
+@media(max-width:390px){
+  .mobile-nav{grid-template-columns:repeat(8,minmax(48px,1fr))!important}
+  .ai-chat-page .ai-chat-actions{gap:6px!important}
+  .ai-chat-page .ai-chat-actions>.button{font-size:10px!important;padding-inline:5px!important}
+}
