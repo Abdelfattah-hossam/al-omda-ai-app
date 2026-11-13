@@ -8,10 +8,10 @@ function normalizeProjectRequest(request: string): string {
 }
 
 function isNegatedProjectRequest(value: string): boolean {
-  return /^(?:مش|موش|لا|بدون|من\s+غير)\s*(?:(?:عايز|عاوز|محتاج)\s*)?(?:اعمل|اعملي|تعمل|تعملي|تنشئ|انشئ|ابني|تبني|صمم|طور|برمج|نفذ|ابدأ|ابدا)/i.test(value) ||
-    /\b(?:don't|do not|never|not asking you to|no need to)\s+(?:build|create|develop|make|implement|design|start)\b/i.test(value);
+  return /^(?:مش|موش|لا|بدون|من\s+غير)\s*(?:(?:عايز|عاوز|محتاج|اريد|أريد|احتاج|أحتاج)\s*)?(?:ان\s*)?(?:اعمل|اعملي|تعمل|تعملي|تنشئ|انشئ|انشاء|ابني|تبني|صمم|طور|برمج|نفذ|ابدأ|ابدا)/i.test(value) ||
+    /^(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تبنيش|تصممش|تطورش|تبرمجش|تنفذش)\b/i.test(value) ||
+    /\b(?:don't|do not|never|not asking you to|no need to|i don't want(?: you to)?|i do not want(?: you to)?)\s+(?:build|create|develop|make|implement|design|start)\b/i.test(value);
 }
-
 function isInformationRequest(value: string): boolean {
   if (/^(?:ممكن|لو سمحت|من فضلك)\s*(?:تشرح|اشرح|تقولي|تقول لي|توضح|تشرحلي|تشرح لي|تفهمني)/i.test(value)) return true;
   if (/^(?:هل|ايه|ما هو|ما هي|ازاي|ازاى|كيف|ليه|لماذا|اشرح|شرح|طريقة|what|which|who|why|how|explain|tell me|teach me|do you|does your|what can you)\b/i.test(value)) return true;
