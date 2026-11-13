@@ -3015,3 +3015,53 @@ body:has(.ai-chat-page){
 .ai-agent-runtime-panel[data-agent-active="false"]{display:none!important}
 .ai-agent-runtime-panel[data-agent-active="true"]{display:block!important}
 .ai-chat-live-test{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:1px solid var(--omda-reference-line);border-radius:999px;background:var(--omda-reference-soft);color:var(--foreground,#eee);font-size:11px}
+
+
+/* Make the translucent treatment consistent on every page without blurring text. */
+.app-shell [class*="card"]:not(button),
+.app-shell [class*="panel"]:not(button),
+.app-shell [class*="tile"]:not(button),
+.app-shell [class*="surface"]:not(button),
+.app-shell [class*="notice-bar"],
+.app-shell .stats-grid>*,
+.app-shell .dashboard-grid>*,
+.app-shell .dashboard-analytics-grid>*,
+.app-shell .market-grid>*,
+.app-shell .profile-settings-layout>*,
+.app-shell .profile-settings-side>*{
+  background:var(--omda-reference-surface)!important;
+  background-color:var(--omda-reference-surface)!important;
+  background-image:none!important;
+  border-color:var(--omda-reference-line)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.16)!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+/* Reset the text-like matches of broad card selectors after the surface rule. */
+.app-shell :is(
+  .stat-card-top,.stat-label,.stat-value,.stat-foot,.dashboard-card-subtitle,
+  .agent-card-stats,.task-main,.history-item-open,.profile-section-heading,
+  .profile-summary,.profile-fields-grid,.profile-actions-row,.profile-accordion-summary,
+  .setting-row,.profile-feature-grid,.profile-feature-link>span,.dashboard-task-name,
+  .dashboard-task-table,.dashboard-task-table th,.dashboard-task-table td,
+  .section-head,.section-title,.section-meta,.eyebrow
+),
+.app-shell [class*="stat"]:not(.stat-card):not(.stats-grid),
+.app-shell [class*="setting-row"],
+.app-shell [class*="task-main"],
+.app-shell [class*="history-item-open"]{
+  background:transparent!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.app-shell :is(.stat-card-top,.stat-label,.stat-value,.stat-foot,.agent-card-stats,
+.task-main,.history-item-open,.profile-section-heading,.profile-summary,
+.profile-fields-grid,.profile-actions-row,.profile-accordion-summary,
+.profile-feature-link>span,.dashboard-task-name) *{
+  background:transparent!important;background-color:transparent!important;
+  background-image:none!important;box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
