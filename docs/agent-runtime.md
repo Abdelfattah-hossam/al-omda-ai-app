@@ -96,6 +96,12 @@ The Agents workspace includes a Browser Workspace panel that reads the configure
 
 This first phase is not a hosted browser, tab manager, isolated multi-profile implementation, or full browser sandbox. It cannot intercept navigation initiated internally by a page (for example, clicking a link to another origin). Keep using trusted sites and approve browser actions carefully. Configure the Playwright companion with `pnpm --filter @workspace/scripts browser:setup -- chromium`, allow `npx` in `OMDA_AGENT_MCP_COMMANDS`, and restart the local runtime.
 
+### Browser Workspace site permissions
+
+When the local runtime is connected in the Agents workspace, open **Browser Workspace** and select **Refresh** to inspect the configured `playwright-browser` MCP server and its advertised tools. Add exact hostnames such as `docs.example.com` (not full URLs, wildcard domains, ports, or paths) to allow direct browser-tool URLs for those hosts. Remove a hostname to block subsequent direct URL calls to it. The policy is stored in `.omda/browser-workspace.json` inside the local workspace with restrictive file permissions.
+
+The policy is deny-by-default: direct browser-tool navigation requires an explicit URL and an exact approved hostname; browser actions are blocked until at least one hostname is approved. MCP tool calls still require their normal per-action approval. This is an additional guardrail, not a complete network sandbox: a page may navigate through its own links or scripts, and this hostname check does not replace operating-system/network isolation. Use a dedicated browser profile, avoid sensitive sessions, and approve only sites you are authorized to access. Browser profile switching, tab thumbnails, and cross-device browser streaming are not implemented by this workspace yet.
+
 ### Multiple remote and local model providers
 
 The runtime tries providers in this order: the primary environment configuration, providers listed in `.omda/models.json`, then the optional fallback environment configuration. All providers use the OpenAI-compatible Chat Completions streaming interface. Configure no more than eight additional providers.
