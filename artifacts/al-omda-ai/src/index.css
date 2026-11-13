@@ -1527,3 +1527,13 @@ body:has(.ai-chat-page){
 .sidebar-search kbd{flex:none;padding:2px 4px;border:1px solid rgba(137,157,220,.16);border-radius:4px;color:#8996b5;font-size:9px}
 .sidebar-search:focus-within{border-color:rgba(var(--omda-glow),.5);box-shadow:0 0 0 3px rgba(var(--omda-glow),.08)}
 @media(max-width:760px){.sidebar-search{margin-top:6px}}
+
+
+/* Subtle ambient motion across the full workspace, preserving each selected theme. */
+@media(prefers-reduced-motion:no-preference){
+ body:not(:has(.app-shell[data-reduced-motion="true"])){background-size:180% 180%;animation:omdaAmbientBackground 32s ease-in-out infinite}
+ .app-shell:not([data-reduced-motion="true"]) .button-primary,
+ .app-shell:not([data-reduced-motion="true"]) .nav-link.active{animation:omdaButtonAura 5.2s ease-in-out infinite}
+}
+@keyframes omdaButtonAura{0%,100%{box-shadow:0 0 0 rgba(var(--omda-glow),0)}50%{box-shadow:0 0 18px rgba(var(--omda-glow),.18)}}
+@media(prefers-reduced-motion:reduce){body{animation:none!important}.app-shell .button-primary,.app-shell .nav-link.active{animation:none!important}}
