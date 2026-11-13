@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { buildLaunchAgentPlist, buildSystemdUserService, buildWindowsAgentLauncher, serializeServiceEnvironment } from "./desktop-service-config.js";
+import { buildLaunchAgentPlist, buildSystemdUserService, buildWindowsAgentLauncher, buildWindowsTaskRegistration, serializeServiceEnvironment } from "./desktop-service-config.js";
 
 test("systemd user service starts the supervisor and restarts failures", () => {
   const result = buildSystemdUserService({ repoRoot: "/home/user/My Project", path: "/usr/bin:/home/user/.local/bin", environment: { OMDA_AGENT_TOKEN: "safe-token" } });
@@ -26,4 +26,14 @@ test("Windows launcher safely quotes paths with apostrophes", () => {
 
 test("service environment serializer keeps only safe single-line values", () => {
   assert.equal(serializeServiceEnvironment({ OMDA_AGENT_TOKEN: "abc", bad: "no", OMDA_AGENT_EXTRA: "line1\nline2" }), "OMDA_AGENT_TOKEN=abc\n");
+});
+
+test("Windows scheduled task restarts a crashed agent and runs as the signed-in user", () => {
+  const result = buildWindowsTaskRegistration({ taskName: "AL OMDA AI Agent", launcherPath: "C:\\Users\\O'Neil\\Al Omda\\start-agent.ps1" });
+  assert.match(result, /-RestartCount 5/);
+  assert.match(result, /-RestartInterval \(New-TimeSpan -Minutes 1\)/);
+  assert.match(result, /-ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);
+  assert.match(result, /-LogonType Interactive/);
+  assert.match(result, /O''Neil/);
+  assert.match(result, /Start-ScheduledTask/);
 });
