@@ -18,6 +18,13 @@ describe("chat artifact intent", () => {
       "اكتبلي تقرير عن Excel",
       "عايز أعرف Word بيشتغل إزاي",
       "اعمل جدول من 7 أعمدة",
+      "مش عايز ملف Word",
+      "مش عايز تعمل لي ملف Word",
+      "لا تعمل ملف Word",
+      "من غير ملف Excel",
+      "ما تعملش ملف Excel",
+      "Don't create a Word file",
+      "Do not generate an Excel workbook",
     ];
     for (const message of ordinaryMessages) {
       assert.equal(isWordFileRequest(message), false, "unexpected Word file intent: " + message);
@@ -38,6 +45,8 @@ describe("chat artifact intent", () => {
       assert.equal(isWordFileRequest(message), true, "missed Word file intent: " + message);
     }
     assert.equal(isWordFileRequest("كيف أعمل ملف Word؟"), false);
+    assert.equal(isWordFileRequest("مش عايز ملف Word"), false);
+    assert.equal(isWordFileRequest("لا تعمل ملف Word"), false);
   });
 
   test("creates Excel only when the user explicitly asks for an Excel file", () => {
@@ -52,6 +61,8 @@ describe("chat artifact intent", () => {
     }
     assert.equal(isExcelFileRequest("ما الفرق بين Word وExcel؟"), false);
     assert.equal(isExcelFileRequest("كيف أعمل ملف Excel؟"), false);
+    assert.equal(isExcelFileRequest("مش عايز ملف Excel"), false);
+    assert.equal(isExcelFileRequest("ما تعملش ملف Excel"), false);
   });
 
   test("recognizes explanatory questions as how-to rather than artifact requests", () => {
