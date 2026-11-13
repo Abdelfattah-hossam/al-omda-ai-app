@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus } from "lucide-react";
+import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2 } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -57,6 +57,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [showConversationList, setShowConversationList] = useState(false);
+  const [showChatMenu, setShowChatMenu] = useState(false);
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [agentMode, setAgentMode] = useState(false);
   const [agentRuntimeUrl, setAgentRuntimeUrl] = useState("http://127.0.0.1:4318");
@@ -781,6 +782,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <button type="button" className="button button-quiet button-small" onClick={()=>setShowConversationList((value)=>!value)} aria-expanded={showConversationList}><History size={14}/>{ar ? "المحادثات" : "Chats"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>void createConversation()} disabled={loading || historyLoading}><Plus size={14}/>{ar ? "محادثة جديدة" : "New chat"}</button>
         <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai/usage")}><Settings2 size={14}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
+        <div className="ai-chat-more-wrap"><button type="button" className="button button-quiet button-small ai-chat-more-button" aria-label={ar?"خيارات المحادثة":"Conversation options"} aria-expanded={showChatMenu} onClick={()=>setShowChatMenu(v=>!v)}><MoreHorizontal size={17}/></button>{showChatMenu && <div className="ai-chat-more-menu" role="menu"><button type="button" onClick={()=>{const text=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع العمدة":"AL OMDA conversation",text}).catch(()=>{});}else if(navigator.clipboard){void navigator.clipboard.writeText(text).then(()=>setShowChatMenu(false));}}}><Share2 size={15}/>{ar?"مشاركة المحادثة":"Share conversation"}</button><button type="button" onClick={()=>{const text=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA")+": "+m.content).join("\n\n");void navigator.clipboard?.writeText(text);setShowChatMenu(false);}}><Copy size={15}/>{ar?"نسخ المحادثة":"Copy conversation"}</button><button type="button" onClick={()=>{setShowChatMenu(false);void createConversation();}}><Plus size={15}/>{ar?"محادثة جديدة":"New chat"}</button></div>}</div>
         <button type="button" className="button button-quiet button-small ai-live-voice-button" onClick={()=>setShowLiveVoice((value)=>!value)} aria-expanded={showLiveVoice}><Volume2 size={14}/>{ar ? "المحادثة الصوتية" : "Live voice"}{showLiveVoice ? <X size={13}/> : null}</button>
       </div>
     </div>
@@ -848,8 +850,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           <div className="ai-composer-tools">
             <button type="button" className="ai-plus-button" onClick={()=>imageInputRef.current?.click()} aria-label={ar?"إرفاق صورة":"Attach image"} title={ar?"تحليل صورة باستخدام نموذج مجاني":"Analyze an image with a free model"} disabled={loading || historyLoading || !signedIn || agentMode || usage?.remaining === 0}><ImagePlus size={18}/></button>
             <div className="ai-plus-wrap">
-              <button type="button" className="ai-plus-button" aria-label={ar ? "خيارات العمل" : "Work options"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
-              {showPlusMenu && <div className="ai-plus-menu" role="menu">
+              <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>setShowPlusMenu((v)=>!v)}><Plus size={20}/></button>
+              {showPlusMenu && <div className="ai-plus-menu" role="menu">\n                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);imageInputRef.current?.click();}}><ImagePlus size={16}/><span>{ar?"إرفاق صورة":"Add photo"}</span></button>
                 {[
                   {icon:BriefcaseBusiness,label:ar?"مشروع جديد":"New project",prompt:ar?"أريد إنشاء مشروع جديد من البداية: ":"I want to create a new project from scratch: "},
                   {icon:Code2,label:ar?"برمجة وتطوير":"Coding & development",prompt:ar?"أريد تنفيذ مهمة برمجية: ":"I need help implementing a coding task: "},
