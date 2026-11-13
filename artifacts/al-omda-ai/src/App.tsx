@@ -905,7 +905,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return <div className="page-enter dashboard-overview">
       <div className="dashboard-toolbar">
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
-        <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet"><Plus size={15}/>{t('newRequest')}</Link></div>
+        <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
