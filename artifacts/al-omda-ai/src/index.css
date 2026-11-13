@@ -1311,8 +1311,12 @@ body:has(.ai-chat-page){
     border:0 !important; border-radius:0 !important; background:transparent !important;
     box-shadow:none !important;
   }
-  .main-area:has(.ai-chat-page) .ai-chat-heading .eyebrow,
-  .main-area:has(.ai-chat-page) .ai-chat-heading .page-subtitle { display:none !important; }
+  .main-area:has(.ai-chat-page) .ai-chat-heading .eyebrow { display:none !important; }
+  .main-area:has(.ai-chat-page) .ai-chat-heading .page-subtitle {
+    display:block !important; position:absolute !important; width:1px !important; height:1px !important;
+    padding:0 !important; margin:-1px !important; overflow:hidden !important;
+    clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important;
+  }
   .main-area:has(.ai-chat-page) .ai-chat-heading .page-title {
     margin:0 !important; font-size:17px !important; line-height:1.35 !important;
   }
