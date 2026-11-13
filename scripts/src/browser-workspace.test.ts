@@ -17,6 +17,8 @@ test("blocks direct browser navigation to sites not explicitly allowed", () => {
   assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "https://docs.example.com/guide" }, policy);
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "https://evil.example" }, policy), /navigation blocked/);
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", {}, policy), /explicit URL/);
+  assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "file:///etc/passwd" }, policy), /HTTP or HTTPS/);
+  assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "https://user:pass@docs.example.com" }, policy), /embedded credentials/);
 });
 test("requires at least one approved site before other browser actions", () => {
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { selector: "button" }, normalizeBrowserWorkspacePolicy({})), /until at least one site/);

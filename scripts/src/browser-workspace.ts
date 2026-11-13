@@ -35,7 +35,8 @@ export function assertBrowserUrlAllowed(serverName: string, toolName: string, ar
   for (const value of urls) {
     let url: URL;
     try { url = new URL(value); } catch { throw new Error("Browser URL is invalid."); }
-    if (!["http:", "https:"].includes(url.protocol) || !policy.allowedHosts.includes(url.hostname.toLowerCase())) throw new Error("Browser navigation blocked: add the exact hostname to Browser Workspace permissions first.");
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Browser URLs must use HTTP(S) and must not contain embedded credentials.");
+    if (!policy.allowedHosts.includes(url.hostname.toLowerCase())) throw new Error("Browser navigation blocked: add the exact hostname to Browser Workspace permissions first.");
   }
   if (/navigate|goto|open_url|new_page/i.test(toolName) && urls.length === 0) throw new Error("Browser navigation requires an explicit URL so its hostname can be checked.");
   if (urls.length === 0 && policy.allowedHosts.length === 0) throw new Error("Browser actions are blocked until at least one site is approved in Browser Workspace.");

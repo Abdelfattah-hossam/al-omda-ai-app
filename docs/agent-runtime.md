@@ -90,12 +90,6 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
-### Browser Workspace and site permissions
-
-The Agents workspace includes a Browser Workspace panel that reads the configured `playwright-browser` MCP server and displays its advertised tools. It stores an exact hostname allowlist in `.omda/browser-workspace.json`; wildcard domains, URL paths, ports, and credentials are rejected. Direct HTTP(S) URLs passed to Playwright MCP tools are checked against this allowlist before the tool call. Every browser MCP action still requires explicit approval.
-
-This first phase is not a hosted browser, tab manager, isolated multi-profile implementation, or full browser sandbox. It cannot intercept navigation initiated internally by a page (for example, clicking a link to another origin). Keep using trusted sites and approve browser actions carefully. Configure the Playwright companion with `pnpm --filter @workspace/scripts browser:setup -- chromium`, allow `npx` in `OMDA_AGENT_MCP_COMMANDS`, and restart the local runtime.
-
 ### Browser Workspace site permissions
 
 When the local runtime is connected in the Agents workspace, open **Browser Workspace** and select **Refresh** to inspect the configured `playwright-browser` MCP server and its advertised tools. Add exact hostnames such as `docs.example.com` (not full URLs, wildcard domains, ports, or paths) to allow direct browser-tool URLs for those hosts. Remove a hostname to block subsequent direct URL calls to it. The policy is stored in `.omda/browser-workspace.json` inside the local workspace with restrictive file permissions.
