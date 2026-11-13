@@ -42,7 +42,7 @@ process.exit(1);
     let starts = 0;
     while (Date.now() < deadline) {
       try {
-        starts = (await readFile(marker, "utf8")).trim().split("\\n").filter(Boolean).length;
+        starts = (await readFile(marker, "utf8")).trim().split("\n").filter(Boolean).length;
       } catch { /* The first supervised process may not have started yet. */ }
       if (starts >= 2) break;
       if (supervisor.exitCode !== null) throw new Error("Supervisor exited unexpectedly: " + output);
