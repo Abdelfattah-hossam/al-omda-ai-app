@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { isExcelFileRequest, isHowToRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -45,14 +45,6 @@ function getProviders() {
 }
 
 
-function getLatestUserRequest(messages: ChatMessage[]): string {
-  // Artifact modes must be triggered by the current turn, never by an older request.
-  return messages.filter((message) => message.role === "user").slice(-1)[0]?.content ?? "";
-}
-function isStandaloneGreeting(request: string): boolean {
-  const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim().replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
-  return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
-}
 function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
