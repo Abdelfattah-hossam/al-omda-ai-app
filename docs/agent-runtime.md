@@ -90,6 +90,21 @@ The command writes `.omda/mcp-servers.json` under `OMDA_AGENT_WORKSPACE` (or the
 
 Add `npx` to the exact executable allowlist in `OMDA_AGENT_MCP_COMMANDS` (for example `node,npx`, preserving any other MCP executables you already use), restart the local Agent runtime, and ask it to list MCP tools. Browser actions then run on the computer hosting the runtime, not inside the Cloudflare Worker. MCP tool calls require explicit approval. Use a dedicated browser profile and only access accounts and sites you own or are authorized to test. Do not place credentials in browser URLs or prompts.
 
+### Install the desktop companion as a user service
+
+The optional service installer can start the local Agent supervisor automatically when the current user signs in. It does not install a graphical desktop app and it does not enable terminal execution.
+
+From the repository root:
+
+```sh
+pnpm --filter @workspace/scripts desktop:service -- install
+pnpm --filter @workspace/scripts desktop:service -- status
+pnpm --filter @workspace/scripts desktop:service -- restart
+pnpm --filter @workspace/scripts desktop:service -- uninstall
+```
+
+Supported targets are Linux user-level systemd, macOS LaunchAgents, and Windows Task Scheduler (current user). The installer generates a 256-bit local bearer token if one does not already exist and stores it in a private per-user environment file. The workspace is set to the current repository; execution remains disabled by default. Uninstall removes the auto-start entry but intentionally preserves the token and environment file. On Linux and macOS, the service definition contains a private copy of the environment values, so rerun the install command after editing the environment file; on Windows the launcher reads the file at each sign-in, and the installer restricts the token file ACL to the current account and SYSTEM. Review the generated service and environment file before enabling this on a shared computer. This setup has not yet been validated on physical Windows/macOS/Linux devices in CI.
+
 ### Browser Workspace site permissions
 
 When the local runtime is connected in the Agents workspace, open **Browser Workspace** and select **Refresh** to inspect the configured `playwright-browser` MCP server and its advertised tools. Add exact hostnames such as `docs.example.com` (not full URLs, wildcard domains, ports, or paths) to allow direct browser-tool URLs for those hosts. Remove a hostname to block subsequent direct URL calls to it. The policy is stored in `.omda/browser-workspace.json` inside the local workspace with restrictive file permissions.
