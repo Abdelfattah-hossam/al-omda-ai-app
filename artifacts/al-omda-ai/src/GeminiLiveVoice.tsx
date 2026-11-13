@@ -39,7 +39,7 @@ function toBase64(samples: Int16Array): string {
 
 export default function GeminiLiveVoice({ language, disabled, onTranscript }: Props) {
   const ar = language === "ar";
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(false);\n  const [speaking, setSpeaking] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
@@ -276,10 +276,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
             receivedAudioChunks++;
-            if (mountedRef.current) setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...");
+            if (mountedRef.current) { setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
           }
         }
-        if (serverContent.turnComplete) {
+        if (serverContent.turnComplete) {\n          if (mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
           if (userText) onTranscript("user", userText);
@@ -323,11 +323,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     setStatus(ar ? "انتهت المحادثة الصوتية." : "Voice conversation ended.");
   };
 
-  return <div style={{ display: "grid", gap: 6 }}>
-    <button type="button" className={active ? "button button-primary button-small" : "button button-quiet button-small"} onClick={active ? stop : start} disabled={disabled || connecting}>
-      {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={14} /> : <Mic size={14} />}
+  return <div className="omda-live-voice" data-active={active} data-speaking={speaking} data-connecting={connecting}>
+    <div className="omda-voice-orb-wrap" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
+      <div className="omda-voice-orb"><span/><span/><span/><i/></div>
+    </div>
+    <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
+    <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
+      {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       {connecting ? labels.connecting : active ? labels.stop : labels.start}
     </button>
-    {status && <small className="muted" role="status">{status}</small>}
   </div>;
 }
