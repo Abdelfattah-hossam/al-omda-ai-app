@@ -820,7 +820,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       ppt: ar ? "جهّز عرض PowerPoint منظمًا بعناوين الشرائح ومحتواها وملاحظات المتحدث عن: " : "Prepare a PowerPoint presentation with slide titles, slide content and speaker notes about: ",
       office: ar ? "استخدم أدوات الأوفيس المناسبة لإنجاز: " : "Use the appropriate Office tools to complete: "
     };
-    setInput((value) => value.trim() ? value + "\n" + prompts[mode] : prompts[mode]);
+    setInput((value) => value.trim() ? prompts[mode] + value : prompts[mode]);
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
   const clearMode = () => setCurrentMode(null);
@@ -1043,6 +1043,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           <header><span><i/> {ar ? "التحدث الصوتي مع العمدة" : "Talk with AL OMDA"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <div className="ai-chat-live-orb"><span><Mic size={30}/></span></div><div className="ai-chat-live-copy"><strong>{ar ? "العمدة يستمع إليك..." : "AL OMDA is listening..."}</strong><p>{ar ? "تحدث مع العمدة مباشرة، وسيجيبك بصوته." : "Speak naturally and AL OMDA will reply by voice."}</p></div>
           <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/>
+          <button type="button" className="ai-chat-live-test" onClick={()=>speak(ar ? "أهلاً بك، العمدة معك وجاهز لمساعدتك." : "Hello, AL OMDA is ready to help you.")}><Volume2 size={14}/>{ar ? "اختبار الصوت" : "Test voice"}</button>
           <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
         </section>
       </div>}
