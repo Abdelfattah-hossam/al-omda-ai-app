@@ -1293,8 +1293,7 @@ body:has(.ai-chat-page){
    Keep the workspace dock on other routes; the chat uses the top menu for navigation. */
 @media (max-width: 650px) {
   .app-shell:has(.ai-chat-page) > .mobile-nav { display:none !important; }
-  .app-shell:has(.ai-chat-page) > .main-area { padding-bottom:0 !important; height:100dvh !important; }
-  .main-area:has(.ai-chat-page) { height:100dvh !important; padding-bottom:0 !important; }
+  .app-shell:has(.ai-chat-page) > .main-area { padding-bottom:0 !important; height:100vh !important; height:100dvh !important; }
   .main-area:has(.ai-chat-page) > .topbar { flex:0 0 54px !important; min-height:54px !important; height:54px !important; }
   .main-area:has(.ai-chat-page) > .content-wrap {
     flex:1 1 0 !important; height:0 !important; min-height:0 !important;
@@ -1323,7 +1322,7 @@ body:has(.ai-chat-page){
     gap:5px !important; padding:0 0 2px !important;
   }
   .main-area:has(.ai-chat-page) .ai-chat-actions .button {
-    min-height:32px !important; padding:5px 8px !important; font-size:10px !important;
+    min-height:32px !important; padding:5px 8px !important; font-size:12px !important;
   }
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel {
     flex:1 1 0 !important; height:0 !important; min-height:0 !important;
@@ -1333,6 +1332,7 @@ body:has(.ai-chat-page){
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel > .section-head { display:none !important; }
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel .chat-messages {
     flex:1 1 0 !important; height:0 !important; min-height:0 !important;
+    overflow-y:auto !important; -webkit-overflow-scrolling:touch;
     padding:10px 3px 14px !important; gap:14px !important;
   }
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel .chat-message {
@@ -1357,7 +1357,7 @@ body:has(.ai-chat-page){
     font-size:15px !important; line-height:1.55 !important;
   }
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel .ai-composer-footer {
-    padding:4px 4px 0 !important; font-size:10px !important;
+    padding:4px 4px 0 !important; font-size:12px !important;
   }
   .main-area:has(.ai-chat-page) .ai-chat-page > .panel > .panel {
     margin:4px 0 !important; padding:7px 9px !important;
