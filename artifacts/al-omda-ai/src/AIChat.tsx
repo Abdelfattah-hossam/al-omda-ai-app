@@ -477,7 +477,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
   const createPowerPointAttachment = async (data: PowerPointData) => {
     const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
-    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
+    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/+esm";
     let lib: any;
     try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
     catch {
