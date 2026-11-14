@@ -615,7 +615,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-12).map((message, index, list) => ({
+        body: JSON.stringify({ language: ar ? "ar" : "en", messages: next.slice(-12).map((message, index, list) => ({
           role: message.role,
           content: message.content,
           ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
