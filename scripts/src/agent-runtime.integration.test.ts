@@ -759,7 +759,11 @@ test("concurrent approval submissions cannot execute the same pending MCP action
       if (toolStarted) break;
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
-    assert.equal(toolStarted, true, "The first approval should reach the MCP server before the second submission.");
+    assert.equal(toolStarted, true, "The first approval should reach the MCP server before competing session requests.");
+    const resumed = await postTo(fixture.isolated, "/v1/agent/resume", { sessionId: pending.sessionId });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 400, resumedBody);
+    assert.match(resumedBody, /already being processed/);
     const second = await submitApproval();
     const secondBody = await second.text();
     assert.equal(second.status, 400, secondBody);
@@ -827,8 +831,9 @@ test("host command mode uses an argument vector and does not forward provider se
 });
 
 
-test("pending MCP approval survives an Agent Runtime restart and can be resumed", async () => {
-  const fixture = await startMcpApprovalFixture("resume after restart");
+test("pending dynamic MCP aliases survive an Agent Runtime restart and can be approved", async () => {
+  const dynamicAlias = createMcpToolAlias("mock", "write_note");
+  const fixture = await startMcpApprovalFixture("resume after restart", false, dynamicAlias);
   let active = fixture.isolated;
   const stopProcessWithoutDeletingWorkspace = async (handle: RuntimeHandle) => {
     if (handle.child.exitCode !== null) return;
@@ -857,6 +862,13 @@ test("pending MCP approval survives an Agent Runtime restart and can be resumed"
       OMDA_AGENT_MODEL_BASE_URL: fixture.model.baseUrl,
       OMDA_AGENT_MODEL_NAME: "mock-model",
     });
+
+    const resumed = await postTo(active, "/v1/agent/resume", { sessionId: pending.sessionId });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 200, resumedBody + "\\n" + active.stderr);
+    const restoredPending = JSON.parse(resumedBody) as { status: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(restoredPending.status, "approval_required");
+    assert.equal(restoredPending.pending[0].tool, "mock / write_note");
 
     // A workspace user can observe a session ID and plant the old predictable
     // temp filename. Session persistence must never follow that symlink.
