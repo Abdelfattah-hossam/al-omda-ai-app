@@ -23,6 +23,9 @@ test("streams assistant text incrementally and collects usage", async () => {
   assert.deepEqual(tokens, ["Hello ", "world"]);
   assert.equal(result.message.content, "Hello world");
   assert.equal((result.usage as any)?.completion_tokens, 3);
+  assert.ok(result.generationDurationMs >= 1);
+  assert.ok(typeof result.tokensPerSecond === "number");
+  assert.ok(result.tokensPerSecond! > 0);
 });
 
 test("reassembles streamed function tool calls", async () => {
@@ -51,4 +54,12 @@ test("accepts CRLF-delimited server-sent events", async () => {
 test("rejects streams with no event data", async () => {
   const response = new Response(": keep-alive\n\n", { status: 200 });
   await assert.rejects(() => consumeOpenAIChatStream(response), /no streaming events/);
+});
+
+test("does not invent throughput when the provider omits completion token usage", async () => {
+  const result = await consumeOpenAIChatStream(streamResponse([
+    { choices: [{ delta: { content: "No usage metadata" }, finish_reason: "stop" }] },
+  ]));
+  assert.equal(result.tokensPerSecond, null);
+  assert.ok(result.generationDurationMs >= 1);
 });
