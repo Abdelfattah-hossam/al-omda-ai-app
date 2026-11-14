@@ -14,7 +14,7 @@ export async function consumeOpenAIChatStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
-  let usage: Record<string, unknown> | null = null;
+  let usage: unknown = null;
   let finishReason: unknown;
   let firstTokenAt: number | null = null;
   let lastTokenAt: number | null = null;
@@ -73,9 +73,10 @@ export async function consumeOpenAIChatStream(
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
   if (finishReason) message.finish_reason = finishReason;
   const generationDurationMs = firstTokenAt !== null && lastTokenAt !== null ? lastTokenAt - firstTokenAt : 0;
-  const completionTokens = typeof usage?.completion_tokens === "number" ? usage.completion_tokens : null;
+  const usageRecord = usage && typeof usage === "object" ? usage as Record<string, unknown> : null;
+  const completionTokens = typeof usageRecord?.completion_tokens === "number" ? usageRecord.completion_tokens : null;
   const tokensPerSecond = completionTokens !== null && generationDurationMs > 0
     ? Math.round((completionTokens / generationDurationMs) * 1000 * 10) / 10
     : null;
-  return { message, usage, generationDurationMs, tokensPerSecond };
+  return { message, usage: usageRecord, generationDurationMs, tokensPerSecond };
 }
