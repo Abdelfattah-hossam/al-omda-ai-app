@@ -108,7 +108,7 @@ function safeArtifactName(value: string, fallback: string): string {
 }
 async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
   const primary = "https://esm.sh/pptxgenjs@3.12.0";
-  const fallback = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
+  const fallback = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/+esm";
   let module: any;
   try { module = await import(/* @vite-ignore */ primary); }
   catch {
