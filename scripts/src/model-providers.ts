@@ -20,6 +20,7 @@ export function parseModelProviderConfig(value: unknown, env: Record<string, str
   if (!Array.isArray(value)) throw new Error("Model provider configuration must be a JSON array.");
   if (value.length > 8) throw new Error("Configure no more than eight additional model providers.");
   const result: ModelProviderConfig[] = [];
+  const seenNames = new Set(["primary", "fallback"]);
   for (const [index, item] of value.entries()) {
     if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Invalid model provider entry at index " + index + ".");
     const entry = item as Record<string, unknown>;
@@ -30,6 +31,9 @@ export function parseModelProviderConfig(value: unknown, env: Record<string, str
     const priority = entry.priority === undefined ? 100 + index : entry.priority;
     const rawPurposes = entry.purposes === undefined ? ["all"] : entry.purposes;
     if (!/^[a-zA-Z0-9_-]{1,48}$/.test(name)) throw new Error("Invalid model provider name at index " + index + ".");
+    const nameKey = name.toLowerCase();
+    if (seenNames.has(nameKey)) throw new Error("Duplicate or reserved model provider name: " + name + ".");
+    seenNames.add(nameKey);
     if (!model || model.length > 200) throw new Error("Invalid model name for provider " + name + ".");
     if (apiKeyEnv && !/^[A-Z_][A-Z0-9_]{0,100}$/.test(apiKeyEnv)) throw new Error("Invalid API key environment variable name for provider " + name + ".");
     if (!Number.isInteger(priority) || (priority as number) < 1 || (priority as number) > 999) throw new Error("Provider priority for " + name + " must be an integer from 1 to 999.");
