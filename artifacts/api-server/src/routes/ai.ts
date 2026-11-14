@@ -62,7 +62,7 @@ type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
 
 function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
   try {
-    const source = text.trim().replace(/^\\s*\x60\x60\x60(?:json)?\\s*/i, "").replace(/\\s*\x60\x60\x60\\s*$/, "");
+    const source = text.trim().replace(/^\s*\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
@@ -1018,7 +1018,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Include useful speaker notes when they materially help the presenter. Do not add an unrequested cover, agenda, or conclusion slide if it conflicts with the requested structure.",
         "The presentation must contain 1 to 40 slides. Return valid JSON only, without Markdown fences or explanations.",
         "Original user request: " + latestCustomerRequest
-      ].join("\\n") }
+      ].join("\n") }
     ] : desktopAppRequest ? [
       ...messages,
       { role: "user", content: [
@@ -1161,7 +1161,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Preserve the original request and do not invent facts, statistics, or sources.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPresentation = parsePowerPointPresentation(answer.text);
