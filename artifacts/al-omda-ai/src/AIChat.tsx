@@ -4,6 +4,7 @@ import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Set
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
+import { parseModelProviderHealth, providerStatusLabel } from "./lib/model-provider-health";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -108,10 +109,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const agentConnectionCheckRef = useRef(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
+  useEffect(() => { agentConnectionCheckRef.current += 1; setAgentConnectionStatus(""); }, [agentRuntimeUrl, agentToken]);
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -509,39 +512,39 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const checkLocalAgentConnection = async () => {
+    const requestId = ++agentConnectionCheckRef.current;
+    const runtimeUrl = agentRuntimeUrl;
+    const token = agentToken.trim();
+    const isCurrent = () => requestId === agentConnectionCheckRef.current;
     setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
     try {
-      const origin = getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
+      const origin = getLocalAgentOrigin(runtimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
       const response = await fetch(origin + "/health", { cache: "no-store" });
+      if (!isCurrent()) return;
       const data = await response.json().catch(() => ({}));
+      if (!isCurrent()) return;
       if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
       const runtimeLabel = ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready");
-      if (!agentToken.trim()) {
+      if (!token) {
         setAgentConnectionStatus(runtimeLabel + (ar ? " · أدخل رمز الاتصال لفحص النماذج المحلية." : " · Enter the access token to check configured models."));
         return;
       }
       const modelResponse = await fetch(origin + "/v1/models/health", {
-        headers: { authorization: "Bearer " + agentToken.trim() },
+        headers: { authorization: "Bearer " + token },
         cache: "no-store",
       });
+      if (!isCurrent()) return;
       const modelData = await modelResponse.json().catch(() => ({}));
+      if (!isCurrent()) return;
       if (!modelResponse.ok || !Array.isArray(modelData.providers)) throw new Error(modelData.error || "Model provider diagnostics failed.");
-      const summaries = modelData.providers.map((provider: any) => {
-        const state = !provider.reachable
-          ? (provider.error === "timeout" ? (ar ? "انتهت المهلة" : "timeout") : (ar ? "غير متصل" : "offline"))
-          : provider.endpointAvailable && provider.modelAvailable === true
-            ? (ar ? "النموذج جاهز" : "model ready")
-            : provider.endpointAvailable && provider.modelAvailable === false
-              ? (ar ? "النموذج غير موجود" : "model not listed")
-              : provider.endpointAvailable
-                ? (ar ? "الخادم متصل" : "endpoint reachable")
-                : provider.error === "authentication_failed"
-                  ? (ar ? "مفتاح المصادقة مرفوض" : "authentication rejected")
-                  : (ar ? "واجهة النماذج غير متاحة" : "models endpoint unavailable");
-        return String(provider.name || "provider") + ": " + state + " (" + String(provider.latencyMs ?? 0) + "ms)";
+      const providers = parseModelProviderHealth(modelData.providers);
+      const summaries = providers.map((provider) => {
+        const state = providerStatusLabel(provider, ar);
+        return provider.name + ": " + state + " (" + provider.latencyMs + "ms)";
       });
       setAgentConnectionStatus(runtimeLabel + (summaries.length ? " · " + summaries.join(" · ") : (ar ? " · لا توجد نماذج مهيأة." : " · No model providers configured.")));
     } catch (err) {
+      if (!isCurrent()) return;
       setAgentConnectionStatus((ar ? "تعذر الفحص: " : "Check failed: ") + (err instanceof Error ? err.message : "connection failed"));
     }
   };
