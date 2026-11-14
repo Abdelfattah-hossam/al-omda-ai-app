@@ -1099,6 +1099,9 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
   const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
   const imageQueue: McpImageObservation[] = [];
   delete state.pendingToolCalls;
+  // Persist the approval claim before performing side effects. If the tool runs
+  // but the follow-up model request fails, the same approval cannot be replayed.
+  await saveAgentState(id, state);
   for (const call of pending) {
     if (!approved.has(call.id)) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
