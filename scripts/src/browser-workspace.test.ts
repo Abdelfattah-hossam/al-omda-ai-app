@@ -29,6 +29,20 @@ test("fails closed instead of skipping browser URLs beyond inspection limits", (
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", nested, policy), /maximum inspection depth/);
 });
 
+
+test("inspects payloads exactly at the documented depth and entry boundaries", () => {
+  const policy = normalizeBrowserWorkspacePolicy({ allowedHosts: ["docs.example.com"] });
+  assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { values: Array(100).fill("safe") }, policy));
+  const hundredFields = Object.fromEntries([
+    ["url", "https://docs.example.com/guide"],
+    ...Array.from({ length: 99 }, (_, index) => ["field" + index, "safe"]),
+  ]);
+  assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", hundredFields, policy));
+  let nested: Record<string, unknown> = { url: "https://docs.example.com/guide" };
+  for (let index = 0; index < 7; index++) nested = { nested };
+  assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", nested, policy));
+});
+
 test("requires at least one approved site before other browser actions", () => {
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { selector: "button" }, normalizeBrowserWorkspacePolicy({})), /until at least one site/);
   assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { selector: "button" }, normalizeBrowserWorkspacePolicy({ allowedHosts: ["docs.example.com"] })));
