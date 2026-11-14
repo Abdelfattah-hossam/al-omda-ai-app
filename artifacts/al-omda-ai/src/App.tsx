@@ -344,9 +344,11 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
+  { path:'/profile', key:'profile', icon:UserRound },
 ];
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
+  { path:'/ai', key:'aiChat', icon:Bot },
   { path:'/agents', key:'agents', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness },
   { path:'/history', key:'history', icon:History },
@@ -1778,10 +1780,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={location.split("?")[0] === "/ai" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
-      <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
+      <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">{isAr?'العمدة AI':'AL OMDA AI'}</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدك الذكي':'YOUR AI ASSISTANT'}</span></span></Link>
       <div className="sidebar-scroll">
       <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-      <div className="nav-caption">{isAr?'عام':'GENERAL'}</div><nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+      <div className="nav-caption">{isAr?'عام':'GENERAL'}</div><nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history','/profile'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
       <div className="nav-caption sidebar-group-caption">{isAr?'الأنظمة والأدوات':'SYSTEMS'}</div><nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
       <div className="nav-caption sidebar-group-caption">{isAr?'الأخيرة':'RECENTS'}</div><nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link"><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
       </div>
