@@ -481,6 +481,20 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     return { name: safePowerPointFileName(data.title) + ".pptx", url };
   };
 
+  const retryPowerPointExport = async (messageIndex: number) => {
+    const target = messages[messageIndex];
+    if (!target?.presentationData) return;
+    try {
+      const attachment = await createPowerPointAttachment(target.presentationData);
+      const updated = messages.map((item, index) => index === messageIndex ? { ...item, attachment } : item);
+      setMessages(updated);
+      await saveHistory(updated);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : (ar ? "تعذر إنشاء ملف PowerPoint." : "PowerPoint export failed."));
+    }
+  };
+
+
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
@@ -967,10 +981,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <MessageContent content={message.content} />
             {message.agentPending && <div style={{display:"grid",gap:8,width:"100%",padding:12,border:"1px solid var(--border,#343a44)",borderRadius:10}}><strong>{ar ? "موافقة مطلوبة (" + message.agentPending.calls.length + ")" : "Approval required (" + message.agentPending.calls.length + ")"}</strong>{message.agentPending.calls.map((call)=><div key={call.id} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{call.tool}</b><pre style={{whiteSpace:"pre-wrap",margin:"4px 0",color:"var(--muted,#9aa3af)"}}>{JSON.stringify(call.arguments,null,2)}</pre></div>)}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="button button-primary button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,true)}>{ar ? "موافقة وتنفيذ" : "Approve & execute"}</button><button type="button" className="button button-quiet button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,false)}>{ar ? "رفض الإجراءات" : "Deny actions"}</button></div></div>}
             {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId)} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
-            {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
-              <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.presentationData?(ar?"تحميل عرض PowerPoint":"Download PowerPoint"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
-              <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>
-            </div>}
+            {(message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.appData)) || message.presentationData ? <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
+              {message.attachment ? <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.presentationData?(ar?"تحميل عرض PowerPoint":"Download PowerPoint"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button> : message.presentationData ? <button type="button" className="button button-primary button-small" onClick={()=>void retryPowerPointExport(index)}><Presentation size={15}/>{ar?"إعادة محاولة إنشاء ملف PPTX":"Retry PPTX export"}</button> : null}
+              {message.presentationData && <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة العرض":"Preview presentation")}</button>}
+              {message.attachment && !message.presentationData && <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>}
+            </div> : null}
             {message.appData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{message.appData.title}</div><iframe title={message.appData.title} srcDoc={message.appData.html} sandbox="allow-scripts" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:360,border:0,background:"#fff"}} /></div>}{message.appData && <small style={{display:"block",width:"100%",color:"var(--muted,#9aa3af)",fontSize:12}}>{ar?"على iPhone: اضغط تحميل / فتح التطبيق، ثم من زر المشاركة اختر حفظ في الملفات.":"On iPhone: tap Download / open app, then use Share → Save to Files."}</small>}
             {message.spreadsheetData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}>
               <strong style={{display:"block",marginBottom:10}}>{message.spreadsheetData.title}</strong>
