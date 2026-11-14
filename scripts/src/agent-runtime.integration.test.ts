@@ -685,3 +685,36 @@ test("denying an MCP tool approval never invokes the configured MCP server tool"
     await rm(fixture.workspace, { recursive: true, force: true });
   }
 });
+
+
+test("concurrent approval submissions cannot execute the same pending MCP action twice", async () => {
+  const fixture = await startMcpApprovalFixture("execute exactly once");
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+
+    const submitApproval = () => postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const [first, second] = await Promise.all([submitApproval(), submitApproval()]);
+    const responses = await Promise.all([first.text(), second.text()]);
+    const successful = [first, second].filter((response) => response.status === 200);
+    const rejected = [first, second].filter((response) => response.status === 400);
+    assert.equal(successful.length, 1, responses.join("\n"));
+    assert.equal(rejected.length, 1, responses.join("\n"));
+    const successIndex = first.status === 200 ? 0 : 1;
+    assert.equal((JSON.parse(responses[successIndex]) as { status: string }).status, "completed");
+    assert.match(responses[1 - successIndex], /already processing an approval/);
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
