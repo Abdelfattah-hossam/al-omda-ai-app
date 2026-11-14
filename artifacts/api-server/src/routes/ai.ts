@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { isPowerPointRequestText } from "../lib/powerpoint-intent";
 import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import {
   readSupabaseJson,
@@ -50,11 +51,7 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
 }
 
 function isPowerPointRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  const namesPowerPoint = /power\s*point|powerpoint|pptx|عرض\s*(?:تقديمي|بوربوينت)|شرائح\s*(?:عرض|تقديمية)/i.test(request);
-  const asksToCreate = /(?:عايز|عاوز|محتاج|اريد|أريد|أنشئ|انشئ|اعمل|أعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(request);
-  return namesPowerPoint && asksToCreate;
+  return isPowerPointRequestText(getLatestUserRequest(messages));
 }
 
 type PowerPointSlide = { title: string; body: string; bullets: string[]; speakerNotes: string };
