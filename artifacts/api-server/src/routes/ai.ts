@@ -59,7 +59,7 @@ type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
 
 function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
   try {
-    const source = text.trim().replace(/^\\s*\\x60\\x60\\x60(?:json)?\\s*/i, "").replace(/\\s*\\x60\\x60\\x60\\s*$/, "");
+    const source = text.trim().replace(/^\s*\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
