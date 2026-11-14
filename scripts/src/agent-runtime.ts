@@ -1156,7 +1156,13 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
         const headers = new Headers();
         if (provider.key) headers.set("authorization", "Bearer " + provider.key);
         const response = await fetch(provider.base.replace(/\/+$/, "") + "/models", { method: "GET", headers, redirect: "manual", signal: AbortSignal.timeout(5000) });
-        const payload = response.ok ? await response.json().catch(() => null) : null;
+        let payload: unknown = null;
+        if (response.ok) {
+          try { payload = await response.json(); }
+          catch (error) {
+            if (!(error instanceof SyntaxError)) throw error;
+          }
+        }
         const inspection = inspectOpenAIModelList(payload, provider.model);
         return {
           name: provider.name,
