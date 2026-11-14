@@ -1162,11 +1162,13 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
           name: provider.name,
           model: provider.model,
           kind: isLocalModelProvider(provider.base) ? "local" : "remote",
-          reachable: response.ok,
+          reachable: true,
+          endpointAvailable: response.ok,
           status: response.status,
           latencyMs: Date.now() - started,
           modelAvailable: inspection.modelAvailable,
           discoveredModels: inspection.discoveredModels,
+          ...(!response.ok ? { error: response.status === 401 || response.status === 403 ? "authentication_failed" : "endpoint_rejected" } : {}),
         };
       } catch (error) {
         return {
