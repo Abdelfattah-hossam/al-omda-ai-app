@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { parsePowerPointPresentation } from "../lib/powerpoint";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -144,27 +145,13 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
       saved.spreadsheetData = { title: sheet.title, columns: sheet.columns, rows: sheet.rows };
     }
     if (item.presentationData !== undefined) {
-      const presentation = item.presentationData;
-      if (!presentation || typeof presentation !== "object" || typeof presentation.title !== "string" || !presentation.title.trim() || presentation.title.length > 180 ||
-        !Array.isArray(presentation.slides) || presentation.slides.length < 1 || presentation.slides.length > 40 ||
-        presentation.slides.some((slide: unknown) => {
-          if (!slide || typeof slide !== "object") return true;
-          const value = slide as Record<string, unknown>;
-          return typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 ||
-            typeof value.body !== "string" || value.body.length > 3000 ||
-            !Array.isArray(value.bullets) || value.bullets.length > 10 || value.bullets.some((bullet) => typeof bullet !== "string" || !bullet.trim() || bullet.length > 500) ||
-            typeof value.speakerNotes !== "string" || value.speakerNotes.length > 2000;
-        })) return null;
+      const presentation = parsePowerPointPresentation(JSON.stringify(item.presentationData));
+      if (!presentation) return null;
       const serializedPresentation = JSON.stringify(presentation);
       if (serializedPresentation.length > 120000) return null;
       total += serializedPresentation.length;
       if (total > 200000) return null;
-      saved.presentationData = {
-        title: presentation.title.trim(),
-        slides: presentation.slides.map((slide: { title: string; body: string; bullets: string[]; speakerNotes: string }) => ({
-          title: slide.title.trim(), body: slide.body, bullets: [...slide.bullets], speakerNotes: slide.speakerNotes,
-        })),
-      };
+      saved.presentationData = presentation;
     }
     messages.push(saved);
   }
