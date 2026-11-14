@@ -8,7 +8,8 @@ import { detectProjectSpecialty } from "./lib/project-intent";
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
+type PowerPointData = { title: string; slides: Array<{ title: string; body: string; bullets: string[]; speakerNotes: string }> };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PowerPointData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -177,6 +178,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const withFiles = await Promise.all(restored.map(async (item) => {
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
+        if (item.presentationData) return { ...item, attachment: await createPowerPointAttachment(item.presentationData).catch(() => undefined) };
         if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
         return item;
       }));
@@ -235,7 +237,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, appData, taskId, taskTitle }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, presentationData, appData, taskId, taskTitle }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
@@ -473,6 +475,65 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     return { name: safeName + ".xlsx", url };
   };
 
+  const createPowerPointAttachment = async (data: PowerPointData) => {
+    const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
+    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
+    let lib: any;
+    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
+    catch {
+      try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+      catch { throw new Error(ar ? "تعذر تحميل مولّد PowerPoint. لم يتم إنشاء ملف مزيف؛ تحقق من الاتصال ثم أعد المحاولة." : "The PowerPoint generator could not be loaded. No fake file was created; check your connection and retry."); }
+    }
+    const PptxGenJS = (lib as any).default ?? lib;
+    const pptx = new PptxGenJS();
+    pptx.layout = "LAYOUT_WIDE";
+    pptx.author = "AL OMDA AI";
+    pptx.subject = data.title;
+    pptx.title = data.title;
+    pptx.lang = ar ? "ar-SA" : "en-US";
+    pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: ar ? "ar-SA" : "en-US" };
+    for (const item of data.slides) {
+      const slide = pptx.addSlide();
+      slide.background = { color: "FFFFFF" };
+      slide.addText(item.title, {
+        x: 0.65, y: 0.45, w: 12.05, h: 0.8, fontFace: "Arial", fontSize: 28,
+        bold: true, color: "17243A", align: ar ? "right" : "left", rtlMode: ar,
+        margin: 0.04, breakLine: false,
+      });
+      let bodyY = 1.55;
+      if (item.body) {
+        slide.addText(item.body, {
+          x: 0.8, y: bodyY, w: 11.7, h: item.bullets.length ? 1.25 : 4.9,
+          fontFace: "Arial", fontSize: 19, color: "354052", align: ar ? "right" : "left",
+          rtlMode: ar, valign: "mid", breakLine: false, paraSpaceAfterPt: 12, fit: "shrink",
+        });
+        bodyY += item.bullets.length ? 1.55 : 0;
+      }
+      if (item.bullets.length) {
+        const runs = item.bullets.map((bullet: string, index: number) => ({
+          text: bullet,
+          options: { bullet: { indent: 20 }, hanging: 4, breakLine: index < item.bullets.length - 1 },
+        }));
+        slide.addText(runs, {
+          x: 0.9, y: bodyY, w: 11.5, h: Math.max(2.2, 4.9 - (bodyY - 1.55)),
+          fontFace: "Arial", fontSize: 19, color: "253247", align: ar ? "right" : "left",
+          rtlMode: ar, valign: "mid", paraSpaceAfterPt: 16, breakLine: false, fit: "shrink",
+        });
+      }
+      if (item.speakerNotes && typeof slide.addNotes === "function") slide.addNotes(item.speakerNotes);
+      slide.addText(String(pptx._slides.length), {
+        x: 12.1, y: 7.08, w: 0.5, h: 0.2, fontFace: "Arial", fontSize: 9,
+        color: "7B8493", align: "center", margin: 0,
+      });
+    }
+    const output = await pptx.write({ outputType: "blob" });
+    const file = output instanceof Blob ? output : new Blob([output], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+    if (file.size < 1500) throw new Error(ar ? "ملف PowerPoint الناتج غير مكتمل." : "The generated PowerPoint file is incomplete.");
+    const url = URL.createObjectURL(file);
+    const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
+    return { name: safeName + ".pptx", url };
+  };
+
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
@@ -601,6 +662,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
+      } else if (data.presentation && typeof data.presentation.title === "string" && Array.isArray(data.presentation.slides)) {
+        const attachment = await createPowerPointAttachment(data.presentation);
+        assistantMessage = { ...assistantMessage, attachment, presentationData: data.presentation };
       }
       // Detect a project from the current message AND the recent user context.
       // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
@@ -948,8 +1012,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <MessageContent content={message.content} />
             {message.agentPending && <div style={{display:"grid",gap:8,width:"100%",padding:12,border:"1px solid var(--border,#343a44)",borderRadius:10}}><strong>{ar ? "موافقة مطلوبة (" + message.agentPending.calls.length + ")" : "Approval required (" + message.agentPending.calls.length + ")"}</strong>{message.agentPending.calls.map((call)=><div key={call.id} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{call.tool}</b><pre style={{whiteSpace:"pre-wrap",margin:"4px 0",color:"var(--muted,#9aa3af)"}}>{JSON.stringify(call.arguments,null,2)}</pre></div>)}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="button button-primary button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,true)}>{ar ? "موافقة وتنفيذ" : "Approve & execute"}</button><button type="button" className="button button-quiet button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,false)}>{ar ? "رفض الإجراءات" : "Deny actions"}</button></div></div>}
             {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId)} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
-            {message.attachment && (message.documentData || message.spreadsheetData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
-              <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
+            {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
+              <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.presentationData?(ar?"تحميل عرض PowerPoint":"Download PowerPoint"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
               <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>
             </div>}
             {message.appData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{message.appData.title}</div><iframe title={message.appData.title} srcDoc={message.appData.html} sandbox="allow-scripts" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:360,border:0,background:"#fff"}} /></div>}{message.appData && <small style={{display:"block",width:"100%",color:"var(--muted,#9aa3af)",fontSize:12}}>{ar?"على iPhone: اضغط تحميل / فتح التطبيق، ثم من زر المشاركة اختر حفظ في الملفات.":"On iPhone: tap Download / open app, then use Share → Save to Files."}</small>}
@@ -958,6 +1022,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{message.spreadsheetData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
               <tbody>{message.spreadsheetData.rows.map((row,i)=><tr key={i}>{message.spreadsheetData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{row[j] ?? ""}</td>)}</tr>)}</tbody></table>
             </div>}
+            {message.presentationData && previewingDocument===index && <div style={{width:"100%",display:"grid",gap:12,border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,slideIndex)=><section key={slideIndex} style={{aspectRatio:"16 / 9",minHeight:180,padding:18,border:"1px solid var(--border,#59616c)",borderRadius:8,background:"#fff",color:"#17243a",display:"flex",flexDirection:"column",justifyContent:"center",gap:10,direction:ar?"rtl":"ltr"}}><small style={{color:"#8b7650"}}>{slideIndex+1} / {message.presentationData!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,bulletIndex)=><li key={bulletIndex}>{bullet}</li>)}</ul>}</section>)}</div>}
             {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
@@ -997,7 +1062,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
                 <div className="ai-chat-menu-caption">{ar ? "برامج الأوفيس الكاملة" : "Office tools"}</div>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("word")}><FileText size={16}/><span>{ar ? "مستند Word (مع زر تحميل)" : "Word document"}</span></button>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("excel")}><Sheet size={16}/><span>{ar ? "جدول Excel (مع زر تحميل)" : "Excel workbook"}</span></button>
-                <button type="button" className="ai-plus-option" onClick={()=>activateMode("ppt")}><Presentation size={16}/><span>{ar ? "عرض PowerPoint (محتوى الشرائح)" : "PowerPoint slide content"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>activateMode("ppt")}><Presentation size={16}/><span>{ar ? "عرض PowerPoint (ملف قابل للتحميل)" : "PowerPoint presentation (.pptx)"}</span></button>
                 <div className="ai-chat-menu-divider"/>
                 <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);openCodeCanvas();}}><Code2 size={16}/><span>{ar ? "محرر ومعاين الأكواد (Canvas)" : "Code editor & preview"}</span></button>
               </div>}
