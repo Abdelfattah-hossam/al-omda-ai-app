@@ -21,3 +21,31 @@ test("accepts CSP frame-ancestors as frame protection", () => {
   assert.ok(!result.missing.includes("frame-protection"));
   assert.equal(result.missing.length, 0);
 });
+
+test("flags weak header values and risky CSP directives", () => {
+  const result = analyzeSecurityHeaders({
+    "strict-transport-security": "max-age=60",
+    "x-content-type-options": "off",
+    "x-frame-options": "ALLOW-FROM https://example.test",
+    "content-security-policy": "default-src *; script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "referrer-policy": "unsafe-url",
+  });
+  assert.ok(result.findings.some((item) => item.header === "strict-transport-security" && item.severity === "medium"));
+  assert.ok(result.findings.some((item) => item.header === "x-content-type-options"));
+  assert.ok(result.findings.some((item) => item.header === "x-frame-options"));
+  assert.ok(result.findings.some((item) => item.header === "content-security-policy" && item.severity === "high"));
+  assert.ok(result.findings.some((item) => item.header === "referrer-policy" && item.severity === "low"));
+  assert.ok(result.missing.includes("x-content-type-options"));
+  assert.ok(result.missing.includes("frame-protection"));
+});
+
+test("accepts valid HSTS duration and valid frame protection", () => {
+  const result = analyzeSecurityHeaders({
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+  });
+  assert.ok(!result.missing.includes("strict-transport-security"));
+  assert.ok(!result.missing.includes("frame-protection"));
+  assert.equal(result.findings.length, 0);
+});
