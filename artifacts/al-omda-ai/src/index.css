@@ -3065,3 +3065,318 @@ body:has(.ai-chat-page){
   background-image:none!important;box-shadow:none!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
 }
+
+
+/* AL OMDA reference design — gold/obsidian shell.
+   Deliberately scoped away from the live AI chat page; AIChat.tsx and its chat
+   workspace rules remain untouched. Solid surfaces are retained (no glass UI). */
+@property --omda-reference-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes omda-reference-ambient {
+  0%,100% { transform:translate3d(0,0,0) scale(1); filter:hue-rotate(-5deg); }
+  50% { transform:translate3d(-1.2%,1.4%,0) scale(1.035); filter:hue-rotate(8deg); }
+}
+@keyframes omda-reference-stars {
+  from { background-position:0 0,120px 170px,260px 60px; }
+  to { background-position:-180px -260px,300px -190px,80px -340px; }
+}
+@keyframes omda-reference-border {
+  to { --omda-reference-angle:360deg; }
+}
+@keyframes omda-reference-glow {
+  0%,100% { box-shadow:0 5px 18px rgba(224,181,101,.14),0 0 0 0 rgba(224,181,101,0); }
+  50% { box-shadow:0 8px 28px rgba(224,181,101,.3),0 0 0 4px rgba(224,181,101,.08); }
+}
+@keyframes omda-reference-sheen {
+  0% { transform:translateX(160%) skewX(-20deg); opacity:0; }
+  18% { opacity:.5; }
+  55%,100% { transform:translateX(-190%) skewX(-20deg); opacity:0; }
+}
+@keyframes omda-reference-enter {
+  from { opacity:0; transform:translateY(12px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes omda-reference-edge {
+  0%,100% { border-color:rgba(224,181,101,.17); }
+  50% { border-color:rgba(224,181,101,.42); }
+}
+
+.app-shell:not([data-chat-active="true"]) {
+  --omda-design-bg:#08080a;
+  --omda-design-panel:#151419;
+  --omda-design-panel-raised:#1b191d;
+  --omda-design-line:rgba(224,181,101,.2);
+  --omda-design-text:#f6f1e7;
+  --omda-design-muted:#a39b88;
+  --omda-design-gold:#e0b565;
+  --omda-design-gold-light:#f6dca0;
+  --profile-accent:#e0b565;
+  --omda-reference-accent:#e0b565;
+  --omda-reference-surface:#151419;
+  --omda-reference-soft:#211d17;
+  --omda-reference-line:rgba(224,181,101,.2);
+  --background:240 11% 3%;
+  --foreground:42 38% 94%;
+  --border:39 35% 22%;
+  --card:240 8% 9%;
+  --card-foreground:42 38% 94%;
+  --primary:39 64% 64%;
+  --primary-foreground:240 12% 6%;
+  --ring:39 64% 64%;
+  --muted-foreground:39 12% 62%;
+  position:relative;
+  isolation:isolate;
+  color:var(--omda-design-text);
+  background:var(--omda-design-bg)!important;
+}
+.app-shell:not([data-chat-active="true"])::before,
+.app-shell:not([data-chat-active="true"])::after {
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+}
+.app-shell:not([data-chat-active="true"])::before {
+  background:
+    radial-gradient(650px 420px at 16% 4%,rgba(224,181,101,.17),transparent 72%),
+    radial-gradient(560px 390px at 88% 34%,rgba(190,112,72,.11),transparent 72%),
+    radial-gradient(620px 440px at 52% 100%,rgba(246,220,160,.075),transparent 72%);
+  background-size:150% 150%;
+  animation:omda-reference-ambient 20s ease-in-out infinite;
+}
+.app-shell:not([data-chat-active="true"])::after {
+  opacity:.42;
+  background-image:
+    radial-gradient(circle at 18% 28%,rgba(246,220,160,.75) 0 1px,transparent 2px),
+    radial-gradient(circle at 72% 76%,rgba(224,181,101,.6) 0 1px,transparent 2px),
+    radial-gradient(circle at 91% 17%,rgba(246,220,160,.55) 0 1px,transparent 2px);
+  background-size:310px 310px,370px 370px,430px 430px;
+  animation:omda-reference-stars 58s linear infinite;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar {
+  background:#111014!important;
+  border-color:var(--omda-design-line)!important;
+  box-shadow:12px 0 44px rgba(0,0,0,.3)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.app-shell:not([data-chat-active="true"]) .topbar {
+  background:#0e0d10!important;
+  border-color:var(--omda-design-line)!important;
+}
+.app-shell:not([data-chat-active="true"]) .brand-mark {
+  color:#1a1306!important;
+  border:1px solid rgba(246,220,160,.72)!important;
+  background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
+  box-shadow:0 0 20px rgba(224,181,101,.24),inset 0 1px 0 rgba(255,255,255,.42)!important;
+  animation:omda-reference-glow 3.4s ease-in-out infinite;
+}
+.app-shell:not([data-chat-active="true"]) .brand-name { color:var(--omda-design-text)!important; }
+.app-shell:not([data-chat-active="true"]) .brand-sub,
+.app-shell:not([data-chat-active="true"]) .nav-caption,
+.app-shell:not([data-chat-active="true"]) .crumb,
+.app-shell:not([data-chat-active="true"]) .page-subtitle,
+.app-shell:not([data-chat-active="true"]) .stat-label,
+.app-shell:not([data-chat-active="true"]) .stat-foot {
+  color:var(--omda-design-muted)!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link {
+  color:#c0b8a8!important;
+  border-color:transparent!important;
+  transition:background .24s,color .24s,border-color .24s,transform .24s,box-shadow .24s;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link:hover {
+  color:var(--omda-design-gold-light)!important;
+  background:rgba(224,181,101,.08)!important;
+  border-color:rgba(224,181,101,.15)!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link.active {
+  color:var(--omda-design-gold-light)!important;
+  background:rgba(224,181,101,.12)!important;
+  border:1px solid rgba(224,181,101,.28)!important;
+  box-shadow:inset -2px 0 var(--omda-design-gold),0 0 22px rgba(224,181,101,.08)!important;
+}
+.app-shell:not([data-chat-active="true"]) .control-note {
+  background:#19171a!important;
+  border-color:var(--omda-design-line)!important;
+  box-shadow:inset 0 1px 0 rgba(224,181,101,.08)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
+  .agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,
+  .profile-account-profile-card,.profile-setting-card,.profile-features-card,
+  .specialty-row,.notice-bar,.task-detail-card,.workbench-step,
+  .ai-conversations-panel,.ai-agent-runtime-panel,.ai-voice-panel,.ai-composer,
+  .profile-settings-side>*,.stats-grid>*,.dashboard-grid>*,.market-grid>*
+),
+.app-shell:not([data-chat-active="true"]) [class*="card"]:not(button),
+.app-shell:not([data-chat-active="true"]) [class*="tile"]:not(button),
+.app-shell:not([data-chat-active="true"]) [class*="surface"]:not(button) {
+  color:var(--omda-design-text);
+  background:linear-gradient(145deg,#1b191d 0%,#111014 100%)!important;
+  background-color:#151419!important;
+  background-image:linear-gradient(145deg,#1b191d 0%,#111014 100%)!important;
+  border:1px solid transparent!important;
+  background-origin:border-box!important;
+  background-clip:padding-box,border-box!important;
+  border-color:rgba(224,181,101,.2)!important;
+  box-shadow:0 14px 38px rgba(0,0,0,.27),inset 0 1px 0 rgba(246,220,160,.07)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .panel,.dashboard-hero,.stat-card,.agent-card,.request-card,.plan-card,
+  .history-item,.profile-main-card,.profile-setting-card,.profile-features-card
+) {
+  position:relative;
+  background:
+    linear-gradient(145deg,#1b191d 0%,#111014 100%) padding-box,
+    conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.12),rgba(224,181,101,.58),rgba(255,159,107,.28),rgba(246,220,160,.55),rgba(224,181,101,.12)) border-box!important;
+  animation:omda-reference-border 11s linear infinite;
+}
+.app-shell:not([data-chat-active="true"]) :is(.panel,.stat-card,.agent-card,.request-card,.plan-card,.history-item):hover {
+  transform:translateY(-3px);
+  border-color:rgba(224,181,101,.48)!important;
+  box-shadow:0 20px 46px rgba(0,0,0,.34),0 0 22px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.1)!important;
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-hero {
+  background:
+    radial-gradient(ellipse at 90% 0%,rgba(224,181,101,.2),transparent 55%),
+    linear-gradient(115deg,#211d18 0%,#171519 60%,#121115 100%) padding-box,
+    conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.18),rgba(224,181,101,.62),rgba(255,159,107,.3),rgba(246,220,160,.58),rgba(224,181,101,.18)) border-box!important;
+  overflow:hidden;
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-hero:after {
+  border-color:rgba(224,181,101,.2)!important;
+  box-shadow:0 0 0 25px rgba(224,181,101,.035),0 0 0 55px rgba(224,181,101,.025)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.page-title,.section-title,.section-head h2,.profile-section-heading h2,.hero-copy h2) {
+  color:var(--omda-design-text)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.eyebrow,.section-meta,.crumb,.task-main small,.agent-tag,.specialty-row small) {
+  color:var(--omda-design-muted)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.stat-value,.hero-side,.task-icon,.specialty-icon,.agent-symbol,.profile-avatar,.status-chip) {
+  color:var(--omda-design-gold-light)!important;
+}
+.app-shell:not([data-chat-active="true"]) .stat-value {
+  background:linear-gradient(110deg,var(--omda-design-gold),var(--omda-design-gold-light),var(--omda-design-gold));
+  background-size:200% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:omda-reference-stars 8s linear infinite;
+}
+.app-shell:not([data-chat-active="true"]) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar) {
+  background:linear-gradient(145deg,#30271a,#1b1917)!important;
+  border:1px solid rgba(224,181,101,.25)!important;
+}
+.app-shell:not([data-chat-active="true"]) .button {
+  position:relative;
+  overflow:hidden;
+  border-radius:999px!important;
+  transition:transform .18s ease,box-shadow .24s ease,background .24s ease,border-color .24s ease!important;
+}
+.app-shell:not([data-chat-active="true"]) .button::after {
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:0;
+  width:42%;
+  pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.52),transparent);
+  animation:omda-reference-sheen 4.2s ease-in-out infinite;
+}
+.app-shell:not([data-chat-active="true"]) .button-primary {
+  color:#1a1306!important;
+  background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
+  border:1px solid rgba(246,220,160,.72)!important;
+  box-shadow:0 5px 20px rgba(224,181,101,.18)!important;
+  animation:omda-reference-glow 3s ease-in-out infinite;
+}
+.app-shell:not([data-chat-active="true"]) .button-primary:hover {
+  color:#100d07!important;
+  background:linear-gradient(135deg,#ffe7b2,#e6b95e)!important;
+  box-shadow:0 9px 30px rgba(224,181,101,.34)!important;
+}
+.app-shell:not([data-chat-active="true"]) .button-quiet {
+  color:var(--omda-design-text)!important;
+  background:#1b191d!important;
+  border-color:var(--omda-design-line)!important;
+}
+.app-shell:not([data-chat-active="true"]) .button-quiet:hover {
+  color:var(--omda-design-gold-light)!important;
+  border-color:rgba(224,181,101,.5)!important;
+  background:#211d18!important;
+}
+.app-shell:not([data-chat-active="true"]) .button-danger {
+  color:#f2a29a!important;
+  background:rgba(116,39,35,.22)!important;
+  border-color:rgba(239,120,108,.32)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select) {
+  color:var(--omda-design-text);
+  background:#0e0d10!important;
+  border-color:rgba(224,181,101,.2)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select)::placeholder {
+  color:#827968!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select):focus {
+  border-color:var(--omda-design-gold)!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.13),0 0 18px rgba(224,181,101,.08)!important;
+}
+.app-shell:not([data-chat-active="true"]) .status-chip {
+  background:rgba(224,181,101,.1)!important;
+  border-color:rgba(224,181,101,.28)!important;
+}
+.app-shell:not([data-chat-active="true"]) .status-chip.completed {
+  color:#8dd2b0!important;
+  background:rgba(52,211,153,.1)!important;
+  border-color:rgba(52,211,153,.3)!important;
+}
+.app-shell:not([data-chat-active="true"]) .status-chip.stopped {
+  color:#f19b92!important;
+  background:rgba(239,68,68,.1)!important;
+  border-color:rgba(239,68,68,.28)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note) {
+  animation:omda-reference-edge 5.5s ease-in-out infinite;
+}
+.app-shell:not([data-chat-active="true"]) .route-page-transition,
+.app-shell:not([data-chat-active="true"]) .page-enter {
+  animation:omda-reference-enter .48s cubic-bezier(.2,.7,.2,1) both;
+}
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid,.profile-settings-layout)>* {
+  animation:omda-reference-enter .55s cubic-bezier(.2,.7,.2,1) both;
+}
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(2) { animation-delay:.07s; }
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(3) { animation-delay:.14s; }
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(4) { animation-delay:.21s; }
+.app-shell:not([data-chat-active="true"]) .sidebar-bottom .control-note { animation:omda-reference-edge 5.5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell:not([data-chat-active="true"])::before,
+  .app-shell:not([data-chat-active="true"])::after,
+  .app-shell:not([data-chat-active="true"]) *,
+  .app-shell:not([data-chat-active="true"]) *::before,
+  .app-shell:not([data-chat-active="true"]) *::after {
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
+}
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::before,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::after,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::before,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::after {
+  animation:none!important;
+  transition:none!important;
+}
