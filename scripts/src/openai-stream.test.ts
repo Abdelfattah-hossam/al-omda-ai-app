@@ -5,10 +5,13 @@ import { consumeOpenAIChatStream } from "./openai-stream.js";
 function streamResponse(events: unknown[]): Response {
   const body = events.map((event) => "data: " + JSON.stringify(event) + "\n\n").join("") + "data: [DONE]\n\n";
   return new Response(new ReadableStream({
-    start(controller) {
-      const bytes = new TextEncoder().encode(body);
-      controller.enqueue(bytes.slice(0, Math.floor(bytes.length / 2)));
-      controller.enqueue(bytes.slice(Math.floor(bytes.length / 2)));
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for (const event of events) {
+        controller.enqueue(encoder.encode("data: " + JSON.stringify(event) + "\n\n"));
+        await new Promise((resolve) => setTimeout(resolve, 3));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
     },
   }), { status: 200, headers: { "content-type": "text/event-stream" } });
@@ -23,6 +26,9 @@ test("streams assistant text incrementally and collects usage", async () => {
   assert.deepEqual(tokens, ["Hello ", "world"]);
   assert.equal(result.message.content, "Hello world");
   assert.equal((result.usage as any)?.completion_tokens, 3);
+  assert.ok(result.generationDurationMs >= 1);
+  assert.ok(typeof result.tokensPerSecond === "number");
+  assert.ok(result.tokensPerSecond! > 0);
 });
 
 test("reassembles streamed function tool calls", async () => {
@@ -51,4 +57,12 @@ test("accepts CRLF-delimited server-sent events", async () => {
 test("rejects streams with no event data", async () => {
   const response = new Response(": keep-alive\n\n", { status: 200 });
   await assert.rejects(() => consumeOpenAIChatStream(response), /no streaming events/);
+});
+
+test("does not invent throughput when the provider omits completion token usage", async () => {
+  const result = await consumeOpenAIChatStream(streamResponse([
+    { choices: [{ delta: { content: "No usage metadata" }, finish_reason: "stop" }] },
+  ]));
+  assert.equal(result.tokensPerSecond, null);
+  assert.equal(result.generationDurationMs, 0);
 });
