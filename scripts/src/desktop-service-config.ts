@@ -50,9 +50,17 @@ export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: 
     "  if ($_ -match '^([A-Z0-9_]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }",
     "}",
     "$logDirectory = Split-Path -Parent $logFile",
-    "New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null",
+    "if ($logDirectory) { New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null }",
     "Set-Location -LiteralPath " + psQuote(options.repoRoot),
-    "& pnpm --filter @workspace/scripts agent:supervisor *>> $logFile",
+    "& pnpm --filter @workspace/scripts agent:supervisor 2>&1 | ForEach-Object {",
+    "  if ((Test-Path -LiteralPath $logFile) -and (Get-Item -LiteralPath $logFile).Length -ge 5MB) {",
+    "    $archive = $logFile + '.' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.bak'",
+    "    Move-Item -LiteralPath $logFile -Destination $archive -Force",
+    "    $archives = @(Get-ChildItem -Path ($logFile + '.*.bak') -File | Sort-Object LastWriteTime -Descending)",
+    "    if ($archives.Count -gt 3) { $archives | Select-Object -Skip 3 | Remove-Item -Force }",
+    "  }",
+    "  Add-Content -LiteralPath $logFile -Value $_",
+    "}",
     "exit $LASTEXITCODE", ""
   ].join("\n");
 }
