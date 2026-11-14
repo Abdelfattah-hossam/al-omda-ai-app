@@ -19,6 +19,10 @@ type Usage = {
   providers?: { gemini: boolean; openrouter: boolean };
 };
 
+function getPresentationDirection(data?: PowerPointData): "rtl" | "ltr" {
+  return data && isPowerPointRtl(data) ? "rtl" : "ltr";
+}
+
 function MessageContent({ content }: { content: string }) {
   const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
   const pattern = /```([a-zA-Z0-9_+#.-]*)\n([\s\S]*?)```/g;
@@ -57,6 +61,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [historyLoading, setHistoryLoading] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState("");
+  const activeConversationIdRef = useRef(activeConversationId);
+  activeConversationIdRef.current = activeConversationId;
   const [showConversationList, setShowConversationList] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [pinnedConversationIds, setPinnedConversationIds] = useState<string[]>([]);
@@ -502,13 +508,20 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const retryPowerPointExport = async (messageIndex: number) => {
-    const target = messages[messageIndex];
-    if (!target?.presentationData) return;
+    const conversationId = activeConversationIdRef.current;
+    const target = messagesRef.current[messageIndex];
+    if (!conversationId || !target?.presentationData) return;
     try {
       const attachment = await createPowerPointAttachment(target.presentationData);
-      const updated = messages.map((item, index) => index === messageIndex ? { ...item, attachment } : item);
+      if (activeConversationIdRef.current !== conversationId || messagesRef.current[messageIndex] !== target) {
+        URL.revokeObjectURL(attachment.url);
+        attachmentUrlsRef.current.delete(attachment.url);
+        return;
+      }
+      const updated = messagesRef.current.map((item, index) => index === messageIndex ? { ...item, attachment } : item);
+      messagesRef.current = updated;
       setMessages(updated);
-      await saveHistory(updated);
+      await saveHistory(updated, conversationId);
     } catch (error) {
       setError(ar ? "تعذر إنشاء ملف PowerPoint. تحقق من الاتصال ثم أعد المحاولة." : (error instanceof Error ? error.message : "PowerPoint export failed."));
     }
@@ -1012,7 +1025,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{message.spreadsheetData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
               <tbody>{message.spreadsheetData.rows.map((row,i)=><tr key={i}>{message.spreadsheetData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{row[j] ?? ""}</td>)}</tr>)}</tbody></table>
             </div>}
-            {message.presentationData && previewingDocument===index && <div style={{width:"100%",display:"grid",gap:12,border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,slideIndex)=><section key={slideIndex} style={{aspectRatio:"16 / 9",minHeight:180,padding:18,border:"1px solid var(--border,#59616c)",borderRadius:8,background:"#fff",color:"#17243a",display:"flex",flexDirection:"column",justifyContent:"center",gap:10,direction:isPowerPointRtl(message.presentationData!)?"rtl":"ltr"}}><small style={{color:"#8b7650"}}>{slideIndex+1} / {message.presentationData!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,bulletIndex)=><li key={bulletIndex}>{bullet}</li>)}</ul>}</section>)}</div>}
+            {message.presentationData && previewingDocument===index && <div style={{width:"100%",display:"grid",gap:12,border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,slideIndex)=><section key={slideIndex} style={{aspectRatio:"16 / 9",minHeight:180,padding:18,border:"1px solid var(--border,#59616c)",borderRadius:8,background:"#fff",color:"#17243a",display:"flex",flexDirection:"column",justifyContent:"center",gap:10,direction:getPresentationDirection(message.presentationData)}}><small style={{color:"#8b7650"}}>{slideIndex+1} / {message.presentationData!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,bulletIndex)=><li key={bulletIndex}>{bullet}</li>)}</ul>}</section>)}</div>}
             {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
