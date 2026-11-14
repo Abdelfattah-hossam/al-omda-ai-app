@@ -13,10 +13,10 @@ export function parsePowerPointData(value: unknown): PowerPointData | null {
     if (!item || typeof item !== "object") return null;
     const slide = item as Record<string, unknown>;
     if (typeof slide.title !== "string" || !slide.title.trim() || slide.title.length > 180) return null;
-    const body = typeof slide.body === "string" ? slide.body.trim().slice(0, 900) : "";
     const bullets = Array.isArray(slide.bullets)
-      ? slide.bullets.filter((bullet): bullet is string => typeof bullet === "string" && Boolean(bullet.trim())).slice(0, 10).map((bullet) => bullet.trim().slice(0, 200))
+      ? slide.bullets.filter((bullet): bullet is string => typeof bullet === "string" && Boolean(bullet.trim())).slice(0, 10).map((bullet) => bullet.trim().slice(0, 150))
       : [];
+    const body = typeof slide.body === "string" ? slide.body.trim().slice(0, bullets.length ? 250 : 900) : "";
     const speakerNotes = typeof slide.speakerNotes === "string" ? slide.speakerNotes.slice(0, 2000) : "";
     if (!body && bullets.length === 0 && !speakerNotes) return null;
     slides.push({ title: slide.title.trim(), body, bullets, speakerNotes });
