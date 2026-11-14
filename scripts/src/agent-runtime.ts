@@ -17,6 +17,7 @@ import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
 import { orderModelProvidersByPurpose, parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
+import { inspectOpenAIModelList } from "./model-provider-health.js";
 import { inferModelPurpose } from "./model-purpose.js";
 import { clearProviderCooldown, getProviderCooldownRemainingMs, recordProviderFailure } from "./provider-health.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
@@ -1146,6 +1147,43 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "GET" && url.pathname === "/v1/models/providers") {
     const providers = await getModelProviders("all");
     send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: isLocalModelProvider(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key), purposes: item.purposes, priority: item.priority })) }); return;
+  }
+  if (req.method === "GET" && url.pathname === "/v1/models/health") {
+    const providers = await getModelProviders("all");
+    const checks = await Promise.all(providers.map(async (provider) => {
+      const started = Date.now();
+      try {
+        const headers = new Headers();
+        if (provider.key) headers.set("authorization", "Bearer " + provider.key);
+        const response = await fetch(provider.base + "/models", { method: "GET", headers, signal: AbortSignal.timeout(5000) });
+        const payload = response.ok ? await response.json().catch(() => null) : null;
+        const inspection = inspectOpenAIModelList(payload, provider.model);
+        return {
+          name: provider.name,
+          model: provider.model,
+          kind: isLocalModelProvider(provider.base) ? "local" : "remote",
+          reachable: response.ok,
+          status: response.status,
+          latencyMs: Date.now() - started,
+          modelAvailable: inspection.modelAvailable,
+          discoveredModels: inspection.discoveredModels,
+        };
+      } catch (error) {
+        return {
+          name: provider.name,
+          model: provider.model,
+          kind: isLocalModelProvider(provider.base) ? "local" : "remote",
+          reachable: false,
+          status: null,
+          latencyMs: Date.now() - started,
+          modelAvailable: null,
+          discoveredModels: [],
+          error: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "connection_failed",
+        };
+      }
+    }));
+    send(res, 200, { providers: checks });
+    return;
   }
   if (req.method === "GET" && url.pathname === "/v1/runtime/status") { send(res, 200, { activeRuns: activeAgentRuns }); return; }
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {
