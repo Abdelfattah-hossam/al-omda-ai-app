@@ -7,6 +7,15 @@ function isLoopback(hostname: string): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
 
+export function normalizeModelProviderBase(baseValue: string, name = "provider"): string {
+  let url: URL;
+  try { url = new URL(baseValue); } catch { throw new Error("Invalid baseUrl for model provider " + name + "."); }
+  if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
+    throw new Error("Model provider " + name + " must use HTTPS or an explicit loopback HTTP endpoint, without credentials or query parameters.");
+  }
+  return url.toString().replace(/\/+$/, "");
+}
+
 export function parseModelProviderConfig(value: unknown, env: Record<string, string | undefined>): ModelProviderConfig[] {
   if (!Array.isArray(value)) throw new Error("Model provider configuration must be a JSON array.");
   if (value.length > 8) throw new Error("Configure no more than eight additional model providers.");
@@ -30,12 +39,8 @@ export function parseModelProviderConfig(value: unknown, env: Record<string, str
       throw new Error("Invalid purposes for model provider " + name + ".");
     }
     if (apiKeyEnv && !env[apiKeyEnv]?.trim()) continue;
-    let url: URL;
-    try { url = new URL(baseValue); } catch { throw new Error("Invalid baseUrl for model provider " + name + "."); }
-    if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
-      throw new Error("Model provider " + name + " must use HTTPS or an explicit loopback HTTP endpoint, without credentials or query parameters.");
-    }
-    result.push({ name, base: url.toString().replace(/\/+$/, ""), model, key: apiKeyEnv ? env[apiKeyEnv]!.trim() : "", purposes: [...rawPurposes] as Array<ModelPurpose | "all">, priority: priority as number });
+    const base = normalizeModelProviderBase(baseValue, name);
+    result.push({ name, base, model, key: apiKeyEnv ? env[apiKeyEnv]!.trim() : "", purposes: [...rawPurposes] as Array<ModelPurpose | "all">, priority: priority as number });
   }
   return result;
 }
