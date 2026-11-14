@@ -26,8 +26,15 @@ export async function readAgentEventStream(
   let result: Record<string, unknown> | null = null;
   let streamError = "";
 
+  const normalizeLineEndings = (final = false) => {
+    // Keep a trailing CR until the next chunk arrives so a CRLF pair split
+    // across network chunks is treated as one SSE line ending, not two.
+    buffer = buffer.replace(/\r\n/g, "\n");
+    buffer = final ? buffer.replace(/\r/g, "\n") : buffer.replace(/\r(?!$)/g, "\n");
+  };
+
   const consume = (block: string) => {
-    const data = block.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n");
+    const data = block.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n");
     if (!data) return;
     let event: AgentStreamEvent;
     try { event = JSON.parse(data) as AgentStreamEvent; }
@@ -40,7 +47,8 @@ export async function readAgentEventStream(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+    buffer += decoder.decode(value, { stream: true });
+    normalizeLineEndings();
     let boundary = buffer.indexOf("\n\n");
     while (boundary >= 0) {
       consume(buffer.slice(0, boundary));
@@ -49,6 +57,7 @@ export async function readAgentEventStream(
     }
   }
   buffer += decoder.decode();
+  normalizeLineEndings(true);
   if (buffer.trim()) consume(buffer);
   if (streamError) throw new Error(streamError);
   if (!result) throw new Error("Local Agent stream ended before returning a completion result.");
