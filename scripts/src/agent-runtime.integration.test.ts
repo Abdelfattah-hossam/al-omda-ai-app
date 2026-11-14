@@ -549,7 +549,7 @@ rl.on("line", (line) => {
   let message;
   try { message = JSON.parse(line); } catch { return; }
   if (message.method === "initialize" && message.id !== undefined) {
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock", version: "1.0" } } }) + "\\n");
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock", version: "1.0" } } }) + "\n");
   } else if (message.method === "tools/list" && message.id !== undefined) {
     process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "ping", description: "Mock health tool", inputSchema: { type: "object", properties: {} } }] } }) + "\\n");
     if (starts === 1) setTimeout(() => process.exit(0), 30);
@@ -588,34 +588,36 @@ rl.on("line", (line) => {
 });
 
 
-async function startMcpApprovalFixture(goal: string) {
+async function startMcpApprovalFixture(goal: string, holdToolCall = false) {
   const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-approval-test-"));
   const scriptPath = join(workspace, "mock-mcp-server.cjs");
   const callsPath = join(workspace, "mcp-calls.txt");
   const argsPath = join(workspace, "mcp-call-args.json");
+  const gatePath = join(workspace, "release-mcp-call");
   const mockServer = [
-    'const { readFileSync, writeFileSync } = require("node:fs");',
+    'const { readFileSync, writeFileSync, existsSync } = require("node:fs");',
     'const readline = require("node:readline");',
     'const rl = readline.createInterface({ input: process.stdin });',
-    'rl.on("line", (line) => {',
+    'rl.on("line", async (line) => {',
     '  let message;',
     '  try { message = JSON.parse(line); } catch { return; }',
     '  if (message.method === "initialize" && message.id !== undefined) {',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\n");',
     '  } else if (message.method === "tools/list" && message.id !== undefined) {',
     '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\n");',
     '  } else if (message.method === "tools/call" && message.id !== undefined) {',
     '    let count = 0;',
     '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
     '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
-    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
+    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));
+    if (process.env.MCP_TEST_GATE) { const deadline = Date.now() + 5000; while (!existsSync(process.env.MCP_TEST_GATE) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10)); }',
     '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\n");',
     '  }',
     '});',
   ].join("\n");
   await writeFileForMcp(scriptPath, mockServer);
   await writeFileForMcp(join(workspace, ".omda", "mcp-servers.json"), JSON.stringify({
-    servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS"] }],
+    servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS", ...(holdToolCall ? ["MCP_TEST_GATE"] : [])] }],
   }));
   const model = await startMockModel((requestNumber) => requestNumber === 1
     ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: "mcp.call_tool", arguments: JSON.stringify({ serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
@@ -625,10 +627,11 @@ async function startMcpApprovalFixture(goal: string) {
     OMDA_AGENT_MCP_COMMANDS: process.execPath,
     MCP_TEST_CALLS: callsPath,
     MCP_TEST_ARGS: argsPath,
+    ...(holdToolCall ? { MCP_TEST_GATE: gatePath } : {}),
     OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
     OMDA_AGENT_MODEL_NAME: "mock-model",
   });
-  return { workspace, callsPath, argsPath, model, isolated };
+  return { workspace, callsPath, argsPath, gatePath, model, isolated };
 }
 
 test("MCP tool execution remains paused until the exact pending call is approved", async () => {
@@ -691,11 +694,11 @@ test("denying an MCP tool approval never invokes the configured MCP server tool"
 });
 
 test("concurrent approval submissions cannot execute the same pending MCP action twice", async () => {
-  const fixture = await startMcpApprovalFixture("execute exactly once");
+  const fixture = await startMcpApprovalFixture("execute exactly once", true);
   try {
     const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
     const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
     const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
     assert.equal(pending.status, "approval_required");
     assert.equal(pending.pending[0].id, "mcp-write-call");
@@ -704,15 +707,26 @@ test("concurrent approval submissions cannot execute the same pending MCP action
       sessionId: pending.sessionId,
       approvedCallIds: ["mcp-write-call"],
     });
-    const [first, second] = await Promise.all([submitApproval(), submitApproval()]);
-    const responses = await Promise.all([first.text(), second.text()]);
-    const successful = [first, second].filter((response) => response.status === 200);
-    const rejected = [first, second].filter((response) => response.status === 400);
-    assert.equal(successful.length, 1, responses.join("\n"));
-    assert.equal(rejected.length, 1, responses.join("\n"));
-    const successIndex = first.status === 200 ? 0 : 1;
-    assert.equal((JSON.parse(responses[successIndex]) as { status: string }).status, "completed");
-    assert.match(responses[1 - successIndex], /already processing an approval/);
+    const firstPromise = submitApproval();
+    const deadline = Date.now() + 4000;
+    let toolStarted = false;
+    while (Date.now() < deadline) {
+      try {
+        toolStarted = (await readFile(fixture.callsPath, "utf8")) === "1";
+      } catch { /* Wait until the first approved call reaches the gated MCP server. */ }
+      if (toolStarted) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.equal(toolStarted, true, "The first approval should reach the MCP server before the second submission.");
+    const second = await submitApproval();
+    const secondBody = await second.text();
+    assert.equal(second.status, 400, secondBody);
+    assert.match(secondBody, /already processing an approval/);
+    await writeFileForMcp(fixture.gatePath, "release");
+    const first = await firstPromise;
+    const firstBody = await first.text();
+    assert.equal(first.status, 200, firstBody + "\\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(firstBody) as { status: string }).status, "completed");
     assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
     assert.equal(fixture.model.requests, 2);
   } finally {
