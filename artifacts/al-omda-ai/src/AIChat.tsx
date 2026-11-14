@@ -487,6 +487,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const PptxGenJS = (lib as any).default ?? lib;
     const pptx = new PptxGenJS();
     pptx.layout = "LAYOUT_WIDE";
+    pptx.rtlMode = ar;
     pptx.author = "AL OMDA AI";
     pptx.subject = data.title;
     pptx.title = data.title;
@@ -716,7 +717,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }
       const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
-      if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
+      if (assistantMessage.appData || assistantMessage.presentationData) setPreviewingDocument(completed.length - 1);
       await saveHistory(completed, conversationId);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
