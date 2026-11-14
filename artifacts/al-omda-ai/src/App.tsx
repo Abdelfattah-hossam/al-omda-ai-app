@@ -455,6 +455,7 @@ function App() {
   const [httpFlowHistoryBusy, setHttpFlowHistoryBusy] = useState(false);
   const [httpFlowHistoryError, setHttpFlowHistoryError] = useState("");
   const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean; purposes?: string[]; priority?: number }>>([]);
+  const [localModelHealth, setLocalModelHealth] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; reachable: boolean; endpointAvailable: boolean; status: number | null; latencyMs: number; modelAvailable: boolean | null; discoveredModels: string[]; error?: string }> | null>(null);
   const [modelProvidersError, setModelProvidersError] = useState("");
   const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
   const [browserSiteInput, setBrowserSiteInput] = useState("");
@@ -1107,6 +1108,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }
   };
 
+  const loadLocalModelHealth = async () => {
+    setModelProvidersError("");
+    try {
+      const result = await callLocalAgentRuntime("/v1/models/health");
+      const providers = Array.isArray(result.providers) ? result.providers.filter((item: any) => item && typeof item.name === "string" && typeof item.model === "string") : [];
+      setLocalModelHealth(providers);
+      if (!providers.length) setModelProvidersError(isAr ? "لا توجد مزودات نماذج لفحصها." : "No model providers are available to check.");
+    } catch (error) {
+      setModelProvidersError(error instanceof Error ? error.message : (isAr ? "تعذر فحص اتصال النماذج." : "Could not check model providers."));
+    }
+  };
+
   const loadDesktopWorkspace = async () => {
     setDesktopWorkspaceBusy(true); setDesktopWorkspaceError("");
     try { setDesktopWorkspace(await callLocalAgentRuntime("/v1/desktop/workspace") as typeof desktopWorkspace); }
@@ -1388,9 +1401,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>}
     </section>
     <section className="panel panel-pad" style={{marginBottom:20}}>
-      <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
+      <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button><button type="button" className="button button-primary button-small" onClick={loadLocalModelHealth} disabled={!localAgentToken.trim()}>{isAr?'فحص النماذج':'Test providers'}</button></div></div>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
-      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
+      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=>{const health=localModelHealth?.find((item)=>item.name===provider.name);const healthLabel=!health?(isAr?'لم يُفحص':'Not tested'):!health.reachable?(health.error==='timeout'?(isAr?'انتهت المهلة':'Timed out'):(isAr?'غير متصل':'Offline')):health.endpointAvailable&&health.modelAvailable===true?(isAr?'النموذج جاهز':'Model ready'):health.endpointAvailable&&health.modelAvailable===false?(isAr?'النموذج غير موجود':'Model not listed'):health.endpointAvailable?(isAr?'الخادم متصل':'Endpoint reachable'):health.error==='authentication_failed'?(isAr?'المصادقة مرفوضة':'Auth rejected'):(isAr?'واجهة النماذج غير متاحة':'Models endpoint unavailable');return <div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p><div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',marginTop:8}}><span className="status-chip">{healthLabel}</span>{health&&<small className="muted">{health.latencyMs} ms{health.status!==null?' · HTTP '+health.status:''}</small>}</div>{health?.discoveredModels?.length>0&&health.modelAvailable===false&&<small className="muted">{(isAr?'المتاح: ':'Available: ')+health.discoveredModels.slice(0,5).join(', ')}</small>}</div>})}</div>}
       <p className="section-meta" style={{marginTop:10}}>{isAr?'لإضافة مزود جديد، عدّل .omda/models.json وفق المثال .omda/models.example.json ثم حدّث القائمة.':'Add providers in .omda/models.json using .omda/models.example.json, then refresh this list.'}</p>
     </section>
       </div>
