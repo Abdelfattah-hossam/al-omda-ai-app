@@ -4680,7 +4680,10 @@ body:has(.ai-chat-page){
   border-radius:11px!important;
   color:#f6dca0!important;
   background:rgba(224,181,101,.075)!important;
-  font:600 11px/1 inherit!important;
+  font-family:inherit!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  line-height:1!important;
   cursor:pointer!important;
 }
 .app-shell[data-chat-active="true"] .ai-chat-exit:hover {
