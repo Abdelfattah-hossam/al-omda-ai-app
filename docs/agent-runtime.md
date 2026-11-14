@@ -283,3 +283,8 @@ The following are not yet built into the AL OMDA web app itself:
 - Container-backed execution with resource, network, and filesystem isolation.
 
 These capabilities will be added as separately testable modules rather than simulated in the chat interface.
+
+
+### CTF Base64 text decoding
+
+Base64 and Base64URL inputs are validated for alphabet, padding, and canonical byte encoding before decoding. The result is presented as UTF-8 text; arbitrary binary bytes that are not valid UTF-8 appear as replacement characters. This is a text view, not a byte-preserving export.
