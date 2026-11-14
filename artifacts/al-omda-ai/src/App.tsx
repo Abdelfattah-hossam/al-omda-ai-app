@@ -677,8 +677,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const data = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       if (typeof data.result !== 'string' || !data.result.trim()) throw new Error(isAr ? 'لم يصل مخرج صالح من الذكاء الاصطناعي.' : 'The AI returned no usable deliverable.');
-      const presentationData = data.presentation ? parsePowerPointData(data.presentation) : undefined;
-      if (data.presentation && !presentationData) throw new Error(isAr ? 'بيانات عرض PowerPoint غير صالحة.' : 'The PowerPoint response was invalid.');
+      const parsedPresentation = data.presentation ? parsePowerPointData(data.presentation) : null;
+      if (data.presentation && !parsedPresentation) throw new Error(isAr ? 'بيانات عرض PowerPoint غير صالحة.' : 'The PowerPoint response was invalid.');
+      const presentationData = parsedPresentation ?? undefined;
       const storedResult = presentationData ? "ALOMDA_PPTX_JSON:" + JSON.stringify(presentationData) : data.result;
       setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:storedResult,presentationData,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
     } catch(error) {
