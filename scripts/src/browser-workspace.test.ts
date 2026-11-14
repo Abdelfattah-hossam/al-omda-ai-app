@@ -20,6 +20,15 @@ test("blocks direct browser navigation to sites not explicitly allowed", () => {
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "file:///etc/passwd" }, policy), /HTTP or HTTPS/);
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_navigate", { url: "https://user:pass@docs.example.com" }, policy), /embedded credentials/);
 });
+test("fails closed instead of skipping browser URLs beyond inspection limits", () => {
+  const policy = normalizeBrowserWorkspacePolicy({ allowedHosts: ["docs.example.com"] });
+  assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { values: Array(101).fill("safe") }, policy), /too many array entries/);
+  assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", Object.fromEntries(Array.from({ length: 101 }, (_, index) => ["field" + index, "safe"])), policy), /too many object fields/);
+  let nested: Record<string, unknown> = { url: "https://evil.example" };
+  for (let index = 0; index < 9; index++) nested = { nested };
+  assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", nested, policy), /maximum inspection depth/);
+});
+
 test("requires at least one approved site before other browser actions", () => {
   assert.throws(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { selector: "button" }, normalizeBrowserWorkspacePolicy({})), /until at least one site/);
   assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { selector: "button" }, normalizeBrowserWorkspacePolicy({ allowedHosts: ["docs.example.com"] })));
