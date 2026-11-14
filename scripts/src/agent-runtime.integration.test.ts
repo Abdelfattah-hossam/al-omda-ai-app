@@ -609,8 +609,8 @@ async function startMcpApprovalFixture(goal: string, holdToolCall = false) {
     '    let count = 0;',
     '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
     '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
-    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));
-    if (process.env.MCP_TEST_GATE) { const deadline = Date.now() + 5000; while (!existsSync(process.env.MCP_TEST_GATE) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10)); }',
+    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
+    '    if (process.env.MCP_TEST_GATE) { const deadline = Date.now() + 5000; while (!existsSync(process.env.MCP_TEST_GATE) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10)); }',
     '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\n");',
     '  }',
     '});',
