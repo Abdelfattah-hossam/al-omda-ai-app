@@ -23,7 +23,7 @@ test("Windows launcher safely quotes paths with apostrophes", () => {
   assert.match(result, /O''Neil/);
   assert.match(result, /agent:supervisor/);
   assert.match(result, /New-Item -ItemType Directory/);
-  assert.match(result, /agent\\*>> \\$logFile/);
+  assert.match(result, /agent:supervisor \\*>> \\$logFile/);
 });
 
 test("service environment serializer keeps only safe single-line values", () => {
