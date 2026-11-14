@@ -35,3 +35,11 @@ test("ignores oversized model identifiers", () => {
   const result = inspectOpenAIModelList({ data: [{ id: "x".repeat(201) }, { id: "valid" }] }, "valid");
   assert.deepEqual(result, { modelAvailable: true, discoveredModels: ["valid"] });
 });
+
+test("finds configured models beyond the display cap and trims configured IDs", () => {
+  const data = Array.from({ length: 60 }, (_, index) => ({ id: "model-" + index }));
+  const result = inspectOpenAIModelList({ data }, " model-59 ");
+  assert.equal(result.modelAvailable, true);
+  assert.equal(result.discoveredModels.length, 50);
+  assert.equal(result.discoveredModels.includes("model-59"), false);
+});
