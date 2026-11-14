@@ -585,12 +585,25 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
-    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
+    const pptStep = isFinalDeliverableStep && !excelStep && !wordStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
+    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && !pptStep && isDesktopAppRequest(customerRequest);
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
     const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
     const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
     const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
-    const prompt = excelStep ? [
+    const prompt = pptStep ? [
+      "You are AL OMDA. Create the actual PowerPoint presentation for this approved project step. Return ONLY valid JSON.",
+      "Schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","body":"Short paragraph","bullets":["Point one"],"speakerNotes":"Presenter notes"}]}',
+      "Create 5 to 12 slides unless the original request specifies another count. Each slide must have a title and meaningful body text, bullets, or speaker notes. Use no more than 10 bullets per slide.",
+      "Preserve the customer's original request, approved requirements, language, audience, and all previous approved work. Do not invent facts, figures, names, or sources.",
+      "Original customer request: " + customerRequest,
+      "Project: " + task.title,
+      "Approved step: " + step.text,
+      "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
+      "Acceptance check: " + (step.complete || "Create a real downloadable PowerPoint presentation with all requested slides."),
+      "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
+      "Return valid JSON only."
+    ].join("\n") : excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
       "Use the previously approved customer requirements and data in the project request and earlier steps. Preserve the exact approved columns and any seven approved sample products. Do not replace them with unrelated invented products or columns.",
@@ -649,6 +662,25 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       await saveExecutionFailure(failures.slice(0, 2).join("; ") || "AI provider unavailable.");
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
+    }
+    let validatedPresentation = pptStep ? parsePowerPointPresentation(answer.text) : null;
+    if (pptStep && !validatedPresentation) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
+        "Create 1 to 40 slides, with at most 10 concise bullets per slide. Keep body and speaker notes within reasonable length.",
+        "Preserve the original request and approved requirements. Never invent facts or sources.",
+        "Original request: " + customerRequest,
+        "Approved step: " + step.text,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
+      catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPresentation = parsePowerPointPresentation(answer.text);
+      if (!validatedPresentation) {
+        await saveExecutionFailure("PowerPoint presentation failed structural validation after one repair attempt.");
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        return;
+      }
     }
     let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
     let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
@@ -763,8 +795,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
     }
     let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
+    let presentation: PowerPointPresentation | null = null;
     let result = answer.text.trim().slice(0, 12000);
-    if (htmlAppStep) {
+    if (pptStep) {
+      presentation = validatedPresentation;
+      if (!presentation) {
+        await saveExecutionFailure("The AI did not return a valid PowerPoint presentation.");
+        res.status(502).json({ error: "تعذر إنشاء عرض PowerPoint صالح. أعد تنفيذ الخطوة." });
+        return;
+      }
+      result = "ALOMDA_PPTX_JSON:" + JSON.stringify(presentation);
+    } else if (htmlAppStep) {
       const html = validatedHtmlApp;
       if (!html) {
         await saveExecutionFailure("The AI did not return a complete HTML application.");
@@ -831,7 +872,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       limit: completion.limit,
       resetAt: completion.resetAt,
     };
-    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), ...(presentation ? { presentation } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
