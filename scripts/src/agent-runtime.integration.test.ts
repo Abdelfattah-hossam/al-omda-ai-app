@@ -766,3 +766,52 @@ test("host command mode uses an argument vector and does not forward provider se
     await rm(fixtureRoot, { recursive: true, force: true });
   }
 });
+
+
+test("pending MCP approval survives an Agent Runtime restart and can be resumed", async () => {
+  const fixture = await startMcpApprovalFixture("resume after restart");
+  let active = fixture.isolated;
+  const stopProcessWithoutDeletingWorkspace = async (handle: RuntimeHandle) => {
+    if (handle.child.exitCode !== null) return;
+    handle.child.kill("SIGTERM");
+    await Promise.race([
+      new Promise<void>((resolve) => handle.child.once("exit", () => resolve())),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
+    if (handle.child.exitCode === null) handle.child.kill("SIGKILL");
+  };
+  try {
+    const started = await postTo(active, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + active.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"), { code: "ENOENT" });
+
+    await stopProcessWithoutDeletingWorkspace(active);
+    active = await startRuntime({
+      OMDA_AGENT_WORKSPACE: fixture.workspace,
+      OMDA_AGENT_MCP_COMMANDS: process.execPath,
+      MCP_TEST_CALLS: fixture.callsPath,
+      MCP_TEST_ARGS: fixture.argsPath,
+      OMDA_AGENT_MODEL_BASE_URL: fixture.model.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "mock-model",
+    });
+
+    const continued = await postTo(active, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + active.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "resume after restart" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(active);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
