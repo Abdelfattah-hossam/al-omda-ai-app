@@ -723,9 +723,17 @@ async function saveAgentState(id: string, state: AgentState): Promise<void> {
   const path = await sessionPath(id);
   const serialized = JSON.stringify({ id, updatedAt: new Date().toISOString(), state });
   if (serialized.length > 2 * 1024 * 1024) throw new Error("Agent session is too large to persist.");
-  const temp = path + ".tmp";
-  await writeFile(temp, serialized, { encoding: "utf8", mode: 0o600 });
-  await rename(temp, path);
+  // Use an unpredictable, exclusive temporary file so a workspace-created
+  // symlink cannot redirect the session write outside the workspace.
+  const temp = path + "." + randomUUID() + ".tmp";
+  try {
+    await writeFile(temp, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await rename(temp, path);
+  } finally {
+    await unlink(temp).catch((error) => {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    });
+  }
 }
 async function loadAgentState(id: string): Promise<AgentState> {
   const path = await sessionPath(id);
