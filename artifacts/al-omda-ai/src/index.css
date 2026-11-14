@@ -2660,7 +2660,7 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter:none!important;
   backdrop-filter:none!important;
 }
-.app-shell [class*="stat"]:not(.stat-card):not(.stat-grid):not(.stats-grid),
+.app-shell :is(.stat-label,.stat-value,.stat-foot,.stat-card-top,.dashboard-kpi-icon),
 .app-shell [class*="setting-row"],
 .app-shell [class*="task-main"],
 .app-shell [class*="history-item-open"]{
