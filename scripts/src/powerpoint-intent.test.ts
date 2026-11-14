@@ -18,6 +18,8 @@ test("does not turn help, negated, or edit requests into new presentations", () 
     "I can't download my PowerPoint file",
     "Why won't PowerPoint export my deck?",
     "How do I create a presentation?",
+    "Show me how to create a PowerPoint presentation",
+    "Create a presentation about climate change",
     "Make my PowerPoint font bigger",
     "لا تعمل ملف بوربوينت",
   ]) assert.equal(isPowerPointRequestText(request), false, request);
