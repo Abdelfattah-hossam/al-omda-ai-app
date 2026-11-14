@@ -4953,8 +4953,8 @@ body:has(.ai-chat-page){
 }
 
 
-/* Chat visual cleanup: retire legacy blue/teal/glass accents on the chat page.
-   Scoped to the chat route; layout, scroll, keyboard and message behavior stay untouched. */
+/* Chat visual cleanup: use only selectors present in AIChat.tsx.
+   Keep this scoped to the chat route; no layout or interaction rules are changed. */
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-composer {
   border-color:rgba(224,181,101,.24)!important;
   background:linear-gradient(155deg,#1b191c,#100f12)!important;
@@ -4970,97 +4970,63 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-composer-footer small {
   color:#a99f8e!important;
 }
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-actions .button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-model-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-exit,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-back {
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-model-button,.ai-chat-exit,.ai-chat-back,.ai-chat-menu-trigger,.ai-chat-header-icon,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button) {
   color:#f6dca0!important;
-  border-color:rgba(224,181,101,.24)!important;
+  border-color:rgba(224,181,101,.25)!important;
   background:rgba(224,181,101,.075)!important;
   box-shadow:none!important;
 }
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-actions .button:hover,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-model-button:hover,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-exit:hover,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-back:hover {
-  color:#ffe8b7!important;
-  border-color:rgba(246,220,160,.5)!important;
-  background:rgba(224,181,101,.15)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-live-voice-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button {
-  color:#f6dca0!important;
-  border-color:rgba(224,181,101,.25)!important;
-  background:rgba(224,181,101,.075)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-live-voice-button:hover,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button:hover {
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-model-button,.ai-chat-exit,.ai-chat-back,.ai-chat-menu-trigger,.ai-chat-header-icon,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button):hover:not(:disabled) {
   color:#ffe8b7!important;
   border-color:rgba(246,220,160,.5)!important;
   background:rgba(224,181,101,.16)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-topbar {
-  border-color:rgba(224,181,101,.16)!important;
-  background:linear-gradient(180deg,#171519,#100f12)!important;
-  box-shadow:0 8px 24px rgba(0,0,0,.18)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-model-menu,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-sidebar {
-  border-color:rgba(224,181,101,.2)!important;
-  background:linear-gradient(155deg,#211d20,#100f12)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready {
-  background:#d6b36c!important;
-  box-shadow:0 0 0 3px rgba(224,181,101,.12)!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row > svg,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-caption,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-history-caption {
-  color:#e0b565!important;
-}
-
-
-/* Apply the chat palette to the actual controls rendered by AIChat.tsx. */
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-plus-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-send-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-voice-button,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-trigger,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-header-icon {
-  color:#f6dca0!important;
-  border-color:rgba(224,181,101,.25)!important;
-  background:rgba(224,181,101,.075)!important;
 }
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-send-button {
   color:#21180b!important;
   border-color:rgba(246,220,160,.6)!important;
   background:linear-gradient(135deg,#f6dca0,#d6a94f)!important;
 }
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-plus-button:hover:not(:disabled),
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button:hover:not(:disabled),
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-voice-button:hover:not(:disabled),
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-trigger:hover,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-header-icon:hover {
-  color:#ffe8b7!important;
-  border-color:rgba(246,220,160,.5)!important;
-  background:rgba(224,181,101,.16)!important;
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-topbar {
+  border-color:rgba(224,181,101,.16)!important;
+  background:linear-gradient(180deg,#171519,#100f12)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.18)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-model-menu,.ai-chat-top-menu,.ai-plus-menu,.ai-chat-sidebar) {
+  color:#f6f1e7!important;
+  border-color:rgba(224,181,101,.2)!important;
+  background:linear-gradient(155deg,#211d20,#100f12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-model-menu,.ai-chat-top-menu,.ai-plus-menu) button {
+  color:#f6f1e7!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-model-menu,.ai-chat-top-menu,.ai-plus-menu) button:hover {
+  background:rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-caption,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row>svg,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready {
+  color:#e0b565!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready {
+  background:#d6b36c!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal) {
+  color:#f6f1e7!important;
+  border-color:rgba(224,181,101,.22)!important;
+  background:#100f12!important;
 }
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-live-orb {
   border-color:rgba(224,181,101,.34)!important;
   background:radial-gradient(circle,rgba(224,181,101,.22),rgba(16,15,18,.96) 70%)!important;
   box-shadow:0 0 44px rgba(224,181,101,.12)!important;
 }
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-modal,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-canvas-modal {
-  color:#f6f1e7!important;
-  border-color:rgba(224,181,101,.22)!important;
-  background:#100f12!important;
-}
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-section,
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-agent-setting {
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-section {
   border-color:rgba(224,181,101,.16)!important;
 }
-.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-progress > i {
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-progress>i {
   background:linear-gradient(90deg,#c99742,#f6dca0)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-live-modal :is(button,.ai-chat-live-test,.ai-chat-live-end) {
+  border-color:rgba(224,181,101,.24)!important;
 }
