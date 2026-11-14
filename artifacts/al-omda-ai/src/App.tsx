@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
-import { buildPowerPointBlob, parsePowerPointResult, safePowerPointFileName, type PowerPointData } from './lib/pptx';
+import { buildPowerPointBlob, isPowerPointRtl, parsePowerPointResult, safePowerPointFileName, type PowerPointData } from './lib/pptx';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
@@ -861,7 +861,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                {presentation ? <div style={{display:'grid',gap:10}}>
                  <strong>{presentation!.title} · {presentation!.slides.length} {isAr?'شرائح':'slides'}</strong>
                  <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(presentation!).catch(error=>setExecutionError(error instanceof Error ? error.message : "PowerPoint download failed."))}><Presentation size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
-                 <div style={{display:'grid',gap:10}}>{presentation!.slides.map((slide,slideIndex)=><section key={slideIndex} dir={isAr?'rtl':'ltr'} style={{aspectRatio:'16 / 9',minHeight:180,padding:18,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'#fff',color:'#17243a',display:'flex',flexDirection:'column',justifyContent:'center',gap:10}}><small style={{color:'#8b7650'}}>{slideIndex+1} / {presentation!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,index)=><li key={index}>{bullet}</li>)}</ul>}</section>)}</div>
+                 <div style={{display:'grid',gap:10}}>{presentation!.slides.map((slide,slideIndex)=><section key={slideIndex} dir={isPowerPointRtl(presentation!)?'rtl':'ltr'} style={{aspectRatio:'16 / 9',minHeight:180,padding:18,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'#fff',color:'#17243a',display:'flex',flexDirection:'column',justifyContent:'center',gap:10}}><small style={{color:'#8b7650'}}>{slideIndex+1} / {presentation!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,index)=><li key={index}>{bullet}</li>)}</ul>}</section>)}</div>
                </div> : getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}> 
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
