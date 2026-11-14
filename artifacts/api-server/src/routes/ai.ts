@@ -646,9 +646,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Approved step: " + step.text,
         "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
         "Acceptance check: " + (step.complete || "Include all required slides and content."),
-        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
+        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPresentation = parsePowerPointPresentation(answer.text);
@@ -670,9 +670,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Approved step: " + step.text,
         "Expected deliverable: " + (step.output || "A complete .docx Word document"),
         "Acceptance check: " + (step.complete || "Include all requested content and formatting."),
-        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
+        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
@@ -695,9 +695,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
                 "Approved step: " + step.text,
                 "Expected deliverable: " + (step.output || "A complete .docx Word document"),
                 "Acceptance check: " + (step.complete || "Include all requested content and formatting."),
-                "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
+                "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
                 "Previous invalid output: " + answer.text.slice(0, 10000)
-              ].join("\\n")
+              ].join("\n")
             }], memory);
             const alternateDocument = parseWordDocument(alternateAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
             if (alternateDocument) {
@@ -1159,7 +1159,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
           "Preserve all original figures, user-provided content, language, audience, and requirements. Do not invent facts, statistics, or sources.",
           "Original request: " + latestCustomerRequest,
           "Invalid previous output: " + answer.text.slice(0, 12000)
-        ].join("\\n") }
+        ].join("\n") }
       ];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
