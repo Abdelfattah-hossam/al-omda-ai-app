@@ -117,6 +117,7 @@ export function decodeJwtUnverified(token: string): { header: unknown; payload: 
   assertInput(token);
   const parts = token.trim().split(".");
   if (parts.length !== 3) throw new Error("JWT must contain exactly three dot-separated segments.");
+  if (!/^[A-Za-z0-9_-]*$/.test(parts[2])) throw new Error("JWT signature segment contains invalid Base64URL characters.");
   return {
     header: decodeJwtSegment(parts[0]),
     payload: decodeJwtSegment(parts[1]),
