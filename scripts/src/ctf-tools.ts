@@ -4,6 +4,26 @@ function assertInput(value: string): void {
   if (typeof value !== "string" || value.length > 100000) throw new Error("CTF input must be text no longer than 100,000 characters.");
 }
 
+function decodeBase64Strict(value: string, urlSafe: boolean): string {
+  const clean = value.trim();
+  const alphabet = urlSafe ? /^[A-Za-z0-9_-]*={0,2}$/ : /^[A-Za-z0-9+/]*={0,2}$/;
+  if (!alphabet.test(clean)) throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  const unpadded = clean.replace(/=+$/, "");
+  const suppliedPadding = clean.length - unpadded.length;
+  const remainder = unpadded.length % 4;
+  if (remainder === 1) throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  const requiredPadding = (4 - remainder) % 4;
+  if (suppliedPadding > 0 && (clean.length % 4 !== 0 || suppliedPadding !== requiredPadding)) {
+    throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  }
+  const normalized = unpadded.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(requiredPadding);
+  const decoded = Buffer.from(normalized, "base64");
+  if (decoded.toString("base64").replace(/=+$/, "") !== normalized.replace(/=+$/, "")) {
+    throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  }
+  return decoded.toString("utf8");
+}
+
 function rot13(value: string): string {
   return value.replace(/[a-zA-Z]/g, (letter) => {
     const base = letter <= "Z" ? 65 : 97;
@@ -37,16 +57,8 @@ function decodeHtml(value: string): string {
 export function decodeCtfValue(value: string, encoding: CtfEncoding, shift = 13): string {
   assertInput(value);
   switch (encoding) {
-    case "base64": {
-      const clean = value.trim();
-      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean) || clean.length % 4 === 1) throw new Error("Invalid Base64 input.");
-      return Buffer.from(clean, "base64").toString("utf8");
-    }
-    case "base64url": {
-      const clean = value.trim();
-      if (!/^[A-Za-z0-9_-]*={0,2}$/.test(clean) || clean.length % 4 === 1) throw new Error("Invalid Base64URL input.");
-      return Buffer.from(clean.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
-    }
+    case "base64": return decodeBase64Strict(value, false);
+    case "base64url": return decodeBase64Strict(value, true);
     case "hex": {
       const clean = value.replace(/\s+/g, "");
       if (!/^(?:[0-9a-fA-F]{2})+$/.test(clean)) throw new Error("Hex input must contain complete byte pairs.");
