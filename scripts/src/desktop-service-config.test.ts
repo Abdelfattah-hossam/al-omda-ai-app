@@ -61,13 +61,17 @@ test("Windows launcher smoke test rotates logs, captures output, and propagates 
     const launcher = join(root, "start-agent.ps1");
     const envFile = join(root, "agent.env");
     const logFile = join(logs, "agent.log");
-    const fakePnpm = join(bin, "pnpm");
+    const fakePnpm = join(bin, process.platform === "win32" ? "pnpm.cmd" : "pnpm");
     const repoRoot = join(root, "project");
     mkdirSync(bin, { recursive: true });
     mkdirSync(repoRoot, { recursive: true });
     writeFileSync(envFile, "OMDA_AGENT_TOKEN=test-token\n");
-    writeFileSync(fakePnpm, "#!/bin/sh\nprintf 'stdout-line\n'\nprintf 'stderr-line\n' >&2\nexit 7\n");
-    chmodSync(fakePnpm, 0o755);
+    if (process.platform === "win32") {
+      writeFileSync(fakePnpm, "@echo off\r\necho stdout-line\r\necho stderr-line 1>&2\r\nexit /b 7\r\n");
+    } else {
+      writeFileSync(fakePnpm, "#!/bin/sh\nprintf \'stdout-line\\n\'\nprintf \'stderr-line\\n\' >&2\nexit 7\n");
+      chmodSync(fakePnpm, 0o755);
+    }
     mkdirSync(logs, { recursive: true });
     writeFileSync(logFile, "x".repeat(5 * 1024 * 1024 + 1));
     writeFileSync(launcher, buildWindowsAgentLauncher({ repoRoot, envFile, logFile }));
