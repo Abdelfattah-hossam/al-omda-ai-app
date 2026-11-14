@@ -679,7 +679,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (typeof data.result !== 'string' || !data.result.trim()) throw new Error(isAr ? 'لم يصل مخرج صالح من الذكاء الاصطناعي.' : 'The AI returned no usable deliverable.');
       const presentationData = data.presentation ? parsePowerPointData(data.presentation) : undefined;
       if (data.presentation && !presentationData) throw new Error(isAr ? 'بيانات عرض PowerPoint غير صالحة.' : 'The PowerPoint response was invalid.');
-      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,presentationData,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
+      const storedResult = presentationData ? "ALOMDA_PPTX_JSON:" + JSON.stringify(presentationData) : data.result;
+      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:storedResult,presentationData,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
     } catch(error) {
       setExecutionError(error instanceof Error ? error.message : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       try {
