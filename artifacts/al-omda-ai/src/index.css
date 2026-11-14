@@ -5019,3 +5019,48 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-history-caption {
   color:#e0b565!important;
 }
+
+
+/* Apply the chat palette to the actual controls rendered by AIChat.tsx. */
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-plus-button,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-send-button,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-voice-button,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-trigger,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-header-icon {
+  color:#f6dca0!important;
+  border-color:rgba(224,181,101,.25)!important;
+  background:rgba(224,181,101,.075)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-send-button {
+  color:#21180b!important;
+  border-color:rgba(246,220,160,.6)!important;
+  background:linear-gradient(135deg,#f6dca0,#d6a94f)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-plus-button:hover:not(:disabled),
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-mic-button:hover:not(:disabled),
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-voice-button:hover:not(:disabled),
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-trigger:hover,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-header-icon:hover {
+  color:#ffe8b7!important;
+  border-color:rgba(246,220,160,.5)!important;
+  background:rgba(224,181,101,.16)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-live-orb {
+  border-color:rgba(224,181,101,.34)!important;
+  background:radial-gradient(circle,rgba(224,181,101,.22),rgba(16,15,18,.96) 70%)!important;
+  box-shadow:0 0 44px rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-modal,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-canvas-modal {
+  color:#f6f1e7!important;
+  border-color:rgba(224,181,101,.22)!important;
+  background:#100f12!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-section,
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-agent-setting {
+  border-color:rgba(224,181,101,.16)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-settings-progress > i {
+  background:linear-gradient(90deg,#c99742,#f6dca0)!important;
+}
