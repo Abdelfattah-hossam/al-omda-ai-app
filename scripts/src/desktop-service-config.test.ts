@@ -65,8 +65,8 @@ test("Windows launcher smoke test rotates logs, captures output, and propagates 
     const repoRoot = join(root, "project");
     mkdirSync(bin, { recursive: true });
     mkdirSync(repoRoot, { recursive: true });
-    writeFileSync(envFile, "OMDA_AGENT_TOKEN=test-token\\n");
-    writeFileSync(fakePnpm, "#!/bin/sh\\nprintf 'stdout-line\\n'\\nprintf 'stderr-line\\n' >&2\\nexit 7\\n");
+    writeFileSync(envFile, "OMDA_AGENT_TOKEN=test-token\n");
+    writeFileSync(fakePnpm, "#!/bin/sh\nprintf 'stdout-line\n'\nprintf 'stderr-line\n' >&2\nexit 7\n");
     chmodSync(fakePnpm, 0o755);
     mkdirSync(logs, { recursive: true });
     writeFileSync(logFile, "x".repeat(5 * 1024 * 1024 + 1));
