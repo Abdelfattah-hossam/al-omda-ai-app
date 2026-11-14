@@ -48,9 +48,45 @@ function getProviders() {
 function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
+
+function isPowerPointRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  if (!request || isHowToRequest(request)) return false;
+  const namesPowerPoint = /power\s*point|powerpoint|pptx|عرض\s*(?:تقديمي|بوربوينت)|شرائح\s*(?:عرض|تقديمية)/i.test(request);
+  const asksToCreate = /(?:عايز|عاوز|محتاج|اريد|أريد|أنشئ|انشئ|اعمل|أعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(request);
+  return namesPowerPoint && asksToCreate;
+}
+
+type PowerPointSlide = { title: string; body: string; bullets: string[]; speakerNotes: string };
+type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
+
+function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
+  try {
+    const source = text.trim().replace(/^\s*\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60\s*$/, "");
+    const start = source.indexOf("{");
+    const end = source.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const value = JSON.parse(source.slice(start, end + 1));
+    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 || !Array.isArray(value.slides)) return null;
+    if (value.slides.length < 1 || value.slides.length > 40) return null;
+    const slides: PowerPointSlide[] = [];
+    for (const item of value.slides) {
+      if (!item || typeof item !== "object" || typeof item.title !== "string" || !item.title.trim() || item.title.length > 180) return null;
+      const body = typeof item.body === "string" ? item.body.trim() : "";
+      const bullets = Array.isArray(item.bullets) ? item.bullets : [];
+      if (bullets.length > 10 || bullets.some((bullet: unknown) => typeof bullet !== "string" || !bullet.trim() || bullet.length > 500)) return null;
+      const speakerNotes = typeof item.speakerNotes === "string" ? item.speakerNotes.trim() : "";
+      if (body.length > 3000 || speakerNotes.length > 2000) return null;
+      if (!body && bullets.length === 0 && !speakerNotes) return null;
+      slides.push({ title: item.title.trim(), body, bullets: bullets.map((bullet: string) => bullet.trim()), speakerNotes });
+    }
+    if (JSON.stringify({ title: value.title, slides }).length > 60000) return null;
+    return { title: value.title.trim(), slides };
+  } catch { return null; }
+}
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
-  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isDesktopAppRequest(latest) ||
+  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isPowerPointRequest(messages) || isDesktopAppRequest(latest) ||
     /project plan|خطة مشروع|خطة تنفيذ|create a practical project plan/i.test(latest);
 }
 
@@ -549,12 +585,25 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
-    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
+    const pptStep = isFinalDeliverableStep && !excelStep && !wordStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
+    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && !pptStep && isDesktopAppRequest(customerRequest);
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
     const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
     const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
     const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
-    const prompt = excelStep ? [
+    const prompt = pptStep ? [
+      "You are AL OMDA. Create the actual PowerPoint presentation for this approved project step. Return ONLY valid JSON.",
+      "Schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","body":"Short paragraph","bullets":["Point one"],"speakerNotes":"Presenter notes"}]}',
+      "Create 5 to 12 slides unless the original request specifies another count. Each slide must have a title and meaningful body text, bullets, or speaker notes. Use no more than 10 bullets per slide.",
+      "Preserve the customer's original request, approved requirements, language, audience, and all previous approved work. Do not invent facts, figures, names, or sources.",
+      "Original customer request: " + customerRequest,
+      "Project: " + task.title,
+      "Approved step: " + step.text,
+      "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
+      "Acceptance check: " + (step.complete || "Create a real downloadable PowerPoint presentation with all requested slides."),
+      "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
+      "Return valid JSON only."
+    ].join("\n") : excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
       "Use the previously approved customer requirements and data in the project request and earlier steps. Preserve the exact approved columns and any seven approved sample products. Do not replace them with unrelated invented products or columns.",
@@ -613,6 +662,25 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       await saveExecutionFailure(failures.slice(0, 2).join("; ") || "AI provider unavailable.");
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
       return;
+    }
+    let validatedPresentation = pptStep ? parsePowerPointPresentation(answer.text) : null;
+    if (pptStep && !validatedPresentation) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
+        "Create 1 to 40 slides, with at most 10 concise bullets per slide. Keep body and speaker notes within reasonable length.",
+        "Preserve the original request and approved requirements. Never invent facts or sources.",
+        "Original request: " + customerRequest,
+        "Approved step: " + step.text,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
+      catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPresentation = parsePowerPointPresentation(answer.text);
+      if (!validatedPresentation) {
+        await saveExecutionFailure("PowerPoint presentation failed structural validation after one repair attempt.");
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        return;
+      }
     }
     let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
     let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
@@ -727,8 +795,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
     }
     let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
+    let presentation: PowerPointPresentation | null = null;
     let result = answer.text.trim().slice(0, 12000);
-    if (htmlAppStep) {
+    if (pptStep) {
+      presentation = validatedPresentation;
+      if (!presentation) {
+        await saveExecutionFailure("The AI did not return a valid PowerPoint presentation.");
+        res.status(502).json({ error: "تعذر إنشاء عرض PowerPoint صالح. أعد تنفيذ الخطوة." });
+        return;
+      }
+      result = "ALOMDA_PPTX_JSON:" + JSON.stringify(presentation);
+    } else if (htmlAppStep) {
       const html = validatedHtmlApp;
       if (!html) {
         await saveExecutionFailure("The AI did not return a complete HTML application.");
@@ -795,7 +872,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       limit: completion.limit,
       resetAt: completion.resetAt,
     };
-    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), ...(presentation ? { presentation } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
@@ -968,11 +1045,22 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
-    const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
+    const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
+    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
-    const modelMessages: ChatMessage[] = desktopAppRequest ? [
+    const modelMessages: ChatMessage[] = powerPointRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create a real PowerPoint presentation deliverable. Return ONLY valid JSON using this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","body":"Optional short paragraph","bullets":["Point one","Point two"],"speakerNotes":"Presenter notes"}]}',
+        "Create 5 to 12 useful slides unless the user explicitly specifies another slide count. Use concise slide titles, readable short body text, and meaningful bullets. Every slide must contain body text, bullets, or speaker notes.",
+        "Preserve the requested language, audience, purpose, and all explicit constraints. Do not invent statistics, citations, names, or facts. Mark uncertain claims clearly and avoid fabricated sources.",
+        "Include useful speaker notes when they materially help the presenter. Do not add an unrequested cover, agenda, or conclusion slide if it conflicts with the requested structure.",
+        "The presentation must contain 1 to 40 slides. Return valid JSON only, without Markdown fences or explanations.",
+        "Original user request: " + latestCustomerRequest
+      ].join("\n") }
+    ] : desktopAppRequest ? [
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Build the actual requested application now. Return ONLY one complete, self-contained HTML document. Do not return a tutorial, source-code instructions, PowerShell, or steps for the user.",
@@ -1106,6 +1194,23 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         console.warn("[Word quality review unavailable] Retaining the validated draft.", error instanceof Error ? error.message : "Unknown error");
       }
     }
+    let validatedPresentation = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
+    if (powerPointRequest && !validatedPresentation) {
+      const repairRequest = [{ role: "user" as const, content: [
+        "Repair the PowerPoint presentation. Return ONLY valid JSON with title and slides. Each slide must have title, body, bullets array, and speakerNotes.",
+        "Create 1 to 40 complete slides. Each slide needs meaningful content in body, bullets, or speakerNotes. Keep bullets to 10 per slide and each bullet concise.",
+        "Preserve the original request and do not invent facts, statistics, or sources.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 12000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
+      catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPresentation = parsePowerPointPresentation(answer.text);
+      if (!validatedPresentation) {
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint لأن بنية الشرائح لم تجتز الفحص. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        return;
+      }
+    }
     let validatedSpreadsheet = excelRequest ? parseExcelWorkbook(answer.text) : null;
     if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
@@ -1150,6 +1255,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.json({
         reply: "تم إنشاء التطبيق وتجهيز معاينته وملف HTML للتحميل.",
         app: { title: latestCustomerRequest.slice(0, 100) || "AL OMDA App", html },
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
+      return;
+    }
+    if (powerPointRequest) {
+      if (!validatedPresentation) {
+        res.status(502).json({ error: "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء محتوى عرض PowerPoint وتجهيز ملف PPTX قابل للتحميل والمعاينة.",
+        presentation: validatedPresentation,
         provider: usedProvider,
         model: answer.model,
         usage: latestUsage,
