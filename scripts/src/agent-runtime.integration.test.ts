@@ -584,3 +584,104 @@ rl.on("line", (line) => {
     assert.equal(await readFile(counterPath, "utf8"), "2");
   });
 });
+
+
+async function startMcpApprovalFixture(goal: string) {
+  const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-approval-test-"));
+  const scriptPath = join(workspace, "mock-mcp-server.cjs");
+  const callsPath = join(workspace, "mcp-calls.txt");
+  const argsPath = join(workspace, "mcp-call-args.json");
+  const mockServer = [
+    'const { readFileSync, writeFileSync } = require("node:fs");',
+    'const readline = require("node:readline");',
+    'const rl = readline.createInterface({ input: process.stdin });',
+    'rl.on("line", (line) => {',
+    '  let message;',
+    '  try { message = JSON.parse(line); } catch { return; }',
+    '  if (message.method === "initialize" && message.id !== undefined) {',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\\\n");',
+    '  } else if (message.method === "tools/list" && message.id !== undefined) {',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\\\n");',
+    '  } else if (message.method === "tools/call" && message.id !== undefined) {',
+    '    let count = 0;',
+    '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
+    '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
+    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\\\n");',
+    '  }',
+    '});',
+  ].join("\\n");
+  await writeFileForMcp(scriptPath, mockServer);
+  await writeFileForMcp(join(workspace, ".omda", "mcp-servers.json"), JSON.stringify({
+    servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS"] }],
+  }));
+  const model = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: "mcp.call_tool", arguments: JSON.stringify({ serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "MCP approval flow completed." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_WORKSPACE: workspace,
+    OMDA_AGENT_MCP_COMMANDS: process.execPath,
+    MCP_TEST_CALLS: callsPath,
+    MCP_TEST_ARGS: argsPath,
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+  });
+  return { workspace, callsPath, argsPath, model, isolated };
+}
+
+test("MCP tool execution remains paused until the exact pending call is approved", async () => {
+  const fixture = await startMcpApprovalFixture("approved MCP content");
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    assert.equal(pending.pending[0].tool, "mcp.call_tool");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+    const continued = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "approved MCP content" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+test("denying an MCP tool approval never invokes the configured MCP server tool", async () => {
+  const fixture = await startMcpApprovalFixture("must not be written");
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+    const denied = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: [],
+    });
+    const deniedBody = await denied.text();
+    assert.equal(denied.status, 200, deniedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(deniedBody) as { status: string }).status, "completed");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
