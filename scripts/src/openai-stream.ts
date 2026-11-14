@@ -72,7 +72,7 @@ export async function consumeOpenAIChatStream(
   const message: Record<string, unknown> = { role: "assistant", content };
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
   if (finishReason) message.finish_reason = finishReason;
-  const generationDurationMs = firstTokenAt !== null && lastTokenAt !== null ? Math.max(1, lastTokenAt - firstTokenAt) : 0;
+  const generationDurationMs = firstTokenAt !== null && lastTokenAt !== null ? lastTokenAt - firstTokenAt : 0;
   const completionTokens = typeof usage?.completion_tokens === "number" ? usage.completion_tokens : null;
   const tokensPerSecond = completionTokens !== null && generationDurationMs > 0
     ? Math.round((completionTokens / generationDurationMs) * 1000 * 10) / 10
