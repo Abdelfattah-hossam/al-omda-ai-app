@@ -48,6 +48,42 @@ function getProviders() {
 function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
+
+function isPowerPointRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  if (!request || isHowToRequest(request)) return false;
+  const namesPowerPoint = /power\s*point|powerpoint|pptx|عرض\s*(?:تقديمي|بوربوينت)|شرائح\s*(?:عرض|تقديمية)/i.test(request);
+  const asksToCreate = /(?:أنشئ|انشئ|اعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(request);
+  return namesPowerPoint && asksToCreate;
+}
+
+type PowerPointSlide = { title: string; body: string; bullets: string[]; speakerNotes: string };
+type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
+
+function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
+  try {
+    const source = text.trim().replace(/^\\s*\x60\x60\x60(?:json)?\\s*/i, "").replace(/\\s*\x60\x60\x60\\s*$/, "");
+    const start = source.indexOf("{");
+    const end = source.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const value = JSON.parse(source.slice(start, end + 1));
+    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 || !Array.isArray(value.slides)) return null;
+    if (value.slides.length < 1 || value.slides.length > 40) return null;
+    const slides: PowerPointSlide[] = [];
+    for (const item of value.slides) {
+      if (!item || typeof item !== "object" || typeof item.title !== "string" || !item.title.trim() || item.title.length > 180) return null;
+      const body = typeof item.body === "string" ? item.body.trim() : "";
+      const bullets = Array.isArray(item.bullets) ? item.bullets : [];
+      if (bullets.length > 10 || bullets.some((bullet: unknown) => typeof bullet !== "string" || !bullet.trim() || bullet.length > 500)) return null;
+      const speakerNotes = typeof item.speakerNotes === "string" ? item.speakerNotes.trim() : "";
+      if (body.length > 3000 || speakerNotes.length > 2000) return null;
+      if (!body && bullets.length === 0 && !speakerNotes) return null;
+      slides.push({ title: item.title.trim(), body, bullets: bullets.map((bullet: string) => bullet.trim()), speakerNotes });
+    }
+    if (JSON.stringify({ title: value.title, slides }).length > 60000) return null;
+    return { title: value.title.trim(), slides };
+  } catch { return null; }
+}
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
   return isWordDocumentRequest(messages) || isExcelRequest(messages) || isDesktopAppRequest(latest) ||
@@ -968,11 +1004,22 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
-    const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
+    const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
+    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
-    const modelMessages: ChatMessage[] = desktopAppRequest ? [
+    const modelMessages: ChatMessage[] = powerPointRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create a real PowerPoint presentation deliverable. Return ONLY valid JSON using this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","body":"Optional short paragraph","bullets":["Point one","Point two"],"speakerNotes":"Presenter notes"}]}',
+        "Create 5 to 12 useful slides unless the user explicitly specifies another slide count. Use concise slide titles, readable short body text, and meaningful bullets. Every slide must contain body text, bullets, or speaker notes.",
+        "Preserve the requested language, audience, purpose, and all explicit constraints. Do not invent statistics, citations, names, or facts. Mark uncertain claims clearly and avoid fabricated sources.",
+        "Include useful speaker notes when they materially help the presenter. Do not add an unrequested cover, agenda, or conclusion slide if it conflicts with the requested structure.",
+        "The presentation must contain 1 to 40 slides. Return valid JSON only, without Markdown fences or explanations.",
+        "Original user request: " + latestCustomerRequest
+      ].join("\\n") }
+    ] : desktopAppRequest ? [
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Build the actual requested application now. Return ONLY one complete, self-contained HTML document. Do not return a tutorial, source-code instructions, PowerShell, or steps for the user.",
@@ -1106,6 +1153,23 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         console.warn("[Word quality review unavailable] Retaining the validated draft.", error instanceof Error ? error.message : "Unknown error");
       }
     }
+    let validatedPresentation = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
+    if (powerPointRequest && !validatedPresentation) {
+      const repairRequest = [{ role: "user" as const, content: [
+        "Repair the PowerPoint presentation. Return ONLY valid JSON with title and slides. Each slide must have title, body, bullets array, and speakerNotes.",
+        "Create 1 to 40 complete slides. Each slide needs meaningful content in body, bullets, or speakerNotes. Keep bullets to 10 per slide and each bullet concise.",
+        "Preserve the original request and do not invent facts, statistics, or sources.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
+      catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPresentation = parsePowerPointPresentation(answer.text);
+      if (!validatedPresentation) {
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint لأن بنية الشرائح لم تجتز الفحص. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        return;
+      }
+    }
     let validatedSpreadsheet = excelRequest ? parseExcelWorkbook(answer.text) : null;
     if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
@@ -1150,6 +1214,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.json({
         reply: "تم إنشاء التطبيق وتجهيز معاينته وملف HTML للتحميل.",
         app: { title: latestCustomerRequest.slice(0, 100) || "AL OMDA App", html },
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
+      return;
+    }
+    if (powerPointRequest) {
+      if (!validatedPresentation) {
+        res.status(502).json({ error: "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء محتوى عرض PowerPoint وتجهيز ملف PPTX قابل للتحميل والمعاينة.",
+        presentation: validatedPresentation,
         provider: usedProvider,
         model: answer.model,
         usage: latestUsage,
