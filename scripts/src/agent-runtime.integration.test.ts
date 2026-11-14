@@ -445,6 +445,37 @@ test("model runtime fails over to the configured fallback without exposing crede
   }
 });
 
+test("skips a provider during its cooldown on the next agent request", async () => {
+  const primary = await startMockModel(() => ({ status: 503, payload: { error: { message: "primary unavailable" } } }));
+  const fallback = await startMockModel((requestNumber) => ({
+    payload: { choices: [{ delta: { content: "Fallback response " + requestNumber }, finish_reason: "stop" }] },
+  }));
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "primary-cooldown-test-model",
+    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+    OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-cooldown-test-model",
+  });
+  try {
+    const first = await postTo(isolated, "/v1/agent/run", { goal: "Answer the first request." });
+    const firstBody = await first.text();
+    assert.equal(first.status, 200, firstBody + "\\n" + isolated.stderr);
+    assert.equal((JSON.parse(firstBody) as { message: string }).message, "Fallback response 1");
+
+    const second = await postTo(isolated, "/v1/agent/run", { goal: "Answer the second request." });
+    const secondBody = await second.text();
+    assert.equal(second.status, 200, secondBody + "\\n" + isolated.stderr);
+    assert.equal((JSON.parse(secondBody) as { message: string }).message, "Fallback response 2");
+
+    assert.equal(primary.requests, 1, "The unavailable primary should be skipped while its cooldown is active.");
+    assert.equal(fallback.requests, 2, "The healthy fallback should handle both requests.");
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(primary);
+    await stopMockModel(fallback);
+  }
+});
+
 test("container execution invokes Docker with restrictive isolation flags and only the approved command", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "omda-docker-runtime-test-"));
   const bin = join(workspace, "bin");
