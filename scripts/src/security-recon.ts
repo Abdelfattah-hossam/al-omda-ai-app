@@ -42,7 +42,7 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
     issue: "The header is present but its value is not nosniff.",
     recommendation: "Set the exact value to nosniff.",
   });
-  if (normalized.has("x-frame-options") && !["deny", "sameorigin"].includes(xFrameOptions) && !frameAncestors) findings.push({
+  if (normalized.has("x-frame-options") && !["deny", "sameorigin"].includes(xFrameOptions) && !frameProtection) findings.push({
     header: "x-frame-options", severity: "medium",
     issue: "X-Frame-Options is present but does not use DENY or SAMEORIGIN.",
     recommendation: "Use DENY or SAMEORIGIN, or configure a valid CSP frame-ancestors directive.",
