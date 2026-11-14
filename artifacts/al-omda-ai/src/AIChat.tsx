@@ -4,11 +4,11 @@ import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Set
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
+import { buildPowerPointBlob, parsePowerPointData, safePowerPointFileName, type PowerPointData } from "./lib/pptx";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
-type PowerPointData = { title: string; slides: Array<{ title: string; body: string; bullets: string[]; speakerNotes: string }> };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PowerPointData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
@@ -178,7 +178,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const withFiles = await Promise.all(restored.map(async (item) => {
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
-        if (item.presentationData) return { ...item, attachment: await createPowerPointAttachment(item.presentationData).catch(() => undefined) };
+        if (item.presentationData) { const presentationData = parsePowerPointData(item.presentationData); if (!presentationData) return { ...item, presentationData: undefined }; return { ...item, presentationData, attachment: await createPowerPointAttachment(presentationData).catch(() => undefined) }; }
         if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
         return item;
       }));
@@ -476,63 +476,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   };
 
   const createPowerPointAttachment = async (data: PowerPointData) => {
-    const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
-    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/+esm";
-    let lib: any;
-    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch {
-      try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
-      catch { throw new Error(ar ? "تعذر تحميل مولّد PowerPoint. لم يتم إنشاء ملف مزيف؛ تحقق من الاتصال ثم أعد المحاولة." : "The PowerPoint generator could not be loaded. No fake file was created; check your connection and retry."); }
-    }
-    const PptxGenJS = (lib as any).default ?? lib;
-    const pptx = new PptxGenJS();
-    pptx.layout = "LAYOUT_WIDE";
-    pptx.rtlMode = ar;
-    pptx.author = "AL OMDA AI";
-    pptx.subject = data.title;
-    pptx.title = data.title;
-    pptx.lang = ar ? "ar-SA" : "en-US";
-    pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: ar ? "ar-SA" : "en-US" };
-    for (const [slideIndex, item] of data.slides.entries()) {
-      const slide = pptx.addSlide();
-      slide.background = { color: "FFFFFF" };
-      slide.addText(item.title, {
-        x: 0.65, y: 0.45, w: 12.05, h: 0.8, fontFace: "Arial", fontSize: 28,
-        bold: true, color: "17243A", align: ar ? "right" : "left", rtlMode: ar,
-        margin: 0.04, breakLine: false,
-      });
-      let bodyY = 1.55;
-      if (item.body) {
-        slide.addText(item.body, {
-          x: 0.8, y: bodyY, w: 11.7, h: item.bullets.length ? 1.25 : 4.9,
-          fontFace: "Arial", fontSize: 19, color: "354052", align: ar ? "right" : "left",
-          rtlMode: ar, valign: "mid", breakLine: false, paraSpaceAfterPt: 12, fit: "shrink",
-        });
-        bodyY += item.bullets.length ? 1.55 : 0;
-      }
-      if (item.bullets.length) {
-        const runs = item.bullets.map((bullet: string, index: number) => ({
-          text: bullet,
-          options: { bullet: { indent: 20 }, hanging: 4, breakLine: index < item.bullets.length - 1 },
-        }));
-        slide.addText(runs, {
-          x: 0.9, y: bodyY, w: 11.5, h: Math.max(2.2, 4.9 - (bodyY - 1.55)),
-          fontFace: "Arial", fontSize: 19, color: "253247", align: ar ? "right" : "left",
-          rtlMode: ar, valign: "mid", paraSpaceAfterPt: 16, breakLine: false, fit: "shrink",
-        });
-      }
-      if (item.speakerNotes && typeof slide.addNotes === "function") slide.addNotes(item.speakerNotes);
-      slide.addText(String(slideIndex + 1), {
-        x: 12.1, y: 7.08, w: 0.5, h: 0.2, fontFace: "Arial", fontSize: 9,
-        color: "7B8493", align: "center", margin: 0,
-      });
-    }
-    const output = await pptx.write({ outputType: "blob" });
-    const file = output instanceof Blob ? output : new Blob([output], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
-    if (file.size < 1500) throw new Error(ar ? "ملف PowerPoint الناتج غير مكتمل." : "The generated PowerPoint file is incomplete.");
+    const file = await buildPowerPointBlob(data);
     const url = URL.createObjectURL(file);
-    const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
-    return { name: safeName + ".pptx", url };
+    return { name: safePowerPointFileName(data.title) + ".pptx", url };
   };
 
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
@@ -663,9 +609,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
-      } else if (data.presentation && typeof data.presentation.title === "string" && Array.isArray(data.presentation.slides)) {
-        const attachment = await createPowerPointAttachment(data.presentation);
-        assistantMessage = { ...assistantMessage, attachment, presentationData: data.presentation };
+      } else if (data.presentation) {
+        const presentationData = parsePowerPointData(data.presentation);
+        if (!presentationData) throw new Error(ar ? "بيانات عرض PowerPoint غير صالحة." : "The PowerPoint response was invalid.");
+        assistantMessage = { ...assistantMessage, presentationData };
+        try {
+          const attachment = await createPowerPointAttachment(presentationData);
+          assistantMessage = { ...assistantMessage, attachment };
+        } catch (exportError) {
+          const detail = exportError instanceof Error ? exportError.message : "PowerPoint export failed.";
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nتم حفظ محتوى العرض ومعاينته، لكن تعذر إنشاء ملف PPTX الآن. يمكنك إعادة محاولة التصدير بعد استعادة الاتصال. " : "\n\nThe presentation content is saved and previewable, but the PPTX export could not be built right now. You can retry the export when the connection is available. ") + detail };
+        }
       }
       // Detect a project from the current message AND the recent user context.
       // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
