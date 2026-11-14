@@ -30,7 +30,9 @@ test("Windows launcher safely quotes paths with apostrophes", () => {
   assert.match(result, /if \(\$logDirectory\) \{ New-Item -ItemType Directory/);
   assert.match(result, /agent:supervisor 2>&1 \| ForEach-Object/);
   assert.match(result, /-ge 5MB/);
-  assert.match(result, /Get-ChildItem -Path/);
+  assert.match(result, /System\.IO\.Directory\]::GetFiles/);
+  assert.match(result, /StartsWith\(\$archiveName/);
+  assert.match(result, /ErrorActionPreference = 'Continue'/);
   assert.match(result, /Select-Object -Skip 3/);
   assert.match(result, /Add-Content -LiteralPath \$logFile/);
 });
