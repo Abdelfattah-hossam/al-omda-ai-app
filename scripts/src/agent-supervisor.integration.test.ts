@@ -61,3 +61,71 @@ process.exit(1);
     await rm(workspace, { recursive: true, force: true });
   }
 });
+
+
+test("supervisor shutdown stops the runtime without scheduling another restart", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "omda-supervisor-shutdown-test-"));
+  const bin = join(workspace, "bin");
+  const marker = join(workspace, "runtime-starts.txt");
+  const fakePnpm = join(bin, "pnpm");
+  await import("node:fs/promises").then(({ mkdir }) => mkdir(bin, { recursive: true }));
+  await writeFile(fakePnpm, [
+    "#!/usr/bin/env node",
+    'const fs = require("node:fs");',
+    'fs.appendFileSync(process.env.OMDA_SUPERVISOR_TEST_MARKER, "start\\\\n");',
+    'process.on("SIGTERM", () => process.exit(0));',
+    "setInterval(() => {}, 1000);",
+    "",
+  ].join("\n"), "utf8");
+  await chmod(fakePnpm, 0o755);
+
+  let supervisor: ChildProcess | null = null;
+  let output = "";
+  try {
+    supervisor = spawn(process.execPath, ["--import", "tsx", supervisorPath], {
+      cwd: dirname(dirname(supervisorPath)),
+      env: {
+        ...process.env,
+        PATH: bin + delimiter + (process.env.PATH || ""),
+        OMDA_SUPERVISOR_TEST_MARKER: marker,
+        OMDA_AGENT_AUTO_UPDATE: "false",
+        OMDA_AGENT_TOKEN: "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    supervisor.stdout?.on("data", (chunk: Buffer) => { output = (output + chunk.toString("utf8")).slice(-4000); });
+    supervisor.stderr?.on("data", (chunk: Buffer) => { output = (output + chunk.toString("utf8")).slice(-4000); });
+
+    const deadline = Date.now() + 4000;
+    let started = false;
+    while (Date.now() < deadline) {
+      try {
+        started = (await readFile(marker, "utf8")).trim().length > 0;
+      } catch { /* Wait for the supervised runtime to start. */ }
+      if (started) break;
+      if (supervisor.exitCode !== null) throw new Error("Supervisor exited before runtime startup: " + output);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.ok(started, "Expected the runtime to start before shutdown. Output: " + output);
+
+    const exited = new Promise<number | null>((resolve) => {
+      supervisor?.once("exit", (code) => resolve(code));
+    });
+    supervisor.kill("SIGTERM");
+    const exitCode = await Promise.race([
+      exited,
+      new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 4000)),
+    ]);
+    assert.notEqual(exitCode, "timeout", "Supervisor did not exit after SIGTERM. Output: " + output);
+    assert.equal(exitCode, 0);
+
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    assert.equal((await readFile(marker, "utf8")).trim().split("\n").filter(Boolean).length, 1);
+  } finally {
+    if (supervisor && supervisor.exitCode === null) {
+      supervisor.kill("SIGKILL");
+      await new Promise<void>((resolve) => supervisor?.once("exit", () => resolve()));
+    }
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
