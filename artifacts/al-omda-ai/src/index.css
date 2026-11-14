@@ -322,10 +322,10 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .dashboard-grid,.workbench-layout,.history-detail,.profile-grid{grid-template-columns:minmax(0,1fr)}
   .market-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ai-chat-page .ai-composer{inset-inline:18px;bottom:calc(78px + env(safe-area-inset-bottom));max-width:none}
-  .ai-chat-page{padding-bottom:190px}
 }
 @media(max-width:650px){
+  .specialty-row{gap:8px}
+  .specialty-row small{padding-inline-start:0;flex-basis:100%}
   .content-wrap{padding:20px 13px 100px}
   .topbar{height:60px;padding-inline:14px}
   .stats-grid{gap:9px;margin-block:12px 18px}
@@ -339,11 +339,11 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
   .task-main{flex:1 1 calc(100% - 52px)}
   .task-row .status-chip{margin-inline-start:45px;max-width:calc(100% - 45px)}
   .market-grid{grid-template-columns:minmax(0,1fr)}
-  .ai-chat-page .ai-chat-heading{top:60px;padding:10px 0}
-  .ai-chat-page .ai-chat-heading~.panel{padding-bottom:150px!important}
-  .ai-chat-page .chat-messages{height:calc(100dvh - 390px);min-height:220px;padding-bottom:22px}
-  .ai-chat-page .ai-composer{inset-inline:10px;bottom:calc(78px + env(safe-area-inset-bottom));padding:7px;border-radius:16px}
-  .ai-chat-page .ai-composer-input{height:36px;min-height:36px;max-height:72px}
+  
+  
+  
+  
+  
 }
 
 .project-tracking{display:grid;gap:14px;min-width:0;align-content:start}
@@ -355,6 +355,11 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .project-progress-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--glass-blue),var(--glass-violet),var(--glass-teal));box-shadow:0 0 16px rgba(120,169,255,.35);transition:width .3s ease}
 @media(max-width:650px){.project-kpi-grid{gap:7px}.project-kpi{padding:10px}.project-kpi strong{font-size:20px}}
 
+/* Profile and settings center */
+.profile-settings-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:16px;align-items:start}
+.profile-settings-side{display:grid;gap:14px;min-width:0}
+.profile-main-card,.profile-setting-card{min-width:0}
+.profile-section-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px;color:var(--glass-blue)}
 .profile-section-heading>div{min-width:0}
 .profile-section-heading h2{margin:5px 0 6px;color:#eef2ff;font-size:16px;font-weight:750}
 .profile-section-heading p{margin:0;color:#9ca9c5;font-size:10px;line-height:1.8}
