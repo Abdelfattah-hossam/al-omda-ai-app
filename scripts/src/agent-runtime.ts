@@ -16,7 +16,7 @@ import { isBlockedNetworkAddress } from "./network-safety.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
-import { orderModelProvidersByPurpose, parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
+import { normalizeModelProviderBase, orderModelProvidersByPurpose, parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
 import { inspectOpenAIModelList } from "./model-provider-health.js";
 import { inferModelPurpose } from "./model-purpose.js";
 import { clearProviderCooldown, getProviderCooldownRemainingMs, recordProviderFailure } from "./provider-health.js";
@@ -823,6 +823,7 @@ async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Pro
     ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all" as const], priority: 1000 },
   ].filter((item, index, allItems) => item.base && item.model && allItems.findIndex((other) => other.base === item.base && other.model === item.model) === index);
+  for (const provider of all) provider.base = normalizeModelProviderBase(provider.base, provider.name);
   return orderModelProvidersByPurpose(all, purpose);
 }
 
