@@ -106,11 +106,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const speechUrlsRef = useRef<string[]>([]);
   const attachmentUrlsRef = useRef(new Set<string>());
   const createAttachmentUrl = (blob: Blob) => {
-    const url = URL.createObjectURL(blob);
+    const url = createAttachmentUrl(blob);
     attachmentUrlsRef.current.add(url);
     return url;
   };
-  const attachmentUrlsRef = useRef(new Set<string>());
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
   useEffect(() => {
     const activeUrls = new Set(messages.map((message) => message.attachment?.url).filter((url): url is string => Boolean(url && url.startsWith("blob:"))));
@@ -461,7 +460,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }));
     }
     const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
-    const url = URL.createObjectURL(file);
+    const url = createAttachmentUrl(file);
     const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
   };
@@ -478,7 +477,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
         const csv = "\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
         const file = new Blob([csv], { type: "text/csv;charset=utf-8" });
-        const url = URL.createObjectURL(file);
+        const url = createAttachmentUrl(file);
         const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
         return { name: safeName + ".csv", url };
       }
@@ -490,14 +489,14 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
     const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(file);
+    const url = createAttachmentUrl(file);
     const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
     return { name: safeName + ".xlsx", url };
   };
 
   const createPowerPointAttachment = async (data: PowerPointData) => {
     const file = await buildPowerPointBlob(data);
-    const url = URL.createObjectURL(file);
+    const url = createAttachmentUrl(file);
     presentationUrlsRef.current.add(url);
     return { name: safePowerPointFileName(data.title) + ".pptx", url };
   };
