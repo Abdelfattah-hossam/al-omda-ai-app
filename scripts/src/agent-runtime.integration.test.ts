@@ -826,3 +826,29 @@ test("pending MCP approval survives an Agent Runtime restart and can be resumed"
     await rm(fixture.workspace, { recursive: true, force: true });
   }
 });
+
+
+test("sessions.save cannot follow a planted predictable temporary-file symlink", async () => {
+  const isolated = await startRuntime();
+  const outside = await mkdtemp(join(tmpdir(), "omda-session-save-symlink-test-"));
+  const sentinel = join(outside, "sentinel.txt");
+  const sessionId = "symlink-save-check";
+  const sessionsDirectory = join(isolated.workspace, ".omda", "sessions");
+  try {
+    await mkdir(sessionsDirectory, { recursive: true });
+    await writeFile(sentinel, "must remain unchanged", "utf8");
+    await symlink(sentinel, join(sessionsDirectory, sessionId + ".json.tmp"));
+
+    const saved = await postTo(isolated, "/v1/sessions/save", { id: sessionId, state: { messages: [{ role: "user", content: "safe" }] } });
+    const savedBody = await saved.text();
+    assert.equal(saved.status, 200, savedBody + "\\n" + isolated.stderr);
+    assert.equal(await readFile(sentinel, "utf8"), "must remain unchanged");
+
+    const loaded = await postTo(isolated, "/v1/sessions/load", { id: sessionId });
+    assert.equal(loaded.status, 200);
+    assert.deepEqual((await loaded.json() as { state: { messages: unknown[] } }).state.messages, [{ role: "user", content: "safe" }]);
+  } finally {
+    await stopRuntime(isolated);
+    await rm(outside, { recursive: true, force: true });
+  }
+});
