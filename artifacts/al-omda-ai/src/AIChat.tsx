@@ -580,7 +580,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (agentMode) {
         if (imageForRequest) throw new Error(ar ? "وضع Agent المحلي لا يستقبل الصور حاليًا. أوقف وضع Agent لتحليل الصورة." : "Local Agent mode does not accept images yet. Turn it off to analyze the image.");
         if (!agentRuntimeUrl.trim() || !agentToken.trim()) throw new Error(ar ? "أدخل عنوان Runtime المحلي ورمز الاتصال أولًا." : "Enter the local runtime URL and access token first.");
-        const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+        const endpoint = getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
         const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\n\n").slice(-12000);
         const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\n\n");
         const action = agentSessionId ? "resume" : "run";
