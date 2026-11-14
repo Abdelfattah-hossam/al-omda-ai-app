@@ -59,7 +59,7 @@ type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
 
 function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
   try {
-    const source = text.trim().replace(/^\s*\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60\s*$/, "");
+    const source = text.trim().replace(/^\\s*\\x60\\x60\\x60(?:json)?\\s*/i, "").replace(/\\s*\\x60\\x60\\x60\\s*$/, "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
@@ -69,15 +69,15 @@ function parsePowerPointPresentation(text: string): PowerPointPresentation | nul
     const slides: PowerPointSlide[] = [];
     for (const item of value.slides) {
       if (!item || typeof item !== "object" || typeof item.title !== "string" || !item.title.trim() || item.title.length > 180) return null;
-      const body = typeof item.body === "string" ? item.body.trim() : "";
-      const bullets = Array.isArray(item.bullets) ? item.bullets : [];
-      if (bullets.length > 10 || bullets.some((bullet: unknown) => typeof bullet !== "string" || !bullet.trim() || bullet.length > 500)) return null;
-      const speakerNotes = typeof item.speakerNotes === "string" ? item.speakerNotes.trim() : "";
-      if (body.length > 3000 || speakerNotes.length > 2000) return null;
+      const body = typeof item.body === "string" ? item.body.trim().slice(0, 900) : "";
+      const rawBullets = Array.isArray(item.bullets) ? item.bullets : [];
+      if (rawBullets.some((bullet: unknown) => typeof bullet !== "string")) return null;
+      const bullets = rawBullets.slice(0, 10).map((bullet: string) => bullet.trim().slice(0, 200)).filter(Boolean);
+      const speakerNotes = typeof item.speakerNotes === "string" ? item.speakerNotes.trim().slice(0, 2000) : "";
       if (!body && bullets.length === 0 && !speakerNotes) return null;
-      slides.push({ title: item.title.trim(), body, bullets: bullets.map((bullet: string) => bullet.trim()), speakerNotes });
+      slides.push({ title: item.title.trim(), body, bullets, speakerNotes });
     }
-    if (JSON.stringify({ title: value.title, slides }).length > 60000) return null;
+    if (JSON.stringify({ title: value.title.trim(), slides }).length > 120000) return null;
     return { title: value.title.trim(), slides };
   } catch { return null; }
 }
@@ -675,7 +675,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       validatedPresentation = parsePowerPointPresentation(answer.text);
       if (!validatedPresentation) {
         await saveExecutionFailure("PowerPoint presentation failed structural validation after one repair attempt.");
-        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
+        res.status(502).json({ error: language === "ar" ? "تعذر اعتماد عرض PowerPoint بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." : "The PowerPoint could not pass validation after repair. No units were charged; please retry." });
         return;
       }
     }
@@ -684,14 +684,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
     if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
-        wordTaskSevenColumnTable ? "The customer requires exactly seven table columns." : wordTaskTableRequested ? "The customer explicitly requested a table; keep the relevant table." : "The customer did not request a table; return paragraphs only and empty columns and rows.",
-        wordTaskTableOnly ? "Return no paragraphs and exactly eight empty table rows, with no sample data." : "",
-        "Preserve the full original request and all approved requirements. Do not invent unrelated content or extra files.",
+        "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
+        "Create 1 to 40 slides. Keep body text to 900 characters, use at most 10 bullets per slide with each bullet no longer than 200 characters, and keep speaker notes under 2,000 characters. Condense long content without losing core approved requirements.",
+        "Preserve the original request, audience, language, figures, and all approved requirements. Never invent facts or sources.",
         "Original request: " + customerRequest,
+        "Project: " + task.title,
         "Approved step: " + step.text,
+        "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
+        "Acceptance check: " + (step.complete || "Include all required slides and content."),
+        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\n") }];
+      ].join("\\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
@@ -798,7 +801,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       presentation = validatedPresentation;
       if (!presentation) {
         await saveExecutionFailure("The AI did not return a valid PowerPoint presentation.");
-        res.status(502).json({ error: "تعذر إنشاء عرض PowerPoint صالح. أعد تنفيذ الخطوة." });
+        res.status(502).json({ error: language === "ar" ? "تعذر إنشاء عرض PowerPoint صالح. أعد تنفيذ الخطوة." : "A valid PowerPoint presentation could not be created. Please retry this step." });
         return;
       }
       result = "ALOMDA_PPTX_JSON:" + JSON.stringify(presentation);
@@ -1036,6 +1039,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestCustomerRequest = getLatestUserRequest(messages);
+    const language = req.body?.language === "en" ? "en" : "ar";
     const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
@@ -1193,18 +1197,21 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     let validatedPresentation = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
     if (powerPointRequest && !validatedPresentation) {
-      const repairRequest = [{ role: "user" as const, content: [
-        "Repair the PowerPoint presentation. Return ONLY valid JSON with title and slides. Each slide must have title, body, bullets array, and speakerNotes.",
-        "Create 1 to 40 complete slides. Each slide needs meaningful content in body, bullets, or speakerNotes. Keep bullets to 10 per slide and each bullet concise.",
-        "Preserve the original request and do not invent facts, statistics, or sources.",
-        "Original request: " + latestCustomerRequest,
-        "Invalid previous output: " + answer.text.slice(0, 12000)
-      ].join("\n") }];
+      const repairRequest: ChatMessage[] = [
+        ...messages.slice(-12),
+        { role: "user", content: [
+          "Repair the PowerPoint presentation using the full conversation context above. Return ONLY valid JSON with title and slides. Each slide must have title, body, bullets array, and speakerNotes.",
+          "Create 1 to 40 complete slides. Condense body text to 900 characters, keep at most 10 bullets per slide with each bullet no longer than 200 characters, and keep speaker notes under 2,000 characters.",
+          "Preserve all original figures, user-provided content, language, audience, and requirements. Do not invent facts, statistics, or sources.",
+          "Original request: " + latestCustomerRequest,
+          "Invalid previous output: " + answer.text.slice(0, 12000)
+        ].join("\\n") }
+      ];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter", repairRequest, userMemory); }
       catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPresentation = parsePowerPointPresentation(answer.text);
       if (!validatedPresentation) {
-        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint لأن بنية الشرائح لم تجتز الفحص. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        res.status(502).json({ error: language === "ar" ? "تعذر اعتماد عرض PowerPoint لأن بنية الشرائح لم تجتز الفحص. لم يتم خصم وحداتك؛ حاول مرة أخرى." : "The PowerPoint structure could not be validated. No units were charged; please retry." });
         return;
       }
     }
@@ -1260,11 +1267,11 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     if (powerPointRequest) {
       if (!validatedPresentation) {
-        res.status(502).json({ error: "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك؛ حاول مرة أخرى." });
+        res.status(502).json({ error: language === "ar" ? "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك؛ حاول مرة أخرى." : "A valid PowerPoint presentation could not be created. No units were charged; please retry." });
         return;
       }
       res.json({
-        reply: "تم إنشاء محتوى عرض PowerPoint وتجهيز ملف PPTX قابل للتحميل والمعاينة.",
+        reply: language === "ar" ? "تم إنشاء محتوى عرض PowerPoint وتجهيز ملف PPTX قابل للتحميل والمعاينة." : "Your PowerPoint presentation is ready to preview and download as a PPTX file.",
         presentation: validatedPresentation,
         provider: usedProvider,
         model: answer.model,
