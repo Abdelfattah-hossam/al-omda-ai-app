@@ -35,6 +35,20 @@ test("accepts CRLF events and a final event without a trailing delimiter", async
   assert.deepEqual(result, { status: "completed" });
 });
 
+test("handles a CRLF delimiter split across network chunks", async () => {
+  const response = eventStream([
+    'data: {"type":"status","status":"working"}\r',
+    '\n\r',
+    '\ndata: {"type":"complete","result":{"status":"completed"}}\r\n\r\n',
+  ]);
+  const seen: string[] = [];
+  const result = await readAgentEventStream(response, (event) => {
+    if (event.type === "status" && event.status) seen.push(event.status);
+  });
+  assert.deepEqual(seen, ["working"]);
+  assert.deepEqual(result, { status: "completed" });
+});
+
 test("surfaces a server-provided error event", async () => {
   const response = eventStream(['data: {"type":"error","error":"Model disconnected"}\n\n']);
   await assert.rejects(() => readAgentEventStream(response), /Model disconnected/);
