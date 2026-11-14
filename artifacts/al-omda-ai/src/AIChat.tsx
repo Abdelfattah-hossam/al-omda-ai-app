@@ -104,20 +104,26 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
-  const presentationUrlsRef = useRef(new Set<string>());
+  const attachmentUrlsRef = useRef(new Set<string>());
+  const createAttachmentUrl = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    attachmentUrlsRef.current.add(url);
+    return url;
+  };
+  const attachmentUrlsRef = useRef(new Set<string>());
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
   useEffect(() => {
-    const activeUrls = new Set(messages.filter((message) => message.presentationData && message.attachment).map((message) => message.attachment!.url));
-    for (const url of presentationUrlsRef.current) {
+    const activeUrls = new Set(messages.map((message) => message.attachment?.url).filter((url): url is string => Boolean(url && url.startsWith("blob:"))));
+    for (const url of attachmentUrlsRef.current) {
       if (!activeUrls.has(url)) {
         URL.revokeObjectURL(url);
-        presentationUrlsRef.current.delete(url);
+        attachmentUrlsRef.current.delete(url);
       }
     }
   }, [messages]);
   useEffect(() => () => {
-    for (const url of presentationUrlsRef.current) URL.revokeObjectURL(url);
-    presentationUrlsRef.current.clear();
+    for (const url of attachmentUrlsRef.current) URL.revokeObjectURL(url);
+    attachmentUrlsRef.current.clear();
   }, []);
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -193,7 +199,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
         if (item.presentationData) { const presentationData = parsePowerPointData(item.presentationData); if (!presentationData) return { ...item, presentationData: undefined }; return { ...item, presentationData, attachment: await createPowerPointAttachment(presentationData).catch(() => undefined) }; }
-        if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
+        if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = createAttachmentUrl(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
         return item;
       }));
       setMessages(withFiles);
@@ -420,7 +426,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const table = documentData.columns.length ? "<table><thead><tr>" + documentData.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + documentData.rows.map((row) => "<tr>" + documentData.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
         const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (ar ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(documentData.title) + "</h1>" + paragraphs + table + "</body></html>";
         const file = new Blob(["\ufeff", html], { type: "application/msword;charset=utf-8" });
-        const url = URL.createObjectURL(file);
+        const url = createAttachmentUrl(file);
         const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
         return { name: safeName + ".doc", url };
       }
@@ -630,7 +636,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       let assistantMessage: ChatMessage = { role: "assistant", content: data.reply, provider: data.model ? `${data.provider} · ${data.model}` : data.provider };
       if (data.app && typeof data.app.title === "string" && typeof data.app.html === "string") {
         const blob = new Blob([data.app.html], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
+        const url = createAttachmentUrl(blob);
         assistantMessage = { ...assistantMessage, attachment: { name: "AL-OMDA-app.html", url }, appData: data.app };
       } else if (data.spreadsheet && typeof data.spreadsheet.title === "string" && Array.isArray(data.spreadsheet.columns) && Array.isArray(data.spreadsheet.rows)) {
         const attachment = await createExcelAttachment(data.spreadsheet);
