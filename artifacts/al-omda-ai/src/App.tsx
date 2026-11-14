@@ -1110,6 +1110,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const loadLocalModelHealth = async () => {
     setModelProvidersError("");
+    await loadLocalModelProviders();
     try {
       const result = await callLocalAgentRuntime("/v1/models/health");
       const providers = Array.isArray(result.providers) ? result.providers.filter((item: any) => item && typeof item.name === "string" && typeof item.model === "string") : [];
