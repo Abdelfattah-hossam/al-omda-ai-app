@@ -4,7 +4,7 @@ import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Set
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
-import { buildPowerPointBlob, parsePowerPointData, safePowerPointFileName, type PowerPointData } from "./lib/pptx";
+import { buildPowerPointBlob, isPowerPointRtl, parsePowerPointData, safePowerPointFileName, type PowerPointData } from "./lib/pptx";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -104,7 +104,21 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const speechUrlsRef = useRef<string[]>([]);
+  const presentationUrlsRef = useRef(new Set<string>());
   useEffect(() => () => { speechUrlsRef.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
+  useEffect(() => {
+    const activeUrls = new Set(messages.filter((message) => message.presentationData && message.attachment).map((message) => message.attachment!.url));
+    for (const url of presentationUrlsRef.current) {
+      if (!activeUrls.has(url)) {
+        URL.revokeObjectURL(url);
+        presentationUrlsRef.current.delete(url);
+      }
+    }
+  }, [messages]);
+  useEffect(() => () => {
+    for (const url of presentationUrlsRef.current) URL.revokeObjectURL(url);
+    presentationUrlsRef.current.clear();
+  }, []);
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -478,6 +492,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const createPowerPointAttachment = async (data: PowerPointData) => {
     const file = await buildPowerPointBlob(data);
     const url = URL.createObjectURL(file);
+    presentationUrlsRef.current.add(url);
     return { name: safePowerPointFileName(data.title) + ".pptx", url };
   };
 
@@ -992,7 +1007,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{message.spreadsheetData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
               <tbody>{message.spreadsheetData.rows.map((row,i)=><tr key={i}>{message.spreadsheetData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{row[j] ?? ""}</td>)}</tr>)}</tbody></table>
             </div>}
-            {message.presentationData && previewingDocument===index && <div style={{width:"100%",display:"grid",gap:12,border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,slideIndex)=><section key={slideIndex} style={{aspectRatio:"16 / 9",minHeight:180,padding:18,border:"1px solid var(--border,#59616c)",borderRadius:8,background:"#fff",color:"#17243a",display:"flex",flexDirection:"column",justifyContent:"center",gap:10,direction:ar?"rtl":"ltr"}}><small style={{color:"#8b7650"}}>{slideIndex+1} / {message.presentationData!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,bulletIndex)=><li key={bulletIndex}>{bullet}</li>)}</ul>}</section>)}</div>}
+            {message.presentationData && previewingDocument===index && <div style={{width:"100%",display:"grid",gap:12,border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,slideIndex)=><section key={slideIndex} style={{aspectRatio:"16 / 9",minHeight:180,padding:18,border:"1px solid var(--border,#59616c)",borderRadius:8,background:"#fff",color:"#17243a",display:"flex",flexDirection:"column",justifyContent:"center",gap:10,direction:isPowerPointRtl(message.presentationData)?"rtl":"ltr"}}><small style={{color:"#8b7650"}}>{slideIndex+1} / {message.presentationData!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,bulletIndex)=><li key={bulletIndex}>{bullet}</li>)}</ul>}</section>)}</div>}
             {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button type="button" className="button button-quiet button-small" onClick={()=>speak(message.content)} aria-label={ar ? "استمع للإجابة" : "Read answer aloud"}><Volume2 size={13}/>{ar ? "استمع" : "Listen"}</button>
