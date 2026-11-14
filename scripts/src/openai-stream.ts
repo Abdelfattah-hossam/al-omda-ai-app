@@ -1,6 +1,8 @@
 export type StreamedCompletion = {
   message: Record<string, unknown>;
   usage: Record<string, unknown> | null;
+  generationDurationMs: number;
+  tokensPerSecond: number | null;
 };
 
 export async function consumeOpenAIChatStream(
@@ -14,6 +16,8 @@ export async function consumeOpenAIChatStream(
   let content = "";
   let usage: Record<string, unknown> | null = null;
   let finishReason: unknown;
+  let firstTokenAt: number | null = null;
+  let lastTokenAt: number | null = null;
   let seenEvent = false;
   const toolCalls = new Map<number, { id: string; type: "function"; function: { name: string; arguments: string } }>();
 
@@ -32,6 +36,9 @@ export async function consumeOpenAIChatStream(
     const delta = choice.delta && typeof choice.delta === "object" ? choice.delta : {};
     if (typeof delta.content === "string" && delta.content) {
       content += delta.content;
+      const tokenAt = Date.now();
+      if (firstTokenAt === null) firstTokenAt = tokenAt;
+      lastTokenAt = tokenAt;
       onToken?.(delta.content);
     }
     if (Array.isArray(delta.tool_calls)) {
@@ -65,5 +72,10 @@ export async function consumeOpenAIChatStream(
   const message: Record<string, unknown> = { role: "assistant", content };
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
   if (finishReason) message.finish_reason = finishReason;
-  return { message, usage };
+  const generationDurationMs = firstTokenAt !== null && lastTokenAt !== null ? Math.max(1, lastTokenAt - firstTokenAt) : 0;
+  const completionTokens = typeof usage?.completion_tokens === "number" ? usage.completion_tokens : null;
+  const tokensPerSecond = completionTokens !== null && generationDurationMs > 0
+    ? Math.round((completionTokens / generationDurationMs) * 1000 * 10) / 10
+    : null;
+  return { message, usage, generationDurationMs, tokensPerSecond };
 }
