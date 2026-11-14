@@ -53,7 +53,7 @@ function isPowerPointRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   if (!request || isHowToRequest(request)) return false;
   const namesPowerPoint = /power\s*point|powerpoint|pptx|عرض\s*(?:تقديمي|بوربوينت)|شرائح\s*(?:عرض|تقديمية)/i.test(request);
-  const asksToCreate = /(?:أنشئ|انشئ|اعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(request);
+  const asksToCreate = /(?:عايز|عاوز|محتاج|اريد|أريد|أنشئ|انشئ|اعمل|أعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(request);
   return namesPowerPoint && asksToCreate;
 }
 
