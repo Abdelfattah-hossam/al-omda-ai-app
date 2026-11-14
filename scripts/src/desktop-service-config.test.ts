@@ -57,7 +57,7 @@ test("Windows launcher smoke test rotates logs, captures output, and propagates 
   const root = mkdtempSync(join(tmpdir(), "omda-windows-launcher-"));
   try {
     const bin = join(root, "bin");
-    const logs = join(root, "logs");
+    const logs = join(root, "Operator[1]");
     const launcher = join(root, "start-agent.ps1");
     const envFile = join(root, "agent.env");
     const logFile = join(logs, "agent.log");
@@ -73,6 +73,7 @@ test("Windows launcher smoke test rotates logs, captures output, and propagates 
       chmodSync(fakePnpm, 0o755);
     }
     mkdirSync(logs, { recursive: true });
+    for (let index = 0; index < 3; index++) writeFileSync(join(logs, "agent.log.2025010" + (index + 1) + "-000000-000.bak"), "old-" + index);
     writeFileSync(logFile, "x".repeat(5 * 1024 * 1024 + 1));
     writeFileSync(launcher, buildWindowsAgentLauncher({ repoRoot, envFile, logFile }));
     const run = spawnSync("pwsh", ["-NoProfile", "-File", launcher], {
@@ -86,8 +87,8 @@ test("Windows launcher smoke test rotates logs, captures output, and propagates 
     assert.match(output, /stdout-line/);
     assert.match(output, /stderr-line/);
     const archives = readdirSync(logs).filter((name) => name.endsWith(".bak"));
-    assert.equal(archives.length, 1);
-    assert.equal(readFileSync(join(logs, archives[0]), "utf8").length, 5 * 1024 * 1024 + 1);
+    assert.equal(archives.length, 3);
+    assert.ok(archives.some((name) => readFileSync(join(logs, name), "utf8").length === 5 * 1024 * 1024 + 1));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
