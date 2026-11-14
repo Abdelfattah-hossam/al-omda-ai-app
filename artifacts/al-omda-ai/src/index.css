@@ -1795,7 +1795,7 @@ body:has(.ai-chat-page){
   .mobile-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:650px){
-  .app-shell:not([data-chat-active="true"])>.main-area>.content-wrap{
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))>.main-area>.content-wrap{
     padding:18px 12px 90px!important;
   }
   .profile-settings-page .page-heading{align-items:flex-start}
@@ -3104,7 +3104,7 @@ body:has(.ai-chat-page){
   50% { border-color:rgba(224,181,101,.42); }
 }
 
-.app-shell:not([data-chat-active="true"]) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) {
   --omda-design-bg:#08080a;
   --omda-design-panel:#151419;
   --omda-design-panel-raised:#1b191d;
@@ -3132,15 +3132,15 @@ body:has(.ai-chat-page){
   color:var(--omda-design-text);
   background:var(--omda-design-bg)!important;
 }
-.app-shell:not([data-chat-active="true"])::before,
-.app-shell:not([data-chat-active="true"])::after {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after {
   content:"";
   position:fixed;
   inset:0;
   z-index:-1;
   pointer-events:none;
 }
-.app-shell:not([data-chat-active="true"])::before {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before {
   background:
     radial-gradient(650px 420px at 16% 4%,rgba(224,181,101,.17),transparent 72%),
     radial-gradient(560px 390px at 88% 34%,rgba(190,112,72,.11),transparent 72%),
@@ -3148,7 +3148,7 @@ body:has(.ai-chat-page){
   background-size:150% 150%;
   animation:omda-reference-ambient 20s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"])::after {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after {
   opacity:.42;
   background-image:
     radial-gradient(circle at 18% 28%,rgba(246,220,160,.75) 0 1px,transparent 2px),
@@ -3157,55 +3157,55 @@ body:has(.ai-chat-page){
   background-size:310px 310px,370px 370px,430px 430px;
   animation:omda-reference-stars 58s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]) .sidebar {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .sidebar {
   background:#111014!important;
   border-color:var(--omda-design-line)!important;
   box-shadow:12px 0 44px rgba(0,0,0,.3)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]) .topbar {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .topbar {
   background:#0e0d10!important;
   border-color:var(--omda-design-line)!important;
 }
-.app-shell:not([data-chat-active="true"]) .brand-mark {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark {
   color:#1a1306!important;
   border:1px solid rgba(246,220,160,.72)!important;
   background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
   box-shadow:0 0 20px rgba(224,181,101,.24),inset 0 1px 0 rgba(255,255,255,.42)!important;
   animation:omda-reference-glow 3.4s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]) .brand-name { color:var(--omda-design-text)!important; }
-.app-shell:not([data-chat-active="true"]) .brand-sub,
-.app-shell:not([data-chat-active="true"]) .nav-caption,
-.app-shell:not([data-chat-active="true"]) .crumb,
-.app-shell:not([data-chat-active="true"]) .page-subtitle,
-.app-shell:not([data-chat-active="true"]) .stat-label,
-.app-shell:not([data-chat-active="true"]) .stat-foot {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-name { color:var(--omda-design-text)!important; }
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-sub,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-caption,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .crumb,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .page-subtitle,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-label,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-foot {
   color:var(--omda-design-muted)!important;
 }
-.app-shell:not([data-chat-active="true"]) .nav-link {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link {
   color:#c0b8a8!important;
   border-color:transparent!important;
   transition:background .24s,color .24s,border-color .24s,transform .24s,box-shadow .24s;
 }
-.app-shell:not([data-chat-active="true"]) .nav-link:hover {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link:hover {
   color:var(--omda-design-gold-light)!important;
   background:rgba(224,181,101,.08)!important;
   border-color:rgba(224,181,101,.15)!important;
 }
-.app-shell:not([data-chat-active="true"]) .nav-link.active {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link.active {
   color:var(--omda-design-gold-light)!important;
   background:rgba(224,181,101,.12)!important;
   border:1px solid rgba(224,181,101,.28)!important;
   box-shadow:inset -2px 0 var(--omda-design-gold),0 0 22px rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]) .control-note {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .control-note {
   background:#19171a!important;
   border-color:var(--omda-design-line)!important;
   box-shadow:inset 0 1px 0 rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
   .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
   .agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,
   .profile-account-profile-card,.profile-setting-card,.profile-features-card,
@@ -3213,9 +3213,9 @@ body:has(.ai-chat-page){
   .ai-conversations-panel,.ai-agent-runtime-panel,.ai-voice-panel,.ai-composer,
   .profile-settings-side>*,.stats-grid>*,.dashboard-grid>*,.market-grid>*
 ),
-.app-shell:not([data-chat-active="true"]) [class*="card"]:not(button),
-.app-shell:not([data-chat-active="true"]) [class*="tile"]:not(button),
-.app-shell:not([data-chat-active="true"]) [class*="surface"]:not(button) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="card"]:not(button),
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="tile"]:not(button),
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="surface"]:not(button) {
   color:var(--omda-design-text);
   background:linear-gradient(145deg,#1b191d 0%,#111014 100%)!important;
   background-color:#151419!important;
@@ -3229,7 +3229,7 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter:none!important;
   transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
   .panel,.dashboard-hero,.stat-card,.agent-card,.request-card,.plan-card,
   .history-item,.profile-main-card,.profile-setting-card,.profile-features-card
 ) {
@@ -3240,32 +3240,32 @@ body:has(.ai-chat-page){
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.12),rgba(224,181,101,.58),rgba(255,159,107,.28),rgba(246,220,160,.55),rgba(224,181,101,.12)) border-box!important;
   animation:omda-reference-border 11s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]) :is(.panel,.stat-card,.agent-card,.request-card,.plan-card,.history-item):hover {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.panel,.stat-card,.agent-card,.request-card,.plan-card,.history-item):hover {
   transform:translateY(-3px);
   border-color:rgba(224,181,101,.48)!important;
   box-shadow:0 20px 46px rgba(0,0,0,.34),0 0 22px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.1)!important;
 }
-.app-shell:not([data-chat-active="true"]) .dashboard-hero {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-hero {
   background:
     radial-gradient(ellipse at 90% 0%,rgba(224,181,101,.2),transparent 55%),
     linear-gradient(115deg,#211d18 0%,#171519 60%,#121115 100%) padding-box,
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.18),rgba(224,181,101,.62),rgba(255,159,107,.3),rgba(246,220,160,.58),rgba(224,181,101,.18)) border-box!important;
   overflow:hidden;
 }
-.app-shell:not([data-chat-active="true"]) .dashboard-hero:after {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-hero:after {
   border-color:rgba(224,181,101,.2)!important;
   box-shadow:0 0 0 25px rgba(224,181,101,.035),0 0 0 55px rgba(224,181,101,.025)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.page-title,.section-title,.section-head h2,.profile-section-heading h2,.hero-copy h2) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.page-title,.section-title,.section-head h2,.profile-section-heading h2,.hero-copy h2) {
   color:var(--omda-design-text)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.eyebrow,.section-meta,.crumb,.task-main small,.agent-tag,.specialty-row small) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.eyebrow,.section-meta,.crumb,.task-main small,.agent-tag,.specialty-row small) {
   color:var(--omda-design-muted)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.stat-value,.hero-side,.task-icon,.specialty-icon,.agent-symbol,.profile-avatar,.status-chip) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stat-value,.hero-side,.task-icon,.specialty-icon,.agent-symbol,.profile-avatar,.status-chip) {
   color:var(--omda-design-gold-light)!important;
 }
-.app-shell:not([data-chat-active="true"]) .stat-value {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-value {
   background:linear-gradient(110deg,var(--omda-design-gold),var(--omda-design-gold-light),var(--omda-design-gold));
   background-size:200% 100%;
   -webkit-background-clip:text;
@@ -3273,17 +3273,17 @@ body:has(.ai-chat-page){
   -webkit-text-fill-color:transparent;
   animation:omda-reference-stars 8s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar) {
   background:linear-gradient(145deg,#30271a,#1b1917)!important;
   border:1px solid rgba(224,181,101,.25)!important;
 }
-.app-shell:not([data-chat-active="true"]) .button {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button {
   position:relative;
   overflow:hidden;
   border-radius:999px!important;
   transition:transform .18s ease,box-shadow .24s ease,background .24s ease,border-color .24s ease!important;
 }
-.app-shell:not([data-chat-active="true"]) .button::after {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button::after {
   content:"";
   position:absolute;
   top:0;
@@ -3294,90 +3294,90 @@ body:has(.ai-chat-page){
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.52),transparent);
   animation:omda-reference-sheen 4.2s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]) .button-primary {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary {
   color:#1a1306!important;
   background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
   border:1px solid rgba(246,220,160,.72)!important;
   box-shadow:0 5px 20px rgba(224,181,101,.18)!important;
   animation:omda-reference-glow 3s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]) .button-primary:hover {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary:hover {
   color:#100d07!important;
   background:linear-gradient(135deg,#ffe7b2,#e6b95e)!important;
   box-shadow:0 9px 30px rgba(224,181,101,.34)!important;
 }
-.app-shell:not([data-chat-active="true"]) .button-quiet {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-quiet {
   color:var(--omda-design-text)!important;
   background:#1b191d!important;
   border-color:var(--omda-design-line)!important;
 }
-.app-shell:not([data-chat-active="true"]) .button-quiet:hover {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-quiet:hover {
   color:var(--omda-design-gold-light)!important;
   border-color:rgba(224,181,101,.5)!important;
   background:#211d18!important;
 }
-.app-shell:not([data-chat-active="true"]) .button-danger {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-danger {
   color:#f2a29a!important;
   background:rgba(116,39,35,.22)!important;
   border-color:rgba(239,120,108,.32)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select) {
   color:var(--omda-design-text);
   background:#0e0d10!important;
   border-color:rgba(224,181,101,.2)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select)::placeholder {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select)::placeholder {
   color:#827968!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select):focus {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select):focus {
   border-color:var(--omda-design-gold)!important;
   box-shadow:0 0 0 3px rgba(224,181,101,.13),0 0 18px rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]) .status-chip {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip {
   background:rgba(224,181,101,.1)!important;
   border-color:rgba(224,181,101,.28)!important;
 }
-.app-shell:not([data-chat-active="true"]) .status-chip.completed {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip.completed {
   color:#8dd2b0!important;
   background:rgba(52,211,153,.1)!important;
   border-color:rgba(52,211,153,.3)!important;
 }
-.app-shell:not([data-chat-active="true"]) .status-chip.stopped {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip.stopped {
   color:#f19b92!important;
   background:rgba(239,68,68,.1)!important;
   border-color:rgba(239,68,68,.28)!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note) {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note) {
   animation:omda-reference-edge 5.5s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]) .route-page-transition,
-.app-shell:not([data-chat-active="true"]) .page-enter {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .route-page-transition,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .page-enter {
   animation:omda-reference-enter .48s cubic-bezier(.2,.7,.2,1) both;
 }
-.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid,.profile-settings-layout)>* {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid,.profile-settings-layout)>* {
   animation:omda-reference-enter .55s cubic-bezier(.2,.7,.2,1) both;
 }
-.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(2) { animation-delay:.07s; }
-.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(3) { animation-delay:.14s; }
-.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(4) { animation-delay:.21s; }
-.app-shell:not([data-chat-active="true"]) .sidebar-bottom .control-note { animation:omda-reference-edge 5.5s ease-in-out infinite; }
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(2) { animation-delay:.07s; }
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(3) { animation-delay:.14s; }
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(4) { animation-delay:.21s; }
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .sidebar-bottom .control-note { animation:omda-reference-edge 5.5s ease-in-out infinite; }
 
 @media (prefers-reduced-motion:reduce) {
-  .app-shell:not([data-chat-active="true"])::before,
-  .app-shell:not([data-chat-active="true"])::after,
-  .app-shell:not([data-chat-active="true"]) *,
-  .app-shell:not([data-chat-active="true"]) *::before,
-  .app-shell:not([data-chat-active="true"]) *::after {
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *::before,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *::after {
     animation:none!important;
     transition:none!important;
     scroll-behavior:auto!important;
   }
 }
-.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::before,
-.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::after,
-.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *,
-.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::before,
-.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::after {
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"]::before,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"]::after,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *::before,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *::after {
   animation:none!important;
   transition:none!important;
 }
