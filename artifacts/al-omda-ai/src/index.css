@@ -4554,3 +4554,42 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-menu-trigger {
   color:var(--chat-gold-light)!important;
 }
+
+
+/* Hard override for the shared application header while the chat route is active.
+   Keep this scoped to /ai; no geometry, navigation, or interaction changes. */
+.app-shell[data-chat-active="true"] .main-area .topbar {
+  background-color:#111014!important;
+  background-image:linear-gradient(180deg,#19171b 0%,#0d0c0e 100%)!important;
+  color:#f6f1e7!important;
+  border-bottom:1px solid rgba(224,181,101,.2)!important;
+  box-shadow:0 5px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(246,220,160,.035)!important;
+}
+.app-shell[data-chat-active="true"] .main-area .topbar::before,
+.app-shell[data-chat-active="true"] .main-area .topbar::after {
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+.app-shell[data-chat-active="true"] .main-area .topbar .crumb,
+.app-shell[data-chat-active="true"] .main-area .topbar .top-actions,
+.app-shell[data-chat-active="true"] .main-area .topbar .status-chip,
+.app-shell[data-chat-active="true"] .main-area .topbar .lang-button,
+.app-shell[data-chat-active="true"] .main-area .topbar .icon-button,
+.app-shell[data-chat-active="true"] .main-area .topbar .curtain-trigger {
+  color:#f6f1e7!important;
+}
+.app-shell[data-chat-active="true"] .main-area .topbar .status-chip,
+.app-shell[data-chat-active="true"] .main-area .topbar .lang-button,
+.app-shell[data-chat-active="true"] .main-area .topbar .icon-button,
+.app-shell[data-chat-active="true"] .main-area .topbar .curtain-trigger {
+  background:#211d18!important;
+  border-color:rgba(224,181,101,.2)!important;
+}
+.app-shell[data-chat-active="true"] .main-area .topbar .status-chip:hover,
+.app-shell[data-chat-active="true"] .main-area .topbar .lang-button:hover,
+.app-shell[data-chat-active="true"] .main-area .topbar .icon-button:hover,
+.app-shell[data-chat-active="true"] .main-area .topbar .curtain-trigger:hover {
+  background:#2a241b!important;
+  border-color:rgba(246,220,160,.38)!important;
+}
