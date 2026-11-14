@@ -13,6 +13,49 @@ export type SecurityHeaderAnalysis = {
 };
 
 const MIN_HSTS_MAX_AGE_SECONDS = 15_552_000;
+const REFERRER_POLICIES = new Set(["no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"]);
+
+function parseHstsMaxAge(value: string): number | null {
+  const seen = new Set<string>();
+  let maxAge: number | null = null;
+  for (const rawDirective of value.split(";")) {
+    const directive = rawDirective.trim();
+    if (!directive) continue;
+    const match = /^([A-Za-z0-9-]+)(?:\s*=\s*(?:"([^"]*)"|([^\s]+)))?$/.exec(directive);
+    if (!match) return null;
+    const name = match[1].toLowerCase();
+    if (seen.has(name)) return null;
+    seen.add(name);
+    if (name === "max-age") {
+      const rawValue = match[2] ?? match[3] ?? "";
+      if (!/^\d+$/.test(rawValue)) return null;
+      const parsed = Number(rawValue);
+      if (!Number.isSafeInteger(parsed)) return null;
+      maxAge = parsed;
+    }
+  }
+  return maxAge;
+}
+
+function parseCspDirectives(value: string): Map<string, string[]> {
+  const directives = new Map<string, string[]>();
+  for (const rawDirective of value.split(";")) {
+    const parts = rawDirective.trim().split(/\s+/).filter(Boolean);
+    if (parts.length) directives.set(parts[0].toLowerCase(), parts.slice(1).map((part) => part.toLowerCase()));
+  }
+  return directives;
+}
+
+function hasEffectiveUnsafeInline(sources: string[]): boolean {
+  const hasUnsafeInline = sources.includes("'unsafe-inline'");
+  const hasNonceOrHash = sources.some((source) => /^'nonce-[^']+'$/i.test(source) || /^'sha(?:256|384|512)-[^']+'$/i.test(source));
+  return hasUnsafeInline && !hasNonceOrHash;
+}
+
+function effectiveReferrerPolicy(value: string): string | null {
+  const recognized = value.split(",").map((item) => item.trim().toLowerCase()).filter((item) => REFERRER_POLICIES.has(item));
+  return recognized.length ? recognized[recognized.length - 1] : null;
+}
 
 export function analyzeSecurityHeaders(headers: Record<string, string>): SecurityHeaderAnalysis {
   const normalized = new Map(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value.trim()]));
@@ -21,10 +64,10 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
   const xFrameOptions = (normalized.get("x-frame-options") || "").toLowerCase();
   const frameProtection = ["deny", "sameorigin"].includes(xFrameOptions) || Boolean(frameAncestors?.[1]?.trim());
   const hsts = normalized.get("strict-transport-security") || "";
-  const hstsMaxAge = hsts.match(/(?:^|;)\s*max-age\s*=\s*(\d+)(?:\s*;|$)/i);
+  const hstsMaxAge = parseHstsMaxAge(hsts);
   const xContentTypeOptions = (normalized.get("x-content-type-options") || "").toLowerCase();
   const checks: Array<{ name: string; present: boolean; recommendation: string }> = [
-    { name: "strict-transport-security", present: Boolean(hstsMaxAge), recommendation: "Enable HSTS with a deliberate max-age; validate subdomain and preload requirements before enabling them." },
+    { name: "strict-transport-security", present: hstsMaxAge !== null, recommendation: "Enable HSTS with a deliberate max-age; validate subdomain and preload requirements before enabling them." },
     { name: "content-security-policy", present: Boolean(csp), recommendation: "Define a Content-Security-Policy appropriate to the application; avoid unsafe-inline and unsafe-eval where possible." },
     { name: "x-content-type-options", present: xContentTypeOptions === "nosniff", recommendation: "Set X-Content-Type-Options: nosniff." },
     { name: "frame-protection", present: frameProtection, recommendation: "Prevent framing with CSP frame-ancestors or X-Frame-Options: DENY/SAMEORIGIN." },
@@ -32,7 +75,7 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
     { name: "permissions-policy", present: normalized.has("permissions-policy"), recommendation: "Define a Permissions-Policy that disables browser features the application does not need." },
   ];
   const findings: SecurityHeaderFinding[] = [];
-  if (hsts && (!hstsMaxAge || Number(hstsMaxAge[1]) < MIN_HSTS_MAX_AGE_SECONDS)) findings.push({
+  if (hsts && (hstsMaxAge === null || hstsMaxAge < MIN_HSTS_MAX_AGE_SECONDS)) findings.push({
     header: "strict-transport-security", severity: "medium",
     issue: "HSTS max-age is missing, invalid, or shorter than six months.",
     recommendation: "Use a max-age of at least 15,552,000 seconds after confirming the site is consistently available over HTTPS.",
@@ -53,9 +96,12 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
       issue: "The policy permits unsafe-eval, weakening script execution protections.",
       recommendation: "Remove unsafe-eval and use safer script loading patterns where possible.",
     });
-    if (/'unsafe-inline'/i.test(csp)) findings.push({
+    const cspDirectives = parseCspDirectives(csp);
+    const scriptSources = cspDirectives.get("script-src") ?? cspDirectives.get("default-src") ?? [];
+    const styleSources = cspDirectives.get("style-src") ?? cspDirectives.get("default-src") ?? [];
+    if (hasEffectiveUnsafeInline(scriptSources) || hasEffectiveUnsafeInline(styleSources)) findings.push({
       header: "content-security-policy", severity: "medium",
-      issue: "The policy permits unsafe-inline, weakening protection against injected scripts or styles.",
+      issue: "The effective script or style policy permits unsafe-inline without a nonce or hash source.",
       recommendation: "Prefer nonces or hashes instead of unsafe-inline, and validate the change against application behavior.",
     });
     if (/(?:^|\s)\*(?:\s|;|$)/.test(csp)) findings.push({
@@ -64,7 +110,7 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
       recommendation: "Replace wildcard sources with the smallest explicit set of trusted origins.",
     });
   }
-  if ((normalized.get("referrer-policy") || "").toLowerCase().split(",").some((value) => value.trim() === "unsafe-url")) findings.push({
+  if (effectiveReferrerPolicy(normalized.get("referrer-policy") || "") === "unsafe-url") findings.push({
     header: "referrer-policy", severity: "low",
     issue: "The policy may disclose the full referring URL to other origins.",
     recommendation: "Prefer strict-origin-when-cross-origin or no-referrer where appropriate.",
