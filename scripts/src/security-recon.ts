@@ -21,7 +21,7 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
   const xFrameOptions = (normalized.get("x-frame-options") || "").toLowerCase();
   const frameProtection = ["deny", "sameorigin"].includes(xFrameOptions) || Boolean(frameAncestors?.[1]?.trim());
   const hsts = normalized.get("strict-transport-security") || "";
-  const hstsMaxAge = hsts.match(/(?:^|;)\s*max-age\s*=\s*(\d+)/i);
+  const hstsMaxAge = hsts.match(/(?:^|;)\s*max-age\s*=\s*(\d+)(?:\s*;|$)/i);
   const xContentTypeOptions = (normalized.get("x-content-type-options") || "").toLowerCase();
   const checks: Array<{ name: string; present: boolean; recommendation: string }> = [
     { name: "strict-transport-security", present: Boolean(hstsMaxAge), recommendation: "Enable HSTS with a deliberate max-age; validate subdomain and preload requirements before enabling them." },
