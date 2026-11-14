@@ -9,9 +9,16 @@ export type DelegationRunStatus = "running" | "completed" | "partial" | "failed"
  */
 export function getDelegationRunStatus(statuses: readonly DelegationTaskStatus[]): DelegationRunStatus {
   if (statuses.length === 0) return "failed";
-  if (statuses.some((status) => status === "pending" || status === "running")) return "running";
-  const completed = statuses.filter((status) => status === "completed").length;
+  let completed = 0;
+  let failed = 0;
+  let hasNonTerminal = false;
+  for (const status of statuses) {
+    if (status === "completed") completed++;
+    else if (status === "failed") failed++;
+    else hasNonTerminal = true;
+  }
+  if (hasNonTerminal) return "running";
   if (completed === statuses.length) return "completed";
-  if (completed === 0) return "failed";
+  if (failed === statuses.length) return "failed";
   return "partial";
 }
