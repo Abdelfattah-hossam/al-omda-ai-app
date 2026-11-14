@@ -398,6 +398,52 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     catch {
       try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
       catch {
+        throw new Error("تعذر إنشاء ملف Word حقيقي الآن. تعذر تحميل مكتبة DOCX من المصدرين المجانيين؛ تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+      }
+    }
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib as any;
+    const rtl = ar;
+    const border = { style: "single", size: 1, color: "B8C2D2" };
+    const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
+    const makeParagraph = (value: string, bold = false) => new Paragraph({
+      alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      bidirectional: rtl,
+      children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })],
+      spacing: { after: 120 },
+    });
+    const children: any[] = [
+      new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: rtl, children: [new TextRun({ text: documentData.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
+      ...documentData.paragraphs.map((paragraph) => makeParagraph(paragraph)),
+    ];
+    if (documentData.columns.length > 0) {
+      const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
+        shading: { fill: "E8EDF5" }, verticalAlign: "center", children: [makeParagraph(column, true)],
+      })) });
+      const bodyRows = documentData.rows.map((row) => new TableRow({
+        children: documentData.columns.map((_, index) => new TableCell({
+          verticalAlign: "center", children: [makeParagraph(String(row[index] ?? ""))],
+        })),
+      }));
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: documentData.columns.map(() => Math.floor(9000 / documentData.columns.length)),
+        borders, rows: [header, ...bodyRows],
+      }));
+    }
+    const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
+    const url = URL.createObjectURL(file);
+    const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+    return { name: safeName + ".docx", url };
+  };
+
+  const createExcelAttachment = async (data: SpreadsheetData) => {
+    const primaryModuleUrl = "https://esm.sh/xlsx@0.18.5";
+    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+    let lib: any;
+    try { lib = await import(/* @vite-ignore */ primaryModuleUrl); }
+    catch {
+      try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
+      catch {
         throw new Error("تعذر إنشاء ملف Excel حقيقي الآن. تعذر تحميل مكتبة XLSX من المصدرين المجانيين؛ تحقق من اتصال الإنترنت ثم أعد المحاولة.");
       }
     }
