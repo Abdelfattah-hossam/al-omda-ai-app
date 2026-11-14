@@ -1753,15 +1753,40 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>
   </div>;
 
+  const notFoundPage = (title:string, description:string, href:string, action:string) => (
+    <div className="page-enter">
+      <section className="panel panel-pad plan-empty">
+        <div>
+          <span className="empty-mark"><FileText size={21}/></span>
+          <h3>{title}</h3>
+          <p>{description}</p>
+          <Link href={href} className="button button-primary" style={{marginTop:16}}>{action}</Link>
+        </div>
+      </section>
+    </div>
+  );
+
   let page:ReactNode;
   if (detailMatch && currentTask) page = taskDetailPage(currentTask);
+  else if (detailMatch) page = notFoundPage(
+    isAr ? 'المشروع غير موجود' : 'Project not found',
+    isAr ? 'المشروع المطلوب غير موجود أو تم حذفه.' : 'The requested project does not exist or has been deleted.',
+    '/history',
+    isAr ? 'العودة إلى سجل المهام' : 'Back to task history',
+  );
   else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} view="usage" />;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
-  else page = dashboardPage();
+  else if (path === '/') page = dashboardPage();
+  else page = notFoundPage(
+    isAr ? 'الصفحة غير موجودة' : 'Page not found',
+    isAr ? 'الرابط الذي فتحته غير موجود داخل التطبيق.' : 'The address you opened is not part of this application.',
+    '/',
+    isAr ? 'العودة للرئيسية' : 'Back to dashboard',
+  );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={location.split("?")[0] === "/ai" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
