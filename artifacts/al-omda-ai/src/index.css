@@ -3809,3 +3809,43 @@ h1,h2,h3,h4,.brand-name,.page-title,.section-title{
   .ai-chat-page .ai-composer{background:rgba(255,253,247,.96)!important}
   .ai-chat-page .ai-agent-runtime-panel{background:rgba(255,255,255,.72)!important}
 }
+
+
+/* Match the real dashboard toolbar markup to the supplied gold hero reference. */
+.dashboard-overview .dashboard-toolbar{
+  position:relative!important;
+  isolation:isolate;
+  overflow:hidden!important;
+  padding:27px 30px!important;
+  border:1px solid var(--omda-line)!important;
+  border-radius:26px!important;
+  background:
+    linear-gradient(105deg,rgba(224,181,101,.13),rgba(224,181,101,.025) 62%),
+    var(--omda-panel)!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.20),inset 0 1px 0 rgba(246,220,160,.07)!important;
+}
+.dashboard-overview .dashboard-toolbar::after{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  width:260px;height:260px;
+  inset-inline-end:-90px;top:-175px;
+  border:1px solid rgba(246,220,160,.18);
+  border-radius:50%;
+  box-shadow:0 0 0 24px rgba(224,181,101,.025),0 0 0 52px rgba(224,181,101,.018);
+  pointer-events:none;
+}
+.dashboard-overview .dashboard-toolbar-actions,
+.dashboard-overview .dashboard-toolbar>div:first-child{
+  position:relative;z-index:1;
+}
+.dashboard-overview .dashboard-section-heading h2{color:var(--omda-text)!important}
+.dashboard-overview .dashboard-section-heading p{color:var(--omda-muted)!important}
+.dashboard-overview .dashboard-period{
+  color:var(--omda-gold-light)!important;
+  border-color:var(--omda-line)!important;
+  background:rgba(224,181,101,.07)!important;
+}
+@media(max-width:760px){
+  .dashboard-overview .dashboard-toolbar{padding:22px 18px!important}
+}
