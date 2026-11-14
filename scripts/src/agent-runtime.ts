@@ -818,13 +818,23 @@ function isLocalModelProvider(base: string): boolean {
 
 async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Promise<ModelProviderConfig[]> {
   const configuredProviders = await loadAdditionalModelProviders();
-  const all: ModelProviderConfig[] = [
+  const candidates: ModelProviderConfig[] = [
     { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all" as const], priority: 0 },
     ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all" as const], priority: 1000 },
-  ].filter((item, index, allItems) => item.base && item.model && allItems.findIndex((other) => other.base === item.base && other.model === item.model) === index);
-  for (const provider of all) provider.base = normalizeModelProviderBase(provider.base, provider.name);
-  return orderModelProvidersByPurpose(all, purpose);
+  ];
+  const normalized: ModelProviderConfig[] = [];
+  for (const provider of candidates) {
+    if (!provider.base || !provider.model) continue;
+    try {
+      const base = normalizeModelProviderBase(provider.base, provider.name);
+      if (normalized.some((existing) => existing.base === base && existing.model === provider.model)) continue;
+      normalized.push({ ...provider, base });
+    } catch (error) {
+      console.warn("[model provider config] Skipping invalid provider", provider.name, error instanceof Error ? error.message : "Invalid endpoint");
+    }
+  }
+  return orderModelProvidersByPurpose(normalized, purpose);
 }
 
 async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general"): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
