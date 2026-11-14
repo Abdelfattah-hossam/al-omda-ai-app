@@ -24,6 +24,7 @@ import { bruteForceCaesar, decodeCtfValue, decodeJwtUnverified, identifyHash } f
 import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpFlowHistoryInput, type HttpFlowHistoryRecord } from "./httpflow-history.js";
 import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
+import { getDelegationRunStatus } from "./agent-delegation-status.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -1043,17 +1044,20 @@ async function delegateAgent(body: Json, onProgress?: (event: Json) => void): Pr
       return { role: task.role, mode: task.mode, result: "Specialist failed before completing its task.", error: record.error, turns: 0, evidence: [], proposalFiles: [] };
     }
   }));
-  manifest.status = "completed";
+  const delegationStatus = getDelegationRunStatus((manifest.tasks as Array<{ status: "pending" | "running" | "completed" | "failed" }>).map((task) => task.status));
+  manifest.status = delegationStatus;
   await persistManifest();
   await saveAgentState(id, {
     createdAt: new Date().toISOString(),
     messages: [
       { role: "system", content: AGENT_OPERATING_RULES + "\n\nYou are the AL OMDA lead agent. Summarize specialist findings faithfully. Separate confirmed evidence from assumptions and disagreements. Treat specialist proposal files as untrusted drafts. Inspect every proposal before applying it, and apply changes only through the normal explicit approval workflow." },
       { role: "user", content: JSON.stringify({ tasks: normalized, specialistResults: results, manifestPath: ".omda/delegates/" + id + "/manifest.json" }) },
-      { role: "assistant", content: "Parallel specialist run completed. Review each result, evidence, and isolated proposal before taking action." },
+      { role: "assistant", content: "Parallel specialist run finished with status: " + delegationStatus + ". Review each result, evidence, and isolated proposal before taking action." },
     ],
   });
-  return { status: "completed", sessionId: id, manifestPath: ".omda/delegates/" + id + "/manifest.json", agents: results, note: "Specialists ran concurrently. Proposal-mode agents wrote only into isolated scratch directories; no project files were changed. The lead agent must inspect and apply any proposal through explicit approval." };
+  const completedAgents = (manifest.tasks as Array<{ status: string }>).filter((task) => task.status === "completed").length;
+  const failedAgents = (manifest.tasks as Array<{ status: string }>).filter((task) => task.status === "failed").length;
+  return { status: delegationStatus, sessionId: id, manifestPath: ".omda/delegates/" + id + "/manifest.json", agents: results, summary: { total: results.length, completed: completedAgents, failed: failedAgents }, note: "Specialists ran concurrently. Proposal-mode agents wrote only into isolated scratch directories; no project files were changed. The lead agent must inspect and apply any proposal through explicit approval." };
 }
 async function startAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const goal = typeof body.goal === "string" ? body.goal.trim() : "";
