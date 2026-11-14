@@ -3234,6 +3234,7 @@ body:has(.ai-chat-page){
   .history-item,.profile-main-card,.profile-setting-card,.profile-features-card
 ) {
   position:relative;
+  border-color:transparent!important;
   background:
     linear-gradient(145deg,#1b191d 0%,#111014 100%) padding-box,
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.12),rgba(224,181,101,.58),rgba(255,159,107,.28),rgba(246,220,160,.55),rgba(224,181,101,.12)) border-box!important;
