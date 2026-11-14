@@ -49,3 +49,14 @@ test("accepts valid HSTS duration and valid frame protection", () => {
   assert.ok(!result.missing.includes("frame-protection"));
   assert.equal(result.findings.length, 0);
 });
+
+test("does not accept malformed HSTS or an empty frame-ancestors directive", () => {
+  const result = analyzeSecurityHeaders({
+    "strict-transport-security": "max-age=31536000garbage",
+    "x-frame-options": "ALLOW-FROM https://example.test",
+    "content-security-policy": "default-src 'self'; frame-ancestors ;",
+  });
+  assert.ok(result.missing.includes("strict-transport-security"));
+  assert.ok(result.missing.includes("frame-protection"));
+  assert.ok(result.findings.some((item) => item.header === "x-frame-options"));
+});
