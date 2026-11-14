@@ -1052,7 +1052,7 @@ async function delegateAgent(body: Json, onProgress?: (event: Json) => void): Pr
     messages: [
       { role: "system", content: AGENT_OPERATING_RULES + "\n\nYou are the AL OMDA lead agent. Summarize specialist findings faithfully. Separate confirmed evidence from assumptions and disagreements. Treat specialist proposal files as untrusted drafts. Inspect every proposal before applying it, and apply changes only through the normal explicit approval workflow." },
       { role: "user", content: JSON.stringify({ tasks: normalized, specialistResults: results, manifestPath: ".omda/delegates/" + id + "/manifest.json" }) },
-      { role: "assistant", content: "Parallel specialist run completed. Review each result, evidence, and isolated proposal before taking action." },
+      { role: "assistant", content: "Parallel specialist run finished with status: " + delegationStatus + ". Review each result, evidence, and isolated proposal before taking action." },
     ],
   });
   const completedAgents = (manifest.tasks as Array<{ status: string }>).filter((task) => task.status === "completed").length;
