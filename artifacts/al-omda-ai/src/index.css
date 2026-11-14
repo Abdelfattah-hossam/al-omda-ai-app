@@ -3561,3 +3561,52 @@ body:has(.ai-chat-page){
 .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-chart-card :is(.pipeline-track,.activity-chart-grid) {
   background-color:rgba(224,181,101,.09)!important;
 }
+
+
+/* Review fixes: keep KPI values readable and preserve entrance + border motion. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-value {
+  color:#f6dca0!important;
+  background:transparent!important;
+  background-image:none!important;
+  -webkit-text-fill-color:#f6dca0!important;
+  animation:none!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card {
+  animation:omda-reference-enter .55s cubic-bezier(.2,.7,.2,1) both,
+            omda-reference-border 11s linear infinite!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(2) {animation-delay:.07s,0s!important}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(3) {animation-delay:.14s,0s!important}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(4) {animation-delay:.21s,0s!important}
+
+/* Animate glow on a filter layer instead of an !important box-shadow. */
+@keyframes omda-reference-filter-glow {
+  0%,100% {filter:drop-shadow(0 4px 8px rgba(224,181,101,.12))}
+  50% {filter:drop-shadow(0 7px 15px rgba(224,181,101,.38))}
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary {
+  animation:omda-reference-filter-glow 3s ease-in-out infinite!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark {
+  animation:omda-reference-filter-glow 3.4s ease-in-out infinite!important;
+}
+
+/* Animated notice edge uses a separate overlay; static border remains the fallback. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note) {
+  position:relative;
+  isolation:isolate;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note)::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  border:1px solid rgba(224,181,101,.42);
+  border-radius:inherit;
+  opacity:0;
+  pointer-events:none;
+  animation:omda-reference-edge-overlay 5.5s ease-in-out infinite;
+}
+@keyframes omda-reference-edge-overlay {
+  0%,100% {opacity:.12}
+  50% {opacity:.85}
+}
