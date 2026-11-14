@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, describe, test } from "node:test";
+import { createMcpToolAlias } from "./mcp-tool-alias.js";
 
 const runtimePath = join(dirname(fileURLToPath(import.meta.url)), "agent-runtime.ts");
 const allowedOrigin = "http://127.0.0.1:3000";
@@ -597,7 +598,7 @@ rl.on("line", (line) => {
 });
 
 
-async function startMcpApprovalFixture(goal: string, holdToolCall = false) {
+async function startMcpApprovalFixture(goal: string, holdToolCall = false, toolFunctionName = "mcp.call_tool") {
   const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-approval-test-"));
   const scriptPath = join(workspace, "mock-mcp-server.cjs");
   const callsPath = join(workspace, "mcp-calls.txt");
@@ -629,7 +630,7 @@ async function startMcpApprovalFixture(goal: string, holdToolCall = false) {
     servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS", ...(holdToolCall ? ["MCP_TEST_GATE"] : [])] }],
   }));
   const model = await startMockModel((requestNumber) => requestNumber === 1
-    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: "mcp.call_tool", arguments: JSON.stringify({ serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: toolFunctionName, arguments: JSON.stringify(toolFunctionName.startsWith("mcp_tool_") ? { content: goal } : { serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
     : { payload: { choices: [{ delta: { content: "MCP approval flow completed." }, finish_reason: "stop" }] } });
   const isolated = await startRuntime({
     OMDA_AGENT_WORKSPACE: workspace,
@@ -672,6 +673,38 @@ test("MCP tool execution remains paused until the exact pending call is approved
     await rm(fixture.workspace, { recursive: true, force: true });
   }
 });
+
+test("dynamic MCP tool aliases also pause for approval before invoking the server", async () => {
+  const alias = createMcpToolAlias("mock", "write_note");
+  const fixture = await startMcpApprovalFixture("approved dynamic alias content", false, alias);
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the discovered MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    assert.equal(pending.pending[0].tool, "mock / write_note");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+    const continued = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "approved dynamic alias content" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
 
 test("denying an MCP tool approval never invokes the configured MCP server tool", async () => {
   for (const approvedCallIds of [[], ["unrelated-call-id"]]) {
