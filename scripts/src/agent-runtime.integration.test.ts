@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, describe, test } from "node:test";
+import { createMcpToolAlias } from "./mcp-tool-alias.js";
 
 const runtimePath = join(dirname(fileURLToPath(import.meta.url)), "agent-runtime.ts");
 const allowedOrigin = "http://127.0.0.1:3000";
@@ -417,15 +418,16 @@ test("model runtime fails over to the configured fallback without exposing crede
     assert.equal(body.model, "fallback-test-model");
     return { payload: { choices: [{ delta: { content: "Fallback provider succeeded." }, finish_reason: "stop" }] } };
   });
-  const isolated = await startRuntime({
-    OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
-    OMDA_AGENT_MODEL_NAME: "primary-test-model",
-    OMDA_AGENT_MODEL_API_KEY: "primary-secret-test-value",
-    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
-    OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-test-model",
-    OMDA_AGENT_FALLBACK_MODEL_API_KEY: "fallback-secret-test-value",
-  });
+  let isolated: RuntimeHandle | undefined;
   try {
+    isolated = await startRuntime({
+      OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "primary-test-model",
+      OMDA_AGENT_MODEL_API_KEY: "primary-secret-test-value",
+      OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+      OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-test-model",
+      OMDA_AGENT_FALLBACK_MODEL_API_KEY: "fallback-secret-test-value",
+    });
     const response = await postTo(isolated, "/v1/agent/run", { goal: "Say hello after checking provider availability." });
     const responseBody = await response.text();
     assert.equal(response.status, 200, responseBody + "\n" + isolated.stderr);
@@ -439,7 +441,39 @@ test("model runtime fails over to the configured fallback without exposing crede
     assert.equal(serialized.includes("primary-secret-test-value"), false);
     assert.equal(serialized.includes("fallback-secret-test-value"), false);
   } finally {
-    await stopRuntime(isolated);
+    if (isolated) await stopRuntime(isolated);
+    await stopMockModel(primary);
+    await stopMockModel(fallback);
+  }
+});
+
+test("skips a provider during its cooldown on the next agent request", async () => {
+  const primary = await startMockModel(() => ({ status: 503, payload: { error: { message: "primary unavailable" } } }));
+  const fallback = await startMockModel((requestNumber) => ({
+    payload: { choices: [{ delta: { content: "Fallback response " + requestNumber }, finish_reason: "stop" }] },
+  }));
+  let isolated: RuntimeHandle | undefined;
+  try {
+    isolated = await startRuntime({
+      OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "primary-cooldown-test-model",
+      OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+      OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-cooldown-test-model",
+    });
+    const first = await postTo(isolated, "/v1/agent/run", { goal: "Answer the first request." });
+    const firstBody = await first.text();
+    assert.equal(first.status, 200, firstBody + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(firstBody) as { message: string }).message, "Fallback response 1");
+
+    const second = await postTo(isolated, "/v1/agent/run", { goal: "Answer the second request." });
+    const secondBody = await second.text();
+    assert.equal(second.status, 200, secondBody + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(secondBody) as { message: string }).message, "Fallback response 2");
+
+    assert.equal(primary.requests, 1, "The unavailable primary should be skipped while its cooldown is active.");
+    assert.equal(fallback.requests, 2, "The healthy fallback should handle both requests.");
+  } finally {
+    if (isolated) await stopRuntime(isolated);
     await stopMockModel(primary);
     await stopMockModel(fallback);
   }
@@ -451,16 +485,22 @@ test("container execution invokes Docker with restrictive isolation flags and on
   const markerPath = join(workspace, "docker-args.json");
   await mkdir(bin, { recursive: true });
   const fakeDocker = join(bin, "docker");
+  const markerLiteral = JSON.stringify(markerPath);
   await writeFile(fakeDocker, `#!/usr/bin/env node
 const fs = require("node:fs");
-fs.writeFileSync(process.env.OMDA_DOCKER_TEST_ARGS, JSON.stringify(process.argv.slice(2)));
+fs.writeFileSync(${markerLiteral}, JSON.stringify({
+  args: process.argv.slice(2),
+  openAiKey: process.env.OPENAI_API_KEY || null,
+  geminiKey: process.env.GEMINI_API_KEY || null,
+}));
 process.stdout.write("container-command-ok");
 `, "utf8");
   await chmod(fakeDocker, 0o755);
   const isolated = await startRuntime({
     OMDA_AGENT_EXECUTION: "container",
     OMDA_AGENT_SANDBOX_IMAGE: "node:22-bookworm-slim",
-    OMDA_DOCKER_TEST_ARGS: markerPath,
+    OPENAI_API_KEY: "must-not-reach-docker-client",
+    GEMINI_API_KEY: "must-not-reach-docker-client",
     PATH: bin + delimiter + (process.env.PATH || ""),
   });
   try {
@@ -471,7 +511,10 @@ process.stdout.write("container-command-ok");
     assert.equal(result.stdout, "container-command-ok");
     assert.equal(result.isolation, "docker");
     assert.equal(result.image, "node:22-bookworm-slim");
-    const args = JSON.parse(await readFile(markerPath, "utf8")) as string[];
+    const recorded = JSON.parse(await readFile(markerPath, "utf8")) as { args: string[]; openAiKey: string | null; geminiKey: string | null };
+    const args = recorded.args;
+    assert.equal(recorded.openAiKey, null);
+    assert.equal(recorded.geminiKey, null);
     for (const flag of ["--network=none", "--cpus=1", "--memory=512m", "--memory-swap=512m", "--pids-limit=128", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges"]) {
       assert.ok(args.includes(flag), "missing Docker isolation flag: " + flag);
     }
@@ -552,4 +595,331 @@ rl.on("line", (line) => {
     assert.ok(secondBody.servers.some((server) => server.tools.some((tool) => tool.name === "ping")));
     assert.equal(await readFile(counterPath, "utf8"), "2");
   });
+});
+
+
+async function startMcpApprovalFixture(goal: string, holdToolCall = false, toolFunctionName = "mcp.call_tool") {
+  const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-approval-test-"));
+  const scriptPath = join(workspace, "mock-mcp-server.cjs");
+  const callsPath = join(workspace, "mcp-calls.txt");
+  const argsPath = join(workspace, "mcp-call-args.json");
+  const gatePath = join(workspace, "release-mcp-call");
+  const mockServer = [
+    'const { readFileSync, writeFileSync, existsSync } = require("node:fs");',
+    'const readline = require("node:readline");',
+    'const rl = readline.createInterface({ input: process.stdin });',
+    'rl.on("line", async (line) => {',
+    '  let message;',
+    '  try { message = JSON.parse(line); } catch { return; }',
+    '  if (message.method === "initialize" && message.id !== undefined) {',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\n");',
+    '  } else if (message.method === "tools/list" && message.id !== undefined) {',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\n");',
+    '  } else if (message.method === "tools/call" && message.id !== undefined) {',
+    '    let count = 0;',
+    '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
+    '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
+    '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
+    '    if (process.env.MCP_TEST_GATE) { const deadline = Date.now() + 5000; while (!existsSync(process.env.MCP_TEST_GATE) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10)); }',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\n");',
+    '  }',
+    '});',
+  ].join("\n");
+  await writeFileForMcp(scriptPath, mockServer);
+  await writeFileForMcp(join(workspace, ".omda", "mcp-servers.json"), JSON.stringify({
+    servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS", ...(holdToolCall ? ["MCP_TEST_GATE"] : [])] }],
+  }));
+  const model = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: toolFunctionName, arguments: JSON.stringify(toolFunctionName.startsWith("mcp_tool_") ? { content: goal } : { serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "MCP approval flow completed." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_WORKSPACE: workspace,
+    OMDA_AGENT_MCP_COMMANDS: process.execPath,
+    MCP_TEST_CALLS: callsPath,
+    MCP_TEST_ARGS: argsPath,
+    ...(holdToolCall ? { MCP_TEST_GATE: gatePath } : {}),
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+  });
+  return { workspace, callsPath, argsPath, gatePath, model, isolated };
+}
+
+test("MCP tool execution remains paused until the exact pending call is approved", async () => {
+  const fixture = await startMcpApprovalFixture("approved MCP content");
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    assert.equal(pending.pending[0].tool, "mcp.call_tool");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+    const continued = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "approved MCP content" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+test("dynamic MCP tool aliases also pause for approval before invoking the server", async () => {
+  const alias = createMcpToolAlias("mock", "write_note");
+  const fixture = await startMcpApprovalFixture("approved dynamic alias content", false, alias);
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the discovered MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    assert.equal(pending.pending[0].tool, "mock / write_note");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+    const continued = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "approved dynamic alias content" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+
+test("denying an MCP tool approval never invokes the configured MCP server tool", async () => {
+  for (const approvedCallIds of [[], ["unrelated-call-id"]]) {
+    const fixture = await startMcpApprovalFixture("must not be written");
+    try {
+      const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+      const startedBody = await started.text();
+      assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+      const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+      assert.equal(pending.status, "approval_required");
+      assert.equal(pending.pending[0].id, "mcp-write-call");
+      await assert.rejects(readFile(fixture.callsPath, "utf8"));
+
+      const denied = await postTo(fixture.isolated, "/v1/agent/continue", {
+        sessionId: pending.sessionId,
+        approvedCallIds,
+      });
+      const deniedBody = await denied.text();
+      assert.equal(denied.status, 200, deniedBody + "\\n" + fixture.isolated.stderr);
+      assert.equal((JSON.parse(deniedBody) as { status: string }).status, "completed");
+      await assert.rejects(readFile(fixture.callsPath, "utf8"));
+      assert.equal(fixture.model.requests, 2);
+    } finally {
+      await stopRuntime(fixture.isolated);
+      await stopMockModel(fixture.model);
+      await rm(fixture.workspace, { recursive: true, force: true });
+    }
+  }
+});
+
+test("concurrent approval submissions cannot execute the same pending MCP action twice", async () => {
+  const fixture = await startMcpApprovalFixture("execute exactly once", true);
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+
+    const submitApproval = () => postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const firstPromise = submitApproval();
+    const deadline = Date.now() + 4000;
+    let toolStarted = false;
+    while (Date.now() < deadline) {
+      try {
+        toolStarted = (await readFile(fixture.callsPath, "utf8")) === "1";
+      } catch { /* Wait until the first approved call reaches the gated MCP server. */ }
+      if (toolStarted) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.equal(toolStarted, true, "The first approval should reach the MCP server before competing session requests.");
+    const resumed = await postTo(fixture.isolated, "/v1/agent/resume", { sessionId: pending.sessionId });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 400, resumedBody);
+    assert.match(resumedBody, /already being processed/);
+    const second = await submitApproval();
+    const secondBody = await second.text();
+    assert.equal(second.status, 400, secondBody);
+    assert.match(secondBody, /already processing an approval/);
+    await writeFileForMcp(fixture.gatePath, "release");
+    const first = await firstPromise;
+    const firstBody = await first.text();
+    assert.equal(first.status, 200, firstBody + "\\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(firstBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+
+test("host command mode uses an argument vector and does not forward provider secrets", async () => {
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "omda-host-command-test-"));
+  const bin = join(fixtureRoot, "bin");
+  const markerPath = join(fixtureRoot, "command-result.json");
+  const injectedPath = join(fixtureRoot, "shell-injection-ran");
+  await mkdir(bin, { recursive: true });
+  const fakePnpm = join(bin, "pnpm");
+  const markerLiteral = JSON.stringify(markerPath);
+  await writeFile(fakePnpm, [
+    "#!/usr/bin/env node",
+    'const fs = require("node:fs");',
+    'fs.writeFileSync(' + markerLiteral + ', JSON.stringify({ args: process.argv.slice(2), openAiKey: process.env.OPENAI_API_KEY || null, geminiKey: process.env.GEMINI_API_KEY || null }));',
+    'process.stdout.write("host-command-ok");',
+    "",
+  ].join("\n"), "utf8");
+  await chmod(fakePnpm, 0o755);
+
+  const isolated = await startRuntime({
+    OMDA_AGENT_EXECUTION: "host",
+    PATH: bin + delimiter + (process.env.PATH || ""),
+    OPENAI_API_KEY: "must-not-reach-child",
+    GEMINI_API_KEY: "must-not-reach-child",
+  });
+  try {
+    const payload = ["--version", ";", "touch", injectedPath];
+    const response = await postTo(isolated, "/v1/terminal/execute", { command: "pnpm", args: payload, cwd: "." });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { ok: boolean; stdout: string; isolation: string };
+    assert.equal(result.ok, true);
+    assert.equal(result.stdout, "host-command-ok");
+    assert.equal(result.isolation, "host");
+    const recorded = JSON.parse(await readFile(markerPath, "utf8")) as { args: string[]; openAiKey: string | null; geminiKey: string | null };
+    assert.deepEqual(recorded.args, payload);
+    assert.equal(recorded.openAiKey, null);
+    assert.equal(recorded.geminiKey, null);
+    await assert.rejects(readFile(injectedPath, "utf8"), { code: "ENOENT" });
+
+    const shell = await postTo(isolated, "/v1/terminal/execute", { command: "sh", args: ["-c", "touch " + injectedPath], cwd: "." });
+    assert.equal(shell.status, 400);
+    assert.match((await shell.json() as { error: string }).error, /not permitted/i);
+    await assert.rejects(readFile(injectedPath, "utf8"), { code: "ENOENT" });
+  } finally {
+    await stopRuntime(isolated);
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+
+test("pending dynamic MCP aliases survive an Agent Runtime restart and can be approved", async () => {
+  const dynamicAlias = createMcpToolAlias("mock", "write_note");
+  const fixture = await startMcpApprovalFixture("resume after restart", false, dynamicAlias);
+  let active = fixture.isolated;
+  const stopProcessWithoutDeletingWorkspace = async (handle: RuntimeHandle) => {
+    if (handle.child.exitCode !== null) return;
+    handle.child.kill("SIGTERM");
+    await Promise.race([
+      new Promise<void>((resolve) => handle.child.once("exit", () => resolve())),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
+    if (handle.child.exitCode === null) handle.child.kill("SIGKILL");
+  };
+  try {
+    const started = await postTo(active, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + active.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending[0].id, "mcp-write-call");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"), { code: "ENOENT" });
+
+    await stopProcessWithoutDeletingWorkspace(active);
+    active = await startRuntime({
+      OMDA_AGENT_WORKSPACE: fixture.workspace,
+      OMDA_AGENT_MCP_COMMANDS: process.execPath,
+      MCP_TEST_CALLS: fixture.callsPath,
+      MCP_TEST_ARGS: fixture.argsPath,
+      OMDA_AGENT_MODEL_BASE_URL: fixture.model.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "mock-model",
+    });
+
+    const resumed = await postTo(active, "/v1/agent/resume", { sessionId: pending.sessionId });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 200, resumedBody + "\\n" + active.stderr);
+    const restoredPending = JSON.parse(resumedBody) as { status: string; pending: Array<{ id: string; tool: string }> };
+    assert.equal(restoredPending.status, "approval_required");
+    assert.equal(restoredPending.pending[0].tool, "mock / write_note");
+
+    // A workspace user can observe a session ID and plant the old predictable
+    // temp filename. Session persistence must never follow that symlink.
+    const outside = await mkdtemp(join(tmpdir(), "omda-session-symlink-test-"));
+    const outsideSentinel = join(outside, "sentinel.txt");
+    const sessionsDirectory = join(fixture.workspace, ".omda", "sessions");
+    await mkdir(sessionsDirectory, { recursive: true });
+    await writeFile(outsideSentinel, "must remain unchanged", "utf8");
+    await symlink(outsideSentinel, join(sessionsDirectory, pending.sessionId + ".json.tmp"));
+
+    const continued = await postTo(active, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: ["mcp-write-call"],
+    });
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + active.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(outsideSentinel, "utf8"), "must remain unchanged");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    await rm(outside, { recursive: true, force: true });
+    assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "resume after restart" });
+    assert.equal(fixture.model.requests, 2);
+  } finally {
+    await stopRuntime(active);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+
+test("sessions.save cannot follow a planted predictable temporary-file symlink", async () => {
+  const isolated = await startRuntime();
+  const outside = await mkdtemp(join(tmpdir(), "omda-session-save-symlink-test-"));
+  const sentinel = join(outside, "sentinel.txt");
+  const sessionId = "symlink-save-check";
+  const sessionsDirectory = join(isolated.workspace, ".omda", "sessions");
+  try {
+    await mkdir(sessionsDirectory, { recursive: true });
+    await writeFile(sentinel, "must remain unchanged", "utf8");
+    await symlink(sentinel, join(sessionsDirectory, sessionId + ".json.tmp"));
+
+    const saved = await postTo(isolated, "/v1/sessions/save", { id: sessionId, state: { messages: [{ role: "user", content: "safe" }] } });
+    const savedBody = await saved.text();
+    assert.equal(saved.status, 200, savedBody + "\\n" + isolated.stderr);
+    assert.equal(await readFile(sentinel, "utf8"), "must remain unchanged");
+
+    const loaded = await postTo(isolated, "/v1/sessions/load", { id: sessionId });
+    assert.equal(loaded.status, 200);
+    assert.deepEqual((await loaded.json() as { state: { messages: unknown[] } }).state.messages, [{ role: "user", content: "safe" }]);
+  } finally {
+    await stopRuntime(isolated);
+    await rm(outside, { recursive: true, force: true });
+  }
 });
