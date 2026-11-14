@@ -872,7 +872,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       limit: completion.limit,
       resetAt: completion.resetAt,
     };
-    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), ...(presentation ? { presentation } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
