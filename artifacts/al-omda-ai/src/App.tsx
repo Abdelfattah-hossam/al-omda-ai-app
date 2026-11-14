@@ -22,7 +22,7 @@ import {
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
-  Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
+  Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles, Presentation,
   X, Menu, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
 } from 'lucide-react';
 
@@ -34,6 +34,16 @@ type PlanStep = { id: string; text: string; state: StepState; output?: string; c
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
 type TaskSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+type TaskPresentation = { title: string; slides: Array<{ title: string; body: string; bullets: string[]; speakerNotes: string }> };
+function getTaskPresentation(result?: string): TaskPresentation | null {
+  if (!result?.startsWith("ALOMDA_PPTX_JSON:")) return null;
+  try {
+    const value = JSON.parse(result.slice("ALOMDA_PPTX_JSON:".length));
+    if (typeof value.title !== "string" || !Array.isArray(value.slides) || value.slides.length < 1 || value.slides.length > 40) return null;
+    if (value.slides.some((slide: any) => !slide || typeof slide.title !== "string" || !slide.title.trim() || (typeof slide.body !== "string") || !Array.isArray(slide.bullets) || slide.bullets.length > 10 || slide.bullets.some((bullet: unknown) => typeof bullet !== "string") || typeof slide.speakerNotes !== "string")) return null;
+    return value as TaskPresentation;
+  } catch { return null; }
+}
 function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
   if (!result?.startsWith("ALOMDA_XLSX_JSON:")) return null;
   try {
@@ -95,6 +105,49 @@ function getTaskHtmlApp(result?: string): string | null {
 }
 function safeArtifactName(value: string, fallback: string): string {
   return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
+}
+async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
+  const primary = "https://esm.sh/pptxgenjs@3.12.0";
+  const fallback = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
+  let module: any;
+  try { module = await import(/* @vite-ignore */ primary); }
+  catch {
+    try { module = await import(/* @vite-ignore */ fallback); }
+    catch { throw new Error("PowerPoint generator unavailable. No substitute or renamed file was created."); }
+  }
+  const PptxGenJS = module.default ?? module;
+  const rtl = /[\\u0590-\\u08ff]/.test([data.title, ...data.slides.map((slide) => [slide.title, slide.body, ...slide.bullets].join(" "))].join(" "));
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.rtlMode = rtl;
+  pptx.author = "AL OMDA AI";
+  pptx.title = data.title;
+  pptx.subject = data.title;
+  pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: rtl ? "ar-SA" : "en-US" };
+  data.slides.forEach((item, index) => {
+    const slide = pptx.addSlide();
+    slide.background = { color: "FFFFFF" };
+    slide.addText(item.title, { x: 0.65, y: 0.45, w: 12.05, h: 0.8, fontFace: "Arial", fontSize: 28, bold: true, color: "17243A", align: rtl ? "right" : "left", rtlMode: rtl, margin: 0.04 });
+    let bodyY = 1.55;
+    if (item.body) {
+      slide.addText(item.body, { x: 0.8, y: bodyY, w: 11.7, h: item.bullets.length ? 1.25 : 4.9, fontFace: "Arial", fontSize: 19, color: "354052", align: rtl ? "right" : "left", rtlMode: rtl, valign: "mid", fit: "shrink" });
+      bodyY += item.bullets.length ? 1.55 : 0;
+    }
+    if (item.bullets.length) {
+      const runs = item.bullets.map((bullet, bulletIndex) => ({ text: bullet, options: { bullet: { indent: 20 }, hanging: 4, breakLine: bulletIndex < item.bullets.length - 1 } }));
+      slide.addText(runs, { x: 0.9, y: bodyY, w: 11.5, h: Math.max(2.2, 4.9 - (bodyY - 1.55)), fontFace: "Arial", fontSize: 19, color: "253247", align: rtl ? "right" : "left", rtlMode: rtl, valign: "mid", paraSpaceAfterPt: 16, fit: "shrink" });
+    }
+    if (item.speakerNotes) slide.addNotes(item.speakerNotes);
+    slide.addText(String(index + 1), { x: 12.1, y: 7.08, w: 0.5, h: 0.2, fontFace: "Arial", fontSize: 9, color: "7B8493", align: "center", margin: 0 });
+  });
+  const output = await pptx.write({ outputType: "blob" });
+  const blob = output instanceof Blob ? output : new Blob([output], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+  if (blob.size < 1500) throw new Error("Generated PowerPoint file is incomplete.");
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx";
+  document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function downloadTaskHtml(data: { title: string; html: string }): void {
   const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
@@ -839,7 +892,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
             </div>; })()}
             {step.result && <div style={{marginTop:12,padding:12,borderRadius:9,border:'1px solid rgba(74,190,145,.28)',background:'rgba(74,190,145,.06)'}}>
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
-               {getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
+               {getTaskPresentation(step.result) ? <div style={{display:'grid',gap:10}}>
+                 <strong>{getTaskPresentation(step.result)!.title} · {getTaskPresentation(step.result)!.slides.length} {isAr?'شرائح':'slides'}</strong>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!)}><Presentation size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
+                 <div style={{display:'grid',gap:10}}>{getTaskPresentation(step.result)!.slides.map((slide,slideIndex)=><section key={slideIndex} dir={isAr?'rtl':'ltr'} style={{aspectRatio:'16 / 9',minHeight:180,padding:18,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'#fff',color:'#17243a',display:'flex',flexDirection:'column',justifyContent:'center',gap:10}}><small style={{color:'#8b7650'}}>{slideIndex+1} / {getTaskPresentation(step.result)!.slides.length}</small><strong style={{fontSize:18}}>{slide.title}</strong>{slide.body && <p style={{margin:0,lineHeight:1.6}}>{slide.body}</p>}{slide.bullets.length>0 && <ul style={{margin:0,paddingInlineStart:22,lineHeight:1.7}}>{slide.bullets.map((bullet,index)=><li key={index}>{bullet}</li>)}</ul>}</section>)}</div>
+               </div> : getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}> 
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
                    <iframe title={task.title} sandbox="allow-scripts" srcDoc={getTaskHtmlApp(step.result)!} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
