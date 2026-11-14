@@ -1091,35 +1091,46 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
   await saveAgentState(id, state);
   return await runAgentLoop(id, state, onProgress);
 }
+const activeApprovalSessions = new Set<string>();
+
 async function continueAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  const state = await loadAgentState(id);
-  const pending = state.pendingToolCalls || [];
-  if (!pending.length) throw new Error("This agent session has no pending approval request.");
-  const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
-  const imageQueue: McpImageObservation[] = [];
-  delete state.pendingToolCalls;
-  // Persist the approval claim before performing side effects. If the tool runs
-  // but the follow-up model request fails, the same approval cannot be replayed.
-  await saveAgentState(id, state);
-  for (const call of pending) {
-    if (!approved.has(call.id)) {
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
-      continue;
-    }
-    try {
-      const result = await runTool(call, onProgress);
-      appendMcpToolResult(state.messages, call, result, imageQueue);
-    } catch (error) {
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
-    }
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Invalid session ID.");
+  if (activeApprovalSessions.has(id)) {
+    throw new Error("This agent session is already processing an approval. Wait for that request to finish.");
   }
-  appendMcpImageObservations(state.messages, imageQueue);
-  if (!state.purpose) {
-    const originalGoal = state.messages.find((message) => message.role === "user")?.content;
-    state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
+  activeApprovalSessions.add(id);
+  try {
+    const state = await loadAgentState(id);
+    const pending = state.pendingToolCalls || [];
+    if (!pending.length) throw new Error("This agent session has no pending approval request.");
+    const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
+    const imageQueue: McpImageObservation[] = [];
+    // Persist the approval claim before performing side effects. The in-memory
+    // per-session lock also prevents concurrent requests from claiming it twice.
+    delete state.pendingToolCalls;
+    await saveAgentState(id, state);
+    for (const call of pending) {
+      if (!approved.has(call.id)) {
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
+        continue;
+      }
+      try {
+        const result = await runTool(call, onProgress);
+        appendMcpToolResult(state.messages, call, result, imageQueue);
+      } catch (error) {
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+      }
+    }
+    appendMcpImageObservations(state.messages, imageQueue);
+    if (!state.purpose) {
+      const originalGoal = state.messages.find((message) => message.role === "user")?.content;
+      state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
+    }
+    return await runAgentLoop(id, state, onProgress, state.purpose);
+  } finally {
+    activeApprovalSessions.delete(id);
   }
-  return await runAgentLoop(id, state, onProgress, state.purpose);
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
