@@ -599,18 +599,18 @@ async function startMcpApprovalFixture(goal: string) {
     '  let message;',
     '  try { message = JSON.parse(line); } catch { return; }',
     '  if (message.method === "initialize" && message.id !== undefined) {',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\\\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\n");',
     '  } else if (message.method === "tools/list" && message.id !== undefined) {',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\\\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\n");',
     '  } else if (message.method === "tools/call" && message.id !== undefined) {',
     '    let count = 0;',
     '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
     '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
     '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\\\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\n");',
     '  }',
     '});',
-  ].join("\\n");
+  ].join("\n");
   await writeFileForMcp(scriptPath, mockServer);
   await writeFileForMcp(join(workspace, ".omda", "mcp-servers.json"), JSON.stringify({
     servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS"] }],
@@ -634,7 +634,7 @@ test("MCP tool execution remains paused until the exact pending call is approved
   try {
     const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
     const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
     const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string; tool: string }> };
     assert.equal(pending.status, "approval_required");
     assert.equal(pending.pending.length, 1);
@@ -647,7 +647,7 @@ test("MCP tool execution remains paused until the exact pending call is approved
       approvedCallIds: ["mcp-write-call"],
     });
     const continuedBody = await continued.text();
-    assert.equal(continued.status, 200, continuedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal(continued.status, 200, continuedBody + "\n" + fixture.isolated.stderr);
     assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
     assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
     assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "approved MCP content" });
@@ -664,7 +664,7 @@ test("denying an MCP tool approval never invokes the configured MCP server tool"
   try {
     const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
     const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
     const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
     assert.equal(pending.status, "approval_required");
     assert.equal(pending.pending[0].id, "mcp-write-call");
@@ -675,7 +675,7 @@ test("denying an MCP tool approval never invokes the configured MCP server tool"
       approvedCallIds: [],
     });
     const deniedBody = await denied.text();
-    assert.equal(denied.status, 200, deniedBody + "\\n" + fixture.isolated.stderr);
+    assert.equal(denied.status, 200, deniedBody + "\n" + fixture.isolated.stderr);
     assert.equal((JSON.parse(deniedBody) as { status: string }).status, "completed");
     await assert.rejects(readFile(fixture.callsPath, "utf8"));
     assert.equal(fixture.model.requests, 2);
