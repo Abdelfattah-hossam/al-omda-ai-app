@@ -425,7 +425,7 @@ async function executeCommand(body: Json): Promise<Json> {
     ...(typeof process.getuid === "function" && typeof process.getgid === "function" ? ["--user", process.getuid() + ":" + process.getgid()] : []),
     image, command, ...(args as string[]),
   ] : args as string[];
-  const commandEnv = useContainer ? process.env : buildCommandEnvironment(process.env);
+  const commandEnv = buildCommandEnvironment(process.env);
   return await new Promise((resolveResult) => {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
@@ -692,7 +692,8 @@ async function callMcpTool(serverName: string, toolName: string, args: Record<st
 }
 
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
-type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string; purpose?: ModelPurpose };
+type PendingMcpTool = { serverName: string; toolName: string };
+type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; createdAt: string; purpose?: ModelPurpose };
 const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
@@ -705,7 +706,7 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "files.list", description: "List files and directories in the configured project workspace.", parameters: { type: "object", properties: { path: { type: "string", description: "Workspace-relative directory path; use . for the root." } }, additionalProperties: false } } },
   { type: "function", function: { name: "files.read", description: "Read a UTF-8 source or project file inside the workspace.", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } } },
   { type: "function", function: { name: "files.write", description: "Create or update a UTF-8 file in the workspace. Requires explicit user approval for each call.", parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"], additionalProperties: false } } },
-  { type: "function", function: { name: "terminal.execute", description: "Run an approved project command without a shell. Requires explicit user approval and OMDA_AGENT_EXECUTION=host.", parameters: { type: "object", properties: { command: { type: "string", enum: ["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"] }, args: { type: "array", items: { type: "string" } }, cwd: { type: "string" } }, required: ["command", "args"], additionalProperties: false } } },
+  { type: "function", function: { name: "terminal.execute", description: "Run an approved project command without a shell. Requires explicit user approval and OMDA_AGENT_EXECUTION=container for the isolated Docker sandbox or host for direct host access.", parameters: { type: "object", properties: { command: { type: "string", enum: ["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"] }, args: { type: "array", items: { type: "string" } }, cwd: { type: "string" } }, required: ["command", "args"], additionalProperties: false } } },
   { type: "function", function: { name: "http.compare_roles", description: "Compare the same authorized endpoint using configured user/role credentials. Requires explicit user approval. Credentials are loaded from environment variables and never sent to the model.", parameters: { type: "object", properties: { url: { type: "string" }, method: { type: "string", enum: ["GET", "HEAD", "OPTIONS"] }, roles: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 } }, required: ["url", "roles"], additionalProperties: false } } },
   { type: "function", function: { name: "agent.delegate", description: "Delegate 2 to 4 parallel specialists. Each may be read-only or may write draft files only inside its isolated proposal workspace; the lead agent alone can apply changes through the normal approval workflow.", parameters: { type: "object", properties: { tasks: { type: "array", minItems: 2, maxItems: 4, items: { type: "object", properties: { role: { type: "string" }, goal: { type: "string" }, mode: { type: "string", enum: ["read_only", "proposal"] } }, required: ["role", "goal"], additionalProperties: false } } }, required: ["tasks"], additionalProperties: false } } },
   { type: "function", function: { name: "recon.dns_records", description: "Perform passive DNS record lookups for an exact allowlisted hostname. Private/reserved IP answers are blocked by default.", parameters: { type: "object", properties: { hostname: { type: "string" } }, required: ["hostname"], additionalProperties: false } } },
@@ -723,9 +724,17 @@ async function saveAgentState(id: string, state: AgentState): Promise<void> {
   const path = await sessionPath(id);
   const serialized = JSON.stringify({ id, updatedAt: new Date().toISOString(), state });
   if (serialized.length > 2 * 1024 * 1024) throw new Error("Agent session is too large to persist.");
-  const temp = path + ".tmp";
-  await writeFile(temp, serialized, { encoding: "utf8", mode: 0o600 });
-  await rename(temp, path);
+  // Use an unpredictable, exclusive temporary file so a workspace-created
+  // symlink cannot redirect the session write outside the workspace.
+  const temp = path + "." + randomUUID() + ".tmp";
+  try {
+    await writeFile(temp, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await rename(temp, path);
+  } finally {
+    await unlink(temp).catch((error) => {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    });
+  }
 }
 async function loadAgentState(id: string): Promise<AgentState> {
   const path = await sessionPath(id);
@@ -733,9 +742,10 @@ async function loadAgentState(id: string): Promise<AgentState> {
   if (!saved.state || !Array.isArray(saved.state.messages)) throw new Error("Saved agent session is invalid.");
   return saved.state;
 }
-async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void): Promise<unknown> {
+async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void, restoredMcpTools?: Record<string, PendingMcpTool>): Promise<unknown> {
   const args = JSON.parse(call.function.arguments || "{}") as Json;
-  const dynamicMcp = parseMcpToolAlias(call.function.name);
+  const restored = restoredMcpTools?.[call.function.name];
+  const dynamicMcp = parseMcpToolAlias(call.function.name) || (restored && typeof restored.serverName === "string" && typeof restored.toolName === "string" ? restored : null);
   if (dynamicMcp) return await callMcpTool(dynamicMcp.serverName, dynamicMcp.toolName, args);
   switch (call.function.name) {
     case "mcp.list_tools":
@@ -909,9 +919,16 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
         }
       }
       appendMcpImageObservations(state.messages, imageQueue);
+      const pendingMcpTools: Record<string, PendingMcpTool> = {};
+      for (const call of approvalCalls) {
+        const dynamicMcp = parseMcpToolAlias(call.function.name);
+        if (dynamicMcp) pendingMcpTools[call.function.name] = dynamicMcp;
+      }
+      if (Object.keys(pendingMcpTools).length) state.pendingMcpTools = pendingMcpTools;
+      else delete state.pendingMcpTools;
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (const call of calls) {
       try {
@@ -1068,58 +1085,83 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  await saveAgentState(id, state);
-  return await runAgentLoop(id, state, onProgress, purpose);
+  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+    await saveAgentState(id, state);
+    return await runAgentLoop(id, state, onProgress, purpose);
+  });
+}
+const activeAgentSessions = new Set<string>();
+async function withAgentSessionLock<T>(id: string, conflictMessage: string, operation: () => Promise<T>): Promise<T> {
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Invalid session ID.");
+  if (activeAgentSessions.has(id)) throw new Error(conflictMessage);
+  activeAgentSessions.add(id);
+  try {
+    return await operation();
+  } finally {
+    activeAgentSessions.delete(id);
+  }
+}
+function pendingToolDisplayName(call: AgentToolCall, state: AgentState): string {
+  const restored = state.pendingMcpTools?.[call.function.name];
+  if (restored && typeof restored.serverName === "string" && typeof restored.toolName === "string") {
+    return restored.serverName + " / " + restored.toolName;
+  }
+  return mcpToolDisplayName(call.function.name);
 }
 async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  const state = await loadAgentState(id);
-  if (typeof body.goal === "string" && body.goal.trim()) {
-    if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
-    state.messages.push({ role: "user", content: body.goal.trim() });
-    state.purpose = inferModelPurpose(body.goal.trim());
-  } else if (!state.pendingToolCalls?.length) {
-    state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
-  }
-  if (!state.purpose) {
-    const originalGoal = state.messages.find((message) => message.role === "user")?.content;
-    state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
-  }
-  if (state.pendingToolCalls?.length) {
-    return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })) };
-  }
-  await saveAgentState(id, state);
-  return await runAgentLoop(id, state, onProgress);
+  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+    const state = await loadAgentState(id);
+    if (typeof body.goal === "string" && body.goal.trim()) {
+      if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
+      state.messages.push({ role: "user", content: body.goal.trim() });
+      state.purpose = inferModelPurpose(body.goal.trim());
+    } else if (!state.pendingToolCalls?.length) {
+      state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
+    }
+    if (!state.purpose) {
+      const originalGoal = state.messages.find((message) => message.role === "user")?.content;
+      state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
+    }
+    if (state.pendingToolCalls?.length) {
+      return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })) };
+    }
+    await saveAgentState(id, state);
+    return await runAgentLoop(id, state, onProgress);
+  });
 }
 async function continueAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  const state = await loadAgentState(id);
-  const pending = state.pendingToolCalls || [];
-  if (!pending.length) throw new Error("This agent session has no pending approval request.");
-  const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
-  const imageQueue: McpImageObservation[] = [];
-  delete state.pendingToolCalls;
-  // Persist the approval claim before performing side effects. If the tool runs
-  // but the follow-up model request fails, the same approval cannot be replayed.
-  await saveAgentState(id, state);
-  for (const call of pending) {
-    if (!approved.has(call.id)) {
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
-      continue;
+  return await withAgentSessionLock(id, "This agent session is already processing an approval. Wait for that request to finish.", async () => {
+    const state = await loadAgentState(id);
+    const pending = state.pendingToolCalls || [];
+    if (!pending.length) throw new Error("This agent session has no pending approval request.");
+    const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
+    const imageQueue: McpImageObservation[] = [];
+    // Persist the approval claim before performing side effects. The per-session
+    // lock also prevents resume and continue requests from mutating the same checkpoint.
+    delete state.pendingToolCalls;
+    await saveAgentState(id, state);
+    for (const call of pending) {
+      if (!approved.has(call.id)) {
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
+        continue;
+      }
+      try {
+        const result = await runTool(call, onProgress, state.pendingMcpTools);
+        appendMcpToolResult(state.messages, call, result, imageQueue);
+      } catch (error) {
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+      }
     }
-    try {
-      const result = await runTool(call, onProgress);
-      appendMcpToolResult(state.messages, call, result, imageQueue);
-    } catch (error) {
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+    delete state.pendingMcpTools;
+    appendMcpImageObservations(state.messages, imageQueue);
+    if (!state.purpose) {
+      const originalGoal = state.messages.find((message) => message.role === "user")?.content;
+      state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
-  }
-  appendMcpImageObservations(state.messages, imageQueue);
-  if (!state.purpose) {
-    const originalGoal = state.messages.find((message) => message.role === "user")?.content;
-    state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
-  }
-  return await runAgentLoop(id, state, onProgress, state.purpose);
+    return await runAgentLoop(id, state, onProgress, state.purpose);
+  });
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -1337,9 +1379,17 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const path = await sessionPath(body.id || randomUUID());
     const state = JSON.stringify({ id: body.id || path.split(sep).pop()?.replace(/\.json$/, ""), updatedAt: new Date().toISOString(), state: body.state ?? null });
     if (state.length > 2 * 1024 * 1024) throw new Error("Session state is too large.");
-    const temp = path + ".tmp";
-    await writeFile(temp, state, { encoding: "utf8", mode: 0o600 });
-    await rename(temp, path);
+    // Use an unpredictable, exclusive temporary file: the predictable `.json.tmp`
+    // path can be planted as a symlink by a workspace user.
+    const temp = path + "." + randomUUID() + ".tmp";
+    try {
+      await writeFile(temp, state, { encoding: "utf8", mode: 0o600, flag: "wx" });
+      await rename(temp, path);
+    } finally {
+      await unlink(temp).catch((error) => {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      });
+    }
     send(res, 200, { ok: true, id: path.split(sep).pop()?.replace(/\.json$/, "") }); return;
   }
   if (url.pathname === "/v1/sessions/load") {
