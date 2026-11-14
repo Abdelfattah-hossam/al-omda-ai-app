@@ -10,8 +10,9 @@ import {
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+type SavedPresentation = { title: string; slides: Array<{ title: string; body: string; bullets: string[]; speakerNotes: string }> };
 type SavedAppData = { title: string; html: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; appData?: SavedAppData; taskId?: string; taskTitle?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -141,6 +142,29 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
         !Array.isArray(sheet.columns) || sheet.columns.length < 1 || sheet.columns.length > 30 || sheet.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
         !Array.isArray(sheet.rows) || sheet.rows.length > 500 || sheet.rows.some((row: unknown) => !Array.isArray(row) || row.length !== sheet.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 2000))) return null;
       saved.spreadsheetData = { title: sheet.title, columns: sheet.columns, rows: sheet.rows };
+    }
+    if (item.presentationData !== undefined) {
+      const presentation = item.presentationData;
+      if (!presentation || typeof presentation !== "object" || typeof presentation.title !== "string" || !presentation.title.trim() || presentation.title.length > 180 ||
+        !Array.isArray(presentation.slides) || presentation.slides.length < 1 || presentation.slides.length > 40 ||
+        presentation.slides.some((slide: unknown) => {
+          if (!slide || typeof slide !== "object") return true;
+          const value = slide as Record<string, unknown>;
+          return typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 ||
+            typeof value.body !== "string" || value.body.length > 3000 ||
+            !Array.isArray(value.bullets) || value.bullets.length > 10 || value.bullets.some((bullet) => typeof bullet !== "string" || !bullet.trim() || bullet.length > 500) ||
+            typeof value.speakerNotes !== "string" || value.speakerNotes.length > 2000;
+        })) return null;
+      const serializedPresentation = JSON.stringify(presentation);
+      if (serializedPresentation.length > 60000) return null;
+      total += serializedPresentation.length;
+      if (total > 200000) return null;
+      saved.presentationData = {
+        title: presentation.title.trim(),
+        slides: presentation.slides.map((slide: { title: string; body: string; bullets: string[]; speakerNotes: string }) => ({
+          title: slide.title.trim(), body: slide.body, bullets: [...slide.bullets], speakerNotes: slide.speakerNotes,
+        })),
+      };
     }
     messages.push(saved);
   }
