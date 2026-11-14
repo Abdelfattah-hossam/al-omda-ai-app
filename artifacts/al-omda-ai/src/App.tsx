@@ -31,7 +31,7 @@ type Language = 'ar' | 'en';
 type StepState = 'pending' | 'approved' | 'rejected';
 type TaskStatus = 'review' | 'paused' | 'approved' | 'stopped';
 type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research' | 'assistant';
-type PlanStep = { id: string; text: string; state: StepState; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
+type PlanStep = { id: string; text: string; state: StepState; output?: string; complete?: string; result?: string; presentationData?: PowerPointData; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
 type TaskSpreadsheet = { title: string; columns: string[]; rows: string[][] };
@@ -677,7 +677,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const data = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       if (typeof data.result !== 'string' || !data.result.trim()) throw new Error(isAr ? 'لم يصل مخرج صالح من الذكاء الاصطناعي.' : 'The AI returned no usable deliverable.');
-      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
+      const presentationData = data.presentation ? parsePowerPointData(data.presentation) : undefined;
+      if (data.presentation && !presentationData) throw new Error(isAr ? 'بيانات عرض PowerPoint غير صالحة.' : 'The PowerPoint response was invalid.');
+      setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,presentationData,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
     } catch(error) {
       setExecutionError(error instanceof Error ? error.message : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       try {
@@ -836,7 +838,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <div className="notice-bar" style={{margin:'15px 0 5px'}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{planGenerating ? (isAr ? 'العمدة بيحلل طلبك وينشئ الخطة...' : 'AL OMDA is analyzing your request...') : (isAr ? 'الخطة تُنشأ بالذكاء الاصطناعي وتُحفظ للمراجعة؛ لا يبدأ التنفيذ قبل موافقتك.' : 'AI-generated plan saved for review; execution will not start before your approval.')}</span></div>
       {task.status === 'paused' && <div className="notice-bar" style={{marginTop:12}}><Pause size={14}/><span>{t('paused')}</span></div>}
       {task.steps.map((step,index) => {
-        const presentation = getTaskPresentation(step.result);
+        const presentation = step.presentationData ?? getTaskPresentation(step.result);
         const isCurrent = task.status === 'review' && index === activeIndex;
         return <div className={`plan-step ${isCurrent ? 'step-current' : ''}`} key={step.id}>
           <div className={`step-number ${step.state}`}>{step.state === 'approved' ? <Check size={13}/> : index+1}</div>
