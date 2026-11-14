@@ -64,13 +64,13 @@ test("does not invent throughput when the provider omits completion token usage"
     { choices: [{ delta: { content: "No usage metadata" }, finish_reason: "stop" }] },
   ]));
   assert.equal(result.tokensPerSecond, null);
-  assert.ok(result.generationDurationMs > 0);
+  assert.equal(result.generationDurationMs, 0);
 });
 
-test("measures tool-call-only generation time with a monotonic clock", async () => {
+test("measures tool-call-only throughput between first and last tool deltas", async () => {
   const result = await consumeOpenAIChatStream(streamResponse([
-    { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "files.read", arguments: JSON.stringify({ path: "a.txt" }) } }] } }] },
-    { choices: [{ delta: {}, finish_reason: "tool_calls" }], usage: { prompt_tokens: 10, completion_tokens: 8 } },
+    { choices: [{ delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "files.", arguments: '{"path":' } }] } }] },
+    { choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "read", arguments: '"a.txt"}' } }] }, finish_reason: "tool_calls" }], usage: { prompt_tokens: 10, completion_tokens: 8 } },
   ]));
   assert.equal(result.message.content, "");
   assert.ok(Array.isArray(result.message.tool_calls));
