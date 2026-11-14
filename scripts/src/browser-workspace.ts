@@ -1,5 +1,8 @@
 export type BrowserWorkspacePolicy = { version: 1; allowedHosts: string[] };
 
+const MAX_BROWSER_ARGUMENT_DEPTH = 8;
+const MAX_BROWSER_ARGUMENT_ENTRIES = 100;
+
 export function normalizeBrowserHost(value: unknown): string {
   if (typeof value !== "string" || !value.trim() || value.length > 253) throw new Error("Enter a hostname without a scheme, path, or port.");
   const input = value.trim().toLowerCase();
@@ -24,16 +27,16 @@ export function assertBrowserUrlAllowed(serverName: string, toolName: string, ar
   const urls: string[] = [];
   const visit = (value: unknown, depth: number) => {
     if (value === null || value === undefined) return;
-    if (depth > 8) throw new Error("Browser tool arguments exceed the maximum inspection depth.");
+    if (depth > MAX_BROWSER_ARGUMENT_DEPTH) throw new Error("Browser tool arguments exceed the maximum inspection depth.");
     if (typeof value === "string") { if (/^https?:\/\//i.test(value.trim())) urls.push(value.trim()); return; }
     if (Array.isArray(value)) {
-      if (value.length > 100) throw new Error("Browser tool arguments contain too many array entries to inspect safely.");
+      if (value.length > MAX_BROWSER_ARGUMENT_ENTRIES) throw new Error("Browser tool arguments contain too many array entries to inspect safely.");
       for (const item of value) visit(item, depth + 1);
       return;
     }
     if (typeof value === "object") {
       const entries = Object.entries(value as Record<string, unknown>);
-      if (entries.length > 100) throw new Error("Browser tool arguments contain too many object fields to inspect safely.");
+      if (entries.length > MAX_BROWSER_ARGUMENT_ENTRIES) throw new Error("Browser tool arguments contain too many object fields to inspect safely.");
       for (const [key, item] of entries) {
         if (/^(url|href|uri|targetUrl)$/i.test(key)) {
           if (typeof item !== "string" || !/^https?:\/\//i.test(item.trim())) throw new Error("Browser URLs must use HTTP or HTTPS.");
