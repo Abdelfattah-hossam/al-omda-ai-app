@@ -60,3 +60,33 @@ test("does not accept malformed HSTS or an empty frame-ancestors directive", () 
   assert.ok(result.missing.includes("frame-protection"));
   assert.ok(result.findings.some((item) => item.header === "x-frame-options"));
 });
+
+test("parses complete HSTS max-age values, quoted digits, and duplicate directives", () => {
+  const quoted = analyzeSecurityHeaders({ "strict-transport-security": 'max-age="31536000"' });
+  assert.ok(!quoted.missing.includes("strict-transport-security"));
+  assert.equal(quoted.findings.length, 0);
+  const trailing = analyzeSecurityHeaders({ "strict-transport-security": "max-age=31536000junk" });
+  assert.ok(trailing.missing.includes("strict-transport-security"));
+  assert.ok(trailing.findings.some((item) => item.header === "strict-transport-security"));
+  const duplicate = analyzeSecurityHeaders({ "strict-transport-security": "max-age=31536000; max-age=0" });
+  assert.ok(duplicate.missing.includes("strict-transport-security"));
+  assert.ok(duplicate.findings.some((item) => item.header === "strict-transport-security"));
+});
+
+test("does not flag unsafe-inline when a nonce or hash makes it ineffective", () => {
+  const nonce = analyzeSecurityHeaders({ "content-security-policy": "script-src 'nonce-YWJjZA==' 'unsafe-inline'" });
+  const hash = analyzeSecurityHeaders({ "content-security-policy": "script-src 'sha256-YWJjZA==' 'unsafe-inline'" });
+  assert.ok(!nonce.findings.some((item) => item.header === "content-security-policy" && item.issue.includes("unsafe-inline")));
+  assert.ok(!hash.findings.some((item) => item.header === "content-security-policy" && item.issue.includes("unsafe-inline")));
+  const unsafe = analyzeSecurityHeaders({ "content-security-policy": "script-src 'self' 'unsafe-inline'" });
+  assert.ok(unsafe.findings.some((item) => item.header === "content-security-policy" && item.issue.includes("unsafe-inline")));
+});
+
+test("uses the last recognized Referrer-Policy token", () => {
+  const protectedLast = analyzeSecurityHeaders({ "referrer-policy": "unsafe-url, no-referrer" });
+  const unsafeLast = analyzeSecurityHeaders({ "referrer-policy": "no-referrer, unsafe-url" });
+  const unknownLast = analyzeSecurityHeaders({ "referrer-policy": "no-referrer, unknown-token" });
+  assert.ok(!protectedLast.findings.some((item) => item.header === "referrer-policy"));
+  assert.ok(unsafeLast.findings.some((item) => item.header === "referrer-policy"));
+  assert.ok(!unknownLast.findings.some((item) => item.header === "referrer-policy"));
+});
