@@ -22,7 +22,8 @@ function decodeBase64Strict(value: string, urlSafe: boolean): string {
   if (decoded.toString("base64").replace(/=+$/, "") !== normalized.replace(/=+$/, "")) {
     throw new Error(invalid);
   }
-  // Binary CTF payloads may not be valid UTF-8; preserve the existing replacement-character text view.\n  return decoded.toString("utf8");
+  // Binary CTF payloads may not be valid UTF-8; preserve the existing replacement-character text view.
+  return decoded.toString("utf8");
 }
 
 function rot13(value: string): string {
