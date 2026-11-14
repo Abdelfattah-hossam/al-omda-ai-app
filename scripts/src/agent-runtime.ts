@@ -825,7 +825,7 @@ async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Pro
   return orderModelProvidersByPurpose(all, purpose);
 }
 
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general"): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general"): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; generationDurationMs: number; tokensPerSecond: number | null; provider: string }> {
   const providers = await getModelProviders(purpose);
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
@@ -864,7 +864,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       });
       if (!streamed.message || typeof streamed.message !== "object") throw new Error("Model returned an invalid streaming completion.");
       clearProviderCooldown(providerKey, providerCooldowns);
-      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, provider: provider.name };
+      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, generationDurationMs: streamed.generationDurationMs, tokensPerSecond: streamed.tokensPerSecond, provider: provider.name };
     } catch (error) {
       const message = error instanceof Error ? error.message : "request failed";
       const cooldownMs = recordProviderFailure(providerKey, responseStatus, retryAfter, providerCooldowns);
@@ -880,11 +880,13 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
   let totalDurationMs = 0;
+  let totalGenerationDurationMs = 0;
   let lastProvider = "primary";
   for (let turn = 0; turn < 10; turn++) {
     onProgress?.({ type: "status", status: "thinking", turn: turn + 1 });
     const completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose);
     totalDurationMs += completion.durationMs;
+    totalGenerationDurationMs += completion.generationDurationMs;
     lastProvider = completion.provider;
     if (typeof completion.usage?.prompt_tokens === "number") totalPromptTokens += completion.usage.prompt_tokens;
     if (typeof completion.usage?.completion_tokens === "number") totalCompletionTokens += completion.usage.completion_tokens;
@@ -892,7 +894,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) {
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, tokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
@@ -911,7 +913,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       appendMcpImageObservations(state.messages, imageQueue);
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, tokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     for (const call of calls) {
       try {
@@ -925,7 +927,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     await saveAgentState(id, state);
   }
   await saveAgentState(id, state);
-  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, tokensPerSecond: totalGenerationDurationMs > 0 ? Math.round((totalCompletionTokens / totalGenerationDurationMs) * 1000 * 10) / 10 : null, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
 }
 const AGENT_OPERATING_RULES = `
 
