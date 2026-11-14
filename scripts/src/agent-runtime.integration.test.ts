@@ -450,13 +450,14 @@ test("skips a provider during its cooldown on the next agent request", async () 
   const fallback = await startMockModel((requestNumber) => ({
     payload: { choices: [{ delta: { content: "Fallback response " + requestNumber }, finish_reason: "stop" }] },
   }));
-  const isolated = await startRuntime({
-    OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
-    OMDA_AGENT_MODEL_NAME: "primary-cooldown-test-model",
-    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
-    OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-cooldown-test-model",
-  });
+  let isolated: RuntimeHandle | undefined;
   try {
+    isolated = await startRuntime({
+      OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "primary-cooldown-test-model",
+      OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+      OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-cooldown-test-model",
+    });
     const first = await postTo(isolated, "/v1/agent/run", { goal: "Answer the first request." });
     const firstBody = await first.text();
     assert.equal(first.status, 200, firstBody + "\n" + isolated.stderr);
@@ -470,7 +471,7 @@ test("skips a provider during its cooldown on the next agent request", async () 
     assert.equal(primary.requests, 1, "The unavailable primary should be skipped while its cooldown is active.");
     assert.equal(fallback.requests, 2, "The healthy fallback should handle both requests.");
   } finally {
-    await stopRuntime(isolated);
+    if (isolated) await stopRuntime(isolated);
     await stopMockModel(primary);
     await stopMockModel(fallback);
   }
@@ -660,32 +661,33 @@ test("MCP tool execution remains paused until the exact pending call is approved
 });
 
 test("denying an MCP tool approval never invokes the configured MCP server tool", async () => {
-  const fixture = await startMcpApprovalFixture("must not be written");
-  try {
-    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
-    const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
-    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
-    assert.equal(pending.status, "approval_required");
-    assert.equal(pending.pending[0].id, "mcp-write-call");
-    await assert.rejects(readFile(fixture.callsPath, "utf8"));
+  for (const approvedCallIds of [[], ["unrelated-call-id"]]) {
+    const fixture = await startMcpApprovalFixture("must not be written");
+    try {
+      const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+      const startedBody = await started.text();
+      assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+      const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+      assert.equal(pending.status, "approval_required");
+      assert.equal(pending.pending[0].id, "mcp-write-call");
+      await assert.rejects(readFile(fixture.callsPath, "utf8"));
 
-    const denied = await postTo(fixture.isolated, "/v1/agent/continue", {
-      sessionId: pending.sessionId,
-      approvedCallIds: [],
-    });
-    const deniedBody = await denied.text();
-    assert.equal(denied.status, 200, deniedBody + "\n" + fixture.isolated.stderr);
-    assert.equal((JSON.parse(deniedBody) as { status: string }).status, "completed");
-    await assert.rejects(readFile(fixture.callsPath, "utf8"));
-    assert.equal(fixture.model.requests, 2);
-  } finally {
-    await stopRuntime(fixture.isolated);
-    await stopMockModel(fixture.model);
-    await rm(fixture.workspace, { recursive: true, force: true });
+      const denied = await postTo(fixture.isolated, "/v1/agent/continue", {
+        sessionId: pending.sessionId,
+        approvedCallIds,
+      });
+      const deniedBody = await denied.text();
+      assert.equal(denied.status, 200, deniedBody + "\\n" + fixture.isolated.stderr);
+      assert.equal((JSON.parse(deniedBody) as { status: string }).status, "completed");
+      await assert.rejects(readFile(fixture.callsPath, "utf8"));
+      assert.equal(fixture.model.requests, 2);
+    } finally {
+      await stopRuntime(fixture.isolated);
+      await stopMockModel(fixture.model);
+      await rm(fixture.workspace, { recursive: true, force: true });
+    }
   }
 });
-
 
 test("concurrent approval submissions cannot execute the same pending MCP action twice", async () => {
   const fixture = await startMcpApprovalFixture("execute exactly once");
