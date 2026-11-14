@@ -484,16 +484,22 @@ test("container execution invokes Docker with restrictive isolation flags and on
   const markerPath = join(workspace, "docker-args.json");
   await mkdir(bin, { recursive: true });
   const fakeDocker = join(bin, "docker");
+  const markerLiteral = JSON.stringify(markerPath);
   await writeFile(fakeDocker, `#!/usr/bin/env node
 const fs = require("node:fs");
-fs.writeFileSync(process.env.OMDA_DOCKER_TEST_ARGS, JSON.stringify(process.argv.slice(2)));
+fs.writeFileSync(${markerLiteral}, JSON.stringify({
+  args: process.argv.slice(2),
+  openAiKey: process.env.OPENAI_API_KEY || null,
+  geminiKey: process.env.GEMINI_API_KEY || null,
+}));
 process.stdout.write("container-command-ok");
 `, "utf8");
   await chmod(fakeDocker, 0o755);
   const isolated = await startRuntime({
     OMDA_AGENT_EXECUTION: "container",
     OMDA_AGENT_SANDBOX_IMAGE: "node:22-bookworm-slim",
-    OMDA_DOCKER_TEST_ARGS: markerPath,
+    OPENAI_API_KEY: "must-not-reach-docker-client",
+    GEMINI_API_KEY: "must-not-reach-docker-client",
     PATH: bin + delimiter + (process.env.PATH || ""),
   });
   try {
@@ -504,7 +510,10 @@ process.stdout.write("container-command-ok");
     assert.equal(result.stdout, "container-command-ok");
     assert.equal(result.isolation, "docker");
     assert.equal(result.image, "node:22-bookworm-slim");
-    const args = JSON.parse(await readFile(markerPath, "utf8")) as string[];
+    const recorded = JSON.parse(await readFile(markerPath, "utf8")) as { args: string[]; openAiKey: string | null; geminiKey: string | null };
+    const args = recorded.args;
+    assert.equal(recorded.openAiKey, null);
+    assert.equal(recorded.geminiKey, null);
     for (const flag of ["--network=none", "--cpus=1", "--memory=512m", "--memory-swap=512m", "--pids-limit=128", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges"]) {
       assert.ok(args.includes(flag), "missing Docker isolation flag: " + flag);
     }
