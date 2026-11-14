@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { orderModelProvidersByPurpose, parseModelProviderConfig } from "./model-providers.js";
+import { normalizeModelProviderBase, orderModelProvidersByPurpose, parseModelProviderConfig } from "./model-providers.js";
 
 test("parses multiple OpenAI-compatible and local model providers without exposing keys", () => {
   const providers = parseModelProviderConfig([
@@ -54,4 +54,11 @@ test("orders purpose-specific providers before global providers and uses priorit
   ], {});
   assert.deepEqual(orderModelProvidersByPurpose(providers, "coding").map((p) => p.name), ["coding-early", "coding-late", "global"]);
   assert.deepEqual(orderModelProvidersByPurpose(providers, "all").map((p) => p.name), ["global", "coding-early", "coding-late"]);
+});
+
+test("normalizes environment model endpoints and rejects insecure remote transports", () => {
+  assert.equal(normalizeModelProviderBase("http://127.0.0.1:1234/v1/"), "http://127.0.0.1:1234/v1");
+  assert.equal(normalizeModelProviderBase("https://api.example/v1/"), "https://api.example/v1");
+  assert.throws(() => normalizeModelProviderBase("http://remote.example/v1", "primary"), /HTTPS/);
+  assert.throws(() => normalizeModelProviderBase("https://user:pass@example.com/v1", "primary"), /HTTPS/);
 });
