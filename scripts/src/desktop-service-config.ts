@@ -41,19 +41,36 @@ export function buildLaunchAgentPlist(options: { label: string; repoRoot: string
   ].join("\n");
 }
 
-export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string }): string {
+export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string; logFile: string }): string {
   return [
     "$ErrorActionPreference = 'Stop'",
     "$envFile = " + psQuote(options.envFile),
+    "$logFile = " + psQuote(options.logFile),
     "Get-Content -LiteralPath $envFile | ForEach-Object {",
     "  if ($_ -match '^([A-Z0-9_]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }",
     "}",
+    "$logDirectory = Split-Path -Parent $logFile",
+    "if ($logDirectory) { New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null }",
     "Set-Location -LiteralPath " + psQuote(options.repoRoot),
-    "& pnpm --filter @workspace/scripts agent:supervisor",
-    "exit $LASTEXITCODE", "",
+    "$previousErrorActionPreference = $ErrorActionPreference",
+    "$ErrorActionPreference = 'Continue'",
+    "$LASTEXITCODE = 1",
+    "& pnpm --filter @workspace/scripts agent:supervisor 2>&1 | ForEach-Object {",
+    "  if ((Test-Path -LiteralPath $logFile) -and (Get-Item -LiteralPath $logFile -ErrorAction Stop).Length -ge 5MB) {",
+    "    $archive = $logFile + '.' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.bak'",
+    "    Move-Item -LiteralPath $logFile -Destination $archive -Force -ErrorAction Stop",
+    "    $archiveDirectory = if ($logDirectory) { $logDirectory } else { (Get-Location).Path }",
+    "    $archiveName = Split-Path -Leaf $logFile",
+    "    $archives = @([System.IO.Directory]::GetFiles($archiveDirectory) | Where-Object { $name = [System.IO.Path]::GetFileName($_); $name.StartsWith($archiveName + '.') -and $name.EndsWith('.bak') } | ForEach-Object { Get-Item -LiteralPath $_ -ErrorAction Stop } | Sort-Object LastWriteTime -Descending)",
+    "    if ($archives.Count -gt 3) { $archives | Select-Object -Skip 3 | Remove-Item -Force -ErrorAction Stop }",
+    "  }",
+    "  Add-Content -LiteralPath $logFile -Value $_ -ErrorAction Stop",
+    "}",
+    "$agentExitCode = $LASTEXITCODE",
+    "$ErrorActionPreference = $previousErrorActionPreference",
+    "exit $agentExitCode", ""
   ].join("\n");
 }
-
 export function serializeServiceEnvironment(environment: ServiceEnvironment): string {
   return Object.entries(environment)
     .filter(([key, value]) => /^[A-Z][A-Z0-9_]{1,80}$/.test(key) && !/[\r\n]/.test(value))

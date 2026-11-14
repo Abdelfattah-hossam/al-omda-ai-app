@@ -80,7 +80,7 @@ async function install(): Promise<void> {
     await run("launchctl", ["bootout", "gui/" + process.getuid?.() + "/" + label]).catch(() => undefined);
     await run("launchctl", ["bootstrap", "gui/" + process.getuid?.(), locations.service]);
   } else if (platform === "win32") {
-    const content = buildWindowsAgentLauncher({ repoRoot, envFile });
+    const content = buildWindowsAgentLauncher({ repoRoot, envFile, logFile: join(locations.logs, "agent.log") });
     await writeFile(locations.service, content, { encoding: "utf8", mode: 0o600 });
     const username = process.env.USERNAME?.trim();
     if (!username) throw new Error("Could not determine the current Windows account to secure the local token file.");
