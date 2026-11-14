@@ -6,6 +6,7 @@ export function isPowerPointRequestText(request: string): boolean {
   const namesPowerPoint = /power\s*point|powerpoint|pptx|presentations?|slide\s*decks?|slides?|بوربوينت|عرض\s*(?:تقديمي|بوربوينت)|شرائح\s*(?:عرض|تقديمية)/i.test(text);
   const asksToCreate = /(?:عايز|عاوز|محتاج|اريد|أريد|أنشئ|انشئ|اعمل|أعمل|اعملي|جهز|جهّز|حضّر|حضر|صمم|صمّم|ابني|نفذ|نفّذ|create|make|build|prepare|generate|design|produce|export|download)/i.test(text);
   const editsExisting = /\b(?:edit|update|change|resize|reformat|repair|fix)\b/i.test(text) ||
+    /\b(?:my|this|the)\s+(?:existing\s+)?(?:power\s*point|powerpoint|presentation|slide\s*deck)\b.{0,60}\b(?:font|size|layout|theme|spacing|alignment|color|colour)\b/i.test(text) ||
     /(?:عدّل|عدل|غيّر|غير|كبّر|كبر|صغّر|صغر|أصلح|اصلح|صلّح|صلح)/i.test(text);
   return namesPowerPoint && asksToCreate && !editsExisting;
 }
