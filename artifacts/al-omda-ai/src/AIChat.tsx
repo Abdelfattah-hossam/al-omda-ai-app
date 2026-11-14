@@ -106,7 +106,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const speechUrlsRef = useRef<string[]>([]);
   const attachmentUrlsRef = useRef(new Set<string>());
   const createAttachmentUrl = (blob: Blob) => {
-    const url = createAttachmentUrl(blob);
+    const url = URL.createObjectURL(blob);
     attachmentUrlsRef.current.add(url);
     return url;
   };
