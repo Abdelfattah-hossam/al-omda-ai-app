@@ -799,6 +799,15 @@ test("pending MCP approval survives an Agent Runtime restart and can be resumed"
       OMDA_AGENT_MODEL_NAME: "mock-model",
     });
 
+    // A workspace user can observe a session ID and plant the old predictable
+    // temp filename. Session persistence must never follow that symlink.
+    const outside = await mkdtemp(join(tmpdir(), "omda-session-symlink-test-"));
+    const outsideSentinel = join(outside, "sentinel.txt");
+    const sessionsDirectory = join(fixture.workspace, ".omda", "sessions");
+    await mkdir(sessionsDirectory, { recursive: true });
+    await writeFile(outsideSentinel, "must remain unchanged", "utf8");
+    await symlink(outsideSentinel, join(sessionsDirectory, pending.sessionId + ".json.tmp"));
+
     const continued = await postTo(active, "/v1/agent/continue", {
       sessionId: pending.sessionId,
       approvedCallIds: ["mcp-write-call"],
@@ -806,7 +815,9 @@ test("pending MCP approval survives an Agent Runtime restart and can be resumed"
     const continuedBody = await continued.text();
     assert.equal(continued.status, 200, continuedBody + "\n" + active.stderr);
     assert.equal((JSON.parse(continuedBody) as { status: string }).status, "completed");
+    assert.equal(await readFile(outsideSentinel, "utf8"), "must remain unchanged");
     assert.equal(await readFile(fixture.callsPath, "utf8"), "1");
+    await rm(outside, { recursive: true, force: true });
     assert.deepEqual(JSON.parse(await readFile(fixture.argsPath, "utf8")), { content: "resume after restart" });
     assert.equal(fixture.model.requests, 2);
   } finally {
