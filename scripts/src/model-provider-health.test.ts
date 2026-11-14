@@ -30,3 +30,8 @@ test("ignores malformed model entries and caps the discovered list", () => {
   assert.equal(result.discoveredModels.length, 50);
   assert.equal(result.discoveredModels[0], "valid");
 });
+
+test("ignores oversized model identifiers", () => {
+  const result = inspectOpenAIModelList({ data: [{ id: "x".repeat(201) }, { id: "valid" }] }, "valid");
+  assert.deepEqual(result, { modelAvailable: true, discoveredModels: ["valid"] });
+});
