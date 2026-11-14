@@ -283,3 +283,8 @@ The following are not yet built into the AL OMDA web app itself:
 - Container-backed execution with resource, network, and filesystem isolation.
 
 These capabilities will be added as separately testable modules rather than simulated in the chat interface.
+
+
+### Browser tool argument inspection limits
+
+Browser MCP tool arguments are inspected recursively for URL-bearing fields before navigation or browser actions are allowed. To keep inspection bounded and fail closed rather than silently skipping uninspected values, each argument tree is limited to a maximum nesting depth of 8 and at most 100 entries per array or object. A call exceeding either limit is rejected even if the oversized part appears unrelated to URLs. Keep browser tool payloads compact; split large operations into smaller calls.
