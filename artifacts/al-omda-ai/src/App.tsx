@@ -23,7 +23,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Menu, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
+  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -1778,7 +1778,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div><div className="top-actions">
         <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
-        <button className="lang-button" onClick={toggleLanguage} data-testid="button-language">{t('languageSwitch')}</button>
+        <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'Switch interface language to English':'تغيير لغة الواجهة إلى العربية'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
         <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
       </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
