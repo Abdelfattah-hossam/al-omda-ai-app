@@ -3602,3 +3602,32 @@ body:has(.ai-chat-page){
   0%,100% {opacity:.12}
   50% {opacity:.85}
 }
+
+
+/* Accessibility review: retain a clear keyboard focus ring on task links. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+  .history-item-open,.dashboard-task-name
+):focus-visible {
+  outline:2px solid #f6dca0!important;
+  outline-offset:3px!important;
+  box-shadow:0 0 0 4px rgba(224,181,101,.2)!important;
+  border-radius:5px;
+}
+
+/* Reduced-motion must win over every later, high-specificity animation rule. */
+@media (prefers-reduced-motion:reduce) {
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark,
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note)::after {
+    animation:none!important;
+    transition:none!important;
+  }
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .stats-grid>.stat-card,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .button-primary,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .brand-mark,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] :is(.notice-bar,.notice,.control-note)::after {
+  animation:none!important;
+  transition:none!important;
+}
