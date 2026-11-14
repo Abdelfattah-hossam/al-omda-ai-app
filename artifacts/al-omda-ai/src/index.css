@@ -2219,9 +2219,10 @@ body:has(.ai-chat-page){
  -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
  backdrop-filter:blur(22px) saturate(150%)!important;
 }
-.app-shell .panel:hover,
-.app-shell [class*="card"]:not(button):hover,
-.app-shell [class*="tile"]:not(button):hover{
+ .app-shell .panel:hover,
+.app-shell .stat-card:hover,.app-shell .agent-card:hover,
+.app-shell .request-card:hover,.app-shell .plan-card:hover,
+.app-shell .history-item:hover{
  border-color:rgba(218,230,255,.27)!important;
 }
 .app-shell button:not(:disabled),
@@ -3016,7 +3017,7 @@ body:has(.ai-chat-page){
 
 /* Last-pass guard: labels, headings, values and text-only wrappers never get card paint. */
 .app-shell .panel :is(h1,h2,h3,h4,h5,h6,p,label,strong,em,b,small),
-.app-shell .panel [class*="stat"]:not(.stat-card),
+.app-shell .panel :is(.stat-label,.stat-value,.stat-foot,.stat-card-top,.dashboard-kpi-icon),
 .app-shell .panel :is(.setting-row,.task-main,.history-item-open,.section-head,.section-title,.section-meta,.eyebrow,.profile-section-heading,.profile-summary,.profile-fields-grid,.profile-actions-row,.profile-accordion-summary,.profile-feature-grid,.dashboard-task-name,.dashboard-task-table,.dashboard-task-table th,.dashboard-task-table td){
   background:transparent!important;
   background-color:transparent!important;
@@ -3034,17 +3035,27 @@ body:has(.ai-chat-page){
 .ai-chat-live-test{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;border:1px solid var(--omda-reference-line);border-radius:999px;background:var(--omda-reference-soft);color:var(--foreground,#eee);font-size:11px}
 
 
-/* Make the translucent treatment consistent on every page without blurring text. */
-.app-shell [class*="card"]:not(button),
-.app-shell [class*="panel"]:not(button),
-.app-shell [class*="tile"]:not(button),
-.app-shell [class*="surface"]:not(button),
-.app-shell [class*="notice-bar"],
-.app-shell .stats-grid>*,
-.app-shell .dashboard-grid>*,
-.app-shell .dashboard-analytics-grid>*,
-.app-shell .market-grid>*,
-.app-shell .profile-settings-layout>*,
+/* Surface treatment is restricted to real containers; text labels and
+   grid children are never inferred to be cards from their class names. */
+.app-shell .panel,
+.app-shell .stat-card,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .history-item,
+.app-shell .dashboard-chart-card,
+.app-shell .dashboard-history-panel,
+.app-shell .profile-main-card,
+.app-shell .profile-account-profile-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .profile-feature-link,
+.app-shell .workbench-step,
+.app-shell .task-detail-card,
+.app-shell .notice-bar,
+.app-shell .specialty-row,
+.app-shell .setting-row,
+.app-shell .profile-summary,
 .app-shell .profile-settings-side>*{
   background:var(--omda-reference-surface)!important;
   background-color:var(--omda-reference-surface)!important;
@@ -3063,7 +3074,7 @@ body:has(.ai-chat-page){
   .dashboard-task-table,.dashboard-task-table th,.dashboard-task-table td,
   .section-head,.section-title,.section-meta,.eyebrow
 ),
-.app-shell [class*="stat"]:not(.stat-card):not(.stats-grid),
+.app-shell :is(.stat-label,.stat-value,.stat-foot,.stat-card-top,.dashboard-kpi-icon),
 .app-shell [class*="setting-row"],
 .app-shell [class*="task-main"],
 .app-shell [class*="history-item-open"]{
