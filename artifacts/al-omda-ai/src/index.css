@@ -3213,9 +3213,15 @@ body:has(.ai-chat-page){
   .ai-conversations-panel,.ai-agent-runtime-panel,.ai-voice-panel,.ai-composer,
   .profile-settings-side>*,.stats-grid>*,.dashboard-grid>*,.market-grid>*
 ),
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="card"]:not(button),
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="tile"]:not(button),
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) [class*="surface"]:not(button) {
+/* Only explicit surface components receive card treatment. Avoid matching
+   text rows such as .stat-card-top, which created unwanted boxes around labels. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+  .panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,
+  .dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,
+  .history-item,.profile-main-card,.profile-account-profile-card,
+  .profile-setting-card,.profile-features-card,.specialty-row,.notice-bar,
+  .task-detail-card,.workbench-step,.profile-settings-side>*
+):not(button) {
   color:var(--omda-design-text);
   background:linear-gradient(145deg,#1b191d 0%,#111014 100%)!important;
   background-color:#151419!important;
@@ -3484,4 +3490,74 @@ body:has(.ai-chat-page){
 .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .developer-console-foot i {
   background:#8dd2b0!important;
   box-shadow:0 0 9px rgba(141,210,176,.5)!important;
+}
+
+
+/* Final reference-match corrections: no miniature text boxes and no blue nav accents.
+   Scoped to non-chat screens; chat markup, dimensions, colors and scroll remain untouched. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+  .stat-card-top,.stat-label,.stat-value,.stat-foot,.section-head,.section-title,
+  .section-meta,.eyebrow,.dashboard-card-subtitle,.dashboard-chart-menu,
+  .dashboard-kpi-icon,.task-main,.agent-card-stats,.history-item-open,
+  .profile-section-heading,.profile-fields-grid,.profile-actions-row,
+  .profile-accordion-summary,.setting-row,.profile-feature-link>span,
+  .dashboard-task-name,.dashboard-task-table th,.dashboard-task-table td
+) {
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  background-color:transparent!important;
+  background-image:none!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-card-top,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-card-top * {
+  border-color:transparent!important;
+  outline:0!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi {
+  --kpi-glow:rgba(224,181,101,.34)!important;
+  background:linear-gradient(145deg,#1b191d 0%,#111014 100%) padding-box,
+    conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.14),rgba(224,181,101,.58),rgba(246,220,160,.42),rgba(224,181,101,.14)) border-box!important;
+  border:1px solid transparent!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi-icon {
+  color:#f6dca0!important;
+  background:linear-gradient(145deg,#30271a,#1b1917)!important;
+  border:1px solid rgba(224,181,101,.28)!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi:after {
+  background:radial-gradient(circle,rgba(224,181,101,.32),transparent 72%)!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav {
+  background:#111014!important;
+  border:1px solid rgba(224,181,101,.24)!important;
+  border-bottom:0!important;
+  box-shadow:0 -12px 36px rgba(0,0,0,.42),0 0 24px rgba(224,181,101,.06)!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link {
+  color:#aaa18f!important;
+  border:1px solid transparent!important;
+  background:transparent!important;
+  text-shadow:none!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active {
+  color:#f6dca0!important;
+  border-color:rgba(224,181,101,.3)!important;
+  background:linear-gradient(145deg,rgba(224,181,101,.16),rgba(224,181,101,.055))!important;
+  box-shadow:0 0 18px rgba(224,181,101,.13),inset 0 1px 0 rgba(246,220,160,.1)!important;
+  text-shadow:0 0 12px rgba(224,181,101,.2)!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active svg {
+  color:#f6dca0!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-analytics-grid,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-history-panel,
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-chart-card {
+  color:#f6f1e7!important;
+  background-color:#151419!important;
+  border-color:rgba(224,181,101,.22)!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-chart-card :is(.pipeline-track,.activity-chart-grid) {
+  background-color:rgba(224,181,101,.09)!important;
 }
