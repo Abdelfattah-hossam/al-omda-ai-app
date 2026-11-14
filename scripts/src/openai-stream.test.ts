@@ -64,5 +64,5 @@ test("does not invent throughput when the provider omits completion token usage"
     { choices: [{ delta: { content: "No usage metadata" }, finish_reason: "stop" }] },
   ]));
   assert.equal(result.tokensPerSecond, null);
-  assert.ok(result.generationDurationMs >= 1);
+  assert.equal(result.generationDurationMs, 0);
 });
