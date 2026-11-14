@@ -35,7 +35,7 @@ test("inspects payloads exactly at the documented depth and entry boundaries", (
   assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", { values: Array(100).fill("safe") }, policy));
   const hundredFields = Object.fromEntries([
     ["url", "https://docs.example.com/guide"],
-    ...Array.from({ length: 99 }, (_, index) => ["field" + index, "safe"]),
+    ...Array.from({ length: 99 }, (_, index) => ["field" + index, "safe"] as const),
   ]);
   assert.doesNotThrow(() => assertBrowserUrlAllowed("playwright-browser", "browser_click", hundredFields, policy));
   let nested: Record<string, unknown> = { url: "https://docs.example.com/guide" };
