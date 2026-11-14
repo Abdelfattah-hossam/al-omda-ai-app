@@ -41,15 +41,40 @@ export function buildLaunchAgentPlist(options: { label: string; repoRoot: string
   ].join("\n");
 }
 
-export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string }): string {
+export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string; logFile: string }): string {
   return [
     "$ErrorActionPreference = 'Stop'",
     "$envFile = " + psQuote(options.envFile),
+    "$logFile = " + psQuote(options.logFile),
     "Get-Content -LiteralPath $envFile | ForEach-Object {",
-    "  if ($_ -match '^([A-Z0-9_]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }",
+    "  if ($_ -match '^([A-Z0-9_]+)=(.*)
+
+export function serializeServiceEnvironment(environment: ServiceEnvironment): string {
+  return Object.entries(environment)
+    .filter(([key, value]) => /^[A-Z][A-Z0-9_]{1,80}$/.test(key) && !/[\r\n]/.test(value))
+    .map(([key, value]) => key + "=" + value)
+    .join("\n") + "\n";
+}
+
+export function buildWindowsTaskRegistration(options: { taskName: string; launcherPath: string }): string {
+  const launcherArgs = "-NoProfile -ExecutionPolicy Bypass -File \"" + options.launcherPath.replace(/"/g, "\"\"") + "\"";
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    "$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument " + psQuote(launcherArgs),
+    "$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME",
+    "$settings = New-ScheduledTaskSettingsSet -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew",
+    "$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited",
+    "Register-ScheduledTask -TaskName " + psQuote(options.taskName) + " -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null",
+    "Start-ScheduledTask -TaskName " + psQuote(options.taskName),
+    "",
+  ].join("\n");
+}
+) { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }",
     "}",
+    "$logDirectory = Split-Path -Parent $logFile",
+    "New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null",
     "Set-Location -LiteralPath " + psQuote(options.repoRoot),
-    "& pnpm --filter @workspace/scripts agent:supervisor",
+    "& pnpm --filter @workspace/scripts agent:supervisor *>> $logFile",
     "exit $LASTEXITCODE", "",
   ].join("\n");
 }
