@@ -46,7 +46,7 @@ function estimateLines(value: string, fontSize: number, widthIn: number): number
   return value.split(/\r?\n/).reduce((count, line) => count + Math.max(1, Math.ceil(line.length / charactersPerLine)), 0);
 }
 
-function fitFontSize(value: string, baseSize: number, widthIn: number, heightIn: number, paragraphCount = 1, paragraphSpacingPt = 0, minSize = 11): number {
+export function fitPowerPointFontSize(value: string, baseSize: number, widthIn: number, heightIn: number, paragraphCount = 1, paragraphSpacingPt = 0, minSize = 11): number {
   if (!value) return baseSize;
   for (let size = baseSize; size >= minSize; size--) {
     const lines = estimateLines(value, size, widthIn);
@@ -80,7 +80,7 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
     slide.background = { color: "FFFFFF" };
     slide.addText(item.title, {
       x: 0.65, y: 0.45, w: 12.05, h: 0.8, fontFace: "Arial",
-      fontSize: fitFontSize(item.title, 28, 12.05, 0.8, 1, 0, 16), bold: true, color: "17243A",
+      fontSize: fitPowerPointFontSize(item.title, 28, 12.05, 0.8, 1, 0, 16), bold: true, color: "17243A",
       align: rtl ? "right" : "left", rtlMode: rtl, margin: 0.04,
     });
     let bodyY = 1.55;
@@ -89,7 +89,7 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
       const bodyHeight = hasBullets ? 1.25 : 4.9;
       slide.addText(item.body, {
         x: 0.8, y: bodyY, w: 11.7, h: bodyHeight,
-        fontFace: "Arial", fontSize: fitFontSize(item.body, 19, 11.7, bodyHeight),
+        fontFace: "Arial", fontSize: fitPowerPointFontSize(item.body, 19, 11.7, bodyHeight),
         color: "354052", align: rtl ? "right" : "left", rtlMode: rtl,
         valign: "mid", paraSpaceAfterPt: 12, margin: 0.04,
       });
@@ -104,7 +104,7 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
       const bulletBoxHeight = Math.max(2.2, 4.9 - (bodyY - 1.55));
       slide.addText(runs, {
         x: 0.9, y: bodyY, w: 11.5, h: bulletBoxHeight,
-        fontFace: "Arial", fontSize: fitFontSize(bulletText, 19, 11.5, bulletBoxHeight, item.bullets.length, 5),
+        fontFace: "Arial", fontSize: fitPowerPointFontSize(bulletText, 19, 11.5, bulletBoxHeight, item.bullets.length, 5),
         color: "253247", align: rtl ? "right" : "left", rtlMode: rtl,
         valign: "mid", paraSpaceAfterPt: 5, margin: 0.04,
       });
