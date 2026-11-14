@@ -40,6 +40,7 @@ test("decodes JWT without claiming signature verification", () => {
   const result = decodeJwtUnverified(encode({ alg: "none" }) + "." + encode({ sub: "123" }) + ".signature");
   assert.equal((result.payload as any).sub, "123");
   assert.equal(result.signatureVerified, false);
+  assert.throws(() => decodeJwtUnverified(encode({ alg: "none" }) + "." + encode({ sub: "123" }) + ".bad+signature"), /invalid Base64URL/);
 });
 
 test("rejects malformed and oversized CTF inputs", () => {
