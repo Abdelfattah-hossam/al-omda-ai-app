@@ -3205,14 +3205,6 @@ body:has(.ai-chat-page){
   border-color:var(--omda-design-line)!important;
   box-shadow:inset 0 1px 0 rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
-  .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
-  .agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,
-  .profile-account-profile-card,.profile-setting-card,.profile-features-card,
-  .specialty-row,.notice-bar,.task-detail-card,.workbench-step,
-  .ai-conversations-panel,.ai-agent-runtime-panel,.ai-voice-panel,.ai-composer,
-  .profile-settings-side>*,.stats-grid>*,.dashboard-grid>*,.market-grid>*
-),
 /* Only explicit surface components receive card treatment. Avoid matching
    text rows such as .stat-card-top, which created unwanted boxes around labels. */
 .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
