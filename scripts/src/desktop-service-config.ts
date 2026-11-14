@@ -41,19 +41,21 @@ export function buildLaunchAgentPlist(options: { label: string; repoRoot: string
   ].join("\n");
 }
 
-export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string }): string {
+export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: string; logFile: string }): string {
   return [
     "$ErrorActionPreference = 'Stop'",
     "$envFile = " + psQuote(options.envFile),
+    "$logFile = " + psQuote(options.logFile),
     "Get-Content -LiteralPath $envFile | ForEach-Object {",
     "  if ($_ -match '^([A-Z0-9_]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') }",
     "}",
+    "$logDirectory = Split-Path -Parent $logFile",
+    "New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null",
     "Set-Location -LiteralPath " + psQuote(options.repoRoot),
-    "& pnpm --filter @workspace/scripts agent:supervisor",
-    "exit $LASTEXITCODE", "",
+    "& pnpm --filter @workspace/scripts agent:supervisor *>> $logFile",
+    "exit $LASTEXITCODE", ""
   ].join("\n");
 }
-
 export function serializeServiceEnvironment(environment: ServiceEnvironment): string {
   return Object.entries(environment)
     .filter(([key, value]) => /^[A-Z][A-Z0-9_]{1,80}$/.test(key) && !/[\r\n]/.test(value))
