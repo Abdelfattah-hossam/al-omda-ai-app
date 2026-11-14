@@ -15,7 +15,7 @@ type Conversation = { id: string; title: string; created_at: string; updated_at:
 function getLocalAgentOrigin(value: string, errorMessage: string): string {
   let base: URL;
   try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
-  if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
+  if (!["http:", "https:"].includes(base.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
   return base.origin;
 }
 
@@ -529,20 +529,28 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         setAgentConnectionStatus(runtimeLabel + (ar ? " · أدخل رمز الاتصال لفحص النماذج المحلية." : " · Enter the access token to check configured models."));
         return;
       }
-      const modelResponse = await fetch(origin + "/v1/models/health", {
-        headers: { authorization: "Bearer " + token },
-        cache: "no-store",
-      });
-      if (!isCurrent()) return;
-      const modelData = await modelResponse.json().catch(() => ({}));
-      if (!isCurrent()) return;
-      if (!modelResponse.ok || !Array.isArray(modelData.providers)) throw new Error(modelData.error || "Model provider diagnostics failed.");
-      const providers = parseModelProviderHealth(modelData.providers);
-      const summaries = providers.map((provider) => {
-        const state = providerStatusLabel(provider, ar);
-        return provider.name + ": " + state + " (" + provider.latencyMs + "ms)";
-      });
-      setAgentConnectionStatus(runtimeLabel + (summaries.length ? " · " + summaries.join(" · ") : (ar ? " · لا توجد نماذج مهيأة." : " · No model providers configured.")));
+      try {
+        const modelResponse = await fetch(origin + "/v1/models/health", {
+          headers: { authorization: "Bearer " + token },
+          cache: "no-store",
+        });
+        if (!isCurrent()) return;
+        const modelData = await modelResponse.json().catch(() => ({}));
+        if (!isCurrent()) return;
+        if (!modelResponse.ok || !Array.isArray(modelData.providers)) {
+          setAgentConnectionStatus(runtimeLabel + (ar ? " · Runtime متصل لكن تشخيص النماذج غير متاح." : " · Runtime is connected, but model diagnostics are unavailable."));
+          return;
+        }
+        const providers = parseModelProviderHealth(modelData.providers);
+        const summaries = providers.map((provider) => {
+          const state = providerStatusLabel(provider, ar);
+          return provider.name + ": " + state + " (" + provider.latencyMs + "ms)";
+        });
+        setAgentConnectionStatus(runtimeLabel + (summaries.length ? " · " + summaries.join(" · ") : (ar ? " · لا توجد نماذج مهيأة." : " · No model providers configured.")));
+      } catch {
+        if (!isCurrent()) return;
+        setAgentConnectionStatus(runtimeLabel + (ar ? " · Runtime متصل لكن تعذر فحص النماذج." : " · Runtime is connected, but model diagnostics could not be checked."));
+      }
     } catch (err) {
       if (!isCurrent()) return;
       setAgentConnectionStatus((ar ? "تعذر الفحص: " : "Check failed: ") + (err instanceof Error ? err.message : "connection failed"));
