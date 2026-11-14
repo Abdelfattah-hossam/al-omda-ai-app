@@ -62,3 +62,10 @@ test("normalizes environment model endpoints and rejects insecure remote transpo
   assert.throws(() => normalizeModelProviderBase("http://remote.example/v1", "primary"), /HTTPS/);
   assert.throws(() => normalizeModelProviderBase("https://user:pass@example.com/v1", "primary"), /HTTPS/);
 });
+
+test("rejects duplicate names case-insensitively and reserved built-in provider names", () => {
+  const entry = { name: "custom", baseUrl: "https://custom.example/v1", model: "model" };
+  assert.throws(() => parseModelProviderConfig([entry, { ...entry, name: "CUSTOM", baseUrl: "https://other.example/v1" }], {}), /Duplicate or reserved/);
+  assert.throws(() => parseModelProviderConfig([{ ...entry, name: "primary" }], {}), /Duplicate or reserved/);
+  assert.throws(() => parseModelProviderConfig([{ ...entry, name: "Fallback" }], {}), /Duplicate or reserved/);
+});
