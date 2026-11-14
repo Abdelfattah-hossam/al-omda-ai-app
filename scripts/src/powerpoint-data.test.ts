@@ -1,0 +1,40 @@
+import { test } from "node:test";
+import { strict as assert } from "node:assert";
+import { parsePowerPointPresentation } from "../../artifacts/api-server/src/lib/powerpoint.js";
+import { parsePowerPointData, parsePowerPointResult } from "../../artifacts/al-omda-ai/src/lib/pptx.js";
+
+const slide = { title: "Overview", body: "A useful summary", bullets: ["First point"], speakerNotes: "Presenter notes" };
+
+test("server parser accepts fenced JSON and JSON surrounded by explanatory text", () => {
+  const json = JSON.stringify({ title: "Demo", slides: [slide] });
+  assert.equal(parsePowerPointPresentation("```json\n" + json + "\n```")?.title, "Demo");
+  assert.equal(parsePowerPointPresentation("Here is the deck:\n" + json + "\nDone.")?.slides.length, 1);
+});
+
+test("server parser normalizes optional fields and bounds long slide content", () => {
+  const parsed = parsePowerPointPresentation(JSON.stringify({
+    title: "Bounded",
+    slides: [{ title: "Slide", body: "b".repeat(1200), bullets: Array.from({ length: 11 }, () => "x".repeat(250)) }],
+  }));
+  assert.ok(parsed);
+  assert.equal(parsed.slides[0].body.length, 900);
+  assert.equal(parsed.slides[0].bullets.length, 10);
+  assert.equal(parsed.slides[0].bullets[0].length, 200);
+  assert.equal(parsed.slides[0].speakerNotes, "");
+});
+
+test("server parser rejects malformed JSON, invalid titles, and slide counts outside 1–40", () => {
+  assert.equal(parsePowerPointPresentation("{broken"), null);
+  assert.equal(parsePowerPointPresentation(JSON.stringify({ title: "", slides: [slide] })), null);
+  assert.equal(parsePowerPointPresentation(JSON.stringify({ title: "Empty", slides: [] })), null);
+  assert.equal(parsePowerPointPresentation(JSON.stringify({ title: "Too many", slides: Array.from({ length: 41 }, (_, i) => ({ ...slide, title: "Slide " + i })) })), null);
+  assert.equal(parsePowerPointPresentation(JSON.stringify({ title: "Bad slide", slides: [{ ...slide, title: 42 }] })), null);
+});
+
+test("client parser mirrors server acceptance and task-history prefix parsing", () => {
+  const normalized = parsePowerPointData({ title: "Client", slides: [{ title: "One", body: "Body" }] });
+  assert.deepEqual(normalized, { title: "Client", slides: [{ title: "One", body: "Body", bullets: [], speakerNotes: "" }] });
+  assert.equal(parsePowerPointData({ title: "No content", slides: [{ title: "One" }] }), null);
+  assert.equal(parsePowerPointResult("ALOMDA_PPTX_JSON:" + JSON.stringify({ title: "Stored", slides: [slide] }))?.title, "Stored");
+  assert.equal(parsePowerPointResult("not a presentation"), null);
+});
