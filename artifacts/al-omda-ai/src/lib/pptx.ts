@@ -109,7 +109,7 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
     });
   });
   const output = await pptx.write({ outputType: "blob" });
-  const file = output instanceof Blob ? output : new Blob([output as BlobPart], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+  const file = output instanceof Blob ? output : new Blob([output as any], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
   if (file.size < 1500) throw new Error("The generated PowerPoint file is incomplete.");
   return file;
 }
