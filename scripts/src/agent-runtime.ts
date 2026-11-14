@@ -1356,9 +1356,17 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const path = await sessionPath(body.id || randomUUID());
     const state = JSON.stringify({ id: body.id || path.split(sep).pop()?.replace(/\.json$/, ""), updatedAt: new Date().toISOString(), state: body.state ?? null });
     if (state.length > 2 * 1024 * 1024) throw new Error("Session state is too large.");
-    const temp = path + ".tmp";
-    await writeFile(temp, state, { encoding: "utf8", mode: 0o600 });
-    await rename(temp, path);
+    // Use an unpredictable, exclusive temporary file: the predictable `.json.tmp`
+    // path can be planted as a symlink by a workspace user.
+    const temp = path + "." + randomUUID() + ".tmp";
+    try {
+      await writeFile(temp, state, { encoding: "utf8", mode: 0o600, flag: "wx" });
+      await rename(temp, path);
+    } finally {
+      await unlink(temp).catch((error) => {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      });
+    }
     send(res, 200, { ok: true, id: path.split(sep).pop()?.replace(/\.json$/, "") }); return;
   }
   if (url.pathname === "/v1/sessions/load") {
