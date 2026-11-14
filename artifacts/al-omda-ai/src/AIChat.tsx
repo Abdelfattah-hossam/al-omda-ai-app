@@ -492,7 +492,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     pptx.title = data.title;
     pptx.lang = ar ? "ar-SA" : "en-US";
     pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: ar ? "ar-SA" : "en-US" };
-    for (const item of data.slides) {
+    for (const [slideIndex, item] of data.slides.entries()) {
       const slide = pptx.addSlide();
       slide.background = { color: "FFFFFF" };
       slide.addText(item.title, {
@@ -521,7 +521,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         });
       }
       if (item.speakerNotes && typeof slide.addNotes === "function") slide.addNotes(item.speakerNotes);
-      slide.addText(String(pptx._slides.length), {
+      slide.addText(String(slideIndex + 1), {
         x: 12.1, y: 7.08, w: 0.5, h: 0.2, fontFace: "Arial", fontSize: 9,
         color: "7B8493", align: "center", margin: 0,
       });
@@ -530,7 +530,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const file = output instanceof Blob ? output : new Blob([output], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
     if (file.size < 1500) throw new Error(ar ? "ملف PowerPoint الناتج غير مكتمل." : "The generated PowerPoint file is incomplete.");
     const url = URL.createObjectURL(file);
-    const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\\p{L}\\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
+    const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
     return { name: safeName + ".pptx", url };
   };
 
