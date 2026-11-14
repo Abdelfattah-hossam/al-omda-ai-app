@@ -5,23 +5,24 @@ function assertInput(value: string): void {
 }
 
 function decodeBase64Strict(value: string, urlSafe: boolean): string {
+  const invalid = urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.";
   const clean = value.trim();
   const alphabet = urlSafe ? /^[A-Za-z0-9_-]*={0,2}$/ : /^[A-Za-z0-9+/]*={0,2}$/;
-  if (!alphabet.test(clean)) throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  if (!alphabet.test(clean)) throw new Error(invalid);
   const unpadded = clean.replace(/=+$/, "");
   const suppliedPadding = clean.length - unpadded.length;
   const remainder = unpadded.length % 4;
-  if (remainder === 1) throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+  if (remainder === 1) throw new Error(invalid);
   const requiredPadding = (4 - remainder) % 4;
   if (suppliedPadding > 0 && (clean.length % 4 !== 0 || suppliedPadding !== requiredPadding)) {
-    throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+    throw new Error(invalid);
   }
   const normalized = unpadded.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(requiredPadding);
   const decoded = Buffer.from(normalized, "base64");
   if (decoded.toString("base64").replace(/=+$/, "") !== normalized.replace(/=+$/, "")) {
-    throw new Error(urlSafe ? "Invalid Base64URL input." : "Invalid Base64 input.");
+    throw new Error(invalid);
   }
-  return decoded.toString("utf8");
+  // Binary CTF payloads may not be valid UTF-8; preserve the existing replacement-character text view.\n  return decoded.toString("utf8");
 }
 
 function rot13(value: string): string {
