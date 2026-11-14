@@ -660,7 +660,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
-        "Create 1 to 40 slides. Keep body text to 900 characters, use at most 10 bullets per slide with each bullet no longer than 200 characters, and keep speaker notes under 2,000 characters. Condense long content without losing core approved requirements.",
+        "Create 1 to 40 slides. Keep body text to 250 characters on slides with bullets, or 900 characters on body-only slides. Use at most 10 bullets per slide, each no longer than 150 characters, and keep speaker notes under 2,000 characters. Condense long content without losing core approved requirements.",
         "Preserve the original request, audience, language, figures, and all approved requirements. Never invent facts or sources.",
         "Original request: " + customerRequest,
         "Project: " + task.title,
@@ -1176,7 +1176,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         ...messages.slice(-12),
         { role: "user", content: [
           "Repair the PowerPoint presentation using the full conversation context above. Return ONLY valid JSON with title and slides. Each slide must have title, body, bullets array, and speakerNotes.",
-          "Create 1 to 40 complete slides. Condense body text to 900 characters, keep at most 10 bullets per slide with each bullet no longer than 200 characters, and keep speaker notes under 2,000 characters.",
+          "Create 1 to 40 complete slides. Keep body text to 250 characters on slides with bullets, or 900 characters on body-only slides. Use at most 10 bullets per slide, each no longer than 150 characters, and keep speaker notes under 2,000 characters.",
           "Preserve all original figures, user-provided content, language, audience, and requirements. Do not invent facts, statistics, or sources.",
           "Original request: " + latestCustomerRequest,
           "Invalid previous output: " + answer.text.slice(0, 12000)
