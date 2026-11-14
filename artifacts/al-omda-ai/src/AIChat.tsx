@@ -510,7 +510,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       setMessages(updated);
       await saveHistory(updated);
     } catch (error) {
-      setError(error instanceof Error ? error.message : (ar ? "تعذر إنشاء ملف PowerPoint." : "PowerPoint export failed."));
+      setError(ar ? "تعذر إنشاء ملف PowerPoint. تحقق من الاتصال ثم أعد المحاولة." : (error instanceof Error ? error.message : "PowerPoint export failed."));
     }
   };
 
@@ -652,7 +652,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           assistantMessage = { ...assistantMessage, attachment };
         } catch (exportError) {
           const detail = exportError instanceof Error ? exportError.message : "PowerPoint export failed.";
-          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nتم حفظ محتوى العرض ومعاينته، لكن تعذر إنشاء ملف PPTX الآن. يمكنك إعادة محاولة التصدير بعد استعادة الاتصال. " : "\n\nThe presentation content is saved and previewable, but the PPTX export could not be built right now. You can retry the export when the connection is available. ") + detail };
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nتم حفظ محتوى العرض ومعاينته، لكن تعذر إنشاء ملف PPTX الآن. يمكنك إعادة محاولة التصدير بعد استعادة الاتصال." : "\n\nThe presentation content is saved and previewable, but the PPTX export could not be built right now. You can retry the export when the connection is available. " + detail) };
         }
       }
       // Detect a project from the current message AND the recent user context.
