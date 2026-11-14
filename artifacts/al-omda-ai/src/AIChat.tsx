@@ -537,10 +537,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const conversationId = activeConversationId || await createConversation();
       if (!conversationId) return;
       const next = [...messages, { role: "user" as const, content: text }];
-      setPendingImage(null);
+      // Keep the draft and attachment in the composer until the request and
+      // conversation save both succeed. A network/provider failure must not eat user input.
       shouldAutoScrollRef.current = true;
       setMessages(next);
-      setInput("");
       setError("");
       await saveHistory(next.slice(-100), conversationId);
       if (agentMode) {
@@ -572,6 +572,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
+        setInput((current) => current === text ? "" : current);
+        if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
         return;
       }
       const response = await fetch("/api/ai/chat", {
@@ -654,6 +656,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       setMessages(completed);
       if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
       await saveHistory(completed, conversationId);
+      setInput((current) => current === text ? "" : current);
+      if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
