@@ -8,10 +8,10 @@ function streamResponse(events: unknown[]): Response {
     async start(controller) {
       const encoder = new TextEncoder();
       for (const event of events) {
-        controller.enqueue(encoder.encode("data: " + JSON.stringify(event) + "\\n\\n"));
+        controller.enqueue(encoder.encode("data: " + JSON.stringify(event) + "\n\n"));
         await new Promise((resolve) => setTimeout(resolve, 3));
       }
-      controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
     },
   }), { status: 200, headers: { "content-type": "text/event-stream" } });
