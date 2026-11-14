@@ -549,9 +549,9 @@ rl.on("line", (line) => {
   let message;
   try { message = JSON.parse(line); } catch { return; }
   if (message.method === "initialize" && message.id !== undefined) {
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock", version: "1.0" } } }) + "\n");
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "mock", version: "1.0" } } }) + "\\n");
   } else if (message.method === "tools/list" && message.id !== undefined) {
-    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "ping", description: "Mock health tool", inputSchema: { type: "object", properties: {} } }] } }) + "\n");
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "ping", description: "Mock health tool", inputSchema: { type: "object", properties: {} } }] } }) + "\\n");
     if (starts === 1) setTimeout(() => process.exit(0), 30);
   }
 });
@@ -602,16 +602,16 @@ async function startMcpApprovalFixture(goal: string, holdToolCall = false) {
     '  let message;',
     '  try { message = JSON.parse(line); } catch { return; }',
     '  if (message.method === "initialize" && message.id !== undefined) {',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { protocolVersion: "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "approval-mock", version: "1.0" } } }) + "\\n");',
     '  } else if (message.method === "tools/list" && message.id !== undefined) {',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { tools: [{ name: "write_note", description: "Write a note to the configured test sink", inputSchema: { type: "object", properties: { content: { type: "string" } }, required: ["content"], additionalProperties: false } }] } }) + "\\n");',
     '  } else if (message.method === "tools/call" && message.id !== undefined) {',
     '    let count = 0;',
     '    try { count = Number(readFileSync(process.env.MCP_TEST_CALLS, "utf8")) || 0; } catch {}',
     '    writeFileSync(process.env.MCP_TEST_CALLS, String(count + 1));',
     '    writeFileSync(process.env.MCP_TEST_ARGS, JSON.stringify(message.params.arguments));',
     '    if (process.env.MCP_TEST_GATE) { const deadline = Date.now() + 5000; while (!existsSync(process.env.MCP_TEST_GATE) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10)); }',
-    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\n");',
+    '    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: { content: [{ type: "text", text: "mock note saved" }] } }) + "\\n");',
     '  }',
     '});',
   ].join("\n");
