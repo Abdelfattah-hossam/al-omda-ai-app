@@ -718,3 +718,51 @@ test("concurrent approval submissions cannot execute the same pending MCP action
     await rm(fixture.workspace, { recursive: true, force: true });
   }
 });
+
+
+test("host command mode uses an argument vector and does not forward provider secrets", async () => {
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "omda-host-command-test-"));
+  const bin = join(fixtureRoot, "bin");
+  const markerPath = join(fixtureRoot, "command-result.json");
+  const injectedPath = join(fixtureRoot, "shell-injection-ran");
+  await mkdir(bin, { recursive: true });
+  const fakePnpm = join(bin, "pnpm");
+  const markerLiteral = JSON.stringify(markerPath);
+  await writeFile(fakePnpm, [
+    "#!/usr/bin/env node",
+    'const fs = require("node:fs");',
+    'fs.writeFileSync(' + markerLiteral + ', JSON.stringify({ args: process.argv.slice(2), openAiKey: process.env.OPENAI_API_KEY || null, geminiKey: process.env.GEMINI_API_KEY || null }));',
+    'process.stdout.write("host-command-ok");',
+    "",
+  ].join("\n"), "utf8");
+  await chmod(fakePnpm, 0o755);
+
+  const isolated = await startRuntime({
+    OMDA_AGENT_EXECUTION: "host",
+    PATH: bin + delimiter + (process.env.PATH || ""),
+    OPENAI_API_KEY: "must-not-reach-child",
+    GEMINI_API_KEY: "must-not-reach-child",
+  });
+  try {
+    const payload = ["--version", ";", "touch", injectedPath];
+    const response = await postTo(isolated, "/v1/terminal/execute", { command: "pnpm", args: payload, cwd: "." });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { ok: boolean; stdout: string; isolation: string };
+    assert.equal(result.ok, true);
+    assert.equal(result.stdout, "host-command-ok");
+    assert.equal(result.isolation, "host");
+    const recorded = JSON.parse(await readFile(markerPath, "utf8")) as { args: string[]; openAiKey: string | null; geminiKey: string | null };
+    assert.deepEqual(recorded.args, payload);
+    assert.equal(recorded.openAiKey, null);
+    assert.equal(recorded.geminiKey, null);
+    await assert.rejects(readFile(injectedPath, "utf8"), { code: "ENOENT" });
+
+    const shell = await postTo(isolated, "/v1/terminal/execute", { command: "sh", args: ["-c", "touch " + injectedPath], cwd: "." });
+    assert.equal(shell.status, 400);
+    assert.match((await shell.json() as { error: string }).error, /not permitted/i);
+    await assert.rejects(readFile(injectedPath, "utf8"), { code: "ENOENT" });
+  } finally {
+    await stopRuntime(isolated);
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
