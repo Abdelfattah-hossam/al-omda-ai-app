@@ -19,9 +19,11 @@ test("launch agent uses escaped plist values and starts at login", () => {
 });
 
 test("Windows launcher safely quotes paths with apostrophes", () => {
-  const result = buildWindowsAgentLauncher({ repoRoot: "C:\\Users\\O'Neil\\Project", envFile: "C:\\Users\\O'Neil\\agent.env" });
+  const result = buildWindowsAgentLauncher({ repoRoot: "C:\\Users\\O'Neil\\Project", envFile: "C:\\Users\\O'Neil\\agent.env", logFile: "C:\\Users\\O'Neil\\logs\\agent.log" });
   assert.match(result, /O''Neil/);
   assert.match(result, /agent:supervisor/);
+  assert.match(result, /New-Item -ItemType Directory/);
+  assert.match(result, /agent\\*>> \\$logFile/);
 });
 
 test("service environment serializer keeps only safe single-line values", () => {
