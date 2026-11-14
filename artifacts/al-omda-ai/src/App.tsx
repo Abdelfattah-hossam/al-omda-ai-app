@@ -116,7 +116,7 @@ async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
     catch { throw new Error("PowerPoint generator unavailable. No substitute or renamed file was created."); }
   }
   const PptxGenJS = module.default ?? module;
-  const rtl = /[\\u0590-\\u08ff]/.test([data.title, ...data.slides.map((slide) => [slide.title, slide.body, ...slide.bullets].join(" "))].join(" "));
+  const rtl = /[\u0590-\u08ff]/.test([data.title, ...data.slides.map((slide) => [slide.title, slide.body, ...slide.bullets].join(" "))].join(" "));
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.rtlMode = rtl;
