@@ -4424,3 +4424,37 @@ body:has(.ai-chat-page){
     animation:none!important;
   }
 }
+
+
+/* Final markup alignment: target the actual runtime/voice panels used by AIChat.tsx. */
+.app-shell[data-chat-active="true"] .ai-agent-runtime-panel,
+.app-shell[data-chat-active="true"] .ai-routing-note,
+.app-shell[data-chat-active="true"] .ai-voice-panel {
+  border:1px solid var(--chat-line)!important;
+  border-radius:16px!important;
+  color:var(--chat-text)!important;
+  background:linear-gradient(135deg,rgba(224,181,101,.075),rgba(16,15,18,.95))!important;
+  box-shadow:inset 0 1px 0 rgba(246,220,160,.045)!important;
+}
+.app-shell[data-chat-active="true"] .ai-agent-runtime-panel {
+  margin:0 14px 10px!important;
+}
+.app-shell[data-chat-active="true"] .ai-agent-runtime-summary strong {
+  color:var(--chat-gold-light)!important;
+}
+.app-shell[data-chat-active="true"] .ai-agent-runtime-panel .muted {
+  color:var(--chat-muted)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-sidebar-close {
+  color:var(--chat-gold-light)!important;
+  border-color:var(--chat-line)!important;
+  background:rgba(224,181,101,.055)!important;
+}
+@media(max-width:760px) {
+  .app-shell[data-chat-active="true"] .ai-agent-runtime-panel {
+    margin:0 8px 8px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-sidebar-close {
+    display:grid!important;
+  }
+}
