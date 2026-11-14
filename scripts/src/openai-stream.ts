@@ -16,7 +16,7 @@ export async function consumeOpenAIChatStream(
   let content = "";
   let usage: unknown = null;
   let finishReason: unknown;
-  const streamStartedAt = performance.now();
+  let firstGenerationDeltaAt: number | null = null;
   let lastGenerationDeltaAt: number | null = null;
   let seenEvent = false;
   const toolCalls = new Map<number, { id: string; type: "function"; function: { name: string; arguments: string } }>();
@@ -36,11 +36,17 @@ export async function consumeOpenAIChatStream(
     const delta = choice.delta && typeof choice.delta === "object" ? choice.delta : {};
     if (typeof delta.content === "string" && delta.content) {
       content += delta.content;
-      lastGenerationDeltaAt = performance.now();
+      const deltaAt = performance.now();
+      if (firstGenerationDeltaAt === null) firstGenerationDeltaAt = deltaAt;
+      lastGenerationDeltaAt = deltaAt;
       onToken?.(delta.content);
     }
     if (Array.isArray(delta.tool_calls)) {
-      if (delta.tool_calls.length) lastGenerationDeltaAt = performance.now();
+      if (delta.tool_calls.length) {
+        const deltaAt = performance.now();
+        if (firstGenerationDeltaAt === null) firstGenerationDeltaAt = deltaAt;
+        lastGenerationDeltaAt = deltaAt;
+      }
       for (const part of delta.tool_calls) {
         const index = Number.isInteger(part?.index) ? part.index : 0;
         const current = toolCalls.get(index) || { id: "", type: "function" as const, function: { name: "", arguments: "" } };
@@ -71,7 +77,7 @@ export async function consumeOpenAIChatStream(
   const message: Record<string, unknown> = { role: "assistant", content };
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
   if (finishReason) message.finish_reason = finishReason;
-  const generationDurationMs = lastGenerationDeltaAt !== null ? lastGenerationDeltaAt - streamStartedAt : 0;
+  const generationDurationMs = firstGenerationDeltaAt !== null && lastGenerationDeltaAt !== null ? lastGenerationDeltaAt - firstGenerationDeltaAt : 0;
   const usageRecord = usage && typeof usage === "object" ? usage as Record<string, unknown> : null;
   const completionTokens = typeof usageRecord?.completion_tokens === "number" ? usageRecord.completion_tokens : null;
   const tokensPerSecond = completionTokens !== null && generationDurationMs > 0
