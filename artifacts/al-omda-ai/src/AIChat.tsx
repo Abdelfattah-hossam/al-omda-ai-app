@@ -538,7 +538,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     try {
       const conversationId = activeConversationId || await createConversation();
       if (!conversationId) return;
-      const next = [...messages, { role: "user" as const, content: text }];
+      // If the previous attempt failed after its user turn was persisted,
+      // retry that same draft without appending a duplicate user bubble.
+      const lastMessage = messages[messages.length - 1];
+      const next = lastMessage?.role === "user" && lastMessage.content === text
+        ? [...messages]
+        : [...messages, { role: "user" as const, content: text }];
       // Keep the draft and attachment in the composer until the request and
       // conversation save both succeed. A network/provider failure must not eat user input.
       shouldAutoScrollRef.current = true;
