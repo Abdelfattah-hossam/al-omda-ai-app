@@ -4492,3 +4492,65 @@ body:has(.ai-chat-page){
     padding:10px!important;
   }
 }
+
+
+/* Final chat surface correction: remove legacy blue surfaces from the chat
+   viewport and both header bars without changing layout or interaction logic. */
+.app-shell[data-chat-active="true"] {
+  background-color:#08080a!important;
+  background-image:
+    radial-gradient(900px 480px at 50% -14%,rgba(224,181,101,.13),transparent 70%),
+    radial-gradient(700px 500px at 100% 100%,rgba(224,181,101,.045),transparent 72%)!important;
+}
+.app-shell[data-chat-active="true"] > .main-area,
+.app-shell[data-chat-active="true"] > .main-area > .content-wrap,
+.app-shell[data-chat-active="true"] > .main-area > .content-wrap > .ai-chat-page,
+.app-shell[data-chat-active="true"] .ai-chat-main {
+  background:#08080a!important;
+  background-color:#08080a!important;
+  color:var(--chat-text)!important;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar {
+  color:var(--chat-text)!important;
+  background:linear-gradient(180deg,rgba(25,23,27,.99),rgba(13,12,14,.98))!important;
+  border-bottom:1px solid var(--chat-line)!important;
+  box-shadow:0 5px 22px rgba(0,0,0,.22),inset 0 1px 0 rgba(246,220,160,.035)!important;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar :is(.crumb,.top-actions,.status-chip,.lang-button,.icon-button) {
+  color:var(--chat-text)!important;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar :is(.status-chip,.lang-button,.icon-button,.curtain-trigger) {
+  border-color:var(--chat-line)!important;
+  background:rgba(224,181,101,.055)!important;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar :is(.status-chip,.lang-button,.icon-button,.curtain-trigger):hover {
+  border-color:var(--chat-line-strong)!important;
+  background:rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main {
+  background:
+    radial-gradient(760px 400px at 50% 0%,rgba(224,181,101,.055),transparent 72%),
+    #08080a!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar {
+  color:var(--chat-text)!important;
+  border-bottom:1px solid var(--chat-line)!important;
+  background:linear-gradient(180deg,rgba(24,22,26,.98),rgba(14,13,16,.94))!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main > .panel {
+  border:1px solid var(--chat-line)!important;
+  border-radius:22px!important;
+  color:var(--chat-text)!important;
+  background:linear-gradient(160deg,rgba(23,21,25,.98),rgba(12,11,13,.99))!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px 0 rgba(246,220,160,.035)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main > .panel .chat-messages {
+  color:var(--chat-text)!important;
+  background:transparent!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-model-button,
+.app-shell[data-chat-active="true"] .ai-chat-header-icon,
+.app-shell[data-chat-active="true"] .ai-chat-back,
+.app-shell[data-chat-active="true"] .ai-chat-menu-trigger {
+  color:var(--chat-gold-light)!important;
+}
