@@ -12,6 +12,13 @@ test("decodes common CTF encodings", () => {
   assert.equal(decodeCtfValue("\\u0048\\x69", "unicode"), "Hi");
 });
 
+test("decodes canonical padded Base64URL values containing URL-safe alphabet characters", () => {
+  const expected = Buffer.from([0xfb, 0xff]).toString("utf8");
+  assert.equal(decodeCtfValue("-_8", "base64url"), expected);
+  assert.equal(decodeCtfValue("-_8=", "base64url"), expected);
+  assert.equal(decodeCtfValue("SGVsbG8=", "base64"), "Hello");
+});
+
 test("rejects malformed, misplaced, and non-canonical Base64 padding", () => {
   assert.equal(decodeCtfValue("SGVsbG8", "base64"), "Hello");
   assert.equal(decodeCtfValue("SGVsbG8", "base64url"), "Hello");
