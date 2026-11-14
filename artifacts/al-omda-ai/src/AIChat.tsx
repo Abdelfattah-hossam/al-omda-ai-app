@@ -580,7 +580,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
         setInput((current) => current === text ? "" : current);
-        if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
         return;
       }
       const response = await fetch("/api/ai/chat", {
