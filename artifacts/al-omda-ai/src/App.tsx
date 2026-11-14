@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
-import { buildPowerPointBlob, isPowerPointRtl, parsePowerPointResult, safePowerPointFileName, type PowerPointData } from './lib/pptx';
+import { buildPowerPointBlob, isPowerPointRtl, parsePowerPointData, parsePowerPointResult, safePowerPointFileName, type PowerPointData } from './lib/pptx';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
