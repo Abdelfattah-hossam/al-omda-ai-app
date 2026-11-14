@@ -10,6 +10,14 @@ type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]
 type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
+
+function getLocalAgentOrigin(value: string, errorMessage: string): string {
+  let base: URL;
+  try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
+  if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
+  return base.origin;
+}
+
 type Usage = {
   used: number;
   remaining: number;
@@ -478,7 +486,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError("");
     try {
-      const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+      const endpoint = getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
       let streamedText = "";
       const startedAt = Date.now();
       const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
@@ -503,7 +511,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const checkLocalAgentConnection = async () => {
     setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
     try {
-      const origin = new URL(agentRuntimeUrl.trim()).origin;
+      const origin = getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
       const response = await fetch(origin + "/health", { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
@@ -541,7 +549,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const loadAgentSessions = async () => {
     if (!agentToken.trim()) { setError(ar ? "أدخل رمز الاتصال أولًا." : "Enter the access token first."); return; }
     try {
-      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
+      const response = await fetch(getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.") + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل الجلسات." : "Could not load sessions."));
       const items = Array.isArray(data.sessions) ? data.sessions : [];
