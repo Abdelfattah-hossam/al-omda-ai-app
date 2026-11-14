@@ -17,10 +17,12 @@ test("server parser normalizes optional fields and bounds long slide content", (
     slides: [{ title: "Slide", body: "b".repeat(1200), bullets: Array.from({ length: 11 }, () => "x".repeat(250)) }],
   }));
   assert.ok(parsed);
-  assert.equal(parsed.slides[0].body.length, 900);
+  assert.equal(parsed.slides[0].body.length, 250);
   assert.equal(parsed.slides[0].bullets.length, 10);
-  assert.equal(parsed.slides[0].bullets[0].length, 200);
+  assert.equal(parsed.slides[0].bullets[0].length, 150);
   assert.equal(parsed.slides[0].speakerNotes, "");
+  const bodyOnly = parsePowerPointPresentation(JSON.stringify({ title: "Body only", slides: [{ title: "Long", body: "b".repeat(1200) }] }));
+  assert.equal(bodyOnly?.slides[0].body.length, 900);
 });
 
 test("server parser rejects malformed JSON, invalid titles, and slide counts outside 1–40", () => {
