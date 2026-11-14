@@ -417,15 +417,16 @@ test("model runtime fails over to the configured fallback without exposing crede
     assert.equal(body.model, "fallback-test-model");
     return { payload: { choices: [{ delta: { content: "Fallback provider succeeded." }, finish_reason: "stop" }] } };
   });
-  const isolated = await startRuntime({
-    OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
-    OMDA_AGENT_MODEL_NAME: "primary-test-model",
-    OMDA_AGENT_MODEL_API_KEY: "primary-secret-test-value",
-    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
-    OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-test-model",
-    OMDA_AGENT_FALLBACK_MODEL_API_KEY: "fallback-secret-test-value",
-  });
+  let isolated: RuntimeHandle | undefined;
   try {
+    isolated = await startRuntime({
+      OMDA_AGENT_MODEL_BASE_URL: primary.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "primary-test-model",
+      OMDA_AGENT_MODEL_API_KEY: "primary-secret-test-value",
+      OMDA_AGENT_FALLBACK_MODEL_BASE_URL: fallback.baseUrl,
+      OMDA_AGENT_FALLBACK_MODEL_NAME: "fallback-test-model",
+      OMDA_AGENT_FALLBACK_MODEL_API_KEY: "fallback-secret-test-value",
+    });
     const response = await postTo(isolated, "/v1/agent/run", { goal: "Say hello after checking provider availability." });
     const responseBody = await response.text();
     assert.equal(response.status, 200, responseBody + "\n" + isolated.stderr);
@@ -439,7 +440,7 @@ test("model runtime fails over to the configured fallback without exposing crede
     assert.equal(serialized.includes("primary-secret-test-value"), false);
     assert.equal(serialized.includes("fallback-secret-test-value"), false);
   } finally {
-    await stopRuntime(isolated);
+    if (isolated) await stopRuntime(isolated);
     await stopMockModel(primary);
     await stopMockModel(fallback);
   }
