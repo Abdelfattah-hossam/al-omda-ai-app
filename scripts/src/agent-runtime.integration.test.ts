@@ -384,7 +384,7 @@ test("does not replay an approved side effect when the follow-up model request f
   try {
     const started = await postTo(isolated, "/v1/agent/run", { goal: "Create write-once.txt" });
     const startedBody = await started.text();
-    assert.equal(started.status, 200, startedBody + "\\n" + isolated.stderr);
+    assert.equal(started.status, 200, startedBody + "\n" + isolated.stderr);
     const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
     assert.equal(pending.status, "approval_required");
     assert.equal(pending.pending[0].id, "write-call-once");
@@ -393,7 +393,7 @@ test("does not replay an approved side effect when the follow-up model request f
       sessionId: pending.sessionId,
       approvedCallIds: ["write-call-once"],
     });
-    assert.equal(continued.status, 500);
+    assert.equal(continued.status, 400);
     assert.equal(await readFile(join(isolated.workspace, "write-once.txt"), "utf8"), "executed once");
     assert.equal(mock.requests, 2);
 
@@ -401,7 +401,7 @@ test("does not replay an approved side effect when the follow-up model request f
       sessionId: pending.sessionId,
       approvedCallIds: ["write-call-once"],
     });
-    assert.equal(replay.status, 500);
+    assert.equal(replay.status, 400);
     assert.match(await replay.text(), /no pending approval request/i);
     assert.equal(await readFile(join(isolated.workspace, "write-once.txt"), "utf8"), "executed once");
     assert.equal(mock.requests, 2);
