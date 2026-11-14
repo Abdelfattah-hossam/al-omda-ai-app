@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { parsePowerPointPresentation } from "../../artifacts/api-server/src/lib/powerpoint.js";
-import { parsePowerPointData, parsePowerPointResult } from "../../artifacts/al-omda-ai/src/lib/pptx.js";
+import { fitPowerPointFontSize, parsePowerPointData, parsePowerPointResult } from "../../artifacts/al-omda-ai/src/lib/pptx.js";
 
 const slide = { title: "Overview", body: "A useful summary", bullets: ["First point"], speakerNotes: "Presenter notes" };
 
@@ -39,4 +39,15 @@ test("client parser mirrors server acceptance and task-history prefix parsing", 
   assert.equal(parsePowerPointData({ title: "No content", slides: [{ title: "One" }] }), null);
   assert.equal(parsePowerPointResult("ALOMDA_PPTX_JSON:" + JSON.stringify({ title: "Stored", slides: [slide] }))?.title, "Stored");
   assert.equal(parsePowerPointResult("not a presentation"), null);
+});
+
+test("PPTX font sizing responds to text length and the actual slide box dimensions", () => {
+  const shortTitle = fitPowerPointFontSize("Quarterly overview", 28, 12.05, 0.8, 1, 0, 16);
+  const longTitle = fitPowerPointFontSize("A very long presentation title ".repeat(12), 28, 12.05, 0.8, 1, 0, 16);
+  const bodyOnly = fitPowerPointFontSize("A detailed body paragraph ".repeat(30), 19, 11.7, 4.9);
+  const narrowBody = fitPowerPointFontSize("A detailed body paragraph ".repeat(30), 19, 4, 1.25);
+  assert.ok(shortTitle > longTitle);
+  assert.ok(bodyOnly > narrowBody);
+  assert.ok(longTitle >= 16);
+  assert.ok(narrowBody >= 11);
 });
