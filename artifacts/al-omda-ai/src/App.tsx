@@ -1645,9 +1645,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const successfulExecutions = task.steps.filter((step)=>step.executionStatus === 'succeeded' && Boolean(step.result)).length;
     const failedExecutions = task.steps.filter((step)=>step.executionStatus === 'failed').length;
     const unexecutedSteps = task.steps.filter((step)=>step.state === 'approved' && !step.result && step.executionStatus !== 'failed').length;
+    const executionTotal = successfulExecutions + failedExecutions;
+    const successShare = executionTotal ? successfulExecutions / executionTotal * 100 : 0;
+    const failureShare = executionTotal ? failedExecutions / executionTotal * 100 : 0;
     const marketTrend = successfulExecutions > failedExecutions ? 'up' : failedExecutions > successfulExecutions ? 'down' : 'flat';
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
-    const trendLabel = marketTrend === 'up' ? (isAr?'اتجاه صاعد':'Uptrend') : marketTrend === 'down' ? (isAr?'اتجاه هابط':'Downtrend') : (isAr?'اتجاه مستقر':'Stable trend');
+    const trendLabel = marketTrend === 'up' ? (isAr?'نجاحات أكثر':'More successful runs') : marketTrend === 'down' ? (isAr?'إخفاقات أكثر':'More failed runs') : (isAr?'نتائج متساوية':'Even results');
     return <div className="page-enter">
       {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
       <div className="history-detail">
@@ -1657,12 +1660,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <div className="section-head"><h2 className="section-title">{isAr?'مؤشرات المشروع':'Project indicators'}</h2>{statusBadge(task.status)}</div>
             <div className="market-trend-board">
               <div className={`market-main-trend ${marketTrend}`}>
-                <div className="market-trend-heading"><small>{isAr?'مؤشر حركة المشروع':'Project market signal'}</small><span className="market-live-dot"/></div>
+                <div className="market-trend-heading"><small>{isAr?'توازن نتائج التنفيذ':'Execution outcome balance'}</small><span className="market-live-dot"/></div>
                 <div className="market-trend-main"><TrendIcon size={34} strokeWidth={2.6}/><strong>{trendLabel}</strong></div>
-                <svg className="market-sparkline" viewBox="0 0 300 62" preserveAspectRatio="none" aria-hidden="true">
-                  <defs><linearGradient id="marketLineGlow" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stopColor="currentColor" stopOpacity=".25"/><stop offset="100%" stopColor="currentColor" stopOpacity="1"/></linearGradient></defs>
-                  <path d={marketTrend==='up'?'M2 52 L38 45 L72 48 L108 30 L145 36 L182 22 L218 27 L258 9 L298 4':marketTrend==='down'?'M2 8 L38 15 L72 12 L108 29 L145 24 L182 39 L218 34 L258 51 L298 57':'M2 31 L38 27 L72 34 L108 29 L145 33 L182 28 L218 32 L258 27 L298 30'} fill="none" stroke="url(#marketLineGlow)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <div className="market-sparkline" role="img" aria-label={isAr?'نسب نجاح وإخفاق التنفيذ':'Execution success and failure proportions'}>
+                  {executionTotal > 0 ? <>
+                    <span style={{width:successShare + '%',background:'#50e3a4'}}/>
+                    <span style={{width:failureShare + '%',background:'#ff687b'}}/>
+                  </> : <span style={{width:'100%',background:'rgba(241,199,111,.35)'}}/>}
+                </div>
               </div>
               <div className="market-signals">
                 <div className="market-signal up"><TrendingUp size={23}/><span><small>{isAr?'التنفيذات الناجحة':'Successful runs'}</small><strong>{successfulExecutions}</strong></span></div>
