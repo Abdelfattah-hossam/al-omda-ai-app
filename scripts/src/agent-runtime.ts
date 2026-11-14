@@ -692,7 +692,8 @@ async function callMcpTool(serverName: string, toolName: string, args: Record<st
 }
 
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
-type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; createdAt: string; purpose?: ModelPurpose };
+type PendingMcpTool = { serverName: string; toolName: string };
+type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; createdAt: string; purpose?: ModelPurpose };
 const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
@@ -741,9 +742,10 @@ async function loadAgentState(id: string): Promise<AgentState> {
   if (!saved.state || !Array.isArray(saved.state.messages)) throw new Error("Saved agent session is invalid.");
   return saved.state;
 }
-async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void): Promise<unknown> {
+async function runTool(call: AgentToolCall, onProgress?: (event: Json) => void, restoredMcpTools?: Record<string, PendingMcpTool>): Promise<unknown> {
   const args = JSON.parse(call.function.arguments || "{}") as Json;
-  const dynamicMcp = parseMcpToolAlias(call.function.name);
+  const restored = restoredMcpTools?.[call.function.name];
+  const dynamicMcp = parseMcpToolAlias(call.function.name) || (restored && typeof restored.serverName === "string" && typeof restored.toolName === "string" ? restored : null);
   if (dynamicMcp) return await callMcpTool(dynamicMcp.serverName, dynamicMcp.toolName, args);
   switch (call.function.name) {
     case "mcp.list_tools":
@@ -917,9 +919,16 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
         }
       }
       appendMcpImageObservations(state.messages, imageQueue);
+      const pendingMcpTools: Record<string, PendingMcpTool> = {};
+      for (const call of approvalCalls) {
+        const dynamicMcp = parseMcpToolAlias(call.function.name);
+        if (dynamicMcp) pendingMcpTools[call.function.name] = dynamicMcp;
+      }
+      if (Object.keys(pendingMcpTools).length) state.pendingMcpTools = pendingMcpTools;
+      else delete state.pendingMcpTools;
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (const call of calls) {
       try {
@@ -1076,46 +1085,61 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  await saveAgentState(id, state);
-  return await runAgentLoop(id, state, onProgress, purpose);
+  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+    await saveAgentState(id, state);
+    return await runAgentLoop(id, state, onProgress, purpose);
+  });
+}
+const activeAgentSessions = new Set<string>();
+async function withAgentSessionLock<T>(id: string, conflictMessage: string, operation: () => Promise<T>): Promise<T> {
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Invalid session ID.");
+  if (activeAgentSessions.has(id)) throw new Error(conflictMessage);
+  activeAgentSessions.add(id);
+  try {
+    return await operation();
+  } finally {
+    activeAgentSessions.delete(id);
+  }
+}
+function pendingToolDisplayName(call: AgentToolCall, state: AgentState): string {
+  const restored = state.pendingMcpTools?.[call.function.name];
+  if (restored && typeof restored.serverName === "string" && typeof restored.toolName === "string") {
+    return restored.serverName + " / " + restored.toolName;
+  }
+  return mcpToolDisplayName(call.function.name);
 }
 async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  const state = await loadAgentState(id);
-  if (typeof body.goal === "string" && body.goal.trim()) {
-    if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
-    state.messages.push({ role: "user", content: body.goal.trim() });
-    state.purpose = inferModelPurpose(body.goal.trim());
-  } else if (!state.pendingToolCalls?.length) {
-    state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
-  }
-  if (!state.purpose) {
-    const originalGoal = state.messages.find((message) => message.role === "user")?.content;
-    state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
-  }
-  if (state.pendingToolCalls?.length) {
-    return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })) };
-  }
-  await saveAgentState(id, state);
-  return await runAgentLoop(id, state, onProgress);
+  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+    const state = await loadAgentState(id);
+    if (typeof body.goal === "string" && body.goal.trim()) {
+      if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
+      state.messages.push({ role: "user", content: body.goal.trim() });
+      state.purpose = inferModelPurpose(body.goal.trim());
+    } else if (!state.pendingToolCalls?.length) {
+      state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
+    }
+    if (!state.purpose) {
+      const originalGoal = state.messages.find((message) => message.role === "user")?.content;
+      state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
+    }
+    if (state.pendingToolCalls?.length) {
+      return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })) };
+    }
+    await saveAgentState(id, state);
+    return await runAgentLoop(id, state, onProgress);
+  });
 }
-const activeApprovalSessions = new Set<string>();
-
 async function continueAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Invalid session ID.");
-  if (activeApprovalSessions.has(id)) {
-    throw new Error("This agent session is already processing an approval. Wait for that request to finish.");
-  }
-  activeApprovalSessions.add(id);
-  try {
+  return await withAgentSessionLock(id, "This agent session is already processing an approval. Wait for that request to finish.", async () => {
     const state = await loadAgentState(id);
     const pending = state.pendingToolCalls || [];
     if (!pending.length) throw new Error("This agent session has no pending approval request.");
     const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
     const imageQueue: McpImageObservation[] = [];
-    // Persist the approval claim before performing side effects. The in-memory
-    // per-session lock also prevents concurrent requests from claiming it twice.
+    // Persist the approval claim before performing side effects. The per-session
+    // lock also prevents resume and continue requests from mutating the same checkpoint.
     delete state.pendingToolCalls;
     await saveAgentState(id, state);
     for (const call of pending) {
@@ -1124,21 +1148,20 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
         continue;
       }
       try {
-        const result = await runTool(call, onProgress);
+        const result = await runTool(call, onProgress, state.pendingMcpTools);
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
+    delete state.pendingMcpTools;
     appendMcpImageObservations(state.messages, imageQueue);
     if (!state.purpose) {
       const originalGoal = state.messages.find((message) => message.role === "user")?.content;
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
     return await runAgentLoop(id, state, onProgress, state.purpose);
-  } finally {
-    activeApprovalSessions.delete(id);
-  }
+  });
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
