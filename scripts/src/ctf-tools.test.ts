@@ -12,6 +12,16 @@ test("decodes common CTF encodings", () => {
   assert.equal(decodeCtfValue("\\u0048\\x69", "unicode"), "Hi");
 });
 
+test("rejects malformed, misplaced, and non-canonical Base64 padding", () => {
+  assert.equal(decodeCtfValue("SGVsbG8", "base64"), "Hello");
+  assert.equal(decodeCtfValue("SGVsbG8", "base64url"), "Hello");
+  assert.throws(() => decodeCtfValue("SGVsbG8===", "base64"), /Invalid Base64/);
+  assert.throws(() => decodeCtfValue("SGVsbG8=xx", "base64"), /Invalid Base64/);
+  assert.throws(() => decodeCtfValue("A", "base64"), /Invalid Base64/);
+  assert.throws(() => decodeCtfValue("SGVsbG8+", "base64url"), /Invalid Base64URL/);
+  assert.throws(() => decodeCtfValue("Zh==", "base64"), /Invalid Base64/);
+});
+
 test("supports Caesar shifts and bounded brute force", () => {
   assert.equal(decodeCtfValue("Khoor", "caesar", 23), "Hello");
   const results = bruteForceCaesar("abc");
