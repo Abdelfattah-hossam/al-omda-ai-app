@@ -156,7 +156,7 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
             typeof value.speakerNotes !== "string" || value.speakerNotes.length > 2000;
         })) return null;
       const serializedPresentation = JSON.stringify(presentation);
-      if (serializedPresentation.length > 60000) return null;
+      if (serializedPresentation.length > 120000) return null;
       total += serializedPresentation.length;
       if (total > 200000) return null;
       saved.presentationData = {
