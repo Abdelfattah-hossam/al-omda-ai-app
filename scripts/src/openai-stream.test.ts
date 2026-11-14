@@ -5,10 +5,13 @@ import { consumeOpenAIChatStream } from "./openai-stream.js";
 function streamResponse(events: unknown[]): Response {
   const body = events.map((event) => "data: " + JSON.stringify(event) + "\n\n").join("") + "data: [DONE]\n\n";
   return new Response(new ReadableStream({
-    start(controller) {
-      const bytes = new TextEncoder().encode(body);
-      controller.enqueue(bytes.slice(0, Math.floor(bytes.length / 2)));
-      controller.enqueue(bytes.slice(Math.floor(bytes.length / 2)));
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for (const event of events) {
+        controller.enqueue(encoder.encode("data: " + JSON.stringify(event) + "\\n\\n"));
+        await new Promise((resolve) => setTimeout(resolve, 3));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));
       controller.close();
     },
   }), { status: 200, headers: { "content-type": "text/event-stream" } });
