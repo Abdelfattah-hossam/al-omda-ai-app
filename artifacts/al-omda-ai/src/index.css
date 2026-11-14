@@ -2155,11 +2155,23 @@ body:has(.ai-chat-page){
 @media(prefers-reduced-motion:no-preference){.app-shell button:not(:disabled):not(.toggle),.app-shell a.button,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle){animation:omdaUniformControlPulse 3.8s ease-in-out infinite!important;transition:filter .18s ease,border-color .18s ease,transform .18s ease!important}.app-shell button:not(:disabled):not(.toggle):hover,.app-shell a.button:hover,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle):hover{filter:brightness(1.12)}.app-shell button:not(:disabled):not(.toggle):active,.app-shell a.button:active,.app-shell [role="button"]:not([aria-disabled="true"]):not(.toggle):active{filter:brightness(1.18);transform:translateY(1px)}}
 @media(prefers-reduced-motion:reduce){.app-shell button,.app-shell a.button,.app-shell [role="button"]{animation:none!important}}
 
-/* Extend the same glass material to page-specific cards and panels. */
-.app-shell [class*="-card"]:not(button),
-.app-shell [class*="-panel"]:not(button),
-.app-shell [class*="-tile"]:not(button),
-.app-shell [class*="-surface"]:not(button){
+/* Apply surface material only to actual containers, never text rows whose
+   class names happen to contain the word "card" or "panel". */
+.app-shell .panel,
+.app-shell .dashboard-hero,
+.app-shell .stat-card,
+.app-shell .dashboard-chart-card,
+.app-shell .dashboard-history-panel,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .history-item,
+.app-shell .profile-main-card,
+.app-shell .profile-account-profile-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .task-detail-card,
+.app-shell .workbench-step{
  background-color:rgba(20,28,43,.43)!important;
  background-image:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.018))!important;
  border-color:var(--omda-glass-border,rgba(205,218,245,.19))!important;
@@ -2177,17 +2189,19 @@ body:has(.ai-chat-page){
  --omda-glass-depth:0 12px 32px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.075);
 }
 .app-shell .panel,
-.app-shell [class*="card"]:not(button),
-.app-shell [class*="panel"]:not(button),
-.app-shell [class*="tile"]:not(button),
-.app-shell [class*="surface"]:not(button),
-.app-shell [class*="setting-row"],
-.app-shell [class*="notice-bar"],
-.app-shell [class*="plan-step"],
-.app-shell [class*="feature-link"],
-.app-shell [class*="task-row"],
-.app-shell [class*="history-item"],
-.app-shell [class*="project-kpi"],
+.app-shell .stat-card,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .history-item,
+.app-shell .dashboard-chart-card,
+.app-shell .dashboard-history-panel,
+.app-shell .profile-main-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .profile-feature-link,
+.app-shell .workbench-step,
+.app-shell .task-detail-card,
 .app-shell .setting-row,
 .app-shell .specialty-card,
 .app-shell .agent-card,
@@ -2332,21 +2346,24 @@ body:has(.ai-chat-page){
  --omda-glass-shadow:0 12px 34px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.085);
 }
 .app-shell .panel,
-.app-shell [class*="card"]:not(button),
-.app-shell [class*="panel"]:not(button),
-.app-shell [class*="tile"]:not(button),
-.app-shell [class*="surface"]:not(button),
-.app-shell [class*="notice-bar"],
-.app-shell [class*="stat"],
-.app-shell [class*="kpi"],
-.app-shell [class*="setting-row"],
-.app-shell [class*="history-item"],
-.app-shell [class*="task-row"],
-.app-shell .stats-grid>*,
-.app-shell .dashboard-grid>*,
-.app-shell .dashboard-analytics-grid>*,
-.app-shell .market-grid>*,
-.app-shell .profile-settings-layout>*,
+.app-shell .stat-card,
+.app-shell .agent-card,
+.app-shell .request-card,
+.app-shell .plan-card,
+.app-shell .history-item,
+.app-shell .dashboard-chart-card,
+.app-shell .dashboard-history-panel,
+.app-shell .profile-main-card,
+.app-shell .profile-account-profile-card,
+.app-shell .profile-setting-card,
+.app-shell .profile-features-card,
+.app-shell .profile-feature-link,
+.app-shell .workbench-step,
+.app-shell .task-detail-card,
+.app-shell .notice-bar,
+.app-shell .specialty-row,
+.app-shell .setting-row,
+.app-shell .profile-summary,
 .app-shell .profile-settings-side>*{
  background:linear-gradient(135deg,rgba(255,255,255,.095),rgba(255,255,255,.018)),var(--omda-glass-fill)!important;
  border:1px solid var(--omda-glass-stroke)!important;
@@ -3630,4 +3647,88 @@ body:has(.ai-chat-page){
 .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] :is(.notice-bar,.notice,.control-note)::after {
   animation:none!important;
   transition:none!important;
+}
+
+
+/* Gold reference pass: actual cards get a moving gradient edge; text never does. */
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+  .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
+  .agent-card,.request-card,.plan-card,.history-item,.profile-main-card,
+  .profile-account-profile-card,.profile-setting-card,.profile-features-card,
+  .task-detail-card,.workbench-step,.specialty-row,.notice-bar,.control-note
+):not(.ai-chat-page *) {
+  border:1px solid transparent!important;
+  background:
+    linear-gradient(145deg,#1b191d 0%,#111014 100%) padding-box,
+    conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.16),rgba(224,181,101,.72),rgba(255,159,107,.32),rgba(246,220,160,.68),rgba(224,181,101,.16)) border-box!important;
+  box-shadow:0 14px 38px rgba(0,0,0,.28),inset 0 1px 0 rgba(246,220,160,.07)!important;
+  animation:omda-reference-border 12s linear infinite!important;
+  transition:transform .28s ease,box-shadow .28s ease!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+  .stat-card-top,.stat-label,.stat-value,.stat-foot,.dashboard-card-subtitle,
+  .section-head,.section-title,.section-meta,.eyebrow,.dashboard-chart-menu,
+  .dashboard-kpi-icon,.dashboard-task-name,.dashboard-task-table th,
+  .dashboard-task-table td,.profile-section-heading,.profile-fields-grid,
+  .profile-actions-row,.profile-accordion-summary,.setting-row>div,
+  .agent-card-stats,.history-item-open
+) {
+  border:0!important;outline:0!important;box-shadow:none!important;
+  background:transparent!important;background-image:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .lang-button {
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  gap:7px!important;min-height:36px!important;padding:0 13px!important;
+  border:1px solid rgba(224,181,101,.38)!important;border-radius:999px!important;
+  color:#f6dca0!important;
+  background:linear-gradient(145deg,rgba(224,181,101,.16),rgba(224,181,101,.055))!important;
+  box-shadow:0 0 16px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.1)!important;
+  font:600 11px/1 var(--app-font-sans)!important;
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease!important;
+}
+.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .lang-button:hover {
+  transform:translateY(-2px)!important;border-color:rgba(246,220,160,.72)!important;
+  box-shadow:0 0 22px rgba(224,181,101,.2)!important;
+}
+@media(max-width:650px){
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav{
+   display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+   align-items:stretch!important;justify-content:initial!important;gap:6px!important;
+   inset-inline:10px!important;bottom:calc(7px + env(safe-area-inset-bottom))!important;
+   width:auto!important;max-width:none!important;
+   padding:8px!important;border:1px solid rgba(224,181,101,.3)!important;
+   border-radius:22px!important;border-bottom:1px solid rgba(224,181,101,.3)!important;
+   background:linear-gradient(145deg,rgba(27,25,29,.98),rgba(14,13,16,.98))!important;
+   box-shadow:0 12px 38px rgba(0,0,0,.46),0 0 25px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.08)!important;
+   backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important;
+ }
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link{
+   display:flex!important;min-width:0!important;width:100%!important;min-height:58px!important;
+   flex-direction:column!important;align-items:center!important;justify-content:center!important;
+   gap:5px!important;padding:5px 2px!important;border:1px solid transparent!important;
+   border-radius:15px!important;background:transparent!important;color:#a9a08f!important;
+   font-size:9px!important;line-height:1.15!important;text-decoration:none!important;
+   transition:transform .22s ease,color .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease!important;
+ }
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link svg{
+   width:19px!important;height:19px!important;stroke-width:1.8!important;
+ }
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active{
+   color:#f6dca0!important;border-color:rgba(224,181,101,.4)!important;
+   background:linear-gradient(145deg,rgba(224,181,101,.2),rgba(224,181,101,.07))!important;
+   box-shadow:0 0 20px rgba(224,181,101,.14),inset 0 1px 0 rgba(246,220,160,.12)!important;
+   transform:translateY(-2px)!important;
+ }
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active svg{
+   color:#f6dca0!important;filter:drop-shadow(0 0 6px rgba(224,181,101,.4))!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+   .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
+   .agent-card,.request-card,.plan-card,.history-item,.profile-main-card,
+   .profile-account-profile-card,.profile-setting-card,.profile-features-card,
+   .task-detail-card,.workbench-step,.specialty-row,.notice-bar,.control-note
+ ){animation:none!important}
 }
