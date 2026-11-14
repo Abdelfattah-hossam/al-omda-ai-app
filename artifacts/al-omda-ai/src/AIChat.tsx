@@ -503,12 +503,38 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const checkLocalAgentConnection = async () => {
     setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
     try {
-      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/health", { cache: "no-store" });
+      const origin = new URL(agentRuntimeUrl.trim()).origin;
+      const response = await fetch(origin + "/health", { cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
-      setAgentConnectionStatus(ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready"));
+      const runtimeLabel = ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready");
+      if (!agentToken.trim()) {
+        setAgentConnectionStatus(runtimeLabel + (ar ? " · أدخل رمز الاتصال لفحص النماذج المحلية." : " · Enter the access token to check configured models."));
+        return;
+      }
+      const modelResponse = await fetch(origin + "/v1/models/health", {
+        headers: { authorization: "Bearer " + agentToken.trim() },
+        cache: "no-store",
+      });
+      const modelData = await modelResponse.json().catch(() => ({}));
+      if (!modelResponse.ok || !Array.isArray(modelData.providers)) throw new Error(modelData.error || "Model provider diagnostics failed.");
+      const summaries = modelData.providers.map((provider: any) => {
+        const state = !provider.reachable
+          ? (provider.error === "timeout" ? (ar ? "انتهت المهلة" : "timeout") : (ar ? "غير متصل" : "offline"))
+          : provider.endpointAvailable && provider.modelAvailable === true
+            ? (ar ? "النموذج جاهز" : "model ready")
+            : provider.endpointAvailable && provider.modelAvailable === false
+              ? (ar ? "النموذج غير موجود" : "model not listed")
+              : provider.endpointAvailable
+                ? (ar ? "الخادم متصل" : "endpoint reachable")
+                : provider.error === "authentication_failed"
+                  ? (ar ? "مفتاح المصادقة مرفوض" : "authentication rejected")
+                  : (ar ? "واجهة النماذج غير متاحة" : "models endpoint unavailable");
+        return String(provider.name || "provider") + ": " + state + " (" + String(provider.latencyMs ?? 0) + "ms)";
+      });
+      setAgentConnectionStatus(runtimeLabel + (summaries.length ? " · " + summaries.join(" · ") : (ar ? " · لا توجد نماذج مهيأة." : " · No model providers configured.")));
     } catch (err) {
-      setAgentConnectionStatus((ar ? "غير متصل: " : "Not connected: ") + (err instanceof Error ? err.message : "connection failed"));
+      setAgentConnectionStatus((ar ? "تعذر الفحص: " : "Check failed: ") + (err instanceof Error ? err.message : "connection failed"));
     }
   };
 
