@@ -52,16 +52,23 @@ export function buildWindowsAgentLauncher(options: { repoRoot: string; envFile: 
     "$logDirectory = Split-Path -Parent $logFile",
     "if ($logDirectory) { New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null }",
     "Set-Location -LiteralPath " + psQuote(options.repoRoot),
+    "$previousErrorActionPreference = $ErrorActionPreference",
+    "$ErrorActionPreference = 'Continue'",
+    "$LASTEXITCODE = 1",
     "& pnpm --filter @workspace/scripts agent:supervisor 2>&1 | ForEach-Object {",
     "  if ((Test-Path -LiteralPath $logFile) -and (Get-Item -LiteralPath $logFile).Length -ge 5MB) {",
     "    $archive = $logFile + '.' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.bak'",
     "    Move-Item -LiteralPath $logFile -Destination $archive -Force",
-    "    $archives = @(Get-ChildItem -Path ($logFile + '.*.bak') -File | Sort-Object LastWriteTime -Descending)",
+    "    $archiveDirectory = if ($logDirectory) { $logDirectory } else { (Get-Location).Path }",
+    "    $archiveName = Split-Path -Leaf $logFile",
+    "    $archives = @([System.IO.Directory]::GetFiles($archiveDirectory) | Where-Object { $name = [System.IO.Path]::GetFileName($_); $name.StartsWith($archiveName + '.') -and $name.EndsWith('.bak') } | ForEach-Object { Get-Item -LiteralPath $_ } | Sort-Object LastWriteTime -Descending)",
     "    if ($archives.Count -gt 3) { $archives | Select-Object -Skip 3 | Remove-Item -Force }",
     "  }",
     "  Add-Content -LiteralPath $logFile -Value $_",
     "}",
-    "exit $LASTEXITCODE", ""
+    "$agentExitCode = $LASTEXITCODE",
+    "$ErrorActionPreference = $previousErrorActionPreference",
+    "exit $agentExitCode", ""
   ].join("\n");
 }
 export function serializeServiceEnvironment(environment: ServiceEnvironment): string {
