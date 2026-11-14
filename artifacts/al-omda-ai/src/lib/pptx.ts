@@ -41,14 +41,19 @@ export function safePowerPointFileName(value: string): string {
   return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
 }
 
-function estimateLines(value: string, charactersPerLine: number): number {
+function estimateLines(value: string, fontSize: number, widthIn: number): number {
+  const charactersPerLine = Math.max(1, Math.floor((widthIn * 72) / (fontSize * 0.52)));
   return value.split(/\r?\n/).reduce((count, line) => count + Math.max(1, Math.ceil(line.length / charactersPerLine)), 0);
 }
 
-function fitFontSize(value: string, baseSize: number, maxLines: number, charactersPerLine: number): number {
+function fitFontSize(value: string, baseSize: number, widthIn: number, heightIn: number, paragraphCount = 1, paragraphSpacingPt = 0, minSize = 11): number {
   if (!value) return baseSize;
-  const lines = estimateLines(value, charactersPerLine);
-  return Math.max(11, Math.min(baseSize, Math.floor(baseSize * maxLines / lines)));
+  for (let size = baseSize; size >= minSize; size--) {
+    const lines = estimateLines(value, size, widthIn);
+    const estimatedHeightPt = lines * size * 1.2 + Math.max(0, paragraphCount - 1) * paragraphSpacingPt;
+    if (estimatedHeightPt <= heightIn * 72 * 0.94) return size;
+  }
+  return minSize;
 }
 
 export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
@@ -75,15 +80,16 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
     slide.background = { color: "FFFFFF" };
     slide.addText(item.title, {
       x: 0.65, y: 0.45, w: 12.05, h: 0.8, fontFace: "Arial",
-      fontSize: fitFontSize(item.title, 28, 2, 62), bold: true, color: "17243A",
+      fontSize: fitFontSize(item.title, 28, 12.05, 0.8, 1, 0, 16), bold: true, color: "17243A",
       align: rtl ? "right" : "left", rtlMode: rtl, margin: 0.04,
     });
     let bodyY = 1.55;
     if (item.body) {
       const hasBullets = item.bullets.length > 0;
+      const bodyHeight = hasBullets ? 1.25 : 4.9;
       slide.addText(item.body, {
-        x: 0.8, y: bodyY, w: 11.7, h: hasBullets ? 1.25 : 4.9,
-        fontFace: "Arial", fontSize: fitFontSize(item.body, 19, hasBullets ? 3 : 14, 92),
+        x: 0.8, y: bodyY, w: 11.7, h: bodyHeight,
+        fontFace: "Arial", fontSize: fitFontSize(item.body, 19, 11.7, bodyHeight),
         color: "354052", align: rtl ? "right" : "left", rtlMode: rtl,
         valign: "mid", paraSpaceAfterPt: 12, margin: 0.04,
       });
@@ -95,11 +101,12 @@ export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
         text: bullet,
         options: { bullet: { indent: 20 }, hanging: 4, breakLine: index < item.bullets.length - 1 },
       }));
+      const bulletBoxHeight = Math.max(2.2, 4.9 - (bodyY - 1.55));
       slide.addText(runs, {
-        x: 0.9, y: bodyY, w: 11.5, h: Math.max(2.2, 4.9 - (bodyY - 1.55)),
-        fontFace: "Arial", fontSize: fitFontSize(bulletText, 19, 14, 92),
+        x: 0.9, y: bodyY, w: 11.5, h: bulletBoxHeight,
+        fontFace: "Arial", fontSize: fitFontSize(bulletText, 19, 11.5, bulletBoxHeight, item.bullets.length, 5),
         color: "253247", align: rtl ? "right" : "left", rtlMode: rtl,
-        valign: "mid", paraSpaceAfterPt: 12, margin: 0.04,
+        valign: "mid", paraSpaceAfterPt: 5, margin: 0.04,
       });
     }
     if (item.speakerNotes && typeof slide.addNotes === "function") slide.addNotes(item.speakerNotes);
