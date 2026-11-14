@@ -359,10 +359,10 @@ const starterTasks: Task[] = [
   { id:'demo-research', title:'مراجعة تجربة صفحة التسجيل', request:'مراجعة تجربة التسجيل الحالية وتحديد أسئلة البحث التي تساعد على تحسينها.', specialty:'research', status:'paused', createdAt:'2025-02-17T14:05:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الأسئلة والافتراضات التي تحتاج تحققاً',state:'approved'},{id:'s2',text:'اقتراح محاور مراجعة تجربة المستخدم',state:'pending'},{id:'s3',text:'تلخيص النتائج المتوقعة للمراجعة',state:'pending'}] },
 ];
 
-function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; notices:boolean; accent:string; compact:boolean; wallpaper:string; reduceMotion:boolean } {
+function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; accent:string; compact:boolean; wallpaper:string; reduceMotion:boolean } {
   try {
     const stored = localStorage.getItem(STORE_KEY);
-    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false }, ...JSON.parse(stored) };
+    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false }, ...JSON.parse(stored) };
   } catch { /* use seeded local preview */ }
   return { language:'ar', tasks:starterTasks, name:'مستخدم العمْدة', org:'مشروعك', notices:true, accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false };
 }
@@ -392,7 +392,7 @@ function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
-  const { language, tasks, name, org, notices } = saved;
+  const { language, tasks, name, org } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
   const [request, setRequest] = useState('');
@@ -1725,9 +1725,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
       </section>
               <details className="panel panel-pad profile-setting-card profile-accordion">
-          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة والتنبيهات الخاصة بك.':'Your language and notification preferences.'}</p></div><Settings2 size={18}/></div></summary>
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة وتقليل الحركة.':'Your language and reduced-motion preferences.'}</p></div><Settings2 size={18}/></div></summary>
           <div className="setting-row"><div><strong>{t('language')}</strong><small>{t('languageDesc')}</small></div><button className="button button-quiet button-small" onClick={toggleLanguage}>{isAr?'العربية':'English'} <ChevronDown size={12}/></button></div>
-          <div className="setting-row"><div><strong>{t('notifications')}</strong><small>{t('notificationDesc')}</small></div><button role="switch" aria-checked={notices} className={'toggle '+(notices?'on':'')} onClick={()=>setSaved((prev)=>({...prev,notices:!prev.notices}))} aria-label={t('notifications')} data-testid="toggle-notifications"/></div>
           <div className="setting-row"><div><strong>{isAr?"تقليل الحركة والمؤثرات":"Reduce motion"}</strong><small>{isAr?"إيقاف حركات الخلفيات والوميض والانتقالات لتجربة أهدأ.":"Reduce animated backgrounds, button glow, and transitions."}</small></div><button type="button" role="switch" aria-checked={Boolean(saved.reduceMotion)} className={"toggle "+(saved.reduceMotion?"on":"")} onClick={()=>setSaved((prev)=>({...prev,reduceMotion:!prev.reduceMotion}))} aria-label={isAr?"تقليل الحركة":"Reduce motion"}/></div>
         </details>
 
