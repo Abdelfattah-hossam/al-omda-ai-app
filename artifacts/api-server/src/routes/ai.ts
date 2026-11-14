@@ -639,12 +639,16 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (pptStep && !validatedPresentation) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
-        "Create 1 to 40 slides, with at most 10 concise bullets per slide. Keep body and speaker notes within reasonable length.",
-        "Preserve the original request and approved requirements. Never invent facts or sources.",
+        "Create 1 to 40 slides. Keep body text to 250 characters on slides with bullets, or 900 characters on body-only slides. Use at most 10 bullets per slide, each no longer than 150 characters, and keep speaker notes under 2,000 characters.",
+        "Preserve the original request, project context, audience, language, figures, and approved requirements. Never invent facts or sources.",
         "Original request: " + customerRequest,
+        "Project: " + task.title,
         "Approved step: " + step.text,
+        "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
+        "Acceptance check: " + (step.complete || "Include all required slides and content."),
+        "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
         "Invalid output: " + answer.text.slice(0, 12000)
-      ].join("\n") }];
+      ].join("\\n") }];
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter", repairRequest, memory); }
       catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPresentation = parsePowerPointPresentation(answer.text);
@@ -654,19 +658,18 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
-    let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
-    let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
-    let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
+
     if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair the PowerPoint output. Return ONLY valid JSON with title and slides; every slide needs a title and content.",
-        "Create 1 to 40 slides. Keep body text to 250 characters on slides with bullets, or 900 characters on body-only slides. Use at most 10 bullets per slide, each no longer than 150 characters, and keep speaker notes under 2,000 characters. Condense long content without losing core approved requirements.",
-        "Preserve the original request, audience, language, figures, and all approved requirements. Never invent facts or sources.",
+        "Repair the Microsoft Word document output. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
+        "Preserve the original request, project context, language, exact quantities, table requirements, and all approved constraints. Do not turn a Word task into a PowerPoint deck.",
+        wordTaskSevenColumnTable ? "The user requires exactly seven meaningful table columns." : wordTaskTableRequested ? "The user explicitly requested a table; preserve its requested structure." : "Do not add a table unless the user requested one.",
+        wordTaskTableOnly ? "Blank table only: include exactly eight empty body rows and no sample data or paragraphs." : "Include the complete requested document content in paragraphs and/or the requested table.",
         "Original request: " + customerRequest,
         "Project: " + task.title,
         "Approved step: " + step.text,
-        "Expected deliverable: " + (step.output || "A complete .pptx PowerPoint presentation"),
-        "Acceptance check: " + (step.complete || "Include all required slides and content."),
+        "Expected deliverable: " + (step.output || "A complete .docx Word document"),
+        "Acceptance check: " + (step.complete || "Include all requested content and formatting."),
         "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
         "Invalid output: " + answer.text.slice(0, 12000)
       ].join("\\n") }];
@@ -688,9 +691,13 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
                 wordTaskTableOnly ? "Blank table only: no paragraphs, exactly eight empty body rows, and no sample data." : "",
                 "Do not return an explanation, Markdown fence, code, or unrelated files.",
                 "Original request: " + customerRequest,
+                "Project: " + task.title,
                 "Approved step: " + step.text,
-                "Previously approved work: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
-              ].filter(Boolean).join("\n")
+                "Expected deliverable: " + (step.output || "A complete .docx Word document"),
+                "Acceptance check: " + (step.complete || "Include all requested content and formatting."),
+                "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\\n").slice(0, 10000),
+                "Previous invalid output: " + answer.text.slice(0, 10000)
+              ].join("\\n")
             }], memory);
             const alternateDocument = parseWordDocument(alternateAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
             if (alternateDocument) {
@@ -699,45 +706,17 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
               provider = alternateProvider;
             }
           } catch (error) {
-            console.warn("[Alternate Word task engine failed]", error instanceof Error ? error.message : "Unknown error");
+            console.warn("[Alternate Word provider failed]", error instanceof Error ? error.message : "Unknown error");
           }
         }
       }
       if (!validatedWordDocument) {
-        await saveExecutionFailure("Word document failed structural validation after repair and alternate-engine attempts.");
-        res.status(502).json({ error: "تعذر اعتماد مستند Word بعد مراجعته بمحركين. لم يتم خصم وحدات؛ احتفظنا بطلبك ومحتوى المشروع، ويمكنك إعادة تنفيذ الخطوة دون كتابة الطلب من جديد." });
+        await saveExecutionFailure("Word document failed structural validation after repair.");
+        res.status(502).json({ error: language === "ar" ? "تعذر إنشاء مستند Word صالح. لم يتم خصم وحدات؛ أعد المحاولة." : "A valid Word document could not be created. No units were charged; please retry." });
         return;
       }
     }
-    if (wordStep && validatedWordDocument) {
-      // Independent final review for documents created from Task History, not just chat attachments.
-      try {
-        const reviewProvider = provider === "openrouter" ? "openrouter" : (providers.find((candidate) => candidate !== provider) || provider);
-        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter", [{
-          role: "user",
-          content: [
-            "Act as the final quality reviewer for this Microsoft Word deliverable. Compare it against the original customer request and the approved task step line by line.",
-            "Check every requirement, requested item, quantity, name, date, language, format, audience, and exclusion. Fix omissions, contradictions, unclear wording, unsupported assumptions, and unnecessary content.",
-            "Preserve all correct content. Do not invent facts, sample data, tables, sections, or extra files. Do not shorten required details.",
-            "Return ONLY valid JSON with exactly title, paragraphs, columns, and rows. Respect the original table/prose requirement and keep every table row aligned with its columns.",
-            "Original request: " + customerRequest,
-            "Approved step: " + step.text,
-            "Expected output: " + (step.output || ""),
-            "Acceptance criteria: " + (step.complete || ""),
-            "Draft to review: " + JSON.stringify(validatedWordDocument)
-          ].join("\n")
-        }], memory);
-        const reviewedDocument = parseWordDocument(reviewAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
-        if (reviewedDocument) {
-          validatedWordDocument = reviewedDocument;
-          answer = reviewAnswer;
-        } else {
-          console.warn("[Task Word quality review] Invalid review structure; retaining validated draft.");
-        }
-      } catch (error) {
-        console.warn("[Task Word quality review unavailable] Retaining validated draft.", error instanceof Error ? error.message : "Unknown error");
-      }
-    }
+
     if (excelStep && !validatedSpreadsheet) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Excel workbook. Return ONLY valid JSON with title, columns, and rows. Every row must match the column count.",
