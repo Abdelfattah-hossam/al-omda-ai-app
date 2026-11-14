@@ -67,12 +67,14 @@ test("supervisor shutdown stops the runtime without scheduling another restart",
   const workspace = await mkdtemp(join(tmpdir(), "omda-supervisor-shutdown-test-"));
   const bin = join(workspace, "bin");
   const marker = join(workspace, "runtime-starts.txt");
+  const runtimePidPath = join(workspace, "runtime.pid");
   const fakePnpm = join(bin, "pnpm");
   await import("node:fs/promises").then(({ mkdir }) => mkdir(bin, { recursive: true }));
   await writeFile(fakePnpm, [
     "#!/usr/bin/env node",
     'const fs = require("node:fs");',
-    'fs.appendFileSync(process.env.OMDA_SUPERVISOR_TEST_MARKER, "start\\\\n");',
+    'fs.appendFileSync(process.env.OMDA_SUPERVISOR_TEST_MARKER, "start\\n");',
+    'require("node:fs").writeFileSync(process.env.OMDA_SUPERVISOR_TEST_PID, String(process.pid));',
     'process.on("SIGTERM", () => process.exit(0));',
     "setInterval(() => {}, 1000);",
     "",
@@ -88,6 +90,7 @@ test("supervisor shutdown stops the runtime without scheduling another restart",
         ...process.env,
         PATH: bin + delimiter + (process.env.PATH || ""),
         OMDA_SUPERVISOR_TEST_MARKER: marker,
+        OMDA_SUPERVISOR_TEST_PID: runtimePidPath,
         OMDA_AGENT_AUTO_UPDATE: "false",
         OMDA_AGENT_TOKEN: "",
       },
@@ -122,10 +125,17 @@ test("supervisor shutdown stops the runtime without scheduling another restart",
     await new Promise((resolve) => setTimeout(resolve, 1200));
     assert.equal((await readFile(marker, "utf8")).trim().split("\n").filter(Boolean).length, 1);
   } finally {
-    if (supervisor && supervisor.exitCode === null) {
+    if (supervisor && supervisor.exitCode === null && supervisor.signalCode === null) {
       supervisor.kill("SIGKILL");
       await new Promise<void>((resolve) => supervisor?.once("exit", () => resolve()));
     }
+    try {
+      const pid = Number(await readFile(runtimePidPath, "utf8"));
+      if (Number.isInteger(pid) && pid > 1) {
+        if (process.platform === "win32") process.kill(pid, "SIGKILL");
+        else process.kill(-pid, "SIGKILL");
+      }
+    } catch { /* The supervised runtime may already have exited. */ }
     await rm(workspace, { recursive: true, force: true });
   }
 });
