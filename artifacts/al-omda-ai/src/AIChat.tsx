@@ -339,7 +339,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         ]);
         if (!listResponse.ok || !conversationResponse.ok) return;
         const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
-        if (stopped) return;
+        // A send may have started while the network requests were in flight.
+        // Never let a stale poll overwrite the active draft/transcript mid-send.
+        if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current) return;
         if (Array.isArray(listData.conversations) && JSON.stringify(conversationsRef.current) !== JSON.stringify(listData.conversations)) {
           setConversations(listData.conversations);
         }
