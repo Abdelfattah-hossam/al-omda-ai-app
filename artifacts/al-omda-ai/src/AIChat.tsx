@@ -21,6 +21,18 @@ function createRequestedSourceArtifact(request: string, reply: string): SourceDa
   const extension = extensions[language] || "txt";
   return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
 }
+
+function createSourceBlob(sourceData: SourceData): Blob {
+  const mimeTypes: Record<string,string> = {
+    html: "text/html;charset=utf-8", svg: "image/svg+xml;charset=utf-8",
+    json: "application/json;charset=utf-8", css: "text/css;charset=utf-8",
+    js: "text/javascript;charset=utf-8", ts: "text/plain;charset=utf-8",
+    py: "text/x-python;charset=utf-8", sql: "application/sql;charset=utf-8",
+    xml: "application/xml;charset=utf-8", md: "text/markdown;charset=utf-8",
+  };
+  const extension = sourceData.name.split(".").pop()?.toLowerCase() || "";
+  return new Blob([sourceData.code], { type: mimeTypes[extension] || "text/plain;charset=utf-8" });
+}
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 async function isValidZipBlob(blob: Blob): Promise<boolean> {
   if (blob.size < 4) return false;
@@ -192,7 +204,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
         if (item.presentationData) return { ...item, attachment: await createPowerPointAttachment(item.presentationData).catch(() => undefined) };
-        if (item.sourceData) { const blob = new Blob([item.sourceData.code], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: item.sourceData.name, url } }; }
+        if (item.sourceData) { const blob = createSourceBlob(item.sourceData); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: item.sourceData.name, url } }; }
         if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
         return item;
       }));
@@ -667,7 +679,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
       } else if (data.codeFile && typeof data.codeFile.name === "string" && typeof data.codeFile.code === "string" && typeof data.codeFile.language === "string") {
         const sourceData = data.codeFile as SourceData;
-        const blob = new Blob([sourceData.code], { type: "text/plain;charset=utf-8" });
+        const blob = createSourceBlob(sourceData);
         const url = URL.createObjectURL(blob);
         assistantMessage = { ...assistantMessage, attachment: { name: sourceData.name, url }, sourceData };
       } else if (data.presentation && typeof data.presentation.title === "string" && Array.isArray(data.presentation.slides)) {
@@ -1029,6 +1041,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             </div>}
             {message.appData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{message.appData.title}</div><iframe title={message.appData.title} srcDoc={message.appData.html} sandbox="allow-scripts" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:360,border:0,background:"#fff"}} /></div>}{message.appData && <small style={{display:"block",width:"100%",color:"var(--muted,#9aa3af)",fontSize:12}}>{ar?"على iPhone: اضغط تحميل / فتح التطبيق، ثم من زر المشاركة اختر حفظ في الملفات.":"On iPhone: tap Download / open app, then use Share → Save to Files."}</small>}
             {message.presentationData && previewingDocument===index && <div style={{display:"grid",gap:12,width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,i)=><section key={i} style={{border:"1px solid var(--border,#59616c)",borderRadius:10,padding:14,background:"linear-gradient(145deg,#182334,#101722)",color:"#f1f5f9",minHeight:130}}><small style={{color:"#d8b978"}}>{ar?"شريحة":"Slide"} {i+1}</small><h3 style={{fontSize:17,margin:"8px 0 10px",color:"#f8fafc"}}>{slide.title}</h3><ul style={{margin:0,paddingInlineStart:20,lineHeight:1.65}}>{slide.bullets.map((bullet,j)=><li key={j}>{bullet}</li>)}</ul></section>)}</div>}
+            {message.sourceData && message.sourceData.language==="html" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة HTML آمنة":"Sandboxed HTML preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#11151b"}}><div style={{padding:"9px 12px",color:"#d5b477",fontSize:12,borderBottom:"1px solid #343a44"}}>{message.sourceData.name} · {message.sourceData.language}</div><pre dir="ltr" style={{margin:0,padding:14,overflowX:"auto",maxHeight:"65vh",color:"#e8edf4",fontSize:13,lineHeight:1.65,whiteSpace:"pre"}}><code>{message.sourceData.code}</code></pre></div>}
             {message.spreadsheetData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}>
               <strong style={{display:"block",marginBottom:10}}>{message.spreadsheetData.title}</strong>
