@@ -80,6 +80,18 @@ export function supabasePublicMessage(error: unknown, fallback: string): string 
     const payload = error.payload;
     if (payload && typeof payload === "object") {
       const data = payload as Record<string, unknown>;
+      const code = typeof data.code === "string" ? data.code : typeof data.error_code === "string" ? data.error_code : "";
+      const messages: Record<string, string> = {
+        over_email_send_rate_limit: "وصلت خدمة البريد التجريبية إلى حد إرسال رسائل التفعيل. يلزم إعداد SMTP مخصص حتى يتمكن جميع المستخدمين من إنشاء حساباتهم.",
+        email_address_not_authorized: "خدمة البريد التجريبية لا تسمح بإرسال رسائل التفعيل إلى هذا العنوان. يلزم ربط SMTP مخصص.",
+        signup_disabled: "إنشاء الحسابات متوقف حاليًا في إعدادات المصادقة.",
+        email_not_confirmed: "الحساب لم يتم تأكيد بريده الإلكتروني بعد. افتح رسالة التفعيل ثم حاول تسجيل الدخول.",
+        over_request_rate_limit: "طلبات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول مرة أخرى.",
+        weak_password: "كلمة المرور ضعيفة. استخدم كلمة مرور أقوى لا تقل عن 8 أحرف.",
+        user_already_exists: "هذا البريد مسجل بالفعل. جرّب تسجيل الدخول بدل إنشاء حساب جديد.",
+        email_exists: "هذا البريد مسجل بالفعل. جرّب تسجيل الدخول بدل إنشاء حساب جديد.",
+      };
+      if (code && messages[code]) return messages[code];
       for (const key of ["msg", "message", "error_description"]) {
         const message = data[key];
         if (typeof message === "string" && message.length < 240) return message;
