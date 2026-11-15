@@ -50,8 +50,24 @@ export function requestPinnedHttp(
   const transport = url.protocol === "https:" ? httpsRequest : httpRequest;
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const connectDeadline = setTimeout(() => {
+      request.destroy(new Error("HTTP connection timed out."));
+    }, timeoutMs);
+    connectDeadline.unref?.();
+    const overallDeadline = setTimeout(() => {
+      request.destroy(new Error("HTTP request exceeded its total deadline."));
+    }, timeoutMs);
+    overallDeadline.unref?.();
+    const clearConnectDeadline = () => clearTimeout(connectDeadline);
+    const clearOverallDeadline = () => clearTimeout(overallDeadline);
+
     const request = transport(requestOptions, (incoming) => {
+      settled = true;
       clearConnectDeadline();
+      incoming.once("end", clearOverallDeadline);
+      incoming.once("close", clearOverallDeadline);
+      incoming.once("error", clearOverallDeadline);
       const responseHeaders = new Headers();
       for (const [name, value] of Object.entries(incoming.headers)) {
         if (value === undefined) continue;
@@ -73,13 +89,6 @@ export function requestPinnedHttp(
         body,
       });
     });
-    let settled = false;
-    const connectDeadline = setTimeout(() => {
-      request.destroy(new Error("HTTP connection timed out."));
-    }, timeoutMs);
-    connectDeadline.unref?.();
-    const clearConnectDeadline = () => clearTimeout(connectDeadline);
-
     request.once("socket", (socket) => {
       const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
       if (!socket.connecting && (url.protocol !== "https:" || !("secureConnecting" in socket) || !socket.secureConnecting)) {
@@ -91,6 +100,7 @@ export function requestPinnedHttp(
     request.setTimeout(timeoutMs, () => request.destroy(new Error("HTTP request timed out.")));
     request.once("upgrade", (_incoming, socket) => {
       clearConnectDeadline();
+      clearOverallDeadline();
       socket.destroy();
       if (!settled) {
         settled = true;
@@ -99,6 +109,7 @@ export function requestPinnedHttp(
     });
     request.once("error", (error) => {
       clearConnectDeadline();
+      clearOverallDeadline();
       if (!settled) {
         settled = true;
         reject(error);
