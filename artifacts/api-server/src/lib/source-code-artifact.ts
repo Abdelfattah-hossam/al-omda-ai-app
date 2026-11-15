@@ -1,17 +1,16 @@
 export type SourceCodeArtifact = { title: string; name: string; language: string; code: string };
 
 export function isValidDxfSource(code: string): boolean {
-  if (!code.trim() || code.length > 100000 || code.includes("\\0")) return false;
-  // DXF files commonly end with one or more line breaks; ignore only trailing
-  // empty lines so a valid final group-code/value pair is not rejected.
-  const lines = code.replace(/\\r\\n?/g, "\\n").split("\\n");
+  if (!code.trim() || code.length > 100000 || code.includes("\0")) return false;
+  // DXF files commonly end with line breaks; ignore only trailing empty lines.
+  const lines = code.replace(/\r\n?/g, "\n").split("\n");
   while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
   if (lines.length < 8 || lines.length % 2 !== 0) return false;
 
   const pairs: Array<[number, string]> = [];
   for (let i = 0; i < lines.length; i += 2) {
     const group = lines[i].trim();
-    if (!/^-?\\d+$/.test(group)) return false;
+    if (!/^-?\d+$/.test(group)) return false;
     const groupCode = Number(group);
     if (!Number.isSafeInteger(groupCode) || groupCode < 0 || groupCode > 1071) return false;
     pairs.push([groupCode, lines[i + 1].trim()]);
