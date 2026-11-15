@@ -51,7 +51,8 @@ export function parseSourceCodeFile(text: string, request: string): SourceCodeAr
   if (requestedExtension && language !== extension && !(extension === "mjs" && language === "js") && !(extension === "cjs" && language === "js")) return null;
   if (extension === "json") { try { JSON.parse(code); } catch { return null; } }
   if (extension === "html" && !/<[a-z][\s\S]*>/i.test(code)) return null;
-  if (extension === "svg" && !isSafeSvgSource(code)) return null;\n  if (extension === "dxf" && !isValidDxfSource(code)) return null;
+  if (extension === "svg" && !isSafeSvgSource(code)) return null;
+  if (extension === "dxf" && !isValidDxfSource(code)) return null;
   if (extension === "css") {
     let depth = 0;
     for (const char of code) { if (char === "{") depth++; if (char === "}") depth--; if (depth < 0) return null; }
