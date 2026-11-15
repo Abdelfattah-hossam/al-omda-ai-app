@@ -50,3 +50,14 @@ test("rejects slides without any content bullets", () => {
 test("rejects oversized presentation payloads before parsing", () => {
   assert.equal(parsePowerPointPresentation(" ".repeat(1_000_001)), null);
 });
+
+
+test("rejects slides whose combined bullet text is too long for a readable slide", () => {
+  const crowded = {
+    ...base,
+    slides: base.slides.map((slide, index) => index === 1
+      ? { ...slide, bullets: ["x".repeat(700), "y".repeat(700), "z".repeat(700), "w".repeat(301)] }
+      : slide),
+  };
+  assert.equal(parsePowerPointPresentation(JSON.stringify(crowded)), null);
+});
