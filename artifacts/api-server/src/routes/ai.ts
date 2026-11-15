@@ -231,7 +231,18 @@ function chooseProviders(messages: ChatMessage[]) {
 async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("Gemini is not configured.");
-  const model = "gemini-3.8-flash";
+  // Every entry below is listed on Google's Standard Free Tier. Try a different
+  // model when one model's per-project RPM/TPM/RPD quota is exhausted; never
+  // fall back to a paid-only model or a paid service tier.
+  const models = [
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+  ];
   const contents = messages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [
@@ -239,21 +250,38 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
       ...(message.image ? [{ inlineData: { mimeType: message.image.mimeType, data: message.image.data } }] : []),
     ],
   }));
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: "POST",
-    signal: AbortSignal.timeout(25000),
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
-      contents,
-      generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
-    }),
-  });
-  const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status})${providerErrorMessage(payload) ? ": " + providerErrorMessage(payload) : "."}`);
-  const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
-  if (!text) throw new Error("Gemini returned an empty response.");
-  return { text, model };
+  const failures: string[] = [];
+  for (const model of models) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: "POST",
+        signal: AbortSignal.timeout(25000),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
+          contents,
+          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
+        }),
+      });
+      const payload = await response.json().catch(() => null) as any;
+      if (!response.ok) {
+        const detail = providerErrorMessage(payload);
+        failures.push(model + ": " + response.status + (detail ? " " + detail : ""));
+        // Invalid credentials/permissions and oversized requests are not model quota issues.
+        if (response.status === 401 || response.status === 403 || response.status === 413) break;
+        continue;
+      }
+      const text = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
+      if (!text) {
+        failures.push(model + ": empty response");
+        continue;
+      }
+      return { text, model };
+    } catch (error) {
+      failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
+    }
+  }
+  throw new Error("All configured Gemini free-tier models failed. " + failures.slice(0, 5).join(" | ").slice(0, 700));
 }
 
 type OpenRouterCatalogModel = {
