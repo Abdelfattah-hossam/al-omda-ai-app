@@ -143,7 +143,7 @@ async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address
 async function assertAllowedTarget(rawUrl: string): Promise<URL> {
   return (await resolveAllowedTarget(rawUrl)).url;
 }
-async function readLimitedResponse(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
+async function readLimitedResponse(response: { body: ReadableStream<Uint8Array> | null }, limit: number): Promise<{ text: string; truncated: boolean }> {
   if (!response.body) return { text: "", truncated: false };
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
