@@ -7269,3 +7269,65 @@ body:has(.ai-chat-page){
 .app-shell .ai-chat-brand-mark{width:35px!important;height:35px!important;flex:0 0 35px!important}
 .app-shell .ai-chat-welcome-mark{width:56px!important;height:56px!important;flex:0 0 56px!important}
 .app-shell .ai-chat-account-avatar{width:32px!important;height:32px!important;flex:0 0 32px!important}
+
+
+/* AL OMDA official identity + screenshot-driven layout corrections */
+.app-shell .brand-lockup { display:flex!important; align-items:center!important; justify-content:flex-start!important; width:100%; min-width:0; padding:0 4px 18px!important; }
+.app-shell .brand-lockup-logo { display:block; width:min(100%,190px); max-height:72px; height:auto; object-fit:contain; flex:none; }
+.app-shell .app-curtain .brand-lockup-logo { width:min(100%,220px); }
+.ai-chat-brand-mark img,.ai-chat-account-avatar img,.ai-chat-welcome-mark img { display:block; width:100%; height:100%; object-fit:contain; padding:7px; }
+.ai-chat-brand-mark img { padding:5px; }
+.ai-chat-welcome-mark img { padding:9px; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome { direction:rtl; grid-template-columns:minmax(0,1.25fr) minmax(260px,.9fr); align-items:center; text-align:start; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome-identity { direction:rtl; justify-content:flex-start; text-align:start; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome-copy { flex:1 1 auto; min-width:0; text-align:start; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats { direction:rtl; min-width:0; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats > div { align-items:center; text-align:center; }
+.profile-accordion-summary { display:flex!important; align-items:center!important; gap:12px; }
+.profile-accordion-summary::after { display:grid!important; place-items:center; float:none!important; flex:none; width:28px; height:28px; margin:0 0 0 auto!important; border:1px solid color-mix(in srgb,var(--profile-accent,#d7b477) 32%,transparent); border-radius:9px; font-size:19px!important; line-height:1!important; }
+.profile-accordion-summary .profile-section-heading { flex:1 1 auto; min-width:0; align-items:center; margin:0!important; }
+.profile-accordion-summary .profile-section-heading>svg { flex:none; width:19px; height:19px; }
+.app-shell:not([data-chat-active="true"]) .topbar { min-width:0; }
+.app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { flex-wrap:wrap; justify-content:center; row-gap:7px; }
+.app-shell:not([data-chat-active="true"]) .topbar-metric { flex:none; min-width:54px; }
+@media (min-width:761px) and (max-width:1200px) {
+ .app-shell:not([data-chat-active="true"]) .topbar { height:auto!important; min-height:88px; flex-wrap:wrap; row-gap:7px; padding-block:8px; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.crumb { order:1; max-width:38vw; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.top-actions { order:2; margin-inline-start:auto; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics { order:3; flex:1 0 100%; justify-content:flex-start; margin:0; padding:2px 0 0; gap:clamp(12px,2vw,24px); }
+ .app-shell:not([data-chat-active="true"]) .topbar-runtime-state { max-width:none; }
+}
+@media (max-width:760px) {
+ .app-shell:not([data-chat-active="true"]) .topbar { height:auto!important; min-height:86px; flex-wrap:wrap; row-gap:5px; padding-block:7px; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.crumb { order:1; max-width:36vw; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.top-actions { order:2; margin-inline-start:auto; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics { display:flex!important; order:3; flex:1 0 100%; justify-content:space-around; gap:5px; margin:0; padding:3px 0 0; }
+ .app-shell:not([data-chat-active="true"]) .topbar-metric { min-width:48px; }
+ .app-shell:not([data-chat-active="true"]) .topbar-runtime-state { display:none!important; }
+}
+@media (max-width:520px) {
+ .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics { display:flex!important; }
+ .app-shell:not([data-chat-active="true"]) .topbar>.crumb { max-width:34vw; }
+ .app-shell:not([data-chat-active="true"]) .topbar-metric small { font-size:8px; }
+}
+.app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar { min-width:0; flex-wrap:wrap; border-bottom:1px solid rgba(224,181,101,.2)!important; background:linear-gradient(180deg,rgba(23,20,16,.98),rgba(10,10,10,.98))!important; }
+.app-shell[data-chat-active="true"] .ai-chat-brand-mark { border:1px solid rgba(224,181,101,.28)!important; background:linear-gradient(145deg,#292116,#100f0d)!important; color:#f6dca0!important; }
+.app-shell[data-chat-active="true"] .ai-chat-page>.panel .chat-messages:has(#welcome-screen) { display:flex!important; align-items:stretch; justify-content:center; }
+.app-shell[data-chat-active="true"] .ai-chat-welcome { display:flex!important; flex:1 0 auto; width:100%; min-height:100%; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal { width:min(100%,480px); height:auto!important; min-height:0!important; max-height:calc(100dvh - 24px)!important; overflow-y:auto!important; overscroll-behavior:contain; justify-content:flex-start!important; gap:14px!important; padding:14px 18px 16px!important; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal>header { flex:none; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:none; width:100%; min-height:0!important; padding:4px 4px 8px!important; gap:10px; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap { width:148px; height:148px; flex:none; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb { width:100px; height:100px; }
+.app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-status { text-align:center; line-height:1.7; }
+.app-shell[data-chat-active="true"] .ai-chat-live-test,.app-shell[data-chat-active="true"] .ai-chat-live-end { flex:none; width:100%; max-width:340px; margin-inline:auto; }
+.app-shell[data-chat-active="true"] .ai-chat-live-end { position:sticky; bottom:0; z-index:3; margin-top:auto; min-height:46px!important; border-color:rgba(224,181,101,.42)!important; color:#f6dca0!important; background:#17130e!important; box-shadow:0 0 0 6px rgba(10,10,10,.92); }
+.app-shell:not([data-chat-active="true"]) .empty-mark img { display:block; width:30px; height:30px; object-fit:contain; }
+@media (max-width:650px) {
+ .app-shell:not([data-chat-active="true"]) .profile-welcome { grid-template-columns:minmax(0,1fr); gap:15px; }
+ .app-shell:not([data-chat-active="true"]) .profile-welcome-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .app-shell .brand-lockup-logo { width:min(100%,174px); }
+ .app-shell[data-chat-active="true"] .ai-chat-live-modal { max-height:calc(100dvh - 16px)!important; padding:10px 12px 12px!important; gap:10px!important; }
+ .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap { width:128px; height:128px; }
+ .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb { width:90px; height:90px; }
+}

@@ -1333,10 +1333,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
         <section className="ai-chat-live-modal" role="dialog" aria-modal="true" aria-label={ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}>
           <header><span><i/> {ar ? "التحدث الصوتي مع العمدة" : "Talk with AL OMDA"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
-          <div className="ai-chat-live-orb"><span><Mic size={30}/></span></div><div className="ai-chat-live-copy"><strong>{ar ? "العمدة يستمع إليك..." : "AL OMDA is listening..."}</strong><p>{ar ? "تحدث مع العمدة مباشرة، وسيجيبك بصوته." : "Speak naturally and AL OMDA will reply by voice."}</p></div>
           <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/>
           <button type="button" className="ai-chat-live-test" onClick={()=>speak(ar ? "أهلاً بك، العمدة معك وجاهز لمساعدتك." : "Hello, AL OMDA is ready to help you.")}><Volume2 size={14}/>{ar ? "اختبار الصوت" : "Test voice"}</button>
-          <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
+          <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إنهاء المحادثة الصوتية وإغلاق النافذة" : "End voice conversation and close"}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
         </section>
       </div>}
       {showCodeCanvas && <div className="ai-chat-modal-backdrop ai-chat-canvas-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowCodeCanvas(false);}}>

@@ -403,9 +403,12 @@ function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
-  const { language, tasks, name, org } = saved;
+  const { language, tasks } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
+  const defaultDisplayName = isAr ? 'مستخدم العمدة' : 'AL OMDA user';
+  const name = saved.name.trim() || defaultDisplayName;
+  const org = saved.org.trim() || (isAr ? 'مساحة العمل' : 'Workspace');
   const [request, setRequest] = useState('');
   const [planGenerating, setPlanGenerating] = useState(false);
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
@@ -422,7 +425,7 @@ function App() {
   const [editText, setEditText] = useState('');
   const [editOutput, setEditOutput] = useState('');
   const [editComplete, setEditComplete] = useState('');
-  const [profileName, setProfileName] = useState(name);
+  const [profileName, setProfileName] = useState(name === defaultDisplayName ? '' : name);
   const [profileOrg, setProfileOrg] = useState(org);
   const [savedToast, setSavedToast] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -603,7 +606,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
     setWorkspaceLoaded(true);
     setWorkspaceLoadError('');
-    const remoteName = workspace.profile.displayName.trim() || email;
+    const storedDisplayName = workspace.profile.displayName.trim();
+    const remoteName = storedDisplayName && storedDisplayName.toLocaleLowerCase() !== email.toLocaleLowerCase()
+      ? storedDisplayName
+      : (language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user');
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
     const remoteTasks = workspace.tasks as Task[];
     // Workspace polling runs in the background. Do not replace React state with
@@ -613,7 +619,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (prev.name === remoteName && prev.org === remoteOrg && sameTasks) return prev;
       return { ...prev, name:remoteName, org:remoteOrg, tasks:remoteTasks };
     });
-    setProfileName((current) => current === remoteName ? current : remoteName);
+    setProfileName((current) => current === storedDisplayName ? current : storedDisplayName);
     setProfileOrg((current) => current === remoteOrg ? current : remoteOrg);
     setAvatarPath((current) => current === workspace.profile.avatarPath ? current : workspace.profile.avatarPath);
   };
@@ -633,8 +639,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         if (cancelled || !session.user) return;
         hasAccountSession = true;
         setAuthUser(session.user);
-        setSaved((prev) => ({ ...prev, tasks:[], name:session.user!.email, org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
-        setProfileName(session.user.email);
+        setSaved((prev) => ({ ...prev, tasks:[], name:language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user', org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
+        setProfileName('');
         setProfileOrg(language === 'ar' ? 'مساحة العمل' : 'Workspace');
         try {
           const workspace = await getWorkspace(apiRequestOptions);
@@ -787,8 +793,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (!result.user) throw new Error(t('apiUnavailable'));
       setAuthUser(result.user);
       setWorkspaceLoaded(false);
-      setSaved((prev) => ({ ...prev, tasks:[], name:result.user!.email, org:isAr ? 'مساحة العمل' : 'Workspace' }));
-      setProfileName(result.user.email);
+      setSaved((prev) => ({ ...prev, tasks:[], name:defaultDisplayName, org:isAr ? 'مساحة العمل' : 'Workspace' }));
+      setProfileName('');
       setProfileOrg(isAr ? 'مساحة العمل' : 'Workspace');
       const workspace = await getWorkspace(apiRequestOptions);
       applyWorkspace(workspace, result.user.email);
@@ -823,7 +829,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }
   };
   const handleSaveProfile = async () => {
-    const displayName = profileName.trim() || name;
+    const displayName = profileName.trim();
     const organization = profileOrg.trim() || org;
     setWorkspaceError('');
     if (authUser) {
@@ -831,14 +837,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
         const profile = await apiUpdateProfile({ displayName, organization }, apiRequestOptions);
         setProfileName(profile.displayName);
         setProfileOrg(profile.organization);
-        setSaved((prev) => ({ ...prev, name:profile.displayName, org:profile.organization }));
+        setSaved((prev) => ({ ...prev, name:profile.displayName.trim() || defaultDisplayName, org:profile.organization.trim() || org }));
         setAuthNotice(t('profileSaved'));
       } catch (error) {
         setWorkspaceError(readApiError(error, t('saveTaskFailed')));
         return;
       }
     } else {
-      setSaved((prev) => ({ ...prev, name:displayName, org:organization }));
+      setProfileName(displayName);
+      setSaved((prev) => ({ ...prev, name:displayName || defaultDisplayName, org:organization }));
     }
     setSavedToast(true);
     window.setTimeout(() => setSavedToast(false), 2200);
@@ -1817,7 +1824,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </Link>
         <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>void handleDeleteTask(task)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
       </div>)}
-      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><Search size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
+      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><History size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
     </div>;
   };
 
@@ -1900,7 +1907,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="profile-welcome-avatar">{authUser && avatarPath ? <img src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')}/> : <span>{profileName.trim().charAt(0)||'ع'}</span>}</div>
         <div className="profile-welcome-copy">
           <span className="eyebrow">{isAr?'مساحتك الشخصية':'YOUR PERSONAL SPACE'}</span>
-          <h2>{isAr?'أهلاً بك، ': 'Welcome, '}{profileName.trim()|| (isAr?'صديق العمدة':'AL OMDA user')}</h2>
+          <h2>{isAr?'أهلاً بك، ': 'Welcome, '}{profileName.trim() || defaultDisplayName}</h2>
           <p>{isAr?'كل تفاصيل حسابك ونشاطك وإعدادات تجربتك في مكان واحد.':'Your account details, activity, and experience settings in one place.'}</p>
           <span className={'profile-account-state '+(authUser?'is-connected':'is-local')}><i/>{authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'تستخدم العمدة كزائر':'Using AL OMDA locally')}</span>
         </div>
@@ -1934,9 +1941,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{(workspaceLoadError||workspaceError)&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError||workspaceError}</div>}
         
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
-        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
+        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || defaultDisplayName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
         <div className="profile-fields-grid">
-          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} maxLength={100} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
           <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
         </div>
         <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
@@ -2009,7 +2016,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <div className="sidebar-brand-area">
-        <Link href={focusedHref("/","dashboard-overview")} className="brand-lockup"><span className="brand-mark"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
+        <Link href={focusedHref("/","dashboard-overview")} className="brand-lockup"><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg" alt={isAr ? "العمدة AL OMDA AI" : "AL OMDA AI"}/></Link>
         <span className="sidebar-workspace-state"><i aria-hidden="true"/>{isAr?'مساحة العمل':'WORKSPACE'}</span>
       </div>
       <div className="sidebar-scroll">
@@ -2058,7 +2065,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </main>
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
-        <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><span className="brand-mark"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
+        <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg" alt={isAr ? "العمدة AL OMDA AI" : "AL OMDA AI"}/></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
         <div className="curtain-launcher-groups">
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
