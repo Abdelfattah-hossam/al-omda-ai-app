@@ -30,7 +30,6 @@ export function isValidDxfSource(code: string): boolean {
 
   let activeSection = "";
   let entitiesSectionCount = 0;
-  let entityCount = 0;
   let sawEof = false;
 
   for (let i = 0; i < pairs.length; i++) {
@@ -60,7 +59,6 @@ export function isValidDxfSource(code: string): boolean {
 
     if (activeSection === "ENTITIES") {
       if (!allowedEntities.has(marker)) return false;
-      entityCount++;
     } else if (!allowedNonEntityRecords.has(marker) && !(activeSection === "BLOCKS" && allowedEntities.has(marker))) {
       return false;
     }
