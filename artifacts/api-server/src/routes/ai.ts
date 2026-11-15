@@ -229,18 +229,35 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
 function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   if (!request || isHowToRequest(request)) return false;
-  const hasSourceExtension = /\.(?:py|js|mjs|cjs|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i.test(request);
+  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|toml|ini)\b/i.test(request);
   return hasSourceExtension || (isCodingRequest(messages) && /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request));
 }
 function parseSourceCodeFile(text: string, request: string): { title: string; name: string; language: string; code: string } | null {
-  const match = text.match(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/);
-  if (!match || !match[2].trim() || match[2].length > 100000) return null;
-  const requestedExtension = request.match(/\.(py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i)?.[1]?.toLowerCase();
-  const language = (match[1] || requestedExtension || "text").toLowerCase();
-  const extensions: Record<string,string> = { javascript:"js",typescript:"ts",python:"py",bash:"sh",shell:"sh",yml:"yaml",text:"txt" };
-  const extension = requestedExtension || extensions[language] || language;
-  if (!/^(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|yaml|md|txt)$/.test(extension)) return null;
-  return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
+  const fence = String.fromCharCode(96).repeat(3);
+  const trimmed = text.trim();
+  if (!trimmed.startsWith(fence) || !trimmed.endsWith(fence)) return null;
+  const firstLineEnd = trimmed.indexOf("\n");
+  const lastFence = trimmed.lastIndexOf(fence);
+  if (firstLineEnd < 0 || lastFence <= firstLineEnd) return null;
+  const rawLanguage = trimmed.slice(fence.length, firstLineEnd).trim().toLowerCase();
+  const code = trimmed.slice(firstLineEnd + 1, lastFence).trim();
+  if (!code || code.length > 100000 || code.includes(fence)) return null;
+  const requestedExtension = request.match(/\.(py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|toml|ini)\b/i)?.[1]?.toLowerCase();
+  const aliases: Record<string,string> = { javascript:"js",node:"js",typescript:"ts",python:"py",bash:"sh",shell:"sh",yml:"yaml",text:"txt" };
+  const language = aliases[rawLanguage] || rawLanguage || requestedExtension || "txt";
+  const extension = requestedExtension || aliases[rawLanguage] || rawLanguage || "txt";
+  const allowed = /^(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|yaml|md|txt|html|svg|toml|ini)$/;
+  if (!allowed.test(extension)) return null;
+  if (requestedExtension && language !== extension && !(extension === "mjs" && language === "js") && !(extension === "cjs" && language === "js")) return null;
+  if (extension === "json") { try { JSON.parse(code); } catch { return null; } }
+  if (extension === "html" && !/<[a-z][\s\S]*>/i.test(code)) return null;
+  if (extension === "svg" && !/<svg\b[\s\S]*<\/svg\s*>/i.test(code)) return null;
+  if (extension === "css") {
+    let depth = 0;
+    for (const char of code) { if (char === "{") depth++; if (char === "}") depth--; if (depth < 0) return null; }
+    if (depth !== 0) return null;
+  }
+  return { title: "Source code", name: "al-omda-source." + extension, language: extension, code };
 }
 
 function systemPrompt(coding: boolean, memory = ""): string {
@@ -1224,7 +1241,17 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       catch (error) { console.warn("[Source file repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSourceFile = parseSourceCodeFile(answer.text, latestCustomerRequest);
       if (!validatedSourceFile) {
-        res.status(502).json({ error: "تعذر اعتماد ملف الكود؛ لم يتم خصم وحداتك. أعد المحاولة مع تحديد لغة الملف." });
+        const alternateProvider = providers.find((candidate) => candidate !== usedProvider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory);
+            const alternateFile = parseSourceCodeFile(alternateAnswer.text, latestCustomerRequest);
+            if (alternateFile) { answer = alternateAnswer; validatedSourceFile = alternateFile; usedProvider = alternateProvider; }
+          } catch (error) { console.warn("[Alternate source file provider failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
+      if (!validatedSourceFile) {
+        res.status(502).json({ error: "تعذر اعتماد ملف الكود بعد مراجعة المحركين؛ لم يتم خصم وحداتك. أعد المحاولة لاحقًا." });
         return;
       }
     }
