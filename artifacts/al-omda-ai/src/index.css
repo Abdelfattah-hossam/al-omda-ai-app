@@ -5360,7 +5360,7 @@ body:has(.ai-chat-page){
 .app-launcher-arrow { flex:none; margin-inline-start:auto; color:#777f89; }
 .app-launcher-grid-secondary { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .app-launcher-grid-secondary .app-launcher-tile { min-height:64px; }
-.curtain-launcher-groups { display:grid; gap:20px; padding:4px 0 18px; overflow-y:auto; }
+.curtain-launcher-groups { display:grid; flex:1; min-height:0; align-content:start; gap:20px; padding:4px 0 18px; overflow-y:auto; overscroll-behavior:contain; }
 .curtain-launcher-group { display:grid; gap:8px; }
 .curtain-launcher-group .curtain-caption { padding:4px 2px; }
 .curtain-launcher-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
