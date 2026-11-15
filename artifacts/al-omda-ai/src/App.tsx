@@ -152,7 +152,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
 const translations = {
   ar: {
     overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', agentNetwork:'شبكة الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
-    workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
+    workspace:'مساحة العمل', account:'الحساب', launcherInsightsAccount:'المتابعة والحساب', launcherCoreTitle:'العمل الأساسي', launcherCoreDesc:'ابدأ وأنجز وتابع', launcherSecondaryDesc:'إحصاءات وتفضيلات التطبيق', launcherSubtitleChat:'ابدأ محادثة مع العمدة', launcherSubtitleWorkbench:'حوّل طلبك إلى خطة', launcherSubtitleAgents:'اختر التخصص المناسب', launcherSubtitleHistory:'راجع مشاريعك ونتائجك', launcherSubtitleUsage:'الاستهلاك والذاكرة', launcherSubtitleProfile:'بياناتك وتفضيلاتك', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'ابدأ محادثتك مع العمدة، ودعه يساعدك في إنجاز العمل.', heroText:'اسأل، أنشئ ملفاتك ومشروعاتك، أو فوّض مهمة لوكيل متخصص مع الاحتفاظ بالتحكم في قراراتك.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لتراجعها قبل التنفيذ.', planDisclaimer:'سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لمراجعتها قبل بدء التنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة وتنفيذ', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'بعد موافقتك على كل خطوة، ينفّذها العمدة تلقائياً ويحفظ مخرجها هنا.',
     historySub:'كل طلباتك وخططك في مكان واحد.', searchTasks:'ابحث في المهام...', detail:'تفاصيل المهمة', backHistory:'العودة إلى السجل', taskRequest:'الطلب الأصلي', planProgress:'حالة الخطة', created:'تاريخ الإنشاء', demoTask:'مهمة عرض', userTask:'طلبك', noTasks:'لا توجد مهام تطابق بحثك.', profileSub:'تحكم في تفضيلاتك وطريقة عرض مساحة العمل.', discoverFeatures:'اكتشف إمكانيات العمدة', discoverFeaturesText:'افتح أي ميزة للانتقال مباشرة إلى مكان استخدامها.', featureChat:'الشات الذكي', featureChatText:'تحدث مع العمدة واطلب المساعدة.', featureAgents:'سوق الوكلاء', featureAgentsText:'استعرض الاختصاصات وابدأ طلبًا.', featureWorkbench:'مساحة العمل', featureWorkbenchText:'أنشئ طلبًا وراجع خطواته.', featureHistory:'سجل المهام', featureHistoryText:'تابع طلباتك ونتائجها.', featureUsage:'الاستخدام والذاكرة', featureUsageText:'راجع استهلاكك وإعدادات الذاكرة.', accountDetails:'بيانات الحساب', displayName:'الاسم المعروض', organization:'الجهة أو النشاط', language:'لغة الواجهة', languageDesc:'يتم حفظ اختيارك على هذا الجهاز.', notifications:'التنبيهات', notificationDesc:'تنبيهات محلية داخل مساحة العمل.', safeguards:'ضوابط التفويض', safeguard1:'لا شيء يتحرك دون موافقتك.', safeguard2:'كل خطوة مستقلة وتحتاج قراراً واضحاً.', safeguard3:'لا توجد تكاملات أو إجراءات خارجية.', saveProfile:'حفظ الملف', saved:'تم الحفظ', interface:'تفضيلات الواجهة', userName:'مستخدم العمْدة', orgName:'مشروعك', taskCount:'طلب', tasksCount:'طلبات', menu:'القائمة', languageSwitch:'EN', search:'بحث', newTask:'إنشاء طلب جديد', taskPlan:'خطة المهمة', planIsDemo:'عرض محلي', chooseAgent:'اختر وكيلاً متخصصاً', workbenchTag:'مساحة عمل خاضعة لإشرافك', requestCreated:'تم إنشاء خطة المعاينة', emptyHistory:'ابدأ بطلبك الأول', emptyHistoryText:'ستجد خططك هنا مع سجل واضح لكل قرار وموافقة.', toWorkbench:'إنشاء طلب', updateName:'أدخل اسمك', updateOrg:'اسم النشاط أو الفريق', approvedCount:'خطوات معتمدة', pendingCount:'خطوات متبقية', noExternal:'بدون إجراءات خارجية',
@@ -165,7 +165,7 @@ const translations = {
   },
   en: {
     overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', agentNetwork:'Agent Network', workbench:'Workbench', history:'Task history', profile:'Profile',
-    workspace:'WORKSPACE', account:'ACCOUNT', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
+    workspace:'WORKSPACE', account:'ACCOUNT', launcherInsightsAccount:'INSIGHTS & ACCOUNT', launcherCoreTitle:'CORE WORKSPACE', launcherCoreDesc:'Create, delegate, and track', launcherSecondaryDesc:'Usage and app preferences', launcherSubtitleChat:'Talk to AL OMDA', launcherSubtitleWorkbench:'Turn a request into a plan', launcherSubtitleAgents:'Choose a specialist', launcherSubtitleHistory:'Review projects and results', launcherSubtitleUsage:'Usage and memory', launcherSubtitleProfile:'Personal details and settings', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
     developerTitle:'Developer console', developerSub:'A technical view of your workspace', dashboard:'Dashboard', welcome:'Your workspace, in full view.', hello:'Welcome back,', hero:'Start a conversation with AL OMDA and get things done.', heroText:'Ask questions, create files and projects, or delegate work to a specialist while keeping control of every decision.', newRequest:'New request', activeTasks:'Awaiting review', approvedPlans:'Plans approved', specialists:'Specialties available', totalTasks:'Total tasks', preview:'LOCAL PREVIEW', recent:'Recent tasks', seeHistory:'View history', specialties:'Agent specialties', allSix:'All six specialties', demoNotice:'Seeded demo data. Plans are deterministic local previews—not AI output and not real execution.',
     marketplace:'Agent marketplace', marketplaceSub:'Specialists for focused work, always under your oversight.', all:'All', available:'Available now', useAgent:'Start a request', request:'Request help', workbenchSub:'Describe what you need, then review every proposed step.', requestLabel:'What would you like to delegate?', requestPlaceholder:'Example: Outline a launch plan for a subscription service for small businesses in Riyadh...', chooseSpecialty:'Choose a specialty', generatePlan:'Propose a plan', yourPlan:'Proposed plan', planEmptyTitle:'Your plan starts here', planEmptyText:'Describe your request and choose a specialty. AL OMDA will create a tailored AI plan for your review before execution.', planDisclaimer:'AL OMDA will create a tailored AI plan for your review before execution begins.', edit:'Edit', save:'Save changes', stepDetails:'Step details', expectedOutput:'Expected output', completionCheck:'Completion check', approve:'Approve & run', reject:'Reject step', approvedStep:'Approved', rejectedStep:'Rejected — edit or approve to continue', pendingStep:'Awaiting your approval', step:'Step', pause:'Pause task', resume:'Resume review', stop:'Stop task', paused:'Paused', stopped:'Stopped', completed:'Plan approved', reviewStatus:'Awaiting review', progress:'Plan progress', allApproved:'All proposed steps have been approved.', noExecution:'Once you approve a step, AL OMDA executes it automatically and saves the deliverable here.',
     historySub:'Every request and proposed plan, in one place.', searchTasks:'Search tasks...', detail:'Task details', backHistory:'Back to history', taskRequest:'Original request', planProgress:'Plan status', created:'Created', demoTask:'Demo task', userTask:'Your request', noTasks:'No tasks match your search.', profileSub:'Set your preferences and how your workspace behaves.', discoverFeatures:'Explore AL OMDA features', discoverFeaturesText:'Open a feature to go straight to where you can use it.', featureChat:'AI chat', featureChatText:'Talk to AL OMDA and ask for help.', featureAgents:'Agent marketplace', featureAgentsText:'Explore specialties and start a request.', featureWorkbench:'Workbench', featureWorkbenchText:'Create a request and review its steps.', featureHistory:'Task history', featureHistoryText:'Track your requests and their results.', featureUsage:'Usage & memory', featureUsageText:'Review usage and memory settings.', accountDetails:'Account details', displayName:'Display name', organization:'Organization or project', language:'Interface language', languageDesc:'Your choice is saved on this device.', notifications:'Notifications', notificationDesc:'Local notifications inside this workspace.', safeguards:'Delegation safeguards', safeguard1:'Nothing moves without your approval.', safeguard2:'Each step is separate and requires a clear decision.', safeguard3:'No integrations or external actions are connected.', saveProfile:'Save profile', saved:'Saved', interface:'Interface preferences', userName:'AL OMDA user', orgName:'Your workspace', taskCount:'task', tasksCount:'tasks', menu:'MENU', languageSwitch:'عربي', search:'Search', newTask:'Create a request', taskPlan:'Task plan', planIsDemo:'LOCAL PREVIEW', chooseAgent:'Choose a specialist', workbenchTag:'A workspace under your direction', requestCreated:'Preview plan created', emptyHistory:'Start with your first request', emptyHistoryText:'Your plans will appear here with a clear record of every decision.', toWorkbench:'Create a request', updateName:'Enter your name', updateOrg:'Business or team name', approvedCount:'steps approved', pendingCount:'steps remaining', noExternal:'No external actions',
@@ -345,6 +345,17 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
+const appLauncherGroups: { id:'core'|'secondary'; items:typeof navItems }[] = [
+  { id:'core', items:navItems.filter(item=>item.path!=='/') },
+  { id:'secondary', items:[
+    { path:'/ai/usage', key:'usage', icon:Activity },
+    { path:'/profile', key:'profile', icon:Settings2 },
+  ] },
+];
+const launcherSubtitleKeys: Record<string, TranslationKey> = {
+  '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
+  '/history':'launcherSubtitleHistory', '/ai/usage':'launcherSubtitleUsage', '/profile':'launcherSubtitleProfile',
+};
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
   { path:'/agents', key:'agentNetwork', icon:Compass },
@@ -836,7 +847,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const navLink = (item:typeof navItems[number], mobile = false) => {
     const Icon = item.icon;
     const active = item.path === '/' ? path === '/' : path.startsWith(item.path);
-    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} data-testid={`link-${item.key}`}>
+    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-testid={`link-${item.key}`}>
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
@@ -951,6 +962,34 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
+      <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
+        <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
+        <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
+        <Link href={active>0?'/history?status=review':'/workbench'} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
+      </section>
+      <section className="app-launcher-section" aria-labelledby="app-launcher-title">
+        <div className="app-launcher-heading">
+          <div>
+            <span className="eyebrow">{isAr?'مساحة التطبيقات':'APP LAUNCHER'}</span>
+            <h2 id="app-launcher-title">{isAr?'كل أدواتك في مكان واحد':'Everything you need, one place'}</h2>
+            <p>{isAr?'وصول سريع ومنظم إلى الوظائف الأساسية، مع فصل أدوات المتابعة والحساب.':'A clear shortcut grid for core work, analytics, and account tools.'}</p>
+          </div>
+          <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أدوات'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
+        </div>
+        {appLauncherGroups.map(group=><div key={group.id} className={'app-launcher-group '+(group.id==='secondary'?'app-launcher-secondary-group':'')}>
+          <div className="app-launcher-group-title">
+            <strong>{group.id==='core'?t('launcherCoreTitle'):t('launcherInsightsAccount')}</strong>
+            <span>{group.id==='core'?t('launcherCoreDesc'):t('launcherSecondaryDesc')}</span>
+          </div>
+          <div className={'app-launcher-grid '+(group.id==='secondary'?'app-launcher-grid-secondary':'')}>
+            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} className="app-launcher-tile">
+              <span className="app-launcher-icon"><Icon size={group.id==='core'?21:19}/></span>
+              <span className="app-launcher-copy"><strong>{t(item.key)}</strong><small>{t(launcherSubtitleKeys[item.path] || 'launcherSubtitleProfile')}</small></span>
+              <ArrowUpLeft size={14} className="app-launcher-arrow"/>
+            </Link>})}
+          </div>
+        </div>)}
+      </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
         <div className="stats-grid dashboard-kpis">
@@ -1451,8 +1490,20 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </details>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
-    <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
-    <div className="market-grid">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
+    <section className="marketplace-intro" aria-label={isAr?'نظرة عامة على التخصصات':'Specialty directory overview'}>
+      <div className="marketplace-intro-mark"><Bot size={25}/></div>
+      <div className="marketplace-intro-copy"><span className="eyebrow">{isAr?'شبكة المتخصصين':'SPECIALIST NETWORK'}</span><h2>{isAr?'اختار العقل المناسب لمهمتك':'Find the right specialist for the job'}</h2><p>{isAr?'كل تخصص يوجّه طلبك بخطة مناسبة، وتقدر تراجع الخطة قبل الموافقة على أي خطوة.':'Each specialty shapes a focused plan. Review the plan before approving any step.'}</p></div>
+      <Link href="/workbench" className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
+    </section>
+    <section className="agent-marketplace-toolbar" aria-label={isAr?'تصفية التخصصات':'Specialty filters'}>
+      <div className="agent-marketplace-summary">
+        <div><span className="eyebrow">{isAr?'دليل التخصصات':'SPECIALTY DIRECTORY'}</span><strong>{specialties.length.toLocaleString(isAr?'ar':'en')} <span>{isAr?'تخصصات':'specialties'}</span></strong><p>{isAr?'اختار التخصص الأقرب لمهمتك، وتابع إنجازاته من هنا.':'Choose the specialty closest to your task and track its activity here.'}</p></div>
+        <div className="agent-marketplace-total"><strong>{tasks.length.toLocaleString(isAr?'ar':'en')}</strong><span>{isAr?'إجمالي المهام':'total tasks'}</span></div>
+      </div>
+      <div className="agent-marketplace-filter-head"><span className="form-label">{isAr?'تصفية حسب التخصص':'Filter by specialty'}</span><span className="section-meta" role="status">{specialties.filter(({id})=>filter==='all'||filter===id).length} {isAr?'نتائج':'results'}</span></div>
+      <div className="filter-row" role="group" aria-label={isAr?'التخصصات':'Specialties'}><button type="button" className={`filter-pill ${filter==='all'?'active':''}`} aria-pressed={filter==='all'} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button type="button" key={id} className={`filter-pill ${filter===id?'active':''}`} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
+    </section>
+    <div className="market-grid" aria-live="polite">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
       <div className="agent-top"><span className="agent-symbol"><Icon size={20}/></span><span className="section-meta">0{index+1} / 06</span></div>
       <h3>{label(id)}</h3><p>{t(specialtyDesc(id))}</p><div className="agent-card-stats"><span>{tasks.filter(task=>task.specialty===id).length} {isAr?'مهمة مسجلة':'recorded tasks'}</span><span>{tasks.filter(task=>task.specialty===id&&(task.status==='review'||task.status==='paused')).length} {isAr?'تحتاج متابعة':'need attention'}</span></div><div className="agent-footer"><span className="agent-tag">{t(specialtyLabel(id))}</span><Link href={`/workbench?specialty=${id}`} className="button button-quiet button-small" onClick={()=>setSelectedSpecialty(id)}>{t('useAgent')}<ArrowLeft size={12}/></Link></div>
     </article>)}</div>
@@ -1460,8 +1511,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const workbenchPage = () => {
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
+    const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
     return <div className="page-enter">
       {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span>)}
+      <ol className="workbench-flow" aria-label={isAr?'مراحل تنفيذ المهمة':'Task workflow'}>
+        <li className="workbench-flow-step" data-stage={workflowStage===0?'current':workflowStage>0?'complete':'upcoming'}><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
+        <li className="workbench-flow-step" data-stage={workflowStage===1?'current':workflowStage>1?'complete':'upcoming'}><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
+        <li className="workbench-flow-step" data-stage={workflowStage===2?'current':'upcoming'}><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
+      </ol>
+      <section className="workbench-context" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
+        <div className="workbench-context-icon"><ShieldCheck size={18}/></div>
+        <div><strong>{active?(isAr?'أنت تتابع مهمة محفوظة':'You are continuing a saved task'):(isAr?'ابدأ بطلب واضح ومحدد':'Start with a clear, specific request')}</strong><p>{active?active.title:(isAr?'حدد الهدف والتخصص، وبعدها راجع الخطة قبل اعتمادها.':'Set the goal and specialty, then review the proposed plan before approving it.')}</p></div>
+        {active&&<Link href={'/history/'+active.id} className="button button-quiet button-small">{isAr?'تفاصيل المهمة':'Task details'}<ArrowLeft size={13}/></Link>}
+      </section>
       <div className="workbench-layout">
         <form className="panel request-card" onSubmit={createPlan}>
           <div className="section-head"><h2 className="section-title">{t('request')}</h2><span className="section-meta">{t('preview')}</span></div>
@@ -1685,7 +1747,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
     );
     return <div className="page-enter">
       {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length}><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link></div>)}
-      <div className="field-group" style={{maxWidth:460}}><div style={{position:'relative'}}><Search size={15} style={{position:'absolute',insetInlineStart:13,top:13,color:'#818891'}}/><input className="field" style={{paddingInlineStart:38}} placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
+      <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المهام':'Task filters'}>
+        <div className="history-search-wrap">
+          <div className="field-group history-search-field"><label className="form-label" htmlFor="history-search">{isAr?'ابحث في مشاريعك':'Find a project'}</label><div className="history-search-control"><Search size={16} aria-hidden="true"/><input id="history-search" className="field" placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
+          <div className="history-results-count" role="status"><strong>{filtered.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
+        </div>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
+          {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><Link key={filter.key} href={filter.href} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')}><span>{filter.label}</span><strong>{filter.count}</strong></Link>)}
+        </nav>
+      </section>
+      <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'تعرض مهامك وحالتها الحالية':'Your saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
       <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
         <Link href={`/history/${task.id}`} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
@@ -1708,6 +1779,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const trendLabel = marketTrend === 'up' ? (isAr?'نجاحات أكثر':'More successful runs') : marketTrend === 'down' ? (isAr?'إخفاقات أكثر':'More failed runs') : (isAr?'نتائج متساوية':'Even results');
     return <div className="page-enter">
       {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
+      <section className="task-detail-overview" aria-label={isAr?'ملخص تقدم المهمة':'Task progress overview'}>
+        <div className="task-detail-progress-copy"><span className="eyebrow">{isAr?'تقدم الخطة':'PLAN PROGRESS'}</span><strong>{count(task)} <small>/ {task.steps.length} {isAr?'خطوات معتمدة':'steps approved'}</small></strong><p>{isAr?'تابع حالة كل خطوة ومخرجات التنفيذ المسجلة.':'Track each step and its recorded execution results.'}</p></div>
+        <div className="task-detail-progress-track" role="progressbar" aria-valuenow={task.steps.length?Math.round(count(task)/task.steps.length*100):0} aria-valuemin={0} aria-valuemax={100}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+        <div className="task-detail-progress-meta">{statusBadge(task.status)}<span>{successfulExecutions} {isAr?'ناجحة':'successful'}</span><span>{failedExecutions} {isAr?'فاشلة':'failed'}</span></div>
+      </section>
       <div className="history-detail">
         <div>{renderPlan(task)}</div>
         <aside className="project-tracking">
@@ -1765,6 +1841,22 @@ pnpm --filter @workspace/scripts agent:runtime`;
   ];
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
+    <section className="profile-welcome" aria-label={isAr?'ملخص الحساب':'Account overview'}>
+      <div className="profile-welcome-identity">
+        <div className="profile-welcome-avatar">{authUser && avatarPath ? <img src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')}/> : <span>{profileName.trim().charAt(0)||'ع'}</span>}</div>
+        <div className="profile-welcome-copy">
+          <span className="eyebrow">{isAr?'مساحتك الشخصية':'YOUR PERSONAL SPACE'}</span>
+          <h2>{isAr?'أهلاً بك، ': 'Welcome, '}{profileName.trim()|| (isAr?'صديق العمدة':'AL OMDA user')}</h2>
+          <p>{isAr?'كل تفاصيل حسابك ونشاطك وإعدادات تجربتك في مكان واحد.':'Your account details, activity, and experience settings in one place.'}</p>
+          <span className={'profile-account-state '+(authUser?'is-connected':'is-local')}><i/>{authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'تستخدم العمدة كزائر':'Using AL OMDA locally')}</span>
+        </div>
+      </div>
+      <div className="profile-welcome-stats">
+        <div><strong>{tasks.length}</strong><span>{isAr?'إجمالي المهام':'Total tasks'}</span></div>
+        <div><strong>{tasks.filter(item=>item.status==='approved').length}</strong><span>{isAr?'مهام معتمدة':'Approved'}</span></div>
+        <div><strong>{tasks.filter(item=>item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
+      </div>
+    </section>
     <div className="profile-settings-layout">
               <section className="panel panel-pad profile-main-card profile-account-profile-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
@@ -1850,14 +1942,33 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
-      <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
-      <div className="sidebar-scroll">
-      <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-      <div className="nav-caption">{isAr?'عام':'GENERAL'}</div><nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
-      <div className="nav-caption sidebar-group-caption">{isAr?'الأنظمة والأدوات':'SYSTEMS'}</div><nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
-      <div className="nav-caption sidebar-group-caption">{isAr?'الأخيرة':'RECENTS'}</div><nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link"><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+      <div className="sidebar-brand-area">
+        <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
+        <span className="sidebar-workspace-state"><i aria-hidden="true"/>{isAr?'مساحة العمل':'WORKSPACE'}</span>
       </div>
-      <div className="sidebar-bottom"><Link href="/profile" className="sidebar-settings-link"><Settings2 size={16}/>{isAr?'الإعدادات':'Settings'}</Link><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
+      <div className="sidebar-scroll">
+        <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
+        <section className="sidebar-nav-group" aria-label={isAr?'التنقل العام':'General navigation'}>
+          <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
+          <nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Systems and tools'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'الأدوات المتخصصة':'SPECIALISTS & TOOLS'}</div>
+          <nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        </section>
+        <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
+          <nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link" aria-label={task.title}><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+        </section>
+      </div>
+      <div className="sidebar-bottom">
+        <div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div>
+        <div className="sidebar-account-card">
+          <span className="avatar">{name.charAt(0)||'ع'}</span>
+          <span className="sidebar-account-copy"><strong>{name}</strong><small>{authUser?.email||org}</small></span>
+          <span className={'sidebar-account-status '+(authUser?'connected':'local')} title={authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'حساب محلي':'Local account')} aria-label={authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'حساب محلي':'Local account')}/>
+        </div>
+      </div>
     </aside>
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
@@ -1883,8 +1994,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
         <div className="curtain-head"><Link href="/" className="brand-lockup" onClick={()=>setCurtainOpen(false)}><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
-        <div className="curtain-caption">{t('workspace')}</div><nav className="curtain-nav">{navItems.map(item=>navLink(item))}</nav>
-        <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
+        <div className="curtain-launcher-groups">
+          {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
+            <div className="curtain-caption">{group.id==='core'?t('workspace'):t('launcherInsightsAccount')}</div>
+            <nav className="curtain-launcher-grid" aria-label={group.id==='core'?(isAr?'أدوات العمل الأساسية':'Core workspace tools'):(isAr?'المتابعة وإعدادات الحساب':'Analytics and account')}>
+              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
+            </nav>
+          </section>)}
+        </div>
       </aside>
     </div>}
     {path !== '/ai' && path !== '/ai/usage' && <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
