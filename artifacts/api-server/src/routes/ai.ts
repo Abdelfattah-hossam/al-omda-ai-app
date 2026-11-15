@@ -42,6 +42,7 @@ function getProviders() {
     gemini: Boolean(process.env.GEMINI_API_KEY?.trim()),
     openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
     groq: Boolean(process.env.GROQ_API_KEY?.trim()),
+    cloudflare: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID?.trim() && process.env.CLOUDFLARE_API_TOKEN?.trim()),
   };
 }
 
@@ -226,8 +227,10 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
 function chooseProviders(messages: ChatMessage[]) {
   const coding = isCodingRequest(messages);
   const configured = getProviders();
-  // Groq is the low-latency first choice; the existing providers remain automatic fallbacks.
-  const order = coding ? ["groq", "gemini", "openrouter"] : ["groq", "openrouter", "gemini"];
+  // Prefer the fast providers first; every configured free provider remains an automatic fallback.
+  const order = coding
+    ? ["groq", "cloudflare", "gemini", "openrouter"]
+    : ["groq", "cloudflare", "openrouter", "gemini"];
   return order.filter((provider) => configured[provider as keyof typeof configured]);
 }
 
@@ -447,11 +450,45 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
   throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
-async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
+async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
+  if (messages.some((message) => message.image)) {
+    throw new Error("Cloudflare fallback currently supports text requests only; trying the next provider.");
+  }
+  const model = "@cf/meta/llama-3.1-8b-instruct-fast";
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`, {
+    method: "POST",
+    signal: AbortSignal.timeout(18000),
+    headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt(isCodingRequest(messages), memory) },
+        ...messages.map((message) => ({ role: message.role, content: message.content })),
+      ],
+      max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
+      temperature: 0.4,
+    }),
+  });
+  const payload = await response.json().catch(() => null) as any;
+  if (!response.ok || payload?.success === false) {
+    const detail = providerErrorMessage(payload);
+    throw new Error("Cloudflare Workers AI " + response.status + (detail ? ": " + detail : " request failed"));
+  }
+  const raw = payload?.choices?.[0]?.message?.content ?? payload?.result?.response;
+  const text = (typeof raw === "string" ? raw : "").trim();
+  if (!text) throw new Error("Cloudflare Workers AI returned an empty response.");
+  return { text, model: payload?.model || model };
+}
+
+async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
   if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
   if (provider === "groq") return callGroq(messages, memory);
+  if (provider === "cloudflare") return callCloudflare(messages, memory);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -498,7 +535,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     let answer: { text: string; model: string } | null = null;
     let provider = "";
     for (const candidate of providers) {
-      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq", messages, memory); provider = candidate; break; }
+      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory); provider = candidate; break; }
       catch (error) { const reason = error instanceof Error ? error.message : "Provider unavailable"; failures.push(reason); console.warn("[AI project plan provider failure]", candidate, reason); }
     }
     if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. No usage was deducted.", details: failures.slice(0, 2) }); return; }
@@ -522,7 +559,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
         "Invalid previous response: " + answer.text.slice(0, 12000)
       ].join("\n") }];
       try {
-        answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq", repairRequest, memory);
+        answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory);
         parsed = parsePlan(answer.text);
       } catch (error) {
         console.warn("[AI project plan repair failed]", error instanceof Error ? error.message : "Unknown error");
@@ -532,7 +569,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       const alternateProvider = providers.find((candidate) => candidate !== provider);
       if (alternateProvider) {
         try {
-          const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq", [{
+          const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
             role: "user",
             content: [
               "Create a concise, accurate project plan. Return ONLY valid JSON with this exact shape: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
@@ -678,7 +715,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let provider = "";
     for (const candidate of providers) {
       try {
-        answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq", messages, memory);
+        answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory);
         provider = candidate;
         break;
       } catch (error) {
@@ -705,7 +742,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Approved step: " + step.text,
         "Invalid output: " + answer.text.slice(0, 12000)
       ].join("\n") }];
-      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq", repairRequest, memory); }
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
       catch (error) { console.warn("[Word task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
       if (!validatedWordDocument) {
@@ -714,7 +751,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         const alternateProvider = providers.find((candidate) => candidate !== provider);
         if (alternateProvider) {
           try {
-            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq", [{
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
               role: "user",
               content: [
                 "Create the final Microsoft Word document content. Return ONLY valid JSON with exactly title, paragraphs, columns, and rows.",
@@ -748,7 +785,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       // Independent final review for documents created from Task History, not just chat attachments.
       try {
         const reviewProvider = provider === "openrouter" ? "openrouter" : (providers.find((candidate) => candidate !== provider) || provider);
-        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq", [{
+        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
           role: "user",
           content: [
             "Act as the final quality reviewer for this Microsoft Word deliverable. Compare it against the original customer request and the approved task step line by line.",
@@ -780,7 +817,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
       ].join("\n") }];
-      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq", repairRequest, memory); }
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
       catch (error) { console.warn("[Excel task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSpreadsheet = parseExcelWorkbook(answer.text);
       if (!validatedSpreadsheet) {
@@ -795,7 +832,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
       ].join("\n") }];
-      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq", repairRequest, memory); }
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
       catch (error) { console.warn("[HTML task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedHtmlApp = parseHtmlApp(answer.text);
       if (!validatedHtmlApp) {
@@ -1083,7 +1120,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ] : modelConversation;
     const providers = chooseProviders(modelMessages);
     if (providers.length === 0) {
-      res.status(503).json({ error: "No free AI provider is connected yet. Configure a free Gemini or OpenRouter key on the Worker." });
+      res.status(503).json({ error: "No AI provider is connected yet. Configure one or more free provider credentials on the Worker." });
       return;
     }
     if (usage.remaining <= 0) {
@@ -1096,7 +1133,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const failures: string[] = [];
     for (const provider of providers) {
       try {
-        answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq", modelMessages, userMemory);
+        answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", modelMessages, userMemory);
         usedProvider = provider;
         break;
       } catch (error) {
@@ -1127,7 +1164,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 14000)
       ].filter(Boolean).join("\n") }];
-      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq", repairRequest, userMemory); }
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[Word document repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedWordDocument = parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested);
       if (!validatedWordDocument) {
@@ -1135,7 +1172,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         const alternateProvider = providers.find((candidate) => candidate !== usedProvider);
         if (alternateProvider) {
           try {
-            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq", [
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [
               { role: "user", content: [
                 "Create the final Word document now. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
                 "Review every sentence of the original request and satisfy all explicit requirements. Do not invent content or add a table unless explicitly requested.",
@@ -1162,7 +1199,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       // Independent quality-control pass: compare the draft against the user's exact request before delivering it.
       try {
         const reviewProvider = usedProvider === "openrouter" ? "openrouter" : (providers.find((candidate) => candidate !== usedProvider) || usedProvider);
-        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq", [{
+        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
           role: "user",
           content: [
             "You are the final quality reviewer for a Microsoft Word document. Compare the draft against the original user request line by line.",
@@ -1192,7 +1229,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 14000)
       ].join("\n") }];
-      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq", repairRequest, userMemory); }
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[Excel workbook repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSpreadsheet = parseExcelWorkbook(answer.text);
       if (!validatedSpreadsheet) {
@@ -1207,7 +1244,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 14000)
       ].join("\n") }];
-      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq", repairRequest, userMemory); }
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[HTML app repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       if (!parseHtmlApp(answer.text)) {
         res.status(502).json({ error: "لم يتم اعتماد التطبيق لأن فحص HTML فشل. لم يتم خصم وحدات." });
