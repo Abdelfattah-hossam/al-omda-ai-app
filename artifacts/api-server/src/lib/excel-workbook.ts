@@ -1,5 +1,5 @@
-export type ExcelSheet = { name: string; columns: string[]; rows: string[][]; formulas?: Record<string, string> };
-export type ExcelWorkbookData = { title: string; columns: string[]; rows: string[][]; formulas?: Record<string, string>; sheets?: ExcelSheet[] };
+export type ExcelSheet = { name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string> };
+export type ExcelWorkbookData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string>; sheets?: ExcelSheet[] };
 
 const CELL_REF = /^([A-Z]{1,3})([1-9]\d{0,5})$/i;
 const BLOCKED = /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i;
@@ -46,14 +46,14 @@ export function parseExcelWorkbook(text: string): ExcelWorkbookData | null {
       if (value.sheets.length < 1 || value.sheets.length > 12 || !value.sheets.every(validSheet)) return null;
       sheets = value.sheets.map((raw) => {
         const s = raw as ExcelSheet;
-        return { name: s.name.trim(), columns: s.columns.map((v) => v.trim()), rows: s.rows.map((row) => row.map(String)), ...(s.formulas ? { formulas: Object.fromEntries(Object.entries(s.formulas).map(([k,v]) => [k.toUpperCase(), v.trim().replace(/^=/, "")])) } : {}) };
+        return { name: s.name.trim(), columns: s.columns.map((v) => v.trim()), rows: s.rows.map((row) => row.map((cell) => cell as string | number | boolean)), ...(s.formulas ? { formulas: Object.fromEntries(Object.entries(s.formulas).map(([k,v]) => [k.toUpperCase(), v.trim().replace(/^=/, "")])) } : {}) };
       });
       if (new Set(sheets.map((s) => s.name.toLowerCase())).size !== sheets.length) return null;
     } else {
       const legacy = { name: "Sheet1", columns: value.columns, rows: value.rows, formulas: value.formulas };
       if (!validSheet(legacy)) return null;
       const s = legacy as unknown as ExcelSheet;
-      sheets = [{ name: s.name, columns: s.columns.map((v) => v.trim()), rows: s.rows.map((row) => row.map(String)), ...(s.formulas ? { formulas: Object.fromEntries(Object.entries(s.formulas).map(([k,v]) => [k.toUpperCase(), v.trim().replace(/^=/, "")])) } : {}) }];
+      sheets = [{ name: s.name, columns: s.columns.map((v) => v.trim()), rows: s.rows.map((row) => row.map((cell) => cell as string | number | boolean)), ...(s.formulas ? { formulas: Object.fromEntries(Object.entries(s.formulas).map(([k,v]) => [k.toUpperCase(), v.trim().replace(/^=/, "")])) } : {}) }];
     }
     const first = sheets[0];
     return { title: value.title.trim(), columns: first.columns, rows: first.rows, ...(first.formulas ? { formulas: first.formulas } : {}), sheets };
