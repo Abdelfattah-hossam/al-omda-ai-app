@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "wouter";
-import { Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
+import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -512,10 +512,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الجلسات." : "Could not load sessions.")); }
   };
 
-  const sendMessage = async (event?: FormEvent) => {
+  const sendMessage = async (event?: FormEvent, draftOverride?: string) => {
     event?.preventDefault();
     const imageForRequest = pendingImage;
-    const text = input.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
+    const text = (draftOverride ?? input).trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
@@ -883,9 +883,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       </button>
       <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar">ع</span><span><strong>{ar ? "حساب العمدة" : "AL OMDA account"}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
     </aside>
-    <div className="ai-chat-main">
+    <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
+      <div className="ai-chat-brand" aria-label="AL OMDA AI"><span className="ai-chat-brand-mark">ع</span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة AI" : "AL OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      {!signedIn && <button type="button" className="ai-chat-login-cta" onClick={()=>setLocation("/profile")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
         <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "العمدة · التوجيه التلقائي" : "AL OMDA · Auto routing"}</span><i>⌄</i></button>
@@ -918,7 +920,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     </header>
     {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA selects a free specialist model and tries alternatives when needed."}</span></div>}
     {currentMode && <div className="ai-chat-mode-banner"><span>{currentMode === "word" ? <FileText size={14}/> : currentMode === "excel" ? <Sheet size={14}/> : currentMode === "ppt" ? <Presentation size={14}/> : <BriefcaseBusiness size={14}/>} {currentMode === "word" ? (ar ? "وضع Word نشط" : "Word mode active") : currentMode === "excel" ? (ar ? "وضع Excel نشط" : "Excel mode active") : currentMode === "ppt" ? (ar ? "إعداد محتوى العرض التقديمي" : "Presentation content mode") : (ar ? "حزمة الأوفيس جاهزة" : "Office suite ready")}</span><button type="button" onClick={clearMode} aria-label={ar ? "إلغاء الوضع" : "Clear mode"}><X size={14}/></button></div>}
-    {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
+    {!signedIn ? <section className="panel panel-pad ai-chat-auth-gate" dir={ar?"rtl":"ltr"}>
+      <div className="ai-chat-auth-gate-mark"><LockKeyhole size={25}/></div>
+      <h2>{ar?"سجّل دخولك لفتح مساحة الشات":"Sign in to open your chat workspace"}</h2>
+      <p className="account-copy">{copy.login}</p>
+      <button type="button" className="ai-chat-auth-gate-button" onClick={()=>setLocation("/profile")}>{ar?"تسجيل الدخول أو إنشاء حساب":"Sign in or create an account"}</button>
+    </section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
         {conversations.length === 0 && <p className="muted">{ar ? "لا توجد محادثات محفوظة بعد." : "No saved conversations yet."}</p>}
@@ -936,10 +943,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to AL OMDA"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
-              <button type="button" onClick={() => activateMode("word")}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند جاهز للتحميل" : "Create a downloadable document"}</small></span></button>
-              <button type="button" onClick={() => activateMode("excel")}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تنظيم البيانات والجداول" : "Organize data and tables"}</small></span></button>
-              <button type="button" onClick={() => { setInput(ar ? "اكتب كود HTML و CSS مع معاينة مباشرة: " : "Write HTML and CSS with a live preview: "); openCodeCanvas(); }}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح محرر الأكواد والمعاينة" : "Open code editor and preview"}</small></span></button>
-              <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "AL OMDA memory"}</strong><small>{ar ? "إدارة الذاكرة والحد اليومي" : "Manage memory and daily usage"}</small></span></button>
+              <button type="button" onClick={() => void sendMessage(undefined, ar ? "أنشئ مستند Word منسقًا واحترافيًا عن: " : "Create a polished, professionally formatted Word document about: ")}><FileText size={17}/><span><strong>{ar ? "إنشاء مستند" : "Create a document"}</strong><small>{ar ? "جهّز ملف Word قابلًا للتحميل" : "Prepare a downloadable Word file"}</small></span></button>
+              <button type="button" onClick={() => void sendMessage(undefined, ar ? "حلل البيانات التالية، ونظمها في جدول واضح مع أهم المؤشرات: " : "Analyze the following data and organize it into a clear table with key insights: ")}><Sheet size={17}/><span><strong>{ar ? "تحليل البيانات" : "Analyze data"}</strong><small>{ar ? "رتّب البيانات واستخرج المؤشرات" : "Organize data and find insights"}</small></span></button>
+              <button type="button" onClick={() => void sendMessage(undefined, ar ? "اكتب حلًا برمجيًا واضحًا وقابلًا للتشغيل من أجل: " : "Write a clear, runnable coding solution for: ")}><Code2 size={17}/><span><strong>{ar ? "مساعدة برمجية" : "Coding help"}</strong><small>{ar ? "اكتب كودًا واشرح طريقة تشغيله" : "Write code and explain how to run it"}</small></span></button>
+              <button type="button" onClick={() => void sendMessage(undefined, ar ? "ساعدني في تخطيط مشروع جديد، وحدد الهدف والمراحل والمهام المطلوبة: " : "Help me plan a new project, defining its goal, phases, and required tasks: ")}><Bot size={17}/><span><strong>{ar ? "تخطيط مشروع" : "Plan a project"}</strong><small>{ar ? "حوّل فكرتك إلى خطة عمل" : "Turn an idea into an action plan"}</small></span></button>
             </div>
           </div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
@@ -971,7 +978,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
 
         <div className="panel ai-agent-runtime-panel" data-agent-active={agentMode ? "true" : "false"} style={{padding:12,marginBottom:10,borderColor:agentMode?"rgba(198,167,108,.65)":undefined}}><div className="ai-agent-runtime-summary"><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><small className="muted" style={{display:"block",marginTop:3}}>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك." : "Inspect project files, edit them and run commands with your approval."}</small></div><button type="button" className={"button button-small " + (agentMode?"button-primary":"button-quiet")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode((value)=>!value);}} disabled={!signedIn} title={!signedIn?(ar?"سجّل الدخول أولاً":"Sign in first"):undefined}>{agentMode?(ar?"مفعّل":"Enabled"):(ar?"تفعيل Agent":"Enable Agent")}</button></div></div>{agentMode && <div style={{display:"grid",gap:8,marginTop:10}}><input className="field" value={agentRuntimeUrl} onChange={(event)=>setAgentRuntimeUrl(event.target.value)} placeholder="http://127.0.0.1:4318" aria-label={ar?"عنوان الوكيل المحلي":"Local runtime URL"}/><input className="field" type="password" autoComplete="off" value={agentToken} onChange={(event)=>setAgentToken(event.target.value)} placeholder={ar?"رمز الاتصال المحلي (32 حرفًا على الأقل)":"Local access token (at least 32 characters)"} aria-label={ar?"رمز الاتصال":"Access token"}/><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><small className="muted">{agentSessionId ? (ar?"جلسة محفوظة: ":"Saved session: ")+agentSessionId.slice(0,12) : (ar?"لا توجد جلسة Agent محفوظة بعد.":"No saved Agent session yet.")}</small><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button type="button" className="button button-quiet button-small" onClick={()=>void checkLocalAgentConnection()}>{ar?"اختبار الاتصال":"Test connection"}</button><button type="button" className="button button-quiet button-small" onClick={()=>void loadAgentSessions()}>{ar?"الجلسات المحفوظة":"Saved sessions"}</button><button type="button" className="button button-quiet button-small" onClick={()=>{setAgentSessionId("");try{window.localStorage.removeItem("omda-agent-session");}catch{}}}>{ar?"جلسة جديدة":"New agent session"}</button></div></div>{agentConnectionStatus && <small className="muted">{agentConnectionStatus}</small>}{agentSessions.length>0 && <select className="field" value={agentSessionId} onChange={(event)=>{setAgentSessionId(event.target.value);try{window.localStorage.setItem("omda-agent-session",event.target.value);}catch{}}}><option value="">{ar?"اختر جلسة محفوظة":"Select a saved session"}</option>{agentSessions.map((session)=><option key={session.id} value={session.id}>{session.pending?"● ":""}{session.lastMessage || session.id} · {session.id.slice(0,8)}</option>)}</select>}<small className="muted">{ar?"يعمل الوكيل على الكمبيوتر الذي يشغّل Runtime فقط. من الهاتف لن يصل إلى ملفات الكمبيوتر إلا عبر ربط آمن منفصل. الرمز يبقى في ذاكرة الصفحة ولا يُحفظ بالحساب.":"The agent runs on the computer hosting the runtime. A phone cannot access that computer's files without a separate secure bridge. The token stays in page memory and is not saved to your account."}</small></div>}</div>
-        <form onSubmit={sendMessage} className="ai-composer">
+        <form onSubmit={sendMessage} className="ai-composer ai-chat-composer">
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:"none"}} onChange={(event)=>{
             const file=event.currentTarget.files?.[0];
             event.currentTarget.value="";

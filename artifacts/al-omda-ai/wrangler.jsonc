@@ -4,6 +4,10 @@
   "name": "al-omda-ai-app",
   "main": "../api-server/src/worker.ts",
   "compatibility_date": "2026-11-11",
+  "vars": {
+    "SUPABASE_URL": "https://rzznnrvlqumhymfmmpjk.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_5EaeynMc1bFY8lhe7CO0Cg_N2k5RMOZ"
+  },
   "assets": {
     "directory": "./dist/public",
     "not_found_handling": "single-page-application",
