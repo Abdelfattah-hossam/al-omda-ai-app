@@ -1541,7 +1541,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <section className="workbench-context" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
         <div className="workbench-context-icon"><ShieldCheck size={18}/></div>
         <div><strong>{active?(isAr?'أنت تتابع مهمة محفوظة':'You are continuing a saved task'):(isAr?'ابدأ بطلب واضح ومحدد':'Start with a clear, specific request')}</strong><p>{active?active.title:(isAr?'حدد الهدف والتخصص، وبعدها راجع الخطة قبل اعتمادها.':'Set the goal and specialty, then review the proposed plan before approving it.')}</p></div>
-        {active&&<Link href={'/history/'+active.id} className="button button-quiet button-small">{isAr?'تفاصيل المهمة':'Task details'}<ArrowLeft size={13}/></Link>}
+        {active&&<Link href={focusedHref('/history/'+active.id,"task-plan")} className="button button-quiet button-small">{isAr?'تفاصيل المهمة':'Task details'}<ArrowLeft size={13}/></Link>}
       </section>
       <div className="workbench-layout">
         <form className="panel request-card" onSubmit={createPlan}>
@@ -1573,7 +1573,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (!response.ok) throw new Error(typeof result.error === 'string' ? result.error : (isAr ? 'تعذر حذف المشروع.' : 'Could not delete project.'));
       setSaved(prev=>({...prev,tasks:prev.tasks.filter(item=>item.id!==task.id)}));
       if (selectedTaskId===task.id) setSelectedTaskId(null);
-      if (path===`/history/${task.id}`) setLocation('/history');
+      if (path===`/history/${task.id}`) setLocation(focusedHref('/history','history-list'));
     } catch(error) {
       window.alert(error instanceof Error ? error.message : (isAr ? 'تعذر حذف المشروع.' : 'Could not delete project.'));
     } finally { setDeletingTaskId(null); }
@@ -2031,13 +2031,13 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
             <div className="curtain-caption">{group.id==='core'?t('workspace'):t('launcherInsightsAccount')}</div>
             <nav className="curtain-launcher-grid" aria-label={group.id==='core'?(isAr?'أدوات العمل الأساسية':'Core workspace tools'):(isAr?'المتابعة وإعدادات الحساب':'Analytics and account')}>
-              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
+              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
             </nav>
           </section>)}
         </div>
       </aside>
     </div>}
-    {path !== '/ai' && path !== '/ai/usage' && <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
+    {path !== '/ai' && path !== '/ai/usage' && <Link href={navigationHref("/ai")} className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }
