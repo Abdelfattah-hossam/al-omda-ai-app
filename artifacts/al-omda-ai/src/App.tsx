@@ -151,7 +151,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
 
 const translations = {
   ar: {
-    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
+    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', agentNetwork:'شبكة الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
     workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'ابدأ محادثتك مع العمدة، ودعه يساعدك في إنجاز العمل.', heroText:'اسأل، أنشئ ملفاتك ومشروعاتك، أو فوّض مهمة لوكيل متخصص مع الاحتفاظ بالتحكم في قراراتك.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لتراجعها قبل التنفيذ.', planDisclaimer:'سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لمراجعتها قبل بدء التنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة وتنفيذ', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'بعد موافقتك على كل خطوة، ينفّذها العمدة تلقائياً ويحفظ مخرجها هنا.',
@@ -164,7 +164,7 @@ const translations = {
     confirmStop:'هل تريد إيقاف هذه المهمة؟', active:'نشط', availableFor:'اختصاص متاح', privacy:'خصوصية وتحكم', assistantLabel:'موجّه AL OMDA', noMore:'هذا العرض لا يتصل بأي خدمة خارجية.', chatWelcome:'أهلاً بك. صف المهمة التي تريد تفويضها، وسأعرض لك تصوراً محلياً لتراجعه.', localResponse:'هذا تصور توضيحي مبني على قالب محلي. لا يتصل بذكاء اصطناعي ولا ينفّذ أي خطوة.',
   },
   en: {
-    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', profile:'Profile',
+    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', agentNetwork:'Agent Network', workbench:'Workbench', history:'Task history', profile:'Profile',
     workspace:'WORKSPACE', account:'ACCOUNT', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
     developerTitle:'Developer console', developerSub:'A technical view of your workspace', dashboard:'Dashboard', welcome:'Your workspace, in full view.', hello:'Welcome back,', hero:'Start a conversation with AL OMDA and get things done.', heroText:'Ask questions, create files and projects, or delegate work to a specialist while keeping control of every decision.', newRequest:'New request', activeTasks:'Awaiting review', approvedPlans:'Plans approved', specialists:'Specialties available', totalTasks:'Total tasks', preview:'LOCAL PREVIEW', recent:'Recent tasks', seeHistory:'View history', specialties:'Agent specialties', allSix:'All six specialties', demoNotice:'Seeded demo data. Plans are deterministic local previews—not AI output and not real execution.',
     marketplace:'Agent marketplace', marketplaceSub:'Specialists for focused work, always under your oversight.', all:'All', available:'Available now', useAgent:'Start a request', request:'Request help', workbenchSub:'Describe what you need, then review every proposed step.', requestLabel:'What would you like to delegate?', requestPlaceholder:'Example: Outline a launch plan for a subscription service for small businesses in Riyadh...', chooseSpecialty:'Choose a specialty', generatePlan:'Propose a plan', yourPlan:'Proposed plan', planEmptyTitle:'Your plan starts here', planEmptyText:'Describe your request and choose a specialty. AL OMDA will create a tailored AI plan for your review before execution.', planDisclaimer:'AL OMDA will create a tailored AI plan for your review before execution begins.', edit:'Edit', save:'Save changes', stepDetails:'Step details', expectedOutput:'Expected output', completionCheck:'Completion check', approve:'Approve & run', reject:'Reject step', approvedStep:'Approved', rejectedStep:'Rejected — edit or approve to continue', pendingStep:'Awaiting your approval', step:'Step', pause:'Pause task', resume:'Resume review', stop:'Stop task', paused:'Paused', stopped:'Stopped', completed:'Plan approved', reviewStatus:'Awaiting review', progress:'Plan progress', allApproved:'All proposed steps have been approved.', noExecution:'Once you approve a step, AL OMDA executes it automatically and saves the deliverable here.',
@@ -342,12 +342,12 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 }
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
-  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
+  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
-  { path:'/agents', key:'agents', icon:Compass },
+  { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness },
   { path:'/history', key:'history', icon:History },
   { path:'/profile', key:'profile', icon:UserRound },
@@ -1807,9 +1807,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
         {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-workspace-metrics" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'}>
-          <span className="topbar-metric"><strong>{tasks.length}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
-          <span className="topbar-metric"><strong>{tasks.filter(task=>task.status==='review'||task.status==='paused').length}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
-          <span className="topbar-metric"><strong>{tasks.filter(task=>task.status==='approved').length}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
+          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo).length}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
+          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo&&(task.status==='review'||task.status==='paused')).length}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
+          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo&&task.status==='approved').length}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
           <span className={`topbar-runtime-state ${localAgentStatus}`} title={isAr?'حالة اتصال الوكيل المحلي':'Local runtime connection state'}>
             <i aria-hidden="true"/>{localAgentStatus==='ready'?(isAr?'Runtime متصل':'Runtime connected'):localAgentStatus==='checking'?(isAr?'جارٍ الفحص':'Checking runtime'):localAgentStatus==='running'?(isAr?'الوكيل يعمل':'Agent running'):localAgentStatus==='approval'?(isAr?'بانتظار موافقتك':'Approval required'):localAgentStatus==='error'?(isAr?'تعذر الاتصال':'Runtime error'):(isAr?'لم يتم فحص Runtime':'Runtime not checked')}
           </span>
