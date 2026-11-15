@@ -6849,3 +6849,13 @@ body:has(.ai-chat-page){
   .app-shell[data-chat-active="true"] .ai-chat-header-icon,
   .app-shell[data-chat-active="true"] .ai-chat-menu-trigger {transition:none!important}
 }
+
+/* Visible account entry point in the redesigned chat header. */
+.app-shell[data-chat-active="true"] .ai-chat-login-cta {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;
+  min-height:35px;padding:0 12px;border:1px solid rgba(255,255,255,.2);border-radius:11px;
+  background:#f0f0f0;color:#080808;font-size:11px;font-weight:750;white-space:nowrap;
+}
+.app-shell[data-chat-active="true"] .ai-chat-login-cta:hover {background:#fff;transform:translateY(-1px)}
+@media(max-width:760px){.app-shell[data-chat-active="true"] .ai-chat-login-cta{min-height:31px;padding:0 8px;font-size:9px;gap:4px}}
+@media(max-width:390px){.app-shell[data-chat-active="true"] .ai-chat-login-cta{font-size:8px;padding:0 6px}}
