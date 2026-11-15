@@ -716,6 +716,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }
       if (!result.user) throw new Error(t('apiUnavailable'));
       setAuthUser(result.user);
+      setWorkspaceLoaded(false);
       setSaved((prev) => ({ ...prev, tasks:[], name:result.user!.email, org:isAr ? 'مساحة العمل' : 'Workspace' }));
       setProfileName(result.user.email);
       setProfileOrg(isAr ? 'مساحة العمل' : 'Workspace');
