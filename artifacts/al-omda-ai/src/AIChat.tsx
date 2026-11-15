@@ -887,6 +887,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
       <div className="ai-chat-brand" aria-label="AL OMDA AI"><span className="ai-chat-brand-mark">ع</span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة AI" : "AL OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      {!signedIn && <button type="button" className="ai-chat-login-cta" onClick={()=>setLocation("/profile")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
         <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "العمدة · التوجيه التلقائي" : "AL OMDA · Auto routing"}</span><i>⌄</i></button>
