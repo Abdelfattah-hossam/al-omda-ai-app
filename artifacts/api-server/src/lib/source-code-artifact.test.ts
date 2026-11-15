@@ -106,7 +106,7 @@ test("rejects DXF ARC angles outside the documented degree range", () => {
     "0","SECTION","2","ENTITIES","0","ARC",
     "10","5","20","5","40","3","50",start,"51",end,
     "0","ENDSEC","0","EOF",
-  ].join("\\n");
+  ].join("\n");
   assert.equal(isValidDxfSource(makeArc("0", "180")), true);
   assert.equal(isValidDxfSource(makeArc("-1", "180")), false);
   assert.equal(isValidDxfSource(makeArc("0", "360")), false);
