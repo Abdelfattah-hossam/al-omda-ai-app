@@ -224,13 +224,13 @@ export async function validateOoxmlPackage(blob: Blob, options: OoxmlValidationO
       if (!parsed) return false;
       if (name.endsWith(".rels")) relationshipParts.push({ name, relationships: parsed.relationships });
       allText.push(...parsed.officeText);
-      if (name === "word/document.xml" && (parsed.root !== "w:document" || !/<w:body(?:\\s|>)/.test(xml))) return false;
+      if (name === "word/document.xml" && (parsed.root !== "w:document" || !/<w:body(?:\s|>)/.test(xml))) return false;
       if (name === "ppt/presentation.xml" && parsed.root !== "p:presentation") return false;
-      if (/^ppt\\/slides\\/slide\\d+\\.xml$/.test(name) && parsed.root !== "p:sld") return false;
-      if (/^ppt\\/notesSlides\\/notesSlide\\d+\\.xml$/.test(name) && parsed.root !== "p:notes") return false;
+      if (/^ppt\/slides\/slide\d+\.xml$/.test(name) && parsed.root !== "p:sld") return false;
+      if (/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(name) && parsed.root !== "p:notes") return false;
     }
     for (const part of relationshipParts) {
-      const sourcePath = part.name === "_rels/.rels" ? "" : part.name.replace("/_rels/", "/").replace(/\\.rels$/, "");
+      const sourcePath = part.name === "_rels/.rels" ? "" : part.name.replace("/_rels/", "/").replace(/\.rels$/, "");
       const baseDirectory = sourcePath.includes("/") ? sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1) : "";
       for (const relationship of part.relationships) {
         if (relationship.external) continue;
