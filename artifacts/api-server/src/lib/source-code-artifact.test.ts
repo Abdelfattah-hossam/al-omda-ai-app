@@ -101,6 +101,18 @@ test("rejects oversized DXF input before parsing", () => {
 });
 
 
+test("rejects DXF ARC angles outside the documented degree range", () => {
+  const makeArc = (start: string, end: string) => [
+    "0","SECTION","2","ENTITIES","0","ARC",
+    "10","5","20","5","40","3","50",start,"51",end,
+    "0","ENDSEC","0","EOF",
+  ].join("\\n");
+  assert.equal(isValidDxfSource(makeArc("0", "180")), true);
+  assert.equal(isValidDxfSource(makeArc("-1", "180")), false);
+  assert.equal(isValidDxfSource(makeArc("0", "360")), false);
+  assert.equal(isValidDxfSource(makeArc("0", "720")), false);
+});
+
 test("accepts DXF ARC, TEXT, and MTEXT entities for preview-capable drawings", () => {
   const dxf = [
     "0","SECTION","2","ENTITIES",
