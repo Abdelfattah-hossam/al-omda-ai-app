@@ -47,7 +47,7 @@ function getSpreadsheetCopyText(data: SpreadsheetData): string {
   }).join("\t"))].join("\n")).join("\n\n");
 }
 function getPresentationCopyText(data: PresentationData): string {
-  return [data.title, ...data.slides.map((slide, index) => [\`[Slide \${index + 1}] \${slide.title}\`, ...slide.bullets.map((bullet) => "• " + bullet)].join("\n"))].join("\n\n");
+  return [data.title, ...data.slides.map((slide, index) => ["[Slide " + (index + 1) + "] " + slide.title, ...slide.bullets.map((bullet) => "• " + bullet)].join("\n"))].join("\n\n");
 }
 
 function excelColumnName(index: number): string {
