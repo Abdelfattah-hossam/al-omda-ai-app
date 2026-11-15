@@ -14,7 +14,8 @@ type ChatMessage = { role: "user" | "assistant"; content: string; provider?: str
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
   if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
-  const match = reply.match(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/);
+  const fence = String.fromCharCode(96).repeat(3);
+  const match = new RegExp(fence + "([a-zA-Z0-9_+#.-]*)\\s*\\n([\\s\\S]*?)" + fence).exec(reply);
   if (!match || !match[2].trim()) return null;
   const language = (match[1] || "text").toLowerCase();
   const extensions: Record<string, string> = { js: "js", javascript: "js", jsx: "jsx", ts: "ts", typescript: "ts", tsx: "tsx", py: "py", python: "py", html: "html", css: "css", json: "json", sql: "sql", sh: "sh", bash: "sh", java: "java", c: "c", cpp: "cpp", cs: "cs", go: "go", rs: "rs", php: "php", rb: "rb", ruby: "rb", md: "md", markdown: "md", xml: "xml", yaml: "yaml", yml: "yml", text: "txt", txt: "txt" };
@@ -88,7 +89,8 @@ type Usage = {
 
 function MessageContent({ content }: { content: string }) {
   const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
-  const pattern = /```([a-zA-Z0-9_+#.-]*)\n([\s\S]*?)```/g;
+  const fence = String.fromCharCode(96).repeat(3);
+  const pattern = new RegExp(fence + "([a-zA-Z0-9_+#.-]*)\\n([\\s\\S]*?)" + fence, "g");
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(content)) !== null) {
@@ -946,7 +948,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     setSpeaking(false);
     setSpeakingIndex(null);
     const spoken = text
-      .replace(/```[\s\S]*?```/g, ar ? " كود برمجي. " : " Code block. ")
+      .replace(new RegExp(String.fromCharCode(96).repeat(3) + "[\\s\\S]*?" + String.fromCharCode(96).repeat(3), "g"), ar ? " كود برمجي. " : " Code block. ")
       .replace(/\bAPI\b/gi, ar ? "إيه بي آي" : "A P I")
       .replace(/\bAI\b/gi, ar ? "إيه آي" : "A I")
       .replace(/\bChatGPT\b/gi, ar ? "شات جي بي تي" : "Chat G P T")
