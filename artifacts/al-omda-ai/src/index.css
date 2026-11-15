@@ -7157,3 +7157,101 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) :is(.app-launcher-tile,.profile-feature-link,.history-filter-chip,.stat-card,.agent-card,.history-item,.workbench-flow-step) {transition:none!important}
   .app-shell:not([data-chat-active="true"]) :is(.app-launcher-tile,.profile-feature-link,.history-filter-chip,.stat-card-link):hover {transform:none}
 }
+
+
+/* Chat message polish + functional attachment control. Does not alter transcript geometry or scrolling. */
+.app-shell[data-chat-active="true"] .ai-chat-page .chat-message {
+  position:relative!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:11px!important;
+  padding:17px 18px 12px!important;
+  border-radius:18px 18px 18px 7px!important;
+  line-height:1.8!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .chat-message.user {
+  border-radius:18px 18px 7px 18px!important;
+  margin-inline-start:auto!important;
+  max-width:min(88%,760px)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .chat-message.assistant {
+  max-width:min(96%,900px)!important;
+  margin-inline-end:auto!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .chat-message>strong {
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  font-size:11px!important;
+  letter-spacing:.025em!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-message-actions {
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  align-self:flex-start!important;
+  padding-top:8px!important;
+  border-top:1px solid rgba(224,181,101,.13)!important;
+  width:100%!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-message-action {
+  display:inline-grid!important;
+  place-items:center!important;
+  width:32px!important;
+  height:30px!important;
+  padding:0!important;
+  border:1px solid rgba(224,181,101,.16)!important;
+  border-radius:9px!important;
+  color:#cfc2a9!important;
+  background:rgba(255,255,255,.025)!important;
+  cursor:pointer!important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-message-action:hover:not(:disabled) {
+  color:#f6dca0!important;
+  border-color:rgba(224,181,101,.42)!important;
+  background:rgba(224,181,101,.1)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-message-action-check {
+  color:#f6dca0!important;
+  font-size:15px!important;
+  font-weight:800!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main :is(.ai-plus-button,.ai-chat-mic-button,.ai-send-button,.ai-voice-button,.ai-attach-image-button) {
+  display:inline-grid!important;
+  place-items:center!important;
+  flex:0 0 40px!important;
+  width:40px!important;
+  min-width:40px!important;
+  height:40px!important;
+  padding:0!important;
+  border:1px solid rgba(224,181,101,.25)!important;
+  border-radius:12px!important;
+  color:#f6dca0!important;
+  background:rgba(224,181,101,.075)!important;
+  cursor:pointer!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main .ai-attach-image-button:hover:not(:disabled) {
+  border-color:rgba(246,220,160,.52)!important;
+  background:rgba(224,181,101,.17)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main :is(.ai-plus-button,.ai-chat-mic-button,.ai-send-button,.ai-voice-button,.ai-attach-image-button):disabled {
+  opacity:.42!important;
+  cursor:not-allowed!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-main .ai-plus-wrap {position:relative!important;z-index:30!important}
+.app-shell[data-chat-active="true"] .ai-chat-main .ai-plus-menu {
+  z-index:60!important;
+  min-width:220px!important;
+  max-width:min(86vw,300px)!important;
+  max-height:min(65vh,420px)!important;
+  overflow-y:auto!important;
+  box-shadow:0 18px 48px rgba(0,0,0,.48)!important;
+}
+@media(max-width:650px) {
+  .app-shell[data-chat-active="true"] .ai-chat-page .chat-message {padding:14px 14px 10px!important}
+  .app-shell[data-chat-active="true"] .ai-chat-page .chat-message.user {max-width:94%!important}
+  .app-shell[data-chat-active="true"] .ai-chat-main :is(.ai-plus-button,.ai-chat-mic-button,.ai-send-button,.ai-voice-button,.ai-attach-image-button) {
+    flex-basis:35px!important;width:35px!important;min-width:35px!important;height:35px!important;border-radius:11px!important;
+  }
+}
