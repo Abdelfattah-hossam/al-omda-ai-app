@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { validateOoxmlPackage } from "./lib/ooxml-validation";
+import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
 import { useLocation } from "wouter";
 import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
@@ -150,7 +150,7 @@ function excelColumnName(index: number): string {
   return result;
 }
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
-async type Usage = {
+type Usage = {
   used: number;
   remaining: number;
   limit: number;
@@ -665,7 +665,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (!roundTrip.Sheets[formula.sheet]?.[formula.cell]?.f) throw new Error(ar ? "لم يتم حفظ إحدى صيغ Excel." : "An Excel formula was not preserved in the workbook.");
     }
     const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    if (!(await isValidZipBlob(file))) throw new Error(ar ? "ملف Excel الناتج غير صالح." : "The generated Excel file is invalid.");
+    if (!(await isValidZipArchive(file))) throw new Error(ar ? "ملف Excel الناتج غير صالح." : "The generated Excel file is invalid.");
     const url = URL.createObjectURL(file);
     const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
     return { name: safeName + ".xlsx", url };
