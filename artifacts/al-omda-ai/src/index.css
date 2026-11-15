@@ -6379,3 +6379,19 @@ body:has(.ai-chat-page){
 @media(prefers-reduced-motion:reduce) {
   .app-shell:not([data-chat-active="true"]) .task-detail-progress-track > span {transition:none}
 }
+
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step[data-stage="current"] {
+  border-color:color-mix(in srgb,var(--omda-accent,#d7b477) 55%,var(--border));
+  background:linear-gradient(145deg,color-mix(in srgb,var(--omda-accent,#d7b477) 12%,var(--panel,#17191f)),var(--panel,#17191f));
+  box-shadow:0 8px 22px rgba(0,0,0,.12),inset 0 0 0 1px color-mix(in srgb,var(--omda-accent,#d7b477) 10%,transparent);
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step[data-stage="complete"] > span {
+  color:#10231c;
+  border-color:rgba(91,204,157,.55);
+  background:linear-gradient(135deg,#8ce0b8,#48b98c);
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step[data-stage="current"] > span {
+  color:#21180b;
+  border-color:rgba(246,220,160,.65);
+  background:linear-gradient(135deg,#f0d59b,#c99a48);
+}
