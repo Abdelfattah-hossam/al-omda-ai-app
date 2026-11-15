@@ -6108,3 +6108,57 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-row { gap:6px; }
   .app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-pill { min-height:34px; padding:6px 10px; }
 }
+
+
+/* Workbench: make the request-to-approval sequence visible before the form. */
+.app-shell:not([data-chat-active="true"]) .workbench-flow {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin:18px 0 20px;
+  padding:0;
+  list-style:none;
+  counter-reset:workbench;
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  padding:14px 16px;
+  border:1px solid rgba(218,177,105,.16);
+  border-radius:15px;
+  background:linear-gradient(145deg,rgba(29,29,31,.95),rgba(19,20,23,.95));
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step > span {
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  flex:none;
+  border:1px solid rgba(218,177,105,.32);
+  border-radius:11px;
+  color:#efd5a2;
+  background:rgba(218,177,105,.09);
+  font-size:11px;
+  font-weight:750;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step > div {
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step strong {
+  color:#e9e2d7;
+  font-size:12px;
+}
+.app-shell:not([data-chat-active="true"]) .workbench-flow-step small {
+  color:var(--muted,#aaa39a);
+  font-size:10px;
+  line-height:1.5;
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) .workbench-flow { grid-template-columns:1fr; gap:7px; }
+  .app-shell:not([data-chat-active="true"]) .workbench-flow-step { padding:11px 13px; }
+}
