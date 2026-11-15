@@ -831,7 +831,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }
     if (excelStep && !validatedSpreadsheet) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair the Excel workbook. Return ONLY valid JSON with title, columns, and rows. Every row must match the column count.",
+        "Repair the Excel workbook. Return ONLY valid JSON with title and sheets. Every sheet needs a unique valid name, columns, rows, and optional formulas keyed by cell address. Every row must match its column count. Preserve all requested worksheets and formulas.",
         "Preserve the original request, approved requirements, and actual data. Do not invent unrelated data.",
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
@@ -1120,9 +1120,10 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ] : excelRequest ? [
       ...messages,
       { role: "user", content: [
-        "SPECIAL OUTPUT MODE: Create a real Excel workbook deliverable. Return ONLY valid JSON with this exact schema: " + '{"title":"Workbook title","columns":["Column 1","Column 2"],"rows":[["",""]]}',
-        "Choose useful column headings and create blank rows if the user asks for a blank template. Otherwise populate the workbook with relevant, accurate data. Never return instructions for manually creating the file.",
-        "Keep the workbook in the user's language. Use 1 to 30 columns and 1 to 500 rows. Each row must match the number of columns.",
+        "SPECIAL OUTPUT MODE: Create a real editable Excel workbook. Return ONLY valid JSON with this schema: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Example",""]],"formulas":{"B2":"SUM(B3:B8)"}}]}',
+        "Create multiple named worksheets when the request needs them (up to 12). Every sheet needs 1 to 30 columns, 1 to 500 rows, and rows matching the column count. Sheet names must be unique and Excel-compatible.",
+        "Use real Excel formulas in the formulas object, keyed by cell address such as C2, whenever calculations, totals, balances, percentages, dates, or summaries are requested. Formula strings omit the leading equals sign. Never replace a requested formula with a guessed static result. Use only ordinary local worksheet formulas; do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
+        "Create useful blank rows when the user asks for a blank template. Otherwise populate only relevant, accurate data. Preserve units, dates, currency, and the user's language. Never return instructions for manually creating the workbook.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
     ] : sourceCodeFileRequest ? [
