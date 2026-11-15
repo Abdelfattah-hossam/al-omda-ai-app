@@ -6416,3 +6416,25 @@ body:has(.ai-chat-page){
 .sidebar-account-status.local{background:#e0b86e;box-shadow:0 0 0 3px color-mix(in srgb,#e0b86e 15%,transparent)}
 @media(max-width:900px){.sidebar-brand-area{padding-bottom:14px}.sidebar-nav-group{margin-bottom:14px}}
 @media(prefers-reduced-motion:reduce){.sidebar-nav-group .nav-link{transition:none}.sidebar-nav-group .nav-link:hover{transform:none}}
+
+
+/* Shared header hierarchy and navigation accessibility */
+.app-shell .topbar{display:flex;align-items:center;gap:clamp(8px,1.2vw,18px);min-width:0}
+.app-shell .topbar>.crumb{flex:0 1 auto;min-width:0;max-width:min(28vw,320px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650;letter-spacing:.01em}
+.app-shell .topbar>.topbar-workspace-metrics{flex:1 1 auto;min-width:0}
+.app-shell .topbar>.top-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex:0 0 auto;min-width:0}
+.app-shell .top-actions>[data-testid="link-profile"]{border-radius:11px;background:color-mix(in srgb,var(--sidebar-accent) 55%,transparent);border-color:var(--sidebar-border)}
+.app-shell .top-actions>[data-testid="link-profile"]:focus-visible,.app-shell .top-actions>button:focus-visible,.app-shell .curtain-trigger:focus-visible{outline:2px solid var(--profile-accent);outline-offset:3px}
+.app-shell .mobile-nav a[aria-current="page"],.app-shell .nav-stack a[aria-current="page"]{position:relative}
+.app-shell .mobile-nav a[aria-current="page"]::after{content:"";position:absolute;inset-inline:30%;bottom:1px;height:2px;border-radius:9px;background:currentColor;opacity:.9}
+@media(max-width:760px){
+ .app-shell .topbar{gap:7px}
+ .app-shell .topbar>.crumb{max-width:26vw;font-size:11px}
+ .app-shell .topbar>.topbar-workspace-metrics{gap:5px;padding-inline:3px}
+ .app-shell .topbar>.top-actions{gap:5px}
+}
+@media(max-width:520px){
+ .app-shell .topbar>.crumb{max-width:22vw;font-size:10px}
+ .app-shell .topbar>.topbar-workspace-metrics{display:none}
+ .app-shell .topbar>.top-actions{margin-inline-start:auto}
+}
