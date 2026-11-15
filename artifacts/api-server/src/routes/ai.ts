@@ -1126,7 +1126,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       ...messages,
       { role: "user", content: [
         "SPECIAL OUTPUT MODE: Create a complete editable PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["concise point 1","concise point 2"],"notes":"Optional speaker notes"}]}',
-        "Create 3 to 30 slides in a logical narrative. Each slide must have a meaningful title and 1 to 8 concise, relevant bullet points. Keep each bullet under 700 characters. Use the customer's language. Include an opening slide and a conclusion when appropriate. Do not invent facts, figures, citations, or sources; mark assumptions and cite only sources actually verified.",
+        "Create 3 to 30 slides in a logical narrative. Each slide must have a meaningful title and 1 to 8 concise, relevant bullet points. Keep each bullet under 700 characters and keep the combined bullet text on each slide at or below 2400 characters so the slide remains readable. Use the customer's language. Include an opening slide and a conclusion when appropriate. Do not invent facts, figures, citations, or sources; mark assumptions and cite only sources actually verified.",
         "Do not return a tutorial or instructions for making slides. The result must be ready to convert into an editable .pptx file.",
         "Original customer request: " + latestCustomerRequest
       ].join("\n") }
@@ -1209,7 +1209,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (powerPointRequest && !validatedPowerPoint) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point 1","point 2"],"notes":"Optional speaker notes"}]}',
-        "Create 3 to 30 slides. Every slide needs a non-empty title and 1 to 8 concise non-empty bullets. Keep each bullet under 700 characters. Preserve the original request and do not invent facts or citations.",
+        "Create 3 to 30 slides. Every slide needs a non-empty title and 1 to 8 concise non-empty bullets. Keep each bullet under 700 characters and keep the combined bullet text on each slide at or below 2400 characters so the slide remains readable. Preserve the original request and do not invent facts or citations.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 12000)
       ].join("\n") }];
