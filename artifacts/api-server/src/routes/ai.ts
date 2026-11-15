@@ -1188,6 +1188,32 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       });
       return;
     }
+    let validatedPowerPoint = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
+    if (powerPointRequest && !validatedPowerPoint) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point 1","point 2"]}]}',
+        "Create 3 to 30 slides. Every slide needs a non-empty title and 1 to 8 concise non-empty bullets. Keep each bullet under 700 characters. Preserve the original request and do not invent facts or citations.",
+        "Original request: " + latestCustomerRequest,
+        "Invalid previous output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
+      catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPowerPoint = parsePowerPointPresentation(answer.text);
+      if (!validatedPowerPoint) {
+        const alternateProvider = providers.find((candidate) => candidate !== usedProvider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory);
+            const alternatePresentation = parsePowerPointPresentation(alternateAnswer.text);
+            if (alternatePresentation) { answer = alternateAnswer; validatedPowerPoint = alternatePresentation; usedProvider = alternateProvider; }
+          } catch (error) { console.warn("[Alternate PowerPoint provider failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
+      if (!validatedPowerPoint) {
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint بعد مراجعة بنيته. لم يتم خصم وحداتك؛ أعد المحاولة." });
+        return;
+      }
+    }
     let validatedWordDocument = wordDocumentRequest ? parseWordDocument(answer.text, sevenColumnTable, tableOnly, wordTableRequested) : null;
     if (wordDocumentRequest && !validatedWordDocument) {
       const repairRequest = [{ role: "user" as const, content: [
@@ -1289,6 +1315,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const latestUsage = await reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000))));
     if (!latestUsage.allowed) {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: latestUsage });
+      return;
+    }
+    if (powerPointRequest) {
+      if (!validatedPowerPoint) {
+        res.status(502).json({ error: "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء محتوى العرض وتجهيزه كملف PowerPoint قابل للمعاينة والتحميل.",
+        presentation: validatedPowerPoint,
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
       return;
     }
     if (desktopAppRequest) {
