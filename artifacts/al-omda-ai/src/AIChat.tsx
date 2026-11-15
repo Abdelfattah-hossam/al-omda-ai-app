@@ -1153,12 +1153,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
         <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
       </button>
-      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar">ع</span><span><strong>{ar ? "حساب العمدة" : "AL OMDA account"}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
+      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span><strong>{ar ? "حساب العمدة" : "AL OMDA account"}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
     </aside>
     <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
-      <div className="ai-chat-brand" aria-label="AL OMDA AI"><span className="ai-chat-brand-mark">ع</span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة AI" : "AL OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      <div className="ai-chat-brand" aria-label="AL OMDA AI"><span className="ai-chat-brand-mark"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة AI" : "AL OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
       {!signedIn && <button type="button" id="ai-chat-login-cta" className="ai-chat-login-cta" onClick={()=>setLocation("/profile?focus=profile-account-card")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
@@ -1211,7 +1211,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
         <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
           {messages.length === 0 && <div className="ai-chat-welcome" id="welcome-screen">
-            <div className="ai-chat-welcome-mark">ع</div>
+            <div className="ai-chat-welcome-mark"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></div>
             <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to AL OMDA"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
