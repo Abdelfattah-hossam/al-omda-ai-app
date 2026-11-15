@@ -345,6 +345,13 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
+const appLauncherGroups: { id:'core'|'secondary'; items:typeof navItems }[] = [
+  { id:'core', items:navItems.filter(item=>item.path!=='/') },
+  { id:'secondary', items:[
+    { path:'/ai/usage', key:'usage', icon:Activity },
+    { path:'/profile', key:'profile', icon:Settings2 },
+  ] },
+];
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
   { path:'/agents', key:'agentNetwork', icon:Compass },
@@ -958,24 +965,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <h2 id="app-launcher-title">{isAr?'كل أدواتك في مكان واحد':'Everything you need, one place'}</h2>
             <p>{isAr?'وصول سريع ومنظم إلى الوظائف الأساسية، مع فصل أدوات المتابعة والحساب.':'A clear shortcut grid for core work, analytics, and account tools.'}</p>
           </div>
-          <span className="app-launcher-count">{isAr?'٦ أدوات أساسية':'06 CORE TOOLS'}</span>
+          <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أدوات'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)).padStart(2,'0')+' TOOLS')}</span>
         </div>
-        <div className="app-launcher-group">
-          <div className="app-launcher-group-title"><strong>{isAr?'العمل الأساسي':'CORE WORKSPACE'}</strong><span>{isAr?'ابدأ وأنجز وتابع':'Create, delegate, and track'}</span></div>
-          <div className="app-launcher-grid">
-            <Link href="/ai" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><Bot size={21}/></span><span className="app-launcher-copy"><strong>{t('aiChat')}</strong><small>{isAr?'ابدأ محادثة مع العمدة':'Talk to AL OMDA'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
-            <Link href="/workbench" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><BriefcaseBusiness size={21}/></span><span className="app-launcher-copy"><strong>{t('workbench')}</strong><small>{isAr?'حوّل طلبك إلى خطة':'Turn a request into a plan'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
-            <Link href="/agents" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><Compass size={21}/></span><span className="app-launcher-copy"><strong>{t('agentNetwork')}</strong><small>{isAr?'اختر التخصص المناسب':'Choose a specialist'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
-            <Link href="/history" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><History size={21}/></span><span className="app-launcher-copy"><strong>{t('history')}</strong><small>{isAr?'راجع مشاريعك ونتائجك':'Review projects and results'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+        {appLauncherGroups.map(group=><div key={group.id} className={'app-launcher-group '+(group.id==='secondary'?'app-launcher-secondary-group':'')}>
+          <div className="app-launcher-group-title">
+            <strong>{group.id==='core'?(isAr?'العمل الأساسي':'CORE WORKSPACE'):(isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT')}</strong>
+            <span>{group.id==='core'?(isAr?'ابدأ وأنجز وتابع':'Create, delegate, and track'):(isAr?'إحصاءات وتفضيلات التطبيق':'Usage and preferences')}</span>
           </div>
-        </div>
-        <div className="app-launcher-group app-launcher-secondary-group">
-          <div className="app-launcher-group-title"><strong>{isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT'}</strong><span>{isAr?'إحصاءات وتفضيلات التطبيق':'Usage and preferences'}</span></div>
-          <div className="app-launcher-grid app-launcher-grid-secondary">
-            <Link href="/ai/usage" className="app-launcher-tile"><span className="app-launcher-icon"><Activity size={19}/></span><span className="app-launcher-copy"><strong>{t('usage')}</strong><small>{isAr?'الاستهلاك والذاكرة':'Usage and memory'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
-            <Link href="/profile" className="app-launcher-tile"><span className="app-launcher-icon"><UserRound size={19}/></span><span className="app-launcher-copy"><strong>{t('profile')}</strong><small>{isAr?'بياناتك وتفضيلاتك':'Personal details and settings'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+          <div className={'app-launcher-grid '+(group.id==='secondary'?'app-launcher-grid-secondary':'')}>
+            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} className="app-launcher-tile">
+              <span className="app-launcher-icon"><Icon size={group.id==='core'?21:19}/></span>
+              <span className="app-launcher-copy"><strong>{t(item.key)}</strong><small>{item.path==='/ai'?(isAr?'ابدأ محادثة مع العمدة':'Talk to AL OMDA'):item.path==='/workbench'?(isAr?'حوّل طلبك إلى خطة':'Turn a request into a plan'):item.path==='/agents'?(isAr?'اختر التخصص المناسب':'Choose a specialist'):item.path==='/history'?(isAr?'راجع مشاريعك ونتائجك':'Review projects and results'):item.path==='/ai/usage'?(isAr?'الاستهلاك والذاكرة':'Usage and memory'):(isAr?'بياناتك وتفضيلاتك':'Personal details and settings')}</small></span>
+              <ArrowUpLeft size={14} className="app-launcher-arrow"/>
+            </Link>})}
           </div>
-        </div>
+        </div>)}
       </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
@@ -1910,19 +1914,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="curtain-head"><Link href="/" className="brand-lockup" onClick={()=>setCurtainOpen(false)}><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
         <div className="curtain-launcher-groups">
-          <section className="curtain-launcher-group">
-            <div className="curtain-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
-            <nav className="curtain-launcher-grid" aria-label={isAr?'أدوات العمل الأساسية':'Core workspace tools'}>
-              {navItems.map(item=><Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path===item.path?'active':''}`}><span className="curtain-launcher-icon"><item.icon size={19}/></span><strong>{t(item.key)}</strong></Link>)}
+          {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
+            <div className="curtain-caption">{group.id==='core'?(isAr?'مساحة العمل':'WORKSPACE'):(isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT')}</div>
+            <nav className="curtain-launcher-grid" aria-label={group.id==='core'?(isAr?'أدوات العمل الأساسية':'Core workspace tools'):(isAr?'المتابعة وإعدادات الحساب':'Analytics and account')}>
+              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
             </nav>
-          </section>
-          <section className="curtain-launcher-group">
-            <div className="curtain-caption">{isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT'}</div>
-            <nav className="curtain-launcher-grid" aria-label={isAr?'المتابعة وإعدادات الحساب':'Analytics and account'}>
-              <Link href="/ai/usage" onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path==='/ai/usage'?'active':''}`}><span className="curtain-launcher-icon"><Activity size={19}/></span><strong>{t('usage')}</strong></Link>
-              <Link href="/profile" onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path==='/profile'?'active':''}`}><span className="curtain-launcher-icon"><Settings2 size={19}/></span><strong>{t('profile')}</strong></Link>
-            </nav>
-          </section>
+          </section>)}
         </div>
       </aside>
     </div>}
