@@ -19,6 +19,12 @@ test("accepts multiple worksheets and keeps formulas", () => {
   assert.equal(result?.columns[0], "Item");
 });
 
+test("preserves numeric and boolean values as typed Excel cells", () => {
+  const result = parseExcelWorkbook(json({ title: "Typed", sheets: [{ name: "Data", columns: ["Amount", "Paid"], rows: [[125.5, true]] }] }));
+  assert.equal(typeof result?.rows[0][0], "number");
+  assert.equal(typeof result?.rows[0][1], "boolean");
+});
+
 test("supports the legacy single-sheet schema", () => {
   const result = parseExcelWorkbook(json({ title: "Old", columns: ["A"], rows: [["1"]] }));
   assert.equal(result?.sheets?.[0].name, "Sheet1");
