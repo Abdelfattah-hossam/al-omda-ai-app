@@ -1109,7 +1109,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
-    const desktopAppRequest = !excelRequest && !wordDocumentRequest && isDesktopAppRequest(latestCustomerRequest);
+    const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
+    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
@@ -1130,6 +1131,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Keep the workbook in the user's language. Use 1 to 30 columns and 1 to 500 rows. Each row must match the number of columns.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
+    ] : powerPointRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create a complete editable PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["concise point 1","concise point 2"]}]}',
+        "Create 3 to 30 slides in a logical narrative. Each slide must have a meaningful title and 1 to 8 concise, relevant bullet points. Keep each bullet under 700 characters. Use the customer's language. Include an opening slide and a conclusion when appropriate. Do not invent facts, figures, citations, or sources; mark assumptions and cite only sources actually verified.",
+        "Do not return a tutorial or instructions for making slides. The result must be ready to convert into an editable .pptx file.",
+        "Original customer request: " + latestCustomerRequest
+      ].join("\\n") }
     ] : wordDocumentRequest ? [
       ...messages,
       { role: "user", content: [
