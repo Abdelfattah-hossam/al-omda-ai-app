@@ -226,6 +226,22 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
   const last = messages[messages.length - 1]?.content ?? "";
   return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
 }
+function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  if (!request || isHowToRequest(request) || !isCodingRequest(messages)) return false;
+  return /\.(?:py|js|mjs|cjs|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i.test(request) ||
+    /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request);
+}
+function parseSourceCodeFile(text: string, request: string): { title: string; name: string; language: string; code: string } | null {
+  const match = text.match(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/);
+  if (!match || !match[2].trim() || match[2].length > 100000) return null;
+  const requestedExtension = request.match(/\.(py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i)?.[1]?.toLowerCase();
+  const language = (match[1] || requestedExtension || "text").toLowerCase();
+  const extensions: Record<string,string> = { javascript:"js",typescript:"ts",python:"py",bash:"sh",shell:"sh",yml:"yaml",text:"txt" };
+  const extension = requestedExtension || extensions[language] || language;
+  if (!/^(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|yaml|md|txt)$/.test(extension)) return null;
+  return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
+}
 
 function systemPrompt(coding: boolean, memory = ""): string {
   const base = "You are AL OMDA AI (العمدة), the AI assistant itself. The name AL OMDA always refers to YOU, the assistant, never to a separate human, colleague, or team. Match the user's language. Before answering, carefully parse the COMPLETE user request and the relevant conversation context. Silently make a requirements checklist: exact deliverable, every requested item, quantities, format, language, audience, constraints, exclusions, and what must not be changed. Resolve references such as this/that/previous using conversation context. Do not skip, reinterpret, or replace any explicit requirement. Never decide what the user wants from one keyword alone; interpret the complete sentence and its surrounding context. Distinguish a question, explanation, comparison, casual conversation, advice request, and plan from an explicit request to create a file, app, or other deliverable. Mentioning Word, Excel, a table, a report, or a file topic is NOT permission to create an attachment. Create Word/Excel files only when the current request clearly names that file format and explicitly asks to create, prepare, export, or download that file. A request for a table or written content without a file-format request should be answered directly in chat. Never infer a file request from unrelated earlier turns. If a request is actionable and sufficiently clear, do the work rather than merely describing how the user can do it. Before sending the response, silently verify that every requirement is addressed, all generated content is coherent and understandable, calculations and structure are consistent, and any claimed file or action actually exists. For structured files, validate the complete structure before declaring success; if the first output is malformed, correct it and validate again. Never return an empty, irrelevant, generic, or confusing artifact. If a requirement is genuinely ambiguous and changes the result materially, ask one focused question; otherwise make the safest reasonable assumption and state it briefly. Be accurate, practical, and honest about uncertainty. When the user delegates a project, YOU (AL OMDA AI) are the intended executor: analyze the request, create the deliverables or code using available tools, make revisions, and report what was actually completed. The user is the project owner who sets goals, gives direction, and reviews or approves important decisions. Never say the user should execute delegated work themselves. Never claim to have executed code or changed external systems unless a tool actually did so. If you lack a required tool, explain the specific limitation and provide the closest useful work you can actually complete. Do not reveal private reasoning; provide concise conclusions and verifiable results.";
@@ -1110,7 +1126,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const excelRequest = isExcelRequest(messages);
     const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
     const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
-    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isDesktopAppRequest(latestCustomerRequest);
+    const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isSourceCodeFileRequest(messages);
+    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
@@ -1131,6 +1148,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Keep the workbook in the user's language. Use 1 to 30 columns and 1 to 500 rows. Each row must match the number of columns.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
+    ] : sourceCodeFileRequest ? [
+      ...messages,
+      { role: "user", content: [
+        "SPECIAL OUTPUT MODE: Create the requested real source-code file. Return ONLY one fenced code block with the correct language identifier. No explanation before or after the code.",
+        "Write complete, runnable, syntactically valid source code for the exact requested file. Include necessary imports, safe defaults, useful comments, input validation, and robust error handling where relevant. Do not invent external credentials, APIs, or project files. If the task requires context that is unavailable, state a clear TODO comment rather than fabricating integration details.",
+        "The language must match the requested extension. Keep all code inside a single fenced block.",
+        "Original customer request: " + latestCustomerRequest
+      ].join("\\n") }
     ] : powerPointRequest ? [
       ...messages,
       { role: "user", content: [
@@ -1187,6 +1212,21 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         usage
       });
       return;
+    }
+    let validatedSourceFile = sourceCodeFileRequest ? parseSourceCodeFile(answer.text, latestCustomerRequest) : null;
+    if (sourceCodeFileRequest && !validatedSourceFile) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Return the complete source file again. Output ONLY one fenced code block with the correct language tag. No prose.",
+        "Original request: " + latestCustomerRequest,
+        "Previous output: " + answer.text.slice(0, 12000)
+      ].join("\\n") }];
+      try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
+      catch (error) { console.warn("[Source file repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedSourceFile = parseSourceCodeFile(answer.text, latestCustomerRequest);
+      if (!validatedSourceFile) {
+        res.status(502).json({ error: "تعذر اعتماد ملف الكود؛ لم يتم خصم وحداتك. أعد المحاولة مع تحديد لغة الملف." });
+        return;
+      }
     }
     let validatedPowerPoint = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
     if (powerPointRequest && !validatedPowerPoint) {
@@ -1315,6 +1355,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const latestUsage = await reserveUnits(accessToken, Math.min(5, Math.max(1, Math.ceil(characters / 6000))));
     if (!latestUsage.allowed) {
       res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage: latestUsage });
+      return;
+    }
+    if (sourceCodeFileRequest) {
+      if (!validatedSourceFile) {
+        res.status(502).json({ error: "لم يكتمل إنشاء ملف الكود." });
+        return;
+      }
+      res.json({
+        reply: "تم إنشاء ملف الكود وتجهيزه للمعاينة والنسخ والتحميل.",
+        codeFile: validatedSourceFile,
+        provider: usedProvider,
+        model: answer.model,
+        usage: latestUsage,
+      });
       return;
     }
     if (powerPointRequest) {
