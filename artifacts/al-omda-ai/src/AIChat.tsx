@@ -11,6 +11,16 @@ type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[] }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
+
+function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
+  if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
+  const match = reply.match(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/);
+  if (!match || !match[2].trim()) return null;
+  const language = (match[1] || "text").toLowerCase();
+  const extensions: Record<string, string> = { js: "js", javascript: "js", jsx: "jsx", ts: "ts", typescript: "ts", tsx: "tsx", py: "py", python: "py", html: "html", css: "css", json: "json", sql: "sql", sh: "sh", bash: "sh", java: "java", c: "c", cpp: "cpp", cs: "cs", go: "go", rs: "rs", php: "php", rb: "rb", ruby: "rb", md: "md", markdown: "md", xml: "xml", yaml: "yaml", yml: "yml", text: "txt", txt: "txt" };
+  const extension = extensions[language] || "txt";
+  return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
+}
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 type Usage = {
   used: number;
@@ -646,6 +656,16 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
+      } else if (data.presentation && typeof data.presentation.title === "string" && Array.isArray(data.presentation.slides)) {
+        const attachment = await createPowerPointAttachment(data.presentation);
+        assistantMessage = { ...assistantMessage, attachment, presentationData: data.presentation };
+      } else {
+        const sourceData = createRequestedSourceArtifact(text, data.reply);
+        if (sourceData) {
+          const blob = new Blob([sourceData.code], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          assistantMessage = { ...assistantMessage, attachment: { name: sourceData.name, url }, sourceData };
+        }
       }
       // Detect a project from the current message AND the recent user context.
       // This keeps follow-up commands such as "ابدأ" or "نفّذ" attached to the project
