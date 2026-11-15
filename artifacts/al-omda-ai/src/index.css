@@ -5028,20 +5028,12 @@ body:has(.ai-chat-page){
     max-width:260px!important;
     z-index:30!important;
   }
-  [dir="rtl"] .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .sidebar {
-    inset-inline-start:auto!important;
-    inset-inline-end:0!important;
-  }
   .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .main-area {
     width:auto!important;
     margin-inline-start:260px!important;
     margin-inline-end:0!important;
     padding-inline:24px!important;
     padding-bottom:24px!important;
-  }
-  [dir="rtl"] .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .main-area {
-    margin-inline-start:0!important;
-    margin-inline-end:260px!important;
   }
   .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .mobile-nav {
     display:none!important;
