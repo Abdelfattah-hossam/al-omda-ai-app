@@ -127,6 +127,36 @@ async function readEntry(bytes: Uint8Array, view: DataView, entry: ZipEntry): Pr
   return output;
 }
 
+export async function isValidZipArchive(blob: Blob): Promise<boolean> {
+  try {
+    if (!(blob instanceof Blob) || blob.size < 22 || blob.size > 40_000_000) return false;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const end = findEndRecord(view, bytes.length);
+    if (end < 0 || view.getUint16(end + 4, true) !== 0 || view.getUint16(end + 6, true) !== 0) return false;
+    const count = view.getUint16(end + 10, true);
+    const diskCount = view.getUint16(end + 8, true);
+    const size = view.getUint32(end + 12, true);
+    const start = view.getUint32(end + 16, true);
+    if (!count || count === 0xffff || count !== diskCount || size === 0xffffffff || start === 0xffffffff || start + size !== end) return false;
+    let offset = start;
+    const names = new Set<string>();
+    for (let index = 0; index < count; index++) {
+      if (offset + 46 > end || view.getUint32(offset, true) !== 0x02014b50) return false;
+      const nameLength = view.getUint16(offset + 28, true);
+      const extraLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const next = offset + 46 + nameLength + extraLength + commentLength;
+      if (next > end) return false;
+      const name = decoder.decode(bytes.slice(offset + 46, offset + 46 + nameLength));
+      if (!name || names.has(name)) return false;
+      names.add(name);
+      offset = next;
+    }
+    return offset === end;
+  } catch { return false; }
+}
+
 export async function validateOoxmlPackage(blob: Blob, options: OoxmlValidationOptions): Promise<boolean> {
   try {
     if (!(blob instanceof Blob) || blob.size < 22 || blob.size > 40_000_000) return false;
