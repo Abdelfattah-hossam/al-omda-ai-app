@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSourceCodeFile } from "./source-code-artifact.js";
+import { isValidDxfSource, parseSourceCodeFile } from "./source-code-artifact.js";
 
 const fenced = (language: string, code: string) => String.fromCharCode(96).repeat(3) + language + "\n" + code + "\n" + String.fromCharCode(96).repeat(3);
 
@@ -115,6 +115,7 @@ test("accepts DXF ARC, TEXT, and MTEXT entities for preview-capable drawings", (
 
 test("accepts standard DXF files ending with a line break", () => {
   const dxf = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","ENDSEC","0","EOF"].join("\\r\\n") + "\\r\\n";
+  assert.equal(isValidDxfSource(dxf), true);
   assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create plan.dxf")?.language, "dxf");
 });
 
