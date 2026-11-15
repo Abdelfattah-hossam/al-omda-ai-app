@@ -683,8 +683,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     for (const item of data.slides) {
       const slide = pptx.addSlide();
       slide.background = { color: "101722" };
-      slide.addText(item.title, { x: 0.55, y: 0.45, w: 12.2, h: 0.85, fontFace: "Arial", fontSize: 26, bold: true, color: "D8B978", align: ar ? "right" : "left", rtlMode: ar, margin: 0.08, breakLine: false });
-      if (item.bullets.length) slide.addText(item.bullets.map((text) => ({ text, options: { bullet: { indent: 18 }, hanging: 4, breakLine: true } })), { x: 0.75, y: 1.65, w: 11.8, h: 5.15, fontFace: "Arial", fontSize: 19, color: "F1F5F9", paraSpaceAfterPt: 16, valign: "mid", align: ar ? "right" : "left", rtlMode: ar, margin: 0.12, breakLine: false });
+      slide.addText(item.title, { x: 0.55, y: 0.45, w: 12.2, h: 0.85, fontFace: "Arial", fontSize: 26, bold: true, color: "D8B978", align: ar ? "right" : "left", rtlMode: ar, margin: 0.08, fit: "shrink", breakLine: false });
+      const bulletTextLength = item.bullets.reduce((total, bullet) => total + bullet.length, 0);
+      const bulletFontSize = bulletTextLength <= 650 ? 19 : bulletTextLength <= 1100 ? 17 : bulletTextLength <= 1700 ? 15 : 13;
+      if (item.bullets.length) slide.addText(item.bullets.map((text) => ({ text, options: { bullet: { indent: 18 }, hanging: 4, breakLine: true } })), { x: 0.75, y: 1.65, w: 11.8, h: 5.15, fontFace: "Arial", fontSize: bulletFontSize, color: "F1F5F9", paraSpaceAfterPt: 16, valign: "mid", align: ar ? "right" : "left", rtlMode: ar, margin: 0.12, fit: "shrink", breakLine: false });
       if (item.notes) slide.addNotes(item.notes);
       slide.addText("AL OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
     }
