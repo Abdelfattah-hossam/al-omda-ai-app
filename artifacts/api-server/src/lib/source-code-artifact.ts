@@ -11,8 +11,9 @@ export function isValidDxfSource(code: string): boolean {
     pairs.push([Number(group), lines[i + 1].trim()]);
   }
   const markers = pairs.map((pair, index) => pair[0] === 0 ? { type: pair[1].toUpperCase(), index } : null).filter((item): item is { type: string; index: number } => item !== null);
-  const hasEntities = pairs.some((pair, index) => pair[0] === 0 && pair[1].toUpperCase() === "SECTION" && pairs[index + 1]?.[0] === 2 && pairs[index + 1]?.[1].toUpperCase() === "ENTITIES");
-  if (!hasEntities || markers[markers.length - 1]?.type !== "EOF") return false;
+  const entitiesSection = pairs.findIndex((pair, index) => pair[0] === 0 && pair[1].toUpperCase() === "SECTION" && pairs[index + 1]?.[0] === 2 && pairs[index + 1]?.[1].toUpperCase() === "ENTITIES");
+  const entitiesEnd = entitiesSection >= 0 ? pairs.findIndex((pair, index) => index > entitiesSection && pair[0] === 0 && pair[1].toUpperCase() === "ENDSEC") : -1;
+  if (entitiesSection < 0 || entitiesEnd < 0 || markers[markers.length - 1]?.type !== "EOF") return false;
   const allowed = new Set(["SECTION", "ENDSEC", "EOF", "TABLE", "ENDTAB", "BLOCK", "ENDBLK", "LAYER", "LTYPE", "STYLE", "DIMSTYLE", "VIEW", "UCS", "VPORT", "APPID", "BLOCK_RECORD", "DICTIONARY", "XRECORD", "GROUP", "LAYOUT", "MLINESTYLE", "POINT", "LINE", "CIRCLE", "ARC", "ELLIPSE", "LWPOLYLINE", "POLYLINE", "VERTEX", "SEQEND", "TEXT", "MTEXT", "SOLID", "3DFACE", "INSERT", "ATTDEF", "ATTRIB", "DIMENSION", "HATCH", "SPLINE", "RAY", "XLINE", "LEADER"]);
   if (markers.some(marker => !allowed.has(marker.type))) return false;
   for (const [group, value] of pairs) {
