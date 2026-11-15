@@ -18,7 +18,7 @@ function createRequestedSourceArtifact(request: string, reply: string): SourceDa
   const match = new RegExp(fence + "([a-zA-Z0-9_+#.-]*)\\s*\\n([\\s\\S]*?)" + fence).exec(reply);
   if (!match || !match[2].trim()) return null;
   const language = (match[1] || "text").toLowerCase();
-  const extensions: Record<string, string> = { js: "js", javascript: "js", jsx: "jsx", ts: "ts", typescript: "ts", tsx: "tsx", py: "py", python: "py", html: "html", css: "css", json: "json", sql: "sql", sh: "sh", bash: "sh", java: "java", c: "c", cpp: "cpp", cs: "cs", go: "go", rs: "rs", php: "php", rb: "rb", ruby: "rb", md: "md", markdown: "md", xml: "xml", yaml: "yaml", yml: "yml", text: "txt", txt: "txt" };
+  const extensions: Record<string, string> = { js: "js", javascript: "js", jsx: "jsx", ts: "ts", typescript: "ts", tsx: "tsx", py: "py", python: "py", html: "html", css: "css", json: "json", sql: "sql", dxf: "dxf", sh: "sh", bash: "sh", java: "java", c: "c", cpp: "cpp", cs: "cs", go: "go", rs: "rs", php: "php", rb: "rb", ruby: "rb", md: "md", markdown: "md", xml: "xml", yaml: "yaml", yml: "yml", text: "txt", txt: "txt" };
   const extension = extensions[language] || "txt";
   return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
 }
@@ -33,7 +33,7 @@ function withPreviewCsp(html: string): string {
 
 function createSourceBlob(sourceData: SourceData): Blob {
   const mimeTypes: Record<string,string> = {
-    html: "text/html;charset=utf-8", svg: "image/svg+xml;charset=utf-8",
+    html: "text/html;charset=utf-8", svg: "image/svg+xml;charset=utf-8", dxf: "application/dxf;charset=utf-8",
     json: "application/json;charset=utf-8", css: "text/css;charset=utf-8",
     js: "text/javascript;charset=utf-8", ts: "text/plain;charset=utf-8",
     py: "text/x-python;charset=utf-8", sql: "application/sql;charset=utf-8",
