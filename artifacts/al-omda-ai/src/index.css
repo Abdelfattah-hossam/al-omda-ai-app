@@ -5444,6 +5444,11 @@ body:has(.ai-chat-page){
 .app-shell:not([data-chat-active="true"]) .panel-pad {
   padding:clamp(16px,1.7vw,23px)!important;
 }
+
+/* Keep compact density effective after the shared workspace panel override. */
+.app-shell:not([data-chat-active="true"])[data-density="compact"] .panel-pad {
+  padding:15px!important;
+}
 .app-shell:not([data-chat-active="true"]) .section-head {
   padding-bottom:12px;
   border-bottom:1px solid rgba(224,181,101,.12);
