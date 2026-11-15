@@ -6876,3 +6876,151 @@ body:has(.ai-chat-page){
 .ai-chat-auth-gate .account-copy{margin:0;color:#aaa;line-height:1.8}
 .ai-chat-auth-gate-button{min-height:46px;padding:0 20px;border:1px solid #eee!important;border-radius:12px!important;background:#eee!important;color:#111!important;font-weight:800;box-shadow:none!important}
 .ai-chat-auth-gate-button:hover,.ai-chat-auth-gate-button:focus,.ai-chat-auth-gate-button:focus-visible{background:#fff!important;color:#000!important;box-shadow:none!important;outline:none!important}
+
+
+/* CHAT THEME CONSOLIDATION — isolate every chat surface from legacy blue/purple app accents. */
+.app-shell[data-chat-active="true"] .ai-chat-page {
+  --omda-glow:224,181,101;
+  --omda-accent:#e0b565;
+  --omda-accent-2:#f6dca0;
+  --profile-accent:#e0b565;
+  --active-glow:rgba(224,181,101,.18);
+  --border:rgba(224,181,101,.2);
+  --surface:rgba(15,14,15,.92);
+  --foreground:#f2eee6;
+  --muted:#a99f8e;
+  --omda-chat-line:rgba(255,255,255,.11);
+  --omda-chat-line-strong:rgba(224,181,101,.34);
+  color:#f2eee6!important;
+  accent-color:#e0b565;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-sidebar,.ai-chat-main>.panel,.ai-chat-conversation-panel,
+  .ai-conversations-panel,.ai-agent-runtime-panel,.ai-chat-auth-gate,
+  .ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal,
+  .ai-chat-model-menu,.ai-chat-top-menu,.ai-chat-more-menu,.ai-plus-menu
+) {
+  color:#f2eee6!important;
+  border-color:rgba(224,181,101,.2)!important;
+  background-color:#100f11!important;
+  box-shadow:0 14px 38px rgba(0,0,0,.42)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-sidebar,.ai-chat-main,.ai-chat-topbar,.ai-chat-settings-modal,
+  .ai-chat-canvas-modal,.ai-chat-live-modal,.ai-chat-model-menu,
+  .ai-chat-top-menu,.ai-chat-more-menu,.ai-plus-menu
+) {
+  background-image:none!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-new-button,.ai-chat-sidebar-close,.ai-chat-tool-list button,
+  .ai-chat-sidebar-history-item>button,.ai-chat-sidebar-history-delete,
+  .ai-chat-sidebar-account>button,.ai-chat-back,.ai-chat-exit,
+  .ai-chat-header-icon,.ai-chat-menu-trigger,.ai-chat-model-button,
+  .ai-chat-top-menu button,.ai-chat-model-menu button,.ai-chat-more-menu button,
+  .ai-chat-settings-actions button,.ai-chat-live-modal button,
+  .ai-chat-canvas-modal button,.ai-conversation-open,.icon-button,
+  .button-quiet,.button-primary,.ai-chat-auth-gate-button
+) {
+  border-color:rgba(224,181,101,.24)!important;
+  color:#eee7da!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-new-button,.ai-chat-sidebar-close,.ai-chat-tool-list button:hover,
+  .ai-chat-sidebar-history-item:hover,.ai-chat-sidebar-history-item.active,
+  .ai-chat-sidebar-history-delete:hover,.ai-chat-back:hover,.ai-chat-exit:hover,
+  .ai-chat-header-icon:hover,.ai-chat-menu-trigger:hover,.ai-chat-model-button:hover,
+  .ai-chat-top-menu button:hover,.ai-chat-model-menu button:hover,
+  .ai-chat-more-menu button:hover,.ai-chat-settings-actions button:hover,
+  .ai-chat-live-modal button:hover,.ai-chat-canvas-modal button:hover,
+  .ai-conversation-open:hover,.icon-button:hover,.button-quiet:hover
+) {
+  border-color:rgba(246,220,160,.48)!important;
+  color:#ffe8b7!important;
+  background:rgba(224,181,101,.11)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.button-primary,.ai-chat-auth-gate-button,.ai-send-button) {
+  border-color:#e0b565!important;
+  color:#17130c!important;
+  background:linear-gradient(135deg,#f6dca0,#d6a94f)!important;
+  box-shadow:0 5px 18px rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(.button-primary,.ai-chat-auth-gate-button,.ai-send-button):hover:not(:disabled) {
+  color:#17130c!important;
+  background:linear-gradient(135deg,#ffe8b7,#e0b565)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-usage-card,.ai-chat-mode-banner,.ai-chat-inline-notice,
+  .ai-chat-agent-runtime-panel,.ai-routing-note,.ai-chat-settings-section,
+  .ai-chat-settings-stats>div,.ai-chat-memory-field,.ai-chat-attachment-preview,
+  .ai-chat-code-block,.ai-chat-canvas-preview
+) {
+  border-color:rgba(224,181,101,.18)!important;
+  background-color:rgba(18,16,16,.88)!important;
+  color:#eee7da!important;
+  box-shadow:none!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-tools-caption,.ai-chat-history-caption,.ai-chat-menu-caption,
+  .ai-chat-settings-section-title,.ai-chat-live-copy p,.ai-composer-footer,
+  .ai-chat-composer .ai-composer-footer small,.ai-chat-sidebar-account small
+) {color:#a99f8e!important}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-usage-card strong,.ai-chat-provider-row>svg,
+  .ai-chat-settings-modal strong,.ai-chat-live-modal strong,
+  .ai-chat-canvas-modal strong
+) {color:#f6dca0!important}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(input,textarea,select,.field,.ai-composer-input) {
+  border-color:rgba(224,181,101,.2)!important;
+  color:#f6f1e7!important;
+  caret-color:#f6dca0!important;
+  background-color:rgba(7,7,8,.72)!important;
+  box-shadow:none!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(input,textarea,select,.field,.ai-composer-input)::placeholder {
+  color:#918879!important;
+  opacity:1!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  button,a,input,textarea,select,[role="button"],[tabindex]
+):focus-visible {
+  outline:2px solid rgba(246,220,160,.72)!important;
+  outline-offset:2px!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-live-orb,.ai-chat-welcome-mark,.ai-chat-account-avatar,
+  .ai-chat-brand-mark,.ai-chat-auth-gate-mark
+) {
+  border-color:rgba(224,181,101,.3)!important;
+  box-shadow:0 0 24px rgba(224,181,101,.09)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready {
+  background:#d6b36c!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.12)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .ai-chat-settings-progress i,.ai-chat-usage-track i
+) {background:linear-gradient(90deg,#c99742,#f6dca0)!important}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-menu-divider {
+  background:rgba(224,181,101,.16)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page :is(
+  .chat-message,.ai-chat-quick-grid button
+) {
+  border-color:rgba(255,255,255,.11)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.18)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-quick-grid button:hover {
+  border-color:rgba(224,181,101,.32)!important;
+  background:linear-gradient(145deg,#211d18,#111)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-quick-grid button :is(svg,strong) {
+  color:#f6dca0!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-brand-copy>small i.is-ready {
+  background:#d6b36c!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.1)!important;
+}
