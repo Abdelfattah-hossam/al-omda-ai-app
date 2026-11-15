@@ -1503,6 +1503,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
     return <div className="page-enter">
       {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span>)}
+      <ol className="workbench-flow" aria-label={isAr?'مراحل تنفيذ المهمة':'Task workflow'}>
+        <li className="workbench-flow-step"><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
+        <li className="workbench-flow-step"><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
+        <li className="workbench-flow-step"><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
+      </ol>
       <div className="workbench-layout">
         <form className="panel request-card" onSubmit={createPlan}>
           <div className="section-head"><h2 className="section-title">{t('request')}</h2><span className="section-meta">{t('preview')}</span></div>
