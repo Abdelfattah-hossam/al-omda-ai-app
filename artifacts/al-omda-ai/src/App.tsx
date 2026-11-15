@@ -847,7 +847,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const navLink = (item:typeof navItems[number], mobile = false) => {
     const Icon = item.icon;
     const active = item.path === '/' ? path === '/' : path.startsWith(item.path);
-    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} data-testid={`link-${item.key}`}>
+    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-testid={`link-${item.key}`}>
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
