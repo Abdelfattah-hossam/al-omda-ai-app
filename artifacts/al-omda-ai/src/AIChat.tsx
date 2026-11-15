@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { validateOoxmlPackage } from "./lib/ooxml-validation";
 import { useLocation } from "wouter";
 import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
@@ -149,80 +150,7 @@ function excelColumnName(index: number): string {
   return result;
 }
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
-async function isValidZipBlob(blob: Blob): Promise<boolean> {
-  if (blob.size < 22) return false;
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const minimumOffset = Math.max(0, bytes.length - 65557);
-  let endOffset = -1;
-  for (let offset = bytes.length - 22; offset >= minimumOffset; offset--) {
-    if (view.getUint32(offset, true) === 0x06054b50) { endOffset = offset; break; }
-  }
-  if (endOffset < 0) return false;
-  const entryCount = view.getUint16(endOffset + 10, true);
-  const centralSize = view.getUint32(endOffset + 12, true);
-  const centralOffset = view.getUint32(endOffset + 16, true);
-  if (entryCount === 0 || entryCount === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) return false;
-  if (centralOffset + centralSize > endOffset || centralOffset + centralSize > bytes.length) return false;
-  let offset = centralOffset;
-  let parsedEntries = 0;
-  while (offset + 46 <= centralOffset + centralSize && parsedEntries < entryCount) {
-    if (view.getUint32(offset, true) !== 0x02014b50) return false;
-    const nameLength = view.getUint16(offset + 28, true);
-    const extraLength = view.getUint16(offset + 30, true);
-    const commentLength = view.getUint16(offset + 32, true);
-    const next = offset + 46 + nameLength + extraLength + commentLength;
-    if (next > centralOffset + centralSize) return false;
-    offset = next;
-    parsedEntries++;
-  }
-  return parsedEntries === entryCount && offset === centralOffset + centralSize;
-}
-
-async function hasOoxmlPackageEntries(blob: Blob, requiredEntries: string[], expectedSlideCount?: number, expectedNotesCount?: number): Promise<boolean> {
-  if (!(await isValidZipBlob(blob))) return false;
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const minimumOffset = Math.max(0, bytes.length - 65557);
-  let endOffset = -1;
-  for (let offset = bytes.length - 22; offset >= minimumOffset; offset--) {
-    if (view.getUint32(offset, true) === 0x06054b50) { endOffset = offset; break; }
-  }
-  if (endOffset < 0) return false;
-  const entryCount = view.getUint16(endOffset + 10, true);
-  const centralSize = view.getUint32(endOffset + 12, true);
-  const centralOffset = view.getUint32(endOffset + 16, true);
-  if (entryCount === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) return false;
-  const names = new Set<string>();
-  let offset = centralOffset;
-  for (let index = 0; index < entryCount; index++) {
-    if (offset + 46 > centralOffset + centralSize || view.getUint32(offset, true) !== 0x02014b50) return false;
-    const compressedSize = view.getUint32(offset + 20, true);
-    const uncompressedSize = view.getUint32(offset + 24, true);
-    const nameLength = view.getUint16(offset + 28, true);
-    const extraLength = view.getUint16(offset + 30, true);
-    const commentLength = view.getUint16(offset + 32, true);
-    const nameStart = offset + 46;
-    const next = nameStart + nameLength + extraLength + commentLength;
-    if (next > centralOffset + centralSize || compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) return false;
-    const name = new TextDecoder().decode(bytes.slice(nameStart, nameStart + nameLength));
-    if (names.has(name)) return false;
-    names.add(name);
-    offset = next;
-  }
-  if (offset !== centralOffset + centralSize || requiredEntries.some((name) => !names.has(name))) return false;
-  if (expectedSlideCount !== undefined) {
-    const slideNames = [...names].filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name));
-    if (slideNames.length !== expectedSlideCount) return false;
-    for (let index = 1; index <= expectedSlideCount; index++) if (!names.has("ppt/slides/slide" + index + ".xml")) return false;
-  }
-  if (expectedNotesCount !== undefined) {
-    const notesNames = [...names].filter((name) => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(name));
-    if (notesNames.length !== expectedNotesCount) return false;
-  }
-  return true;
-}
-type Usage = {
+async type Usage = {
   used: number;
   remaining: number;
   limit: number;
@@ -672,7 +600,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       footers: { default: footer },
       children,
     }] }));
-    if (!(file instanceof Blob) || !(await hasOoxmlPackageEntries(file, ["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/header1.xml", "word/footer1.xml"]))) throw new Error(ar ? "ملف Word الناتج لا يحتوي على بنية DOCX المطلوبة ولم يتم إرفاقه." : "The generated Word file is missing required DOCX package entries and was not attached.");
+    if (!(file instanceof Blob) || !(await validateOoxmlPackage(file, { requiredEntries: ["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/header1.xml", "word/footer1.xml"], expectedText: [documentData.title, ...documentData.paragraphs.map((value) => value.replace(/^#{1,3}\\s+/, "").replace(/^[-*]\\s+/, "")), ...documentData.columns, ...documentData.rows.flat()] }))) throw new Error(ar ? "ملف Word الناتج لا يحتوي على بنية DOCX المطلوبة ولم يتم إرفاقه." : "The generated Word file is missing required DOCX package entries and was not attached.");
     const url = URL.createObjectURL(file);
     const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
@@ -773,7 +701,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     }
     const blob = await pptx.write({ outputType: "blob" }) as Blob;
     const expectedNotesCount = data.slides.filter((item) => Boolean(item.notes)).length;
-    if (!(blob instanceof Blob) || blob.size < 1000 || !(await hasOoxmlPackageEntries(blob, ["[Content_Types].xml", "_rels/.rels", "ppt/presentation.xml", "ppt/_rels/presentation.xml.rels"], data.slides.length, expectedNotesCount))) throw new Error(ar ? "ملف PowerPoint الناتج لا يحتوي على بنية PPTX المطلوبة أو أن عدد الشرائح/الملاحظات غير مطابق." : "The generated PowerPoint file is missing required PPTX package entries or its slide/note counts do not match.");
+    if (!(blob instanceof Blob) || blob.size < 1000 || !(await validateOoxmlPackage(blob, { requiredEntries: ["[Content_Types].xml", "_rels/.rels", "ppt/presentation.xml", "ppt/_rels/presentation.xml.rels"], expectedSlideCount: data.slides.length, expectedNotesCount, expectedText: data.slides.flatMap((slide) => [slide.title, ...slide.bullets, ...(slide.notes ? [slide.notes] : [])]) }))) throw new Error(ar ? "ملف PowerPoint الناتج لا يحتوي على بنية PPTX المطلوبة أو أن عدد الشرائح/الملاحظات غير مطابق." : "The generated PowerPoint file is missing required PPTX package entries or its slide/note counts do not match.");
     const url = URL.createObjectURL(blob);
     const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
     return { name: safeName + ".pptx", url };
