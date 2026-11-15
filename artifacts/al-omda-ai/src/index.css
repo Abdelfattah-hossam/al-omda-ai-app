@@ -7261,3 +7261,11 @@ body:has(.ai-chat-page){
 .brand-mark{display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;border:0;border-radius:0;background:transparent;color:inherit;box-shadow:none}
 .brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
 .brand-lockup{min-width:0}
+
+
+/* Official Al Omda logo in chat header, welcome state, and assistant account tile. */
+.app-shell .ai-chat-brand-mark,.app-shell .ai-chat-welcome-mark,.app-shell .ai-chat-account-avatar{display:grid!important;place-items:center!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;overflow:visible!important}
+.app-shell .ai-chat-brand-mark img,.app-shell .ai-chat-welcome-mark img,.app-shell .ai-chat-account-avatar img{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}
+.app-shell .ai-chat-brand-mark{width:35px!important;height:35px!important;flex:0 0 35px!important}
+.app-shell .ai-chat-welcome-mark{width:56px!important;height:56px!important;flex:0 0 56px!important}
+.app-shell .ai-chat-account-avatar{width:32px!important;height:32px!important;flex:0 0 32px!important}
