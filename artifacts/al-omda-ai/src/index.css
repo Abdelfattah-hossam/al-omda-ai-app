@@ -5706,3 +5706,51 @@ body:has(.ai-chat-page){
     padding:15px!important;
   }
 }
+
+/* Terminal setup blocks inside the agent guide: keep commands readable on every screen. */
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal {
+  border-color:rgba(224,181,101,.2);
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(31,28,29,.72),rgba(17,16,18,.82));
+}
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal > summary {
+  color:#ead9b7;
+  padding:3px 2px;
+}
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:8px 10px;
+  min-width:0;
+  margin-top:12px;
+}
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > strong {
+  grid-column:1/-1;
+  color:#d9c59e;
+  font-size:11px;
+}
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > pre {
+  grid-column:1;
+  min-width:0;
+  width:100%;
+  margin:0;
+  border:1px solid rgba(224,181,101,.12);
+}
+.app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > .button {
+  grid-column:2;
+  align-self:end;
+  white-space:nowrap;
+}
+@media(max-width:650px) {
+  .app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row {
+    grid-template-columns:minmax(0,1fr);
+  }
+  .app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > pre,
+  .app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > .button {
+    grid-column:1;
+  }
+  .app-shell:not([data-chat-active="true"]) .agent-guide-terminal-row > .button {
+    justify-self:start;
+  }
+}
