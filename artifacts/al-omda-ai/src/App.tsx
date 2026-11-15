@@ -962,7 +962,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
-      <section className="dashboard-pulse panel" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
+      <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
         <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
         <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
         <Link href={active>0?'/history?status=review':'/workbench'} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
@@ -1490,7 +1490,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </details>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
-    <section className="marketplace-intro panel" aria-label={isAr?'نظرة عامة على التخصصات':'Specialty directory overview'}>
+    <section className="marketplace-intro" aria-label={isAr?'نظرة عامة على التخصصات':'Specialty directory overview'}>
       <div className="marketplace-intro-mark"><Bot size={25}/></div>
       <div className="marketplace-intro-copy"><span className="eyebrow">{isAr?'شبكة المتخصصين':'SPECIALIST NETWORK'}</span><h2>{isAr?'اختار العقل المناسب لمهمتك':'Find the right specialist for the job'}</h2><p>{isAr?'كل تخصص يوجّه طلبك بخطة مناسبة، وتقدر تراجع الخطة قبل الموافقة على أي خطوة.':'Each specialty shapes a focused plan. Review the plan before approving any step.'}</p></div>
       <Link href="/workbench" className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
@@ -1519,7 +1519,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <li className="workbench-flow-step" data-stage={workflowStage===1?'current':workflowStage>1?'complete':'upcoming'}><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
         <li className="workbench-flow-step" data-stage={workflowStage===2?'current':'upcoming'}><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
       </ol>
-      <section className="workbench-context panel" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
+      <section className="workbench-context" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
         <div className="workbench-context-icon"><ShieldCheck size={18}/></div>
         <div><strong>{active?(isAr?'أنت تتابع مهمة محفوظة':'You are continuing a saved task'):(isAr?'ابدأ بطلب واضح ومحدد':'Start with a clear, specific request')}</strong><p>{active?active.title:(isAr?'حدد الهدف والتخصص، وبعدها راجع الخطة قبل اعتمادها.':'Set the goal and specialty, then review the proposed plan before approving it.')}</p></div>
         {active&&<Link href={'/history/'+active.id} className="button button-quiet button-small">{isAr?'تفاصيل المهمة':'Task details'}<ArrowLeft size={13}/></Link>}
@@ -1779,7 +1779,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const trendLabel = marketTrend === 'up' ? (isAr?'نجاحات أكثر':'More successful runs') : marketTrend === 'down' ? (isAr?'إخفاقات أكثر':'More failed runs') : (isAr?'نتائج متساوية':'Even results');
     return <div className="page-enter">
       {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
-      <section className="task-detail-overview panel" aria-label={isAr?'ملخص تقدم المهمة':'Task progress overview'}>
+      <section className="task-detail-overview" aria-label={isAr?'ملخص تقدم المهمة':'Task progress overview'}>
         <div className="task-detail-progress-copy"><span className="eyebrow">{isAr?'تقدم الخطة':'PLAN PROGRESS'}</span><strong>{count(task)} <small>/ {task.steps.length} {isAr?'خطوات معتمدة':'steps approved'}</small></strong><p>{isAr?'تابع حالة كل خطوة ومخرجات التنفيذ المسجلة.':'Track each step and its recorded execution results.'}</p></div>
         <div className="task-detail-progress-track" role="progressbar" aria-valuenow={task.steps.length?Math.round(count(task)/task.steps.length*100):0} aria-valuemin={0} aria-valuemax={100}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
         <div className="task-detail-progress-meta">{statusBadge(task.status)}<span>{successfulExecutions} {isAr?'ناجحة':'successful'}</span><span>{failedExecutions} {isAr?'فاشلة':'failed'}</span></div>
@@ -1841,7 +1841,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   ];
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
-    <section className="profile-welcome panel" aria-label={isAr?'ملخص الحساب':'Account overview'}>
+    <section className="profile-welcome" aria-label={isAr?'ملخص الحساب':'Account overview'}>
       <div className="profile-welcome-identity">
         <div className="profile-welcome-avatar">{authUser && avatarPath ? <img src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')}/> : <span>{profileName.trim().charAt(0)||'ع'}</span>}</div>
         <div className="profile-welcome-copy">
