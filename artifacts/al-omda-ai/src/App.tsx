@@ -1942,14 +1942,33 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
-      <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
-      <div className="sidebar-scroll">
-      <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-      <div className="nav-caption">{isAr?'عام':'GENERAL'}</div><nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
-      <div className="nav-caption sidebar-group-caption">{isAr?'الأنظمة والأدوات':'SYSTEMS'}</div><nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
-      <div className="nav-caption sidebar-group-caption">{isAr?'الأخيرة':'RECENTS'}</div><nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link"><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+      <div className="sidebar-brand-area">
+        <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
+        <span className="sidebar-workspace-state"><i aria-hidden="true"/>{isAr?'مساحة العمل':'WORKSPACE'}</span>
       </div>
-      <div className="sidebar-bottom"><Link href="/profile" className="sidebar-settings-link"><Settings2 size={16}/>{isAr?'الإعدادات':'Settings'}</Link><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
+      <div className="sidebar-scroll">
+        <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
+        <section className="sidebar-nav-group" aria-label={isAr?'التنقل العام':'General navigation'}>
+          <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
+          <nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Systems and tools'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'الأدوات المتخصصة':'SPECIALISTS & TOOLS'}</div>
+          <nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        </section>
+        <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
+          <nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link" aria-label={task.title}><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+        </section>
+      </div>
+      <div className="sidebar-bottom">
+        <div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div>
+        <div className="sidebar-account-card">
+          <span className="avatar">{name.charAt(0)||'ع'}</span>
+          <span className="sidebar-account-copy"><strong>{name}</strong><small>{authUser?.email||org}</small></span>
+          <span className={'sidebar-account-status '+(authUser?'connected':'local')} title={authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'حساب محلي':'Local account')} aria-label={authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'حساب محلي':'Local account')}/>
+        </div>
+      </div>
     </aside>
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
