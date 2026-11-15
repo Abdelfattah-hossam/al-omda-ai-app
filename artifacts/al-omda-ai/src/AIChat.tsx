@@ -71,7 +71,7 @@ function dxfToSvg(source: string): string {
         let sweep=(end-start+360)%360;if(sweep===0)sweep=360;
         const a=toPoint(start),b=toPoint(end),largeArc=sweep>180?1:0;
         include(center[0]-radius,center[1]-radius);include(center[0]+radius,center[1]+radius);
-        shapes.push('<path d="M '+a[0]+' '+a[1]+' A '+radius+' '+radius+' 0 '+largeArc+' 0 '+b[0]+' '+b[1]+'"/>');
+        shapes.push('<path d="M '+a[0]+' '+a[1]+' A '+radius+' '+radius+' 0 '+largeArc+' 1 '+b[0]+' '+b[1]+'"/>');
       }
     }else if(e.type==="TEXT"||e.type==="MTEXT"){
       const point=xy(e,10,20),height=Math.max(0.5,get(e.data,40,2.5)),rotation=get(e.data,50);
