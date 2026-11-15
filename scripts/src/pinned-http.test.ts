@@ -37,3 +37,21 @@ test("returns an empty body for HEAD requests", async () => {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+test("rejects protocol upgrades instead of leaving the request pending", async () => {
+  const server = createServer();
+  server.on("upgrade", (_request, socket) => {
+    socket.write("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: test\r\n\r\n");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  try {
+    const target = new URL(`http://upgrade-test.invalid:${address.port}/`);
+    await assert.rejects(
+      requestPinnedHttp(target, { address: "127.0.0.1", family: 4 }, "GET", new Headers({ connection: "Upgrade", upgrade: "test" })),
+      /Protocol upgrades are not supported/
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
