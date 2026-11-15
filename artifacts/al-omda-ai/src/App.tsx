@@ -706,7 +706,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (!current) return;
     const updated = updater(current);
     setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((task) => task.id === id ? updated : task) }));
-    if (authUser && !current.demo) saveRemoteTask(updated);
+    if (authUser && !current.demo) {
+      void saveRemoteTask(updated).catch(async (error) => {
+        setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+        try {
+          const workspace = await getWorkspace(apiRequestOptions);
+          if (authUser) applyWorkspace(workspace, authUser.email);
+        } catch {
+          // Keep the visible save error if the server cannot be refreshed.
+        }
+      });
+    }
   };
   const toggleLanguage = () => setSaved((prev) => ({ ...prev, language:prev.language === 'ar' ? 'en' : 'ar' }));
   const createPlan = async (event:FormEvent) => {
@@ -980,20 +990,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const dashboardPage = () => {
-    const active = tasks.filter((task) => task.status === 'review' || task.status === 'paused').length;
-    const approved = tasks.filter((task) => task.status === 'approved').length;
-    const stopped = tasks.filter((task) => task.status === 'stopped').length;
-    const total = tasks.length;
+    const dashboardTasks = tasks.filter((task) => !task.demo);
+    const active = dashboardTasks.filter((task) => task.status === 'review' || task.status === 'paused').length;
+    const approved = dashboardTasks.filter((task) => task.status === 'approved').length;
+    const stopped = dashboardTasks.filter((task) => task.status === 'stopped').length;
+    const total = dashboardTasks.length;
     const statusRows = [
-      { label:isAr?'بانتظار المراجعة':'Needs review', value:tasks.filter(task=>task.status==='review').length, color:'var(--omda-accent)' },
-      { label:isAr?'متوقفة مؤقتًا':'Paused', value:tasks.filter(task=>task.status==='paused').length, color:'var(--omda-accent-2)' },
+      { label:isAr?'بانتظار المراجعة':'Needs review', value:dashboardTasks.filter(task=>task.status==='review').length, color:'var(--omda-accent)' },
+      { label:isAr?'متوقفة مؤقتًا':'Paused', value:dashboardTasks.filter(task=>task.status==='paused').length, color:'var(--omda-accent-2)' },
       { label:isAr?'معتمدة':'Approved', value:approved, color:'#27d6b1' },
       { label:isAr?'متوقفة':'Stopped', value:stopped, color:'#ec6ca8' },
     ];
     const maxStatus = Math.max(1,...statusRows.map(row=>row.value));
-    const specialtyRows = specialties.map(item=>({id:item.id,label:label(item.id),value:tasks.filter(task=>task.specialty===item.id).length,icon:item.icon})).sort((x,y)=>y.value-x.value);
+    const specialtyRows = specialties.map(item=>({id:item.id,label:label(item.id),value:dashboardTasks.filter(task=>task.specialty===item.id).length,icon:item.icon})).sort((x,y)=>y.value-x.value);
     const maxSpecialty = Math.max(1,...specialtyRows.map(row=>row.value));
-    const trend = [0,1,2,3,4,5,6].map((offset)=>tasks.filter(task=>{
+    const trend = [0,1,2,3,4,5,6].map((offset)=>dashboardTasks.filter(task=>{
       const date=new Date(task.createdAt); const now=new Date();
       return date.getMonth()===new Date(now.getFullYear(),now.getMonth()-offset,1).getMonth() && date.getFullYear()===new Date(now.getFullYear(),now.getMonth()-offset,1).getFullYear();
     }).length);
@@ -1045,7 +1056,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <section className="panel dashboard-history-panel">
         <div className="dashboard-section-heading"><div><h2>{isAr?'سجل المهام':'Task history'}</h2><p>{isAr?'آخر المهام التي عملت عليها مع العمدة':'Your latest work with AL OMDA'}</p></div><Link href={focusedHref("/history","history-list")} className="button button-quiet">{isAr?'عرض الكل':'View all'} <ArrowLeft size={14}/></Link></div>
-        <div className="dashboard-table-wrap"><table className="dashboard-task-table"><thead><tr><th>{isAr?'المهمة':'Task'}</th><th>{isAr?'التخصص':'Specialty'}</th><th>{isAr?'تاريخ الإنشاء':'Created'}</th><th>{isAr?'التقدم':'Progress'}</th><th>{isAr?'الحالة':'Status'}</th></tr></thead><tbody>{tasks.slice(0,6).map(task=><tr key={task.id}><td><Link href={focusedHref(`/history/${task.id}`,"task-plan")} className="dashboard-task-name"><span className="task-icon">{taskIcon(task.specialty,15)}</span><strong>{task.title}</strong></Link></td><td>{label(task.specialty)}</td><td>{dateLabel(task.createdAt,language)}</td><td><span className="dashboard-progress-cell"><span><i style={{width:`${task.steps.length?count(task)/task.steps.length*100:0}%`}}/></span>{count(task)}/{task.steps.length}</span></td><td>{statusBadge(task.status)}</td></tr>)}</tbody></table>{tasks.length===0&&<div className="dashboard-empty">{isAr?'لا توجد مهام بعد. ابدأ محادثة جديدة لإنشاء أول مهمة.':'No tasks yet. Start a chat to create your first task.'}</div>}</div>
+        <div className="dashboard-table-wrap"><table className="dashboard-task-table"><thead><tr><th>{isAr?'المهمة':'Task'}</th><th>{isAr?'التخصص':'Specialty'}</th><th>{isAr?'تاريخ الإنشاء':'Created'}</th><th>{isAr?'التقدم':'Progress'}</th><th>{isAr?'الحالة':'Status'}</th></tr></thead><tbody>{dashboardTasks.slice(0,6).map(task=><tr key={task.id}><td><Link href={focusedHref(`/history/${task.id}`,"task-plan")} className="dashboard-task-name"><span className="task-icon">{taskIcon(task.specialty,15)}</span><strong>{task.title}</strong></Link></td><td>{label(task.specialty)}</td><td>{dateLabel(task.createdAt,language)}</td><td><span className="dashboard-progress-cell"><span><i style={{width:`${task.steps.length?count(task)/task.steps.length*100:0}%`}}/></span>{count(task)}/{task.steps.length}</span></td><td>{statusBadge(task.status)}</td></tr>)}</tbody></table>{dashboardTasks.length===0&&<div className="dashboard-empty">{isAr?'لا توجد مهام بعد. ابدأ محادثة جديدة لإنشاء أول مهمة.':'No tasks yet. Start a chat to create your first task.'}</div>}</div>
       </section>
       <div className="notice-bar dashboard-security-note"><ShieldCheck size={15} style={{flex:'none'}}/><span>{authUser?t('authConfigured'):t('demoNotice')}</span></div>
     </div>;
