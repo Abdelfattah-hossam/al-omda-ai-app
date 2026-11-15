@@ -114,14 +114,14 @@ test("accepts DXF ARC, TEXT, and MTEXT entities for preview-capable drawings", (
 
 
 test("accepts standard DXF files ending with a line break", () => {
-  const dxf = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","ENDSEC","0","EOF"].join("\\r\\n") + "\\r\\n";
+  const dxf = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","ENDSEC","0","EOF"].join("\r\n") + "\r\n";
   assert.equal(isValidDxfSource(dxf), true);
   assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create plan.dxf")?.language, "dxf");
 });
 
 test("rejects malformed DXF section nesting and duplicate ENTITIES sections", () => {
-  const nested = ["0","SECTION","2","ENTITIES","0","SECTION","2","HEADER","0","ENDSEC","0","ENDSEC","0","EOF"].join("\\n");
-  const duplicate = ["0","SECTION","2","ENTITIES","0","ENDSEC","0","SECTION","2","ENTITIES","0","ENDSEC","0","EOF"].join("\\n");
+  const nested = ["0","SECTION","2","ENTITIES","0","SECTION","2","HEADER","0","ENDSEC","0","ENDSEC","0","EOF"].join("\n");
+  const duplicate = ["0","SECTION","2","ENTITIES","0","ENDSEC","0","SECTION","2","ENTITIES","0","ENDSEC","0","EOF"].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", nested), "Create plan.dxf"), null);
   assert.equal(parseSourceCodeFile(fenced("dxf", duplicate), "Create plan.dxf"), null);
 });
@@ -132,6 +132,6 @@ test("accepts a supported drawing entity inside a BLOCKS section", () => {
     "0","LINE","10","0","20","0","11","10","21","10","0","ENDBLK",
     "0","ENDSEC","0","SECTION","2","ENTITIES","0","INSERT","2","SAMPLE","10","5","20","5",
     "0","ENDSEC","0","EOF"
-  ].join("\\n");
+  ].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create block.dxf")?.language, "dxf");
 });
