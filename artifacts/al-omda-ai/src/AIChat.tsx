@@ -656,6 +656,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       } else if (data.document && typeof data.document.title === "string" && Array.isArray(data.document.columns) && Array.isArray(data.document.rows)) {
         const attachment = await createWordAttachment(data.document);
         assistantMessage = { ...assistantMessage, attachment, documentData: data.document };
+      } else if (data.codeFile && typeof data.codeFile.name === "string" && typeof data.codeFile.code === "string" && typeof data.codeFile.language === "string") {
+        const sourceData = data.codeFile as SourceData;
+        const blob = new Blob([sourceData.code], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        assistantMessage = { ...assistantMessage, attachment: { name: sourceData.name, url }, sourceData };
       } else if (data.presentation && typeof data.presentation.title === "string" && Array.isArray(data.presentation.slides)) {
         const attachment = await createPowerPointAttachment(data.presentation);
         assistantMessage = { ...assistantMessage, attachment, presentationData: data.presentation };
