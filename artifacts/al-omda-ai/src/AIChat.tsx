@@ -7,7 +7,7 @@ import { detectProjectSpecialty } from "./lib/project-intent";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
-type SpreadsheetData = { title: string; columns: string[]; rows: string[][]; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: string[][]; formulas?: Record<string,string> }> };
+type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string> }> };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[] }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
