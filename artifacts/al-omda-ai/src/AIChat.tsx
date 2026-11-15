@@ -522,7 +522,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         throw new Error("تعذر إنشاء ملف Word حقيقي الآن. تعذر تحميل مكتبة DOCX من المصدرين المجانيين؛ تحقق من اتصال الإنترنت ثم أعد المحاولة.");
       }
     }
-    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = lib as any;
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, Header, Footer, PageNumber } = lib as any;
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
     const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
@@ -559,7 +559,26 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         borders, rows: [header, ...bodyRows],
       }));
     }
-    const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
+    const header = new Header({ children: [new Paragraph({
+      alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+      bidirectional: rtl,
+      children: [new TextRun({ text: documentData.title, color: "64748B", size: 16, font: "Arial" })],
+    })] });
+    const footer = new Footer({ children: [new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({ text: ar ? "صفحة " : "Page ", size: 16, color: "64748B", font: "Arial" }),
+        new TextRun({ children: [PageNumber.CURRENT], size: 16, color: "64748B", font: "Arial" }),
+        new TextRun({ text: ar ? " من " : " of ", size: 16, color: "64748B", font: "Arial" }),
+        new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, color: "64748B", font: "Arial" }),
+      ],
+    })] });
+    const file = await Packer.toBlob(new Document({ sections: [{
+      properties: { page: { margin: { top: 1100, right: 800, bottom: 1100, left: 800 } } },
+      headers: { default: header },
+      footers: { default: footer },
+      children,
+    }] }));
     if (!(file instanceof Blob) || !(await isValidZipBlob(file))) throw new Error(ar ? "ملف Word الناتج غير صالح ولم يتم إرفاقه." : "The generated Word file failed ZIP validation and was not attached.");
     const url = URL.createObjectURL(file);
     const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
