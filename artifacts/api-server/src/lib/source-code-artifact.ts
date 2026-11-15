@@ -61,7 +61,7 @@ export function isValidDxfSource(code: string): boolean {
     if (activeSection === "ENTITIES") {
       if (!allowedEntities.has(marker)) return false;
       entityCount++;
-    } else if (!allowedNonEntityRecords.has(marker)) {
+    } else if (!allowedNonEntityRecords.has(marker) && !(activeSection === "BLOCKS" && allowedEntities.has(marker))) {
       return false;
     }
   }
@@ -71,7 +71,7 @@ export function isValidDxfSource(code: string): boolean {
   for (const [group, value] of pairs) {
     if ([10, 20, 11, 21, 30, 31, 40, 41, 42, 50, 51, 70, 90].includes(group) && value !== "" && !Number.isFinite(Number(value))) return false;
   }
-  return entityCount >= 0;
+  return true;
 }
 
 export function isSafeSvgSource(code: string): boolean {
