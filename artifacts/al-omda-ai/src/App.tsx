@@ -413,6 +413,7 @@ function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<'checking'|'unconfigured'|'configured'|'offline'>('checking');
   const [authLoading, setAuthLoading] = useState(true);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [authUser, setAuthUser] = useState<ApiAuthUser | null>(null);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -429,6 +430,7 @@ function App() {
   const [localAgentToken, setLocalAgentToken] = useState("");
   const [localAgentGoal, setLocalAgentGoal] = useState("");
   const [localAgentStatus, setLocalAgentStatus] = useState<"idle" | "checking" | "ready" | "running" | "approval" | "error">("idle");
+  const localAgentConfigRevision = useRef(0);
   const [localAgentMessage, setLocalAgentMessage] = useState("");
   const [agentGuideNotice, setAgentGuideNotice] = useState("");
   const [localAgentSessionId, setLocalAgentSessionId] = useState(() => { try { return localStorage.getItem("al-omda-agent-session") || ""; } catch { return ""; } });
@@ -468,6 +470,23 @@ function App() {
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
+  const showWorkspaceHeader = path !== '/ai' && path !== '/ai/usage';
+  const workspaceMetrics = tasks.reduce((metrics, task) => {
+    if (!task.demo) {
+      metrics.total += 1;
+      if (task.status === 'review' || task.status === 'paused') metrics.needsReview += 1;
+      if (task.status === 'approved') metrics.approved += 1;
+    }
+    return metrics;
+  }, { total:0, needsReview:0, approved:0 });
+  const runtimeStatusLabel = {
+    idle: { ar:'لم يتم فحص Runtime', en:'Runtime not checked' },
+    checking: { ar:'جارٍ الفحص', en:'Checking runtime' },
+    ready: { ar:'Runtime متصل', en:'Runtime connected' },
+    running: { ar:'الوكيل يعمل', en:'Agent running' },
+    approval: { ar:'بانتظار موافقتك', en:'Approval required' },
+    error: { ar:'تعذر الاتصال', en:'Runtime error' },
+  }[localAgentStatus][language];
 
   const copyAgentSetup = async (value:string) => {
     try {
@@ -525,6 +544,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(localSnapshot)); } catch { /* local preview remains usable without storage */ }
   }, [saved, authLoading, authUser]);
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
+    setWorkspaceLoaded(true);
+    setWorkspaceError('');
     const remoteName = workspace.profile.displayName.trim() || email;
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
     const remoteTasks = workspace.tasks as Task[];
@@ -542,6 +563,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   useEffect(() => {
     let cancelled = false;
     const initializeAccount = async () => {
+      let hasAccountSession = false;
       try {
         const status = await getAuthStatus(apiRequestOptions);
         if (cancelled) return;
@@ -552,6 +574,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         setAuthStatus('configured');
         const session = await getAuthSession(apiRequestOptions);
         if (cancelled || !session.user) return;
+        hasAccountSession = true;
         setAuthUser(session.user);
         setSaved((prev) => ({ ...prev, tasks:[], name:session.user!.email, org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
         setProfileName(session.user.email);
@@ -568,7 +591,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
           setAuthError(readApiError(error, t('apiUnavailable')));
         }
       } finally {
-        if (!cancelled) setAuthLoading(false);
+        if (!cancelled) {
+          if (!hasAccountSession) setWorkspaceLoaded(true);
+          setAuthLoading(false);
+        }
       }
     };
     void initializeAccount();
@@ -710,6 +736,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       // Clearing the local view is still required if the remote revoke is unavailable.
     } finally {
       setAuthUser(null);
+      setWorkspaceLoaded(true);
       setAvatarPath(null);
       setWorkspaceError('');
       const local = readInitial();
@@ -971,19 +998,24 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return await readAgentEventStream(response, onEvent);
   };
   const checkLocalAgent = async () => {
+    const configRevision = localAgentConfigRevision.current;
+    const checkedUrl = localAgentUrl.trim();
     setLocalAgentBusy(true); setLocalAgentStatus("checking"); setLocalAgentMessage("");
     try {
-      const healthUrl = new URL(localAgentUrl.trim());
+      const healthUrl = new URL(checkedUrl);
       if (healthUrl.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(healthUrl.hostname)) throw new Error(isAr ? "استخدم عنوان الجهاز المحلي فقط." : "Use a localhost runtime URL only.");
       const healthResponse = await fetch(healthUrl.origin + "/health");
       if (!healthResponse.ok) throw new Error("Local runtime is not responding.");
       const health = await healthResponse.json();
       const tools = await callLocalAgentRuntime("/v1/tools");
+      if (localAgentConfigRevision.current !== configRevision) return;
       setLocalAgentStatus("ready");
       setLocalAgentMessage((isAr ? "متصل · " : "Connected · ") + String(tools.tools?.length || 0) + (isAr ? " أداة متاحة" : " tools available") + " · " + String(health.execution || "disabled"));
     } catch (error) {
-      setLocalAgentStatus("error");
-      setLocalAgentMessage(error instanceof Error ? error.message : (isAr ? "تعذر الاتصال بالوكيل المحلي." : "Could not connect to local runtime."));
+      if (localAgentConfigRevision.current === configRevision) {
+        setLocalAgentStatus("error");
+        setLocalAgentMessage(error instanceof Error ? error.message : (isAr ? "تعذر الاتصال بالوكيل المحلي." : "Could not connect to local runtime."));
+      }
     } finally { setLocalAgentBusy(false); }
   };
   const runLocalAgent = async () => {
@@ -1253,8 +1285,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'online-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:14}}>
-        <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} onChange={event=>setLocalAgentUrl(event.target.value)} placeholder="http://127.0.0.1:4318"/></label>
-        <label className="field-group"><span className="form-label">{isAr?'مفتاح الاتصال المحلي':'Local runtime token'}</span><input className="field" type="password" autoComplete="off" value={localAgentToken} onChange={event=>setLocalAgentToken(event.target.value)} placeholder={isAr?'أدخل المفتاح من إعدادات التشغيل':'Paste OMDA_AGENT_TOKEN'}/></label>
+        <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} disabled={localAgentBusy} onChange={event=>{localAgentConfigRevision.current+=1;setLocalAgentUrl(event.target.value);setLocalAgentStatus("idle");setLocalAgentMessage("");}} placeholder="http://127.0.0.1:4318"/></label>
+        <label className="field-group"><span className="form-label">{isAr?'مفتاح الاتصال المحلي':'Local runtime token'}</span><input className="field" type="password" autoComplete="off" value={localAgentToken} disabled={localAgentBusy} onChange={event=>{localAgentConfigRevision.current+=1;setLocalAgentToken(event.target.value);setLocalAgentStatus("idle");setLocalAgentMessage("");}} placeholder={isAr?'أدخل المفتاح من إعدادات التشغيل':'Paste OMDA_AGENT_TOKEN'}/></label>
       </div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
         <button type="button" className="button button-quiet button-small" onClick={checkLocalAgent} disabled={localAgentBusy || !localAgentToken.trim()}>{isAr?'اختبار الاتصال':'Test connection'}</button>
@@ -1806,18 +1838,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </aside>
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
-        {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-workspace-metrics" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'}>
-          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo).length}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
-          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo&&(task.status==='review'||task.status==='paused')).length}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
-          <span className="topbar-metric"><strong>{tasks.filter(task=>!task.demo&&task.status==='approved').length}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
+        {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'}>
+          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.total : '—'}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.needsReview : '—'}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.approved : '—'}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
           <span className={`topbar-runtime-state ${localAgentStatus}`} title={isAr?'حالة اتصال الوكيل المحلي':'Local runtime connection state'}>
-            <i aria-hidden="true"/>{localAgentStatus==='ready'?(isAr?'Runtime متصل':'Runtime connected'):localAgentStatus==='checking'?(isAr?'جارٍ الفحص':'Checking runtime'):localAgentStatus==='running'?(isAr?'الوكيل يعمل':'Agent running'):localAgentStatus==='approval'?(isAr?'بانتظار موافقتك':'Approval required'):localAgentStatus==='error'?(isAr?'تعذر الاتصال':'Runtime error'):(isAr?'لم يتم فحص Runtime':'Runtime not checked')}
+            <i aria-hidden="true"/>{runtimeStatusLabel}
           </span>
         </div>}
         <div className="top-actions">
-          {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-quick-actions">
-            <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={isAr?'الشات':'Chat'}><Bot size={14}/><span>{isAr?'الشات':'Chat'}</span></Link>
-            <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={isAr?'طلب جديد':'New task'}><Plus size={14}/><span>{isAr?'طلب جديد':'New task'}</span></Link>
+          {showWorkspaceHeader && <div className="topbar-quick-actions">
+            <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
+            <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
           </div>}
           <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
