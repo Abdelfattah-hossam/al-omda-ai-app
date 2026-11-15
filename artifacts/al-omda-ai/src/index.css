@@ -7049,3 +7049,111 @@ body:has(.ai-chat-page){
   outline-offset:3px;
   box-shadow:0 0 0 4px rgba(218,177,105,.13)!important;
 }
+
+
+/* Cross-page card system: one calm charcoal/glass surface with brass detailing.
+   Scoped away from chat so its layout, transcript and scrolling remain unchanged. */
+.app-shell:not([data-chat-active="true"]) {
+  --omda-card-line:rgba(224,181,101,.17);
+  --omda-card-line-hover:rgba(224,181,101,.38);
+  --omda-card-surface:linear-gradient(150deg,rgba(37,33,29,.78),rgba(20,19,19,.94) 72%);
+  --omda-card-shadow:0 10px 28px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,244,220,.025);
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .panel,.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,
+  .app-launcher-tile,.profile-feature-link,.history-filter-chip,.agent-card,
+  .history-item,.stat-card,.profile-welcome-stats>div,.workbench-flow-step,
+  .agent-guide-panel,.profile-setting-card,.profile-features-card,.dashboard-chart-card,
+  .dashboard-history-panel
+) {
+  border-color:var(--omda-card-line)!important;
+  border-radius:17px!important;
+  box-shadow:var(--omda-card-shadow);
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .panel,.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,
+  .app-launcher-tile,.profile-feature-link,.history-filter-chip,.agent-card,
+  .history-item,.stat-card,.profile-welcome-stats>div,.workbench-flow-step,
+  .agent-guide-panel,.profile-setting-card,.profile-features-card,.dashboard-chart-card,
+  .dashboard-history-panel
+) {
+  background:var(--omda-card-surface);
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .panel,.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,
+  .app-launcher-tile,.profile-feature-link,.history-filter-chip,.agent-card,
+  .history-item,.stat-card,.workbench-flow-step
+) {
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+.app-shell:not([data-chat-active="true"]) :is(
+  .app-launcher-tile,.profile-feature-link,.history-filter-chip,.stat-card-link,
+  .agent-card:has(a),.history-item:has(>a)
+):hover {
+  border-color:var(--omda-card-line-hover)!important;
+  box-shadow:0 13px 32px rgba(0,0,0,.22),0 0 0 1px rgba(224,181,101,.055),inset 0 1px 0 rgba(255,244,220,.04)!important;
+  transform:translateY(-1px);
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse {
+  background:
+    radial-gradient(ellipse at 8% 0%,rgba(224,181,101,.105),transparent 52%),
+    var(--omda-card-surface)!important;
+  padding:19px!important;
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics {gap:9px!important}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics>div {
+  min-height:70px;
+  align-content:center;
+  padding:10px 13px!important;
+  border:1px solid rgba(224,181,101,.14)!important;
+  border-radius:13px;
+  background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012));
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics>div:first-child {
+  border-color:rgba(224,181,101,.28)!important;
+  background:linear-gradient(145deg,rgba(224,181,101,.105),rgba(255,255,255,.012));
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics strong {
+  color:#f3dfb7!important;
+  font-size:clamp(21px,2.2vw,27px)!important;
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics span {
+  color:#b8ad9b!important;
+  font-size:10px!important;
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-kpi {
+  background:var(--omda-card-surface)!important;
+}
+.app-shell:not([data-chat-active="true"]) .history-filter-chip {
+  min-height:43px;
+  padding:8px 13px;
+  background:rgba(255,255,255,.025)!important;
+}
+.app-shell:not([data-chat-active="true"]) .history-filter-chip.active {
+  border-color:rgba(224,181,101,.48)!important;
+  background:linear-gradient(145deg,rgba(224,181,101,.15),rgba(224,181,101,.045))!important;
+  box-shadow:inset 0 0 0 1px rgba(224,181,101,.07),0 6px 18px rgba(0,0,0,.14)!important;
+}
+.app-shell:not([data-chat-active="true"]) .history-filter-chip strong {
+  min-width:25px;
+  height:25px;
+  display:inline-grid;
+  place-items:center;
+  border:1px solid rgba(224,181,101,.17);
+  border-radius:8px;
+  color:#efd8aa;
+  background:rgba(224,181,101,.075);
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) :is(.panel,.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,.app-launcher-tile,.profile-feature-link,.history-item,.stat-card,.agent-guide-panel,.profile-setting-card,.profile-features-card,.dashboard-chart-card,.dashboard-history-panel) {
+    border-radius:15px!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .dashboard-pulse {padding:15px!important}
+  .app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics {gap:7px!important}
+  .app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics>div {min-height:65px;padding:9px 8px!important}
+}
+@media(prefers-reduced-motion:reduce) {
+  .app-shell:not([data-chat-active="true"]) :is(.app-launcher-tile,.profile-feature-link,.history-filter-chip,.stat-card,.agent-card,.history-item,.workbench-flow-step) {transition:none!important}
+  .app-shell:not([data-chat-active="true"]) :is(.app-launcher-tile,.profile-feature-link,.history-filter-chip,.stat-card-link):hover {transform:none}
+}
