@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
+import { parseExcelWorkbook } from "../lib/excel-workbook.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -123,22 +124,6 @@ function parsePowerPointPresentation(text: string): { title: string; slides: Arr
     if (slides.some((slide: any) => !slide)) return null;
     if (JSON.stringify({ title: value.title, slides }).length > 65000) return null;
     return { title: value.title.trim(), slides };
-  } catch { return null; }
-}
-function parseExcelWorkbook(text: string): { title: string; columns: string[]; rows: string[][] } | null {
-  try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
-    const start = source.indexOf("{");
-    const end = source.lastIndexOf("}");
-    if (start < 0 || end <= start) return null;
-    const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.trim().length > 180 || !Array.isArray(value.columns) || !Array.isArray(value.rows)) return null;
-    if (value.columns.length < 1 || value.columns.length > 30 || value.rows.length < 1 || value.rows.length > 500) return null;
-    if (value.columns.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 180)) return null;
-    const columns = value.columns.map((item: string) => item.trim());
-    if (value.rows.some((row: unknown) => !Array.isArray(row) || row.length !== columns.length || row.some((cell: unknown) => (typeof cell !== "string" && typeof cell !== "number" && typeof cell !== "boolean") || String(cell).length > 2000))) return null;
-    const rows = value.rows.map((row: unknown[]) => row.map((cell: unknown) => String(cell)));
-    return { title: value.title.trim(), columns, rows };
   } catch { return null; }
 }
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
