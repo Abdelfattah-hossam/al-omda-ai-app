@@ -1719,7 +1719,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
     );
     return <div className="page-enter">
       {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length}><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link></div>)}
-      <div className="field-group" style={{maxWidth:460}}><div style={{position:'relative'}}><Search size={15} style={{position:'absolute',insetInlineStart:13,top:13,color:'#818891'}}/><input className="field" style={{paddingInlineStart:38}} placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
+      <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المهام':'Task filters'}>
+        <div className="history-search-wrap">
+          <div className="field-group history-search-field"><label className="form-label" htmlFor="history-search">{isAr?'ابحث في مشاريعك':'Find a project'}</label><div className="history-search-control"><Search size={16} aria-hidden="true"/><input id="history-search" className="field" placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
+          <div className="history-results-count" role="status"><strong>{filtered.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
+        </div>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
+          {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><Link key={filter.key} href={filter.href} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')}><span>{filter.label}</span><strong>{filter.count}</strong></Link>)}
+        </nav>
+      </section>
       <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
         <Link href={`/history/${task.id}`} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
