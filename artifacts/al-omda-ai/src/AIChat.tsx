@@ -36,18 +36,34 @@ function createSourceBlob(sourceData: SourceData): Blob {
 
 function getWordCopyText(data: WordDocumentData): string {
   const parts = [data.title, ...data.paragraphs];
-  if (data.columns.length) parts.push([data.columns.join("\t"), ...data.rows.map((row) => row.join("\t"))].join("\n"));
-  return parts.filter(Boolean).join("\n\n");
+  if (data.columns.length) {
+    parts.push([data.columns.join("\\t"), ...data.rows.map((row) => row.join("\\t"))].join("\\n"));
+  }
+  return parts.filter(Boolean).join("\\n\\n");
 }
 function getSpreadsheetCopyText(data: SpreadsheetData): string {
   const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
-  return sheets.map((sheet) => [sheet.name, sheet.columns.join("\t"), ...sheet.rows.map((row, index) => sheet.columns.map((_, columnIndex) => {
-    const address = excelColumnName(columnIndex) + (index + 2);
-    return sheet.formulas?.[address] ? "=" + sheet.formulas[address] : String(row[columnIndex] ?? "");
-  }).join("\t"))].join("\n")).join("\n\n");
+  const output: string[] = [];
+  for (const sheet of sheets) {
+    const lines = [sheet.name, sheet.columns.join("\\t")];
+    sheet.rows.forEach((row, rowIndex) => {
+      const values = sheet.columns.map((_, columnIndex) => {
+        const address = excelColumnName(columnIndex) + (rowIndex + 2);
+        return sheet.formulas?.[address] ? "=" + sheet.formulas[address] : String(row[columnIndex] ?? "");
+      });
+      lines.push(values.join("\\t"));
+    });
+    output.push(lines.join("\\n"));
+  }
+  return output.join("\\n\\n");
 }
 function getPresentationCopyText(data: PresentationData): string {
-  return [data.title, ...data.slides.map((slide, index) => ["[Slide " + (index + 1) + "] " + slide.title, ...slide.bullets.map((bullet) => "• " + bullet)].join("\n"))].join("\n\n");
+  const slides = data.slides.map((slide, index) => {
+    const lines = ["[Slide " + (index + 1) + "] " + slide.title];
+    for (const bullet of slide.bullets) lines.push("• " + bullet);
+    return lines.join("\\n");
+  });
+  return [data.title, ...slides].join("\\n\\n");
 }
 
 function excelColumnName(index: number): string {
