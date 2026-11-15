@@ -483,7 +483,7 @@ function App() {
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
   const focusTarget = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : '').get('focus');
   const focusedHref = (href:string, target:string) => href + (href.includes('?') ? '&' : '?') + 'focus=' + encodeURIComponent(target);
-  const navigationHref = (href:string) => focusedHref(href, href === '/ai' ? 'ai-chat-input' : href === '/workbench' ? 'request-input' : href === '/agents' ? 'agent-marketplace-grid' : href === '/history' ? 'history-list' : href === '/ai/usage' ? 'ai-usage-grid' : href === '/profile' ? 'profile-account-card' : 'dashboard-overview');
+  const navigationHref = (href:string) => focusedHref(href, href === '/ai' ? (authUser ? 'ai-chat-input' : 'ai-chat-login-cta') : href === '/workbench' ? 'request-input' : href === '/agents' ? 'agent-marketplace-grid' : href === '/history' ? 'history-list' : href === '/ai/usage' ? 'ai-usage-page' : href === '/profile' ? 'profile-account-card' : 'dashboard-overview');
   const showWorkspaceHeader = path !== '/ai' && path !== '/ai/usage';
   const workspaceMetrics = useMemo(() => {
     if (!showWorkspaceHeader) return { total:0, needsReview:0, approved:0 };
