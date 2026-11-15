@@ -69,7 +69,7 @@ function dxfToSvg(source: string): string {
   let minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
   if(maxX-minX<1){minX-=5;maxX+=5;} if(maxY-minY<1){minY-=5;maxY+=5;}
   const pad=Math.max(maxX-minX,maxY-minY)*0.06||5;
-  const vb=[minX-pad,-maxY-pad,maxX-minX+2*pad,maxY-minY+2*pad].join(" ");
+  const vb=[minX-pad,minY-pad,maxX-minX+2*pad,maxY-minY+2*pad].join(" ");
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet"><g transform={`translate(0 ${minY+maxY}) scale(1 -1)`} fill="none" stroke="#1769aa" stroke-width="'+Math.max(maxX-minX,maxY-minY)*0.004+'" stroke-linecap="round" stroke-linejoin="round">'+shapes.join("")+'</g></svg>';
 }
 
