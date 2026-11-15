@@ -1,6 +1,7 @@
 export type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 
 export function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
+  if (typeof text !== "string" || text.length > 70000) return null;
   try {
     const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     let value: any = null;
