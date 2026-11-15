@@ -515,7 +515,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const sendMessage = async (event?: FormEvent, draftOverride?: string) => {
     event?.preventDefault();
     const imageForRequest = pendingImage;
-    const text = (draftOverride ?? input).trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
+    // Keep the exact raw composer value so a successful send clears it even
+    // when the user entered leading/trailing whitespace. Never clear newer typing.
+    const submittedDraft = draftOverride ?? input;
+    const text = submittedDraft.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
@@ -565,7 +568,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
-        setInput((current) => current === text ? "" : current);
+        setInput((current) => current === submittedDraft ? "" : current);
         return;
       }
       const response = await fetch("/api/ai/chat", {
@@ -648,7 +651,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       setMessages(completed);
       if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
       await saveHistory(completed, conversationId);
-      setInput((current) => current === text ? "" : current);
+      setInput((current) => current === submittedDraft ? "" : current);
       if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
