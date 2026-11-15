@@ -18,10 +18,10 @@
       "purpose": "any"
     },
     {
-      "src": "/favicon.svg",
+      "src": "/brand/al-omda-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ]
 }
