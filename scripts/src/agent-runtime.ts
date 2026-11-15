@@ -13,6 +13,7 @@ import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js"
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
+import { requestPinnedHttp, type PinnedAddress } from "./pinned-http.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -123,17 +124,23 @@ function authenticated(req: IncomingMessage): boolean {
   const b = Buffer.from(TOKEN);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-async function assertAllowedTarget(rawUrl: string): Promise<URL> {
+async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address: PinnedAddress }> {
   const url = new URL(rawUrl);
   if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
-  const hostname = url.hostname.toLowerCase();
+  const hostname = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
   if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
-  if (isIP(hostname) && isBlockedNetworkAddress(hostname) && !ALLOW_LOCAL_LAB_TARGETS) throw new Error("Private and loopback targets are blocked.");
-  if (!isIP(hostname)) {
-    const addresses = await lookup(hostname, { all: true, verbatim: true });
-    if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) throw new Error("Target resolves to a private or local network address.");
+  const literalFamily = isIP(hostname);
+  const addresses = literalFamily
+    ? [{ address: hostname, family: literalFamily }]
+    : await lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) {
+    throw new Error("Target resolves to a private or local network address.");
   }
-  return url;
+  const pinned = addresses[0];
+  return { url, address: { address: pinned.address, family: pinned.family as 4 | 6 } };
+}
+async function assertAllowedTarget(rawUrl: string): Promise<URL> {
+  return (await resolveAllowedTarget(rawUrl)).url;
 }
 async function readLimitedResponse(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
   if (!response.body) return { text: "", truncated: false };
@@ -164,7 +171,8 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const startedAt = Date.now();
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
-  let url = await assertAllowedTarget(String(body.url || ""));
+  let target = await resolveAllowedTarget(String(body.url || ""));
+  let url = target.url;
   const inputHeaders = body.headers && typeof body.headers === "object" ? body.headers as Record<string, unknown> : {};
   const headers = new Headers();
   for (const [key, value] of Object.entries(inputHeaders)) {
@@ -172,16 +180,19 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
     headers.set(key, value);
   }
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
-  let response: Response | null = null;
+  // Pin the exact public address that passed the allowlist and private-network
+  // checks. Native fetch would resolve the hostname again and permit DNS rebinding.
+  let response: Awaited<ReturnType<typeof requestPinnedHttp>> | null = null;
   for (let hop = 0; hop < 4; hop++) {
-    response = await fetch(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) });
+    response = await requestPinnedHttp(url, target.address, method, headers, 12000);
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get("location");
     if (!location) break;
     await response.body?.cancel();
-    const nextUrl = await assertAllowedTarget(new URL(location, url).toString());
-    assertCredentialRedirectAllowed(url, nextUrl, allowCredentialHeaders);
-    url = nextUrl;
+    const nextTarget = await resolveAllowedTarget(new URL(location, url).toString());
+    assertCredentialRedirectAllowed(url, nextTarget.url, allowCredentialHeaders);
+    target = nextTarget;
+    url = nextTarget.url;
   }
   if (!response) throw new Error("No HTTP response was received.");
   const responseHeaders: Record<string, string> = {};
