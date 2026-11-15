@@ -481,6 +481,9 @@ function App() {
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
+  const focusTarget = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : '').get('focus');
+  const focusedHref = (href:string, target:string) => href + (href.includes('?') ? '&' : '?') + 'focus=' + encodeURIComponent(target);
+  const navigationHref = (href:string) => focusedHref(href, href === '/ai' ? 'ai-chat-input' : href === '/workbench' ? 'request-input' : href === '/agents' ? 'agent-marketplace-grid' : href === '/history' ? 'history-list' : href === '/ai/usage' ? 'ai-usage-grid' : href === '/profile' ? 'profile-account-card' : 'dashboard-overview');
   const showWorkspaceHeader = path !== '/ai' && path !== '/ai/usage';
   const workspaceMetrics = useMemo(() => {
     if (!showWorkspaceHeader) return { total:0, needsReview:0, approved:0 };
@@ -545,6 +548,22 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const contentWrap = document.querySelector<HTMLElement>('.main-area > .content-wrap');
     if (contentWrap) contentWrap.scrollTop = 0;
   }, [path]);
+
+  useEffect(() => {
+    if (!focusTarget) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(focusTarget);
+      if (!target) return;
+      let parent = target.parentElement;
+      while (parent) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+        parent = parent.parentElement;
+      }
+      target.scrollIntoView({ behavior: saved.reduceMotion ? 'auto' : 'smooth', block: focusTarget === 'ai-chat-input' || focusTarget === 'request-input' ? 'center' : 'start' });
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [location, focusTarget, saved.reduceMotion]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -847,7 +866,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const navLink = (item:typeof navItems[number], mobile = false) => {
     const Icon = item.icon;
     const active = item.path === '/' ? path === '/' : path.startsWith(item.path);
-    return <Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-testid={`link-${item.key}`}>
+    return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} className={`${mobile ? 'mobile-nav-link' : 'nav-link'}${mobile && item.path === '/ai' ? ' mobile-chat-link' : ''}${active ? ' active' : ''}`} aria-current={active ? 'page' : undefined} data-testid={`link-${item.key}`}>
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
@@ -863,7 +882,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const renderPlan = (task:Task) => {
     const activeIndex = task.steps.findIndex((step) => step.state !== 'approved');
-    return <section className="panel plan-card">
+    return <section className="panel plan-card" id="task-plan">
       <div className="plan-heading"><div><div className="eyebrow">{t('planIsDemo')}</div><h2 className="section-title" style={{marginTop:9}}>{t('yourPlan')}</h2></div><span className="section-meta">{count(task)}/{task.steps.length}</span></div>
       <div className="notice-bar" style={{margin:'15px 0 5px'}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{planGenerating ? (isAr ? 'العمدة بيحلل طلبك وينشئ الخطة...' : 'AL OMDA is analyzing your request...') : (isAr ? 'الخطة تُنشأ بالذكاء الاصطناعي وتُحفظ للمراجعة؛ لا يبدأ التنفيذ قبل موافقتك.' : 'AI-generated plan saved for review; execution will not start before your approval.')}</span></div>
       {task.status === 'paused' && <div className="notice-bar" style={{marginTop:12}}><Pause size={14}/><span>{t('paused')}</span></div>}
@@ -960,12 +979,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return <div className="page-enter dashboard-overview">
       <div className="dashboard-toolbar">
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
-        <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
+        <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
       <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
         <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
         <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
-        <Link href={active>0?'/history?status=review':'/workbench'} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
+        <Link href={active>0?focusedHref('/history?status=review','history-list'):focusedHref('/workbench','request-input')} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
       </section>
       <section className="app-launcher-section" aria-labelledby="app-launcher-title">
         <div className="app-launcher-heading">
@@ -982,7 +1001,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <span>{group.id==='core'?t('launcherCoreDesc'):t('launcherSecondaryDesc')}</span>
           </div>
           <div className={'app-launcher-grid '+(group.id==='secondary'?'app-launcher-grid-secondary':'')}>
-            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={item.path} className="app-launcher-tile">
+            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} className="app-launcher-tile">
               <span className="app-launcher-icon"><Icon size={group.id==='core'?21:19}/></span>
               <span className="app-launcher-copy"><strong>{t(item.key)}</strong><small>{t(launcherSubtitleKeys[item.path] || 'launcherSubtitleProfile')}</small></span>
               <ArrowUpLeft size={14} className="app-launcher-arrow"/>
@@ -993,7 +1012,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
         <div className="stats-grid dashboard-kpis">
-          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:isAr?'قوالب تخصص متاحة':'Specialty templates',value:specialties.length,foot:isAr?'قوالب التخصصات المتاحة':'Available specialty templates',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
+          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:focusedHref('/history?status=review','history-list'),tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:focusedHref('/history?status=approved','history-list'),tone:'teal'},{label:isAr?'قوالب تخصص متاحة':'Specialty templates',value:specialties.length,foot:isAr?'قوالب التخصصات المتاحة':'Available specialty templates',icon:Bot,href:focusedHref('/agents','agent-marketplace-grid'),tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:focusedHref('/history','history-list'),tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
         </div>
       </section>
       <div className="dashboard-analytics-grid">
@@ -1002,8 +1021,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'المهام حسب التخصص':'Tasks by specialty'}</h2><p className="dashboard-card-subtitle">{isAr?'توزيع العمل على الوكلاء':'Workload across specialists'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="specialty-chart-list">{specialtyRows.map((row,index)=><div className="specialty-chart-row" key={row.id}><div className="specialty-chart-label"><span>{row.label}</span><strong>{row.value}</strong></div><div className="specialty-chart-track"><span style={{width:`${row.value/maxSpecialty*100}%`}} data-tone={index%4}/></div></div>)}</div></section>
       </div>
       <section className="panel dashboard-history-panel">
-        <div className="dashboard-section-heading"><div><h2>{isAr?'سجل المهام':'Task history'}</h2><p>{isAr?'آخر المهام التي عملت عليها مع العمدة':'Your latest work with AL OMDA'}</p></div><Link href="/history" className="button button-quiet">{isAr?'عرض الكل':'View all'} <ArrowLeft size={14}/></Link></div>
-        <div className="dashboard-table-wrap"><table className="dashboard-task-table"><thead><tr><th>{isAr?'المهمة':'Task'}</th><th>{isAr?'التخصص':'Specialty'}</th><th>{isAr?'تاريخ الإنشاء':'Created'}</th><th>{isAr?'التقدم':'Progress'}</th><th>{isAr?'الحالة':'Status'}</th></tr></thead><tbody>{tasks.slice(0,6).map(task=><tr key={task.id}><td><Link href={`/history/${task.id}`} className="dashboard-task-name"><span className="task-icon">{taskIcon(task.specialty,15)}</span><strong>{task.title}</strong></Link></td><td>{label(task.specialty)}</td><td>{dateLabel(task.createdAt,language)}</td><td><span className="dashboard-progress-cell"><span><i style={{width:`${task.steps.length?count(task)/task.steps.length*100:0}%`}}/></span>{count(task)}/{task.steps.length}</span></td><td>{statusBadge(task.status)}</td></tr>)}</tbody></table>{tasks.length===0&&<div className="dashboard-empty">{isAr?'لا توجد مهام بعد. ابدأ محادثة جديدة لإنشاء أول مهمة.':'No tasks yet. Start a chat to create your first task.'}</div>}</div>
+        <div className="dashboard-section-heading"><div><h2>{isAr?'سجل المهام':'Task history'}</h2><p>{isAr?'آخر المهام التي عملت عليها مع العمدة':'Your latest work with AL OMDA'}</p></div><Link href={focusedHref("/history","history-list")} className="button button-quiet">{isAr?'عرض الكل':'View all'} <ArrowLeft size={14}/></Link></div>
+        <div className="dashboard-table-wrap"><table className="dashboard-task-table"><thead><tr><th>{isAr?'المهمة':'Task'}</th><th>{isAr?'التخصص':'Specialty'}</th><th>{isAr?'تاريخ الإنشاء':'Created'}</th><th>{isAr?'التقدم':'Progress'}</th><th>{isAr?'الحالة':'Status'}</th></tr></thead><tbody>{tasks.slice(0,6).map(task=><tr key={task.id}><td><Link href={focusedHref(`/history/${task.id}`,"task-plan")} className="dashboard-task-name"><span className="task-icon">{taskIcon(task.specialty,15)}</span><strong>{task.title}</strong></Link></td><td>{label(task.specialty)}</td><td>{dateLabel(task.createdAt,language)}</td><td><span className="dashboard-progress-cell"><span><i style={{width:`${task.steps.length?count(task)/task.steps.length*100:0}%`}}/></span>{count(task)}/{task.steps.length}</span></td><td>{statusBadge(task.status)}</td></tr>)}</tbody></table>{tasks.length===0&&<div className="dashboard-empty">{isAr?'لا توجد مهام بعد. ابدأ محادثة جديدة لإنشاء أول مهمة.':'No tasks yet. Start a chat to create your first task.'}</div>}</div>
       </section>
       <div className="notice-bar dashboard-security-note"><ShieldCheck size={15} style={{flex:'none'}}/><span>{authUser?t('authConfigured'):t('demoNotice')}</span></div>
     </div>;
@@ -1341,7 +1360,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <details className="panel panel-pad agent-advanced-tools">
       <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
       <div className="agent-advanced-tools-content">
-    <section className="panel panel-pad" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">LOCAL EXECUTION</span><h2 className="section-title">{isAr?'الوكيل الذكي المحلي':'Local AI Agent'}</h2><p className="section-meta">{isAr?'وصّل بيئة التنفيذ على جهازك ليقرأ المشروع وينفذ المهام بموافقتك.':'Connect the runtime on your computer to inspect projects and execute approved tasks.'}</p></div>
         <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'online-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
@@ -1414,7 +1433,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
     </section>
-    <section className="panel panel-pad" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">DESKTOP WORKSPACE</span><h2 className="section-title">{isAr?'مساحة سطح المكتب والتحكم المحلي':'Desktop Workspace & local control'}</h2><p className="section-meta">{isAr?'اكتشاف أدوات التحكم في التطبيقات والنوافذ على جهازك المحلي. كل إجراء يتطلب موافقتك، كما يجب منح صلاحيات نظام التشغيل يدويًا.':'Discover local app and window control tools. Every action requires your approval, and operating-system permissions must be granted manually.'}</p></div>
         <button type="button" className="button button-quiet button-small" onClick={loadDesktopWorkspace} disabled={desktopWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{desktopWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
@@ -1428,7 +1447,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </>}
       {desktopWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{desktopWorkspaceError}</div>}
     </section>
-    <section className="panel panel-pad" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">BROWSER WORKSPACE</span><h2 className="section-title">{isAr?'مساحة المتصفح وصلاحيات المواقع':'Browser Workspace & site permissions'}</h2><p className="section-meta">{isAr?'إدارة قائمة المواقع المسموح بها واكتشاف أدوات Playwright المحلية. كل إجراء متصفح يظل خاضعًا لموافقة منفصلة.':'Manage exact allowed hostnames and inspect local Playwright tools. Every browser action still requires separate approval.'}</p></div>
         <button type="button" className="button button-quiet button-small" onClick={loadBrowserWorkspace} disabled={browserWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{browserWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
@@ -1444,7 +1463,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </>}
       {browserWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{browserWorkspaceError}</div>}
     </section>
-    <section className="panel panel-pad" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">HTTPFLOW</span><h2 className="section-title">{isAr?'مقارنة الاستجابات والصلاحيات':'HTTP response & role diff'}</h2><p className="section-meta">{isAr?'قارن نفس المسار بين الزائر والمستخدم والمدير باستخدام بيانات الاعتماد المحلية.':'Compare the same endpoint across anonymous, user, and admin roles using local credentials.'}</p></div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -1481,7 +1500,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>)}
       </div>}
     </section>
-    <section className="panel panel-pad" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
       {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
@@ -1493,7 +1512,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <section className="marketplace-intro" aria-label={isAr?'نظرة عامة على التخصصات':'Specialty directory overview'}>
       <div className="marketplace-intro-mark"><Bot size={25}/></div>
       <div className="marketplace-intro-copy"><span className="eyebrow">{isAr?'شبكة المتخصصين':'SPECIALIST NETWORK'}</span><h2>{isAr?'اختار العقل المناسب لمهمتك':'Find the right specialist for the job'}</h2><p>{isAr?'كل تخصص يوجّه طلبك بخطة مناسبة، وتقدر تراجع الخطة قبل الموافقة على أي خطوة.':'Each specialty shapes a focused plan. Review the plan before approving any step.'}</p></div>
-      <Link href="/workbench" className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
+      <Link href={focusedHref("/workbench","request-input")} className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
     </section>
     <section className="agent-marketplace-toolbar" aria-label={isAr?'تصفية التخصصات':'Specialty filters'}>
       <div className="agent-marketplace-summary">
@@ -1503,9 +1522,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <div className="agent-marketplace-filter-head"><span className="form-label">{isAr?'تصفية حسب التخصص':'Filter by specialty'}</span><span className="section-meta" role="status">{specialties.filter(({id})=>filter==='all'||filter===id).length} {isAr?'نتائج':'results'}</span></div>
       <div className="filter-row" role="group" aria-label={isAr?'التخصصات':'Specialties'}><button type="button" className={`filter-pill ${filter==='all'?'active':''}`} aria-pressed={filter==='all'} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button type="button" key={id} className={`filter-pill ${filter===id?'active':''}`} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
     </section>
-    <div className="market-grid" aria-live="polite">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
+    <div className="market-grid" id="agent-marketplace-grid" aria-live="polite">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
       <div className="agent-top"><span className="agent-symbol"><Icon size={20}/></span><span className="section-meta">0{index+1} / 06</span></div>
-      <h3>{label(id)}</h3><p>{t(specialtyDesc(id))}</p><div className="agent-card-stats"><span>{tasks.filter(task=>task.specialty===id).length} {isAr?'مهمة مسجلة':'recorded tasks'}</span><span>{tasks.filter(task=>task.specialty===id&&(task.status==='review'||task.status==='paused')).length} {isAr?'تحتاج متابعة':'need attention'}</span></div><div className="agent-footer"><span className="agent-tag">{t(specialtyLabel(id))}</span><Link href={`/workbench?specialty=${id}`} className="button button-quiet button-small" onClick={()=>setSelectedSpecialty(id)}>{t('useAgent')}<ArrowLeft size={12}/></Link></div>
+      <h3>{label(id)}</h3><p>{t(specialtyDesc(id))}</p><div className="agent-card-stats"><span>{tasks.filter(task=>task.specialty===id).length} {isAr?'مهمة مسجلة':'recorded tasks'}</span><span>{tasks.filter(task=>task.specialty===id&&(task.status==='review'||task.status==='paused')).length} {isAr?'تحتاج متابعة':'need attention'}</span></div><div className="agent-footer"><span className="agent-tag">{t(specialtyLabel(id))}</span><Link href={focusedHref(`/workbench?specialty=${id}`,"request-input")} className="button button-quiet button-small" onClick={()=>setSelectedSpecialty(id)}>{t('useAgent')}<ArrowLeft size={12}/></Link></div>
     </article>)}</div>
   </div>;
 
@@ -1539,7 +1558,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </form>
         {active ? renderPlan(active) : <section className="panel plan-empty"><div><span className="empty-mark"><MessageSquareText size={22}/></span><h3>{t('planEmptyTitle')}</h3><p>{t('planEmptyText')}</p></div></section>}
       </div>
-      {active && <div className="notice-bar" style={{marginTop:15}}><span>{t('taskPlan')}: <strong>{active.title}</strong> · {statusLabel(active.status)}</span><Link href={`/history/${active.id}`} className="section-meta">{t('detail')}</Link></div>}
+      {active && <div className="notice-bar" style={{marginTop:15}}><span>{t('taskPlan')}: <strong>{active.title}</strong> · {statusLabel(active.status)}</span><Link href={focusedHref(`/history/${active.id}`,"task-plan")} className="section-meta">{t('detail')}</Link></div>}
     </div>;
   };
 
@@ -1755,17 +1774,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="history-results-count" role="status"><strong>{filtered.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
         </div>
         <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
-          {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><button key={filter.key} type="button" onClick={()=>setLocation(filter.href)} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')} data-testid={'history-filter-'+filter.key}><span>{filter.label}</span><strong>{filter.count}</strong></button>)}
+          {[{key:'all',href:focusedHref('/history','history-list'),label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:focusedHref('/history?status=review','history-list'),label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:focusedHref('/history?status=approved','history-list'),label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><button key={filter.key} type="button" onClick={()=>setLocation(filter.href)} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')} data-testid={'history-filter-'+filter.key}><span>{filter.label}</span><strong>{filter.count}</strong></button>)}
         </nav>
       </section>
       <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'تعرض مهامك وحالتها الحالية':'Your saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
-      <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
-        <Link href={`/history/${task.id}`} className="history-item-open">
+      <div className="history-layout" id="history-list">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
+        <Link href={focusedHref(`/history/${task.id}`,"task-plan")} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
         </Link>
         <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>void handleDeleteTask(task)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
       </div>)}
-      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><Search size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href="/workbench" className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
+      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><Search size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
     </div>;
   };
 
@@ -1780,7 +1799,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const TrendIcon = marketTrend === 'up' ? TrendingUp : marketTrend === 'down' ? TrendingDown : Minus;
     const trendLabel = marketTrend === 'up' ? (isAr?'نجاحات أكثر':'More successful runs') : marketTrend === 'down' ? (isAr?'إخفاقات أكثر':'More failed runs') : (isAr?'نتائج متساوية':'Even results');
     return <div className="page-enter">
-      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
+      {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href={focusedHref("/history","history-list")} className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
       <section className="task-detail-overview" aria-label={isAr?'ملخص تقدم المهمة':'Task progress overview'}>
         <div className="task-detail-progress-copy"><span className="eyebrow">{isAr?'تقدم الخطة':'PLAN PROGRESS'}</span><strong>{count(task)} <small>/ {task.steps.length} {isAr?'خطوات معتمدة':'steps approved'}</small></strong><p>{isAr?'تابع حالة كل خطوة ومخرجات التنفيذ المسجلة.':'Track each step and its recorded execution results.'}</p></div>
         <div className="task-detail-progress-track" role="progressbar" aria-valuenow={task.steps.length?Math.round(count(task)/task.steps.length*100):0} aria-valuemin={0} aria-valuemax={100}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
@@ -1860,7 +1879,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </section>
     <div className="profile-settings-layout">
-              <section className="panel panel-pad profile-main-card profile-account-profile-card profile-account-first">
+              <section className="panel panel-pad profile-main-card profile-account-profile-card profile-account-first" id="profile-account-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && !authUser && <>
@@ -1901,11 +1920,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="panel panel-pad profile-features-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><Compass size={18}/></div>
           <div className="profile-feature-grid">
-            <Link href="/ai" className="profile-feature-link"><Bot size={19}/><span><strong>{t('featureChat')}</strong><small>{t('featureChatText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/agents" className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/workbench" className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/history" className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href="/ai/usage" className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={navigationHref("/ai")} className="profile-feature-link"><Bot size={19}/><span><strong>{t('featureChat')}</strong><small>{t('featureChatText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={focusedHref("/agents","agent-marketplace-grid")} className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={focusedHref("/workbench","request-input")} className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={focusedHref("/history","history-list")} className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={focusedHref("/ai/usage","ai-usage-grid")} className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
           </div>
         </section>
 
@@ -1972,7 +1991,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
-          <nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={'/history/'+task.id} className="nav-link recent-nav-link" aria-label={task.title}><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
+          <nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={focusedHref('/history/'+task.id,"task-plan")} className="nav-link recent-nav-link" aria-label={task.title}><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
         </section>
       </div>
       <div className="sidebar-bottom">
@@ -1996,11 +2015,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>}
         <div className="top-actions">
           {showWorkspaceHeader && <div className="topbar-quick-actions">
-            <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
-            <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
+            <Link href={navigationHref("/ai")} className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
+            <Link href={focusedHref("/workbench","request-input")} className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
           </div>}
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
-          <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
+          <Link href={focusedHref("/profile","profile-account-card")} className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
         </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
