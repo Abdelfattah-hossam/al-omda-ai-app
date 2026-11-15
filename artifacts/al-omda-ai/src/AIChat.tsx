@@ -22,6 +22,11 @@ function createRequestedSourceArtifact(request: string, reply: string): SourceDa
   return { title: "Source code", name: "al-omda-source." + extension, language, code: match[2].trim() };
 }
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
+async function isValidZipBlob(blob: Blob): Promise<boolean> {
+  if (blob.size < 4) return false;
+  const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  return signature[0] === 0x50 && signature[1] === 0x4b && (signature[2] === 0x03 || signature[2] === 0x05 || signature[2] === 0x07);
+}
 type Usage = {
   used: number;
   remaining: number;
@@ -444,6 +449,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }));
     }
     const file = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
+    if (!(file instanceof Blob) || !(await isValidZipBlob(file))) throw new Error(ar ? "ملف Word الناتج غير صالح ولم يتم إرفاقه." : "The generated Word file failed ZIP validation and was not attached.");
     const url = URL.createObjectURL(file);
     const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
@@ -466,7 +472,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
     const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const roundTrip = XLSX.read(bytes, { type: "array" });
+    if (!roundTrip.SheetNames?.includes("Sheet1") || XLSX.utils.sheet_to_json(roundTrip.Sheets.Sheet1, { header: 1 }).length !== data.rows.length + 1) throw new Error(ar ? "فشل التحقق من محتوى ملف Excel." : "Excel workbook content validation failed.");
     const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    if (!(await isValidZipBlob(file))) throw new Error(ar ? "ملف Excel الناتج غير صالح." : "The generated Excel file is invalid.");
     const url = URL.createObjectURL(file);
     const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
     return { name: safeName + ".xlsx", url };
@@ -498,7 +507,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       slide.addText("AL OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
     }
     const blob = await pptx.write({ outputType: "blob" }) as Blob;
-    if (!(blob instanceof Blob) || blob.size < 1000) throw new Error(ar ? "لم يتم إنشاء ملف PowerPoint صالح." : "PowerPoint export did not produce a valid file.");
+    if (!(blob instanceof Blob) || blob.size < 1000 || !(await isValidZipBlob(blob))) throw new Error(ar ? "لم يتم إنشاء ملف PowerPoint صالح." : "PowerPoint export did not produce a valid file.");
     const url = URL.createObjectURL(blob);
     const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
     return { name: safeName + ".pptx", url };
