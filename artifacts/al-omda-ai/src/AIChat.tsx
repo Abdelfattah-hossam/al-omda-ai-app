@@ -64,6 +64,20 @@ function dxfToSvg(source: string): string {
       shapes.push('<circle cx="'+center[0]+'" cy="'+center[1]+'" r="'+radius+'"/>');
     }else if(e.type==="POINT"){
       const point=xy(e,10,20);include(...point);shapes.push('<circle cx="'+point[0]+'" cy="'+point[1]+'" r="1.5"/>');
+    }else if(e.type==="ARC"){
+      const center=xy(e,10,20),radius=Math.max(0,get(e.data,40)),start=get(e.data,50),end=get(e.data,51);
+      if(radius>0){
+        const toPoint=(angle:number):[number,number]=>[center[0]+radius*Math.cos(angle*Math.PI/180),center[1]+radius*Math.sin(angle*Math.PI/180)];
+        let sweep=(end-start+360)%360;if(sweep===0)sweep=360;
+        const a=toPoint(start),b=toPoint(end),largeArc=sweep>180?1:0;
+        include(center[0]-radius,center[1]-radius);include(center[0]+radius,center[1]+radius);
+        shapes.push('<path d="M '+a[0]+' '+a[1]+' A '+radius+' '+radius+' 0 '+largeArc+' 0 '+b[0]+' '+b[1]+'"/>');
+      }
+    }else if(e.type==="TEXT"||e.type==="MTEXT"){
+      const point=xy(e,10,20),height=Math.max(0.5,get(e.data,40,2.5)),rotation=get(e.data,50);
+      const raw=e.data.filter(pair=>e.type==="TEXT"?pair[0]===1||pair[0]===3:pair[0]===1||pair[0]===3).map(pair=>pair[1]).join("");
+      const label=raw.replace(/\\\\P/g," ").replace(/\\\\~/g," ").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+      if(label){include(point[0],point[1]);shapes.push('<text x="'+point[0]+'" y="'+point[1]+'" transform="rotate('+(-rotation)+' '+point[0]+' '+point[1]+')" font-family="sans-serif" font-size="'+height+'" fill="#20252b" stroke="none">'+label+'</text>');}
     }else if(e.type==="LWPOLYLINE"){
       const vertices:Array<[number,number]>=[];let x:number|null=null;
       for(const [group,value] of e.data){
