@@ -241,6 +241,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
     "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
+    "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
   ];
   const contents = messages.map((message) => ({
@@ -381,7 +382,11 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
-        failures.push(model + ": " + response.status + (providerErrorMessage(payload) ? " " + providerErrorMessage(payload) : ""));
+        const detail = providerErrorMessage(payload);
+        failures.push(model + ": " + response.status + (detail ? " " + detail : ""));
+        // OpenRouter's free-models-per-day limit is account-wide, not model-specific.
+        // Stop its model rotation immediately and let the other configured provider try.
+        if (/free-models-per-day/i.test(detail) || response.status === 401 || response.status === 403) break;
         continue;
       }
       const raw = payload?.choices?.[0]?.message?.content;
