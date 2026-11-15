@@ -5012,3 +5012,49 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .topbar-quick-link span { display:none; }
   .app-shell:not([data-chat-active="true"]) .topbar-quick-link { width:36px; min-width:36px; padding:0; justify-content:center; }
 }
+
+
+/* Restore the requested desktop sidebar layout for non-chat workspace pages.
+   Tablet and phone navigation remain docked; the chat workspace is untouched. */
+@media(min-width:801px) {
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .sidebar {
+    display:flex!important;
+    position:fixed!important;
+    inset-block:0!important;
+    inset-inline-start:0!important;
+    inset-inline-end:auto!important;
+    width:260px!important;
+    min-width:260px!important;
+    max-width:260px!important;
+    z-index:30!important;
+  }
+  [dir="rtl"] .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .sidebar {
+    inset-inline-start:auto!important;
+    inset-inline-end:0!important;
+  }
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .main-area {
+    width:auto!important;
+    margin-inline-start:260px!important;
+    margin-inline-end:0!important;
+    padding-inline:24px!important;
+    padding-bottom:24px!important;
+  }
+  [dir="rtl"] .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .main-area {
+    margin-inline-start:0!important;
+    margin-inline-end:260px!important;
+  }
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) > .mobile-nav {
+    display:none!important;
+  }
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .curtain-trigger {
+    display:none!important;
+  }
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .topbar {
+    height:72px!important;
+    padding-inline:28px!important;
+  }
+  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .content-wrap {
+    max-width:1440px!important;
+    padding:28px 24px 56px!important;
+  }
+}
