@@ -5974,6 +5974,11 @@ body:has(.ai-chat-page){
   border-top:1px solid rgba(218,177,105,.12);
 }
 .app-shell:not([data-chat-active="true"]) .history-filter-chip {
+  appearance:none;
+  -webkit-appearance:none;
+  cursor:pointer;
+  font-family:inherit;
+  text-align:start;
   display:inline-flex;
   align-items:center;
   gap:10px;
