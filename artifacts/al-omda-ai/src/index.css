@@ -6011,3 +6011,100 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .history-filter-list { gap:7px; }
   .app-shell:not([data-chat-active="true"]) .history-filter-chip { min-height:34px; padding:6px 10px; }
 }
+
+
+/* Agent marketplace: dedicated directory header and filter surface. */
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar {
+  display:grid;
+  gap:16px;
+  margin:18px 0 22px;
+  padding:20px;
+  border:1px solid rgba(218,177,105,.18);
+  border-radius:20px;
+  background:linear-gradient(135deg,rgba(32,30,27,.96),rgba(19,20,23,.97) 72%);
+  box-shadow:0 14px 36px rgba(0,0,0,.16);
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-summary > div:first-child > strong {
+  display:block;
+  margin-top:6px;
+  color:#f0d7a6;
+  font-size:26px;
+  line-height:1.2;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-summary > div:first-child > strong span {
+  color:#e7e0d5;
+  font-size:15px;
+  font-weight:600;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-summary p {
+  margin:7px 0 0;
+  color:var(--muted,#aaa39a);
+  font-size:12px;
+  line-height:1.7;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-total {
+  display:grid;
+  justify-items:center;
+  gap:3px;
+  flex:none;
+  min-width:94px;
+  padding:12px 16px;
+  border:1px solid rgba(218,177,105,.2);
+  border-radius:14px;
+  background:rgba(218,177,105,.07);
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-total strong {
+  color:#f0d7a6;
+  font-size:23px;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-total span {
+  color:#b9ad9a;
+  font-size:10px;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-filter-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-top:14px;
+  border-top:1px solid rgba(218,177,105,.13);
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-pill {
+  min-height:36px;
+  padding:7px 13px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.025);
+  transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-pill.active,
+.app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-pill:hover {
+  border-color:rgba(218,177,105,.46);
+  background:rgba(218,177,105,.12);
+  color:#f3dfbb;
+}
+.app-shell:not([data-chat-active="true"]) .market-grid {
+  align-items:stretch;
+}
+@media(max-width:640px) {
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar { padding:15px; gap:13px; border-radius:16px; }
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-summary { align-items:flex-start; gap:10px; }
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-summary > div:first-child > strong { font-size:23px; }
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-total { min-width:76px; padding:9px 11px; }
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-row { gap:6px; }
+  .app-shell:not([data-chat-active="true"]) .agent-marketplace-toolbar .filter-pill { min-height:34px; padding:6px 10px; }
+}
