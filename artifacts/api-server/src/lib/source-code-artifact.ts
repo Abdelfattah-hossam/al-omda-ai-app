@@ -109,7 +109,10 @@ export function isValidDxfSource(code: string): boolean {
   };
   for (let index = 0; index < pairs.length; index++) {
     const [group, value] = pairs[index];
-    if (group !== 0) continue;
+    if (group !== 0) {
+      if (checkingEntities && currentEntityType) currentEntityData.push([group, value]);
+      continue;
+    }
     const marker = value.toUpperCase();
     if (marker === "SECTION" && pairs[index + 1]?.[0] === 2 && pairs[index + 1]?.[1].toUpperCase() === "ENTITIES") {
       if (!flushEntity()) return false;
