@@ -43,3 +43,21 @@ test("rejects empty and oversized files", () => {
   assert.equal(parseSourceCodeFile(fenced("js", "   "), "Create app.js"), null);
   assert.equal(parseSourceCodeFile(fenced("js", "x".repeat(100001)), "Create app.js"), null);
 });
+
+
+test("accepts a safe self-contained SVG drawing", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="black"/></svg>';
+  assert.equal(parseSourceCodeFile(fenced("svg", svg), "Create plan.svg")?.language, "svg");
+});
+
+test("rejects active SVG content and event handlers", () => {
+  for (const svg of [
+    '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div>bad</div></foreignObject></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><rect onload="alert(1)"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><image href="https://evil.example/x.png"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><use href="javascript:alert(1)"/></svg>',
+    '<!DOCTYPE svg [<!ENTITY x SYSTEM "https://evil.example/x">]><svg>&x;</svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><rect style="fill:url(https://evil.example/a)"/></svg>'
+  ]) assert.equal(parseSourceCodeFile(fenced("svg", svg), "Create plan.svg"), null);
+});
