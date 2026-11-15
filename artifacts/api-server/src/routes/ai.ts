@@ -690,9 +690,10 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
-      "Return ONLY valid JSON: " + '{"title":"Workbook title","columns":["Column 1"],"rows":[["value"]]}',
-      "Use the previously approved customer requirements and data in the project request and earlier steps. Preserve the exact approved columns and any seven approved sample products. Do not replace them with unrelated invented products or columns.",
-      "For a blank template, use empty body rows. Otherwise include the approved sample data. Every row must have exactly the same number of cells as columns.",
+      "Return ONLY valid JSON: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Rent","1000"],["Total",""]],"formulas":{"B3":"SUM(B2:B2)"}}]}',
+      "Create multiple named worksheets when the approved request needs them, with unique Excel-compatible names. Every sheet needs 1 to 30 columns and 1 to 500 rows; every row must match its sheet column count.",
+      "Use real formulas in each sheet formulas map, keyed by cell addresses such as C2, for requested totals, calculations, percentages, balances, and summaries. Do not replace formulas with guessed values. Do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
+      "Use the previously approved requirements and data. Preserve exact approved columns and sample products. For a blank template, keep body cells blank. Never invent unrelated data.",
       "Project: " + task.title,
       "Original request: " + task.request,
       "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
@@ -860,7 +861,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
-    let spreadsheet: { title: string; columns: string[]; rows: string[][] } | null = null;
+    let spreadsheet: ReturnType<typeof parseExcelWorkbook> = null;
     let result = answer.text.trim().slice(0, 12000);
     if (htmlAppStep) {
       const html = validatedHtmlApp;
@@ -1313,8 +1314,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     let validatedSpreadsheet = excelRequest ? parseExcelWorkbook(answer.text) : null;
     if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
-        "Repair the Excel workbook. Return ONLY valid JSON: " + '{"title":"...","columns":["..."],"rows":[["..."]]}',
-        "Use relevant columns and rows of equal width. Preserve the original request and never add unrelated sample data.",
+        "Repair the Excel workbook. Return ONLY valid JSON with title and sheets. Every sheet needs a unique valid name, columns, rows, and optional formulas keyed by cell address. Every row must match its column count. Preserve requested worksheets and formulas.",
+        "Use relevant columns and rows. Do not replace requested formulas with static values or add unrelated sample data.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 14000)
       ].join("\n") }];
