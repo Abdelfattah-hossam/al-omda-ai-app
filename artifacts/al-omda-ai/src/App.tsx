@@ -1819,6 +1819,22 @@ pnpm --filter @workspace/scripts agent:runtime`;
   ];
   const profilePage = () => <div className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
+    <section className="profile-welcome panel" aria-label={isAr?'ملخص الحساب':'Account overview'}>
+      <div className="profile-welcome-identity">
+        <div className="profile-welcome-avatar">{authUser && avatarPath ? <img src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')}/> : <span>{profileName.trim().charAt(0)||'ع'}</span>}</div>
+        <div className="profile-welcome-copy">
+          <span className="eyebrow">{isAr?'مساحتك الشخصية':'YOUR PERSONAL SPACE'}</span>
+          <h2>{isAr?'أهلاً بك، ': 'Welcome, '}{profileName.trim()|| (isAr?'صديق العمدة':'AL OMDA user')}</h2>
+          <p>{isAr?'كل تفاصيل حسابك ونشاطك وإعدادات تجربتك في مكان واحد.':'Your account details, activity, and experience settings in one place.'}</p>
+          <span className={'profile-account-state '+(authUser?'is-connected':'is-local')}><i/>{authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'تستخدم العمدة كزائر':'Using AL OMDA locally')}</span>
+        </div>
+      </div>
+      <div className="profile-welcome-stats">
+        <div><strong>{tasks.length}</strong><span>{isAr?'إجمالي المهام':'Total tasks'}</span></div>
+        <div><strong>{tasks.filter(item=>item.status==='approved').length}</strong><span>{isAr?'مهام معتمدة':'Approved'}</span></div>
+        <div><strong>{tasks.filter(item=>item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
+      </div>
+    </section>
     <div className="profile-settings-layout">
               <section className="panel panel-pad profile-main-card profile-account-profile-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
