@@ -228,9 +228,9 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
 }
 function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request) || !isCodingRequest(messages)) return false;
-  return /\.(?:py|js|mjs|cjs|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i.test(request) ||
-    /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request);
+  if (!request || isHowToRequest(request)) return false;
+  const hasSourceExtension = /\.(?:py|js|mjs|cjs|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md)\b/i.test(request);
+  return hasSourceExtension || (isCodingRequest(messages) && /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request));
 }
 function parseSourceCodeFile(text: string, request: string): { title: string; name: string; language: string; code: string } | null {
   const match = text.match(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/);
