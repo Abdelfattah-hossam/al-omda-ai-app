@@ -73,10 +73,10 @@ function parseXmlText(xml: string): { root: string; officeText: string[]; relati
       const name = match[1];
       const attrs = match[2];
       if (name === "Relationship" || name.endsWith(":Relationship")) {
-        const targetMatch = attrs.match(/(?:^|\\s)Target\\s*=\\s*("[^"]*"|'[^']*')/);
+        const targetMatch = attrs.match(/(?:^|\s)Target\s*=\s*("[^"]*"|'[^']*')/);
         if (!targetMatch) return null;
         const target = targetMatch[1].slice(1, -1);
-        const modeMatch = attrs.match(/(?:^|\\s)TargetMode\\s*=\\s*("[^"]*"|'[^']*')/);
+        const modeMatch = attrs.match(/(?:^|\s)TargetMode\s*=\s*("[^"]*"|'[^']*')/);
         relationships.push({ target, external: modeMatch?.[1].slice(1, -1) === "External" });
       }
       const attrPattern = /\s+([A-Za-z_][\w:.-]*)\s*=\s*("[^"]*"|'[^']*')/g;
