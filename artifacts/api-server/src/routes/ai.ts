@@ -1121,7 +1121,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Write complete, runnable, syntactically valid source code for the exact requested file. Include necessary imports, safe defaults, useful comments, input validation, and robust error handling where relevant. Do not invent external credentials, APIs, or project files. If the task requires context that is unavailable, state a clear TODO comment rather than fabricating integration details.",
         "The language must match the requested extension. Keep all code inside a single fenced block.",
         "Original customer request: " + latestCustomerRequest
-      ].join("\\n") }
+      ].join("\n") }
     ] : powerPointRequest ? [
       ...messages,
       { role: "user", content: [
@@ -1129,7 +1129,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Create 3 to 30 slides in a logical narrative. Each slide must have a meaningful title and 1 to 8 concise, relevant bullet points. Keep each bullet under 700 characters. Use the customer's language. Include an opening slide and a conclusion when appropriate. Do not invent facts, figures, citations, or sources; mark assumptions and cite only sources actually verified.",
         "Do not return a tutorial or instructions for making slides. The result must be ready to convert into an editable .pptx file.",
         "Original customer request: " + latestCustomerRequest
-      ].join("\\n") }
+      ].join("\n") }
     ] : wordDocumentRequest ? [
       ...messages,
       { role: "user", content: [
@@ -1186,7 +1186,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Return the complete source file again. Output ONLY one fenced code block with the correct language tag. No prose.",
         "Original request: " + latestCustomerRequest,
         "Previous output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[Source file repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSourceFile = parseSourceCodeFile(answer.text, latestCustomerRequest);
@@ -1212,7 +1212,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Create 3 to 30 slides. Every slide needs a non-empty title and 1 to 8 concise non-empty bullets. Keep each bullet under 700 characters. Preserve the original request and do not invent facts or citations.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 12000)
-      ].join("\\n") }];
+      ].join("\n") }];
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[PowerPoint repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPowerPoint = parsePowerPointPresentation(answer.text);
