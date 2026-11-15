@@ -6162,3 +6162,130 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .workbench-flow { grid-template-columns:1fr; gap:7px; }
   .app-shell:not([data-chat-active="true"]) .workbench-flow-step { padding:11px 13px; }
 }
+
+
+/* Profile account center: identity first, then live account activity. */
+.app-shell:not([data-chat-active="true"]) .profile-welcome {
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(250px,.9fr);
+  align-items:center;
+  gap:22px;
+  margin:0 0 18px;
+  padding:clamp(18px,2.6vw,28px);
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--omda-accent,#d7b477) 25%,var(--border));
+  background:
+    radial-gradient(ellipse at 8% 0%,color-mix(in srgb,var(--omda-accent,#d7b477) 16%,transparent),transparent 54%),
+    linear-gradient(135deg,color-mix(in srgb,var(--panel,#17191f) 92%,#25211b),var(--panel,#17191f));
+  box-shadow:0 14px 38px rgba(0,0,0,.12);
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-identity {
+  display:flex;
+  align-items:center;
+  gap:17px;
+  min-width:0;
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-avatar {
+  display:grid;
+  place-items:center;
+  width:76px;
+  height:76px;
+  flex:none;
+  overflow:hidden;
+  border:2px solid color-mix(in srgb,var(--omda-accent,#d7b477) 62%,transparent);
+  border-radius:24px;
+  background:color-mix(in srgb,var(--omda-accent,#d7b477) 13%,var(--panel,#17191f));
+  color:var(--omda-accent,#d7b477);
+  font-size:30px;
+  font-weight:800;
+  box-shadow:0 8px 24px rgba(0,0,0,.16);
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-avatar img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-copy { min-width:0; }
+.app-shell:not([data-chat-active="true"]) .profile-welcome-copy h2 {
+  margin:5px 0 6px;
+  color:var(--text,#f1eee8);
+  font-size:clamp(19px,2.2vw,25px);
+  font-weight:800;
+  letter-spacing:-.035em;
+  overflow-wrap:anywhere;
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-copy p {
+  margin:0;
+  color:var(--muted,#aaa39a);
+  font-size:12px;
+  line-height:1.75;
+}
+.app-shell:not([data-chat-active="true"]) .profile-account-state {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:12px;
+  padding:5px 9px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  color:var(--muted,#aaa39a);
+  font-size:10px;
+  font-weight:700;
+}
+.app-shell:not([data-chat-active="true"]) .profile-account-state i {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#d8ad65;
+  box-shadow:0 0 0 3px rgba(216,173,101,.12);
+}
+.app-shell:not([data-chat-active="true"]) .profile-account-state.is-connected i {
+  background:#55c99a;
+  box-shadow:0 0 0 3px rgba(85,201,154,.13);
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats > div {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  min-height:82px;
+  padding:12px 10px;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:color-mix(in srgb,var(--panel,#17191f) 78%,transparent);
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats strong {
+  color:var(--text,#f1eee8);
+  font-size:clamp(20px,2.5vw,27px);
+  line-height:1.2;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .profile-welcome-stats span {
+  margin-top:7px;
+  color:var(--muted,#aaa39a);
+  font-size:10px;
+  line-height:1.4;
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) .profile-welcome {
+    grid-template-columns:1fr;
+    gap:17px;
+    padding:17px;
+  }
+  .app-shell:not([data-chat-active="true"]) .profile-welcome-avatar {
+    width:62px;
+    height:62px;
+    border-radius:19px;
+    font-size:25px;
+  }
+  .app-shell:not([data-chat-active="true"]) .profile-welcome-stats > div {
+    min-height:70px;
+    padding:10px 8px;
+  }
+}
