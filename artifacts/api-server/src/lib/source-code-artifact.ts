@@ -1,25 +1,77 @@
 export type SourceCodeArtifact = { title: string; name: string; language: string; code: string };
 
 export function isValidDxfSource(code: string): boolean {
-  if (!code.trim() || code.length > 100000 || code.includes("\0")) return false;
-  const lines = code.replace(/\r/g, "").split("\n");
+  if (!code.trim() || code.length > 100000 || code.includes("\\0")) return false;
+  // DXF files commonly end with one or more line breaks; ignore only trailing
+  // empty lines so a valid final group-code/value pair is not rejected.
+  const lines = code.replace(/\\r\\n?/g, "\\n").split("\\n");
+  while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
   if (lines.length < 8 || lines.length % 2 !== 0) return false;
+
   const pairs: Array<[number, string]> = [];
   for (let i = 0; i < lines.length; i += 2) {
     const group = lines[i].trim();
-    if (!/^-?\d+$/.test(group)) return false;
-    pairs.push([Number(group), lines[i + 1].trim()]);
+    if (!/^-?\\d+$/.test(group)) return false;
+    const groupCode = Number(group);
+    if (!Number.isSafeInteger(groupCode) || groupCode < 0 || groupCode > 1071) return false;
+    pairs.push([groupCode, lines[i + 1].trim()]);
   }
-  const markers = pairs.map((pair, index) => pair[0] === 0 ? { type: pair[1].toUpperCase(), index } : null).filter((item): item is { type: string; index: number } => item !== null);
-  const entitiesSection = pairs.findIndex((pair, index) => pair[0] === 0 && pair[1].toUpperCase() === "SECTION" && pairs[index + 1]?.[0] === 2 && pairs[index + 1]?.[1].toUpperCase() === "ENTITIES");
-  const entitiesEnd = entitiesSection >= 0 ? pairs.findIndex((pair, index) => index > entitiesSection && pair[0] === 0 && pair[1].toUpperCase() === "ENDSEC") : -1;
-  if (entitiesSection < 0 || entitiesEnd < 0 || markers[markers.length - 1]?.type !== "EOF") return false;
-  const allowed = new Set(["SECTION", "ENDSEC", "EOF", "TABLE", "ENDTAB", "BLOCK", "ENDBLK", "LAYER", "LTYPE", "STYLE", "DIMSTYLE", "VIEW", "UCS", "VPORT", "APPID", "BLOCK_RECORD", "DICTIONARY", "XRECORD", "GROUP", "LAYOUT", "MLINESTYLE", "POINT", "LINE", "CIRCLE", "ARC", "ELLIPSE", "LWPOLYLINE", "POLYLINE", "VERTEX", "SEQEND", "TEXT", "MTEXT", "SOLID", "3DFACE", "INSERT", "ATTDEF", "ATTRIB", "DIMENSION", "HATCH", "SPLINE", "RAY", "XLINE", "LEADER"]);
-  if (markers.some(marker => !allowed.has(marker.type))) return false;
+
+  const allowedEntities = new Set([
+    "POINT", "LINE", "CIRCLE", "ARC", "ELLIPSE", "LWPOLYLINE", "POLYLINE",
+    "VERTEX", "SEQEND", "TEXT", "MTEXT", "SOLID", "3DFACE", "INSERT",
+    "ATTDEF", "ATTRIB", "DIMENSION", "HATCH", "SPLINE", "RAY", "XLINE", "LEADER",
+  ]);
+  const allowedNonEntityRecords = new Set([
+    "TABLE", "ENDTAB", "BLOCK", "ENDBLK", "LAYER", "LTYPE", "STYLE",
+    "DIMSTYLE", "VIEW", "UCS", "VPORT", "APPID", "BLOCK_RECORD",
+    "DICTIONARY", "XRECORD", "GROUP", "LAYOUT", "MLINESTYLE",
+  ]);
+
+  let activeSection = "";
+  let entitiesSectionCount = 0;
+  let entityCount = 0;
+  let sawEof = false;
+
+  for (let i = 0; i < pairs.length; i++) {
+    const [group, value] = pairs[i];
+    if (group !== 0) continue;
+    const marker = value.toUpperCase();
+
+    if (marker === "SECTION") {
+      if (activeSection || pairs[i + 1]?.[0] !== 2 || !pairs[i + 1][1]) return false;
+      activeSection = pairs[i + 1][1].toUpperCase();
+      if (activeSection === "ENTITIES") entitiesSectionCount++;
+      if (entitiesSectionCount > 1) return false;
+      i++;
+      continue;
+    }
+    if (marker === "ENDSEC") {
+      if (!activeSection) return false;
+      activeSection = "";
+      continue;
+    }
+    if (marker === "EOF") {
+      if (activeSection || i !== pairs.length - 1) return false;
+      sawEof = true;
+      continue;
+    }
+    if (sawEof) return false;
+
+    if (activeSection === "ENTITIES") {
+      if (!allowedEntities.has(marker)) return false;
+      entityCount++;
+    } else if (!allowedNonEntityRecords.has(marker)) {
+      return false;
+    }
+  }
+
+  if (!sawEof || activeSection || entitiesSectionCount !== 1) return false;
+
   for (const [group, value] of pairs) {
     if ([10, 20, 11, 21, 30, 31, 40, 41, 42, 50, 51, 70, 90].includes(group) && value !== "" && !Number.isFinite(Number(value))) return false;
   }
-  return true;
+  return entityCount >= 0;
 }
 
 export function isSafeSvgSource(code: string): boolean {
