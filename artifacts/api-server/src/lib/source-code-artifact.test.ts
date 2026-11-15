@@ -145,15 +145,15 @@ test("rejects previewable DXF entities with missing geometry fields", () => {
     ["0","SECTION","2","ENTITIES","0","TEXT","10","0","20","0","40","0","1","Door","0","ENDSEC","0","EOF"],
     ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","3","70","1","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"],
   ];
-  for (const pairs of drawings) assert.equal(isValidDxfSource(pairs.join("\\n")), false);
+  for (const pairs of drawings) assert.equal(isValidDxfSource(pairs.join("\n")), false);
 });
 
 test("checks DXF lightweight polyline vertex counts, coordinate pairing, and closed-loop minimum", () => {
-  const validOpen = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","0","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\\n");
-  const validClosed = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","3","70","1","10","0","20","0","10","10","20","0","10","5","20","8","0","ENDSEC","0","EOF"].join("\\n");
-  const mismatchedCount = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","3","70","0","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\\n");
-  const missingY = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","0","10","0","20","0","10","10","0","ENDSEC","0","EOF"].join("\\n");
-  const closedWithTwoPoints = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","1","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\\n");
+  const validOpen = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","0","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\n");
+  const validClosed = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","3","70","1","10","0","20","0","10","10","20","0","10","5","20","8","0","ENDSEC","0","EOF"].join("\n");
+  const mismatchedCount = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","3","70","0","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\n");
+  const missingY = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","0","10","0","20","0","10","10","0","ENDSEC","0","EOF"].join("\n");
+  const closedWithTwoPoints = ["0","SECTION","2","ENTITIES","0","LWPOLYLINE","90","2","70","1","10","0","20","0","10","10","20","0","0","ENDSEC","0","EOF"].join("\n");
   assert.equal(isValidDxfSource(validOpen), true);
   assert.equal(isValidDxfSource(validClosed), true);
   assert.equal(isValidDxfSource(mismatchedCount), false);
