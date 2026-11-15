@@ -127,7 +127,8 @@ function authenticated(req: IncomingMessage): boolean {
 async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address: PinnedAddress }> {
   const url = new URL(rawUrl);
   if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
-  const hostname = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const rawHostname = url.hostname.toLowerCase();
+  const hostname = rawHostname.startsWith("[") && rawHostname.endsWith("]") ? rawHostname.slice(1, -1) : rawHostname;
   if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
   const literalFamily = isIP(hostname);
   const addresses = literalFamily
