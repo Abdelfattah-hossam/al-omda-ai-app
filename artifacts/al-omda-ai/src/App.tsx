@@ -976,7 +976,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }).length);
     const trendMax=Math.max(1,...trend);
     const trendPoints=trend.slice().reverse().map((value,index)=>`${24+index*44},${92-(value/trendMax)*72}`).join(' ');
-    return <div className="page-enter dashboard-overview">
+    return <div className="page-enter dashboard-overview" id="dashboard-overview">
       <div className="dashboard-toolbar">
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
