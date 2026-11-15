@@ -897,7 +897,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         </div>}
       </div>
       <div className="ai-chat-topbar-actions">
-      {agentMode && <span className="ai-chat-agent-badge"><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
+      {agentMode && <span className="ai-chat-agent-badge" title={ar ? "وكيل محلي" : "Local Agent"} aria-label={ar ? "وكيل محلي" : "Local Agent"}><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
       <button type="button" className="ai-chat-header-icon" onClick={openCodeCanvas} title={ar ? "محرر الأكواد" : "Code Canvas"}><Code2 size={16}/></button>
       <button type="button" className="ai-chat-header-icon" onClick={openSettings} title={ar ? "الإعدادات والحد اليومي" : "Settings and daily usage"}><Settings2 size={16}/></button>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
