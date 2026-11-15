@@ -34,45 +34,55 @@ function withPreviewCsp(html: string): string {
 
 function dxfToSvg(source: string): string {
   const lines = source.replace(/\\r/g, "").split("\\n");
-  const pairs: Array<[number,string]> = [];
-  for (let i=0;i+1<lines.length;i+=2) {
-    const group=Number(lines[i].trim());
-    if(Number.isInteger(group)) pairs.push([group,lines[i+1].trim()]);
-  }
-  const entities: Array<{type:string; data:Array<[number,string]>}> = [];
-  let inEntities=false, current: {type:string;data:Array<[number,string]>}|null=null;
-  for(let i=0;i<pairs.length;i++){
-    const [g,v]=pairs[i];
-    if(g===0 && v.toUpperCase()==="SECTION" && pairs[i+1]?.[0]===2 && pairs[i+1]?.[1].toUpperCase()==="ENTITIES"){inEntities=true;i++;continue;}
-    if(g===0 && v.toUpperCase()==="ENDSEC"){if(current)entities.push(current);current=null;inEntities=false;continue;}
+  const entities: Array<{type:string;data:Array<[number,string]>}> = [];
+  let inEntities=false;
+  let current: {type:string;data:Array<[number,string]>}|null=null;
+  for(let i=0;i+1<lines.length;i+=2){
+    const group=Number(lines[i].trim()), value=lines[i+1].trim();
+    if(!Number.isInteger(group)) continue;
+    if(group===0 && value.toUpperCase()==="SECTION" && Number(lines[i+2]?.trim())===2 && lines[i+3]?.trim().toUpperCase()==="ENTITIES"){inEntities=true;i+=2;continue;}
+    if(group===0 && value.toUpperCase()==="ENDSEC"){if(current)entities.push(current);current=null;inEntities=false;continue;}
     if(!inEntities)continue;
-    if(g===0){if(current)entities.push(current);current={type:v.toUpperCase(),data:[]};}
-    else if(current)current.data.push([g,v]);
+    if(group===0){
+      if(current)entities.push(current);
+      current={type:value.toUpperCase(),data:[]};
+      if(entities.length>=2000)break;
+    }else if(current)current.data.push([group,value]);
   }
-  if(current)entities.push(current);
-  const get=(data:Array<[number,string]>,group:number, fallback=0)=>{const item=data.find(x=>x[0]===group);const n=item?Number(item[1]):fallback;return Number.isFinite(n)?n:fallback;};
+  if(current && entities.length<2000)entities.push(current);
+  const get=(data:Array<[number,string]>,group:number,fallback=0)=>{const item=data.find(x=>x[0]===group);const n=item?Number(item[1]):fallback;return Number.isFinite(n)?n:fallback;};
   const shapes:string[]=[];
-  const points:Array<[number,number]>=[];
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  const include=(x:number,y:number)=>{if(!Number.isFinite(x)||!Number.isFinite(y))return;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);};
   const xy=(e:{type:string;data:Array<[number,string]>},gx:number,gy:number)=>[get(e.data,gx),get(e.data,gy)] as [number,number];
   for(const e of entities){
-    if(e.type==="LINE"){const a=xy(e,10,20),b=xy(e,11,21);points.push(a,b);shapes.push('<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>');}
-    else if(e.type==="CIRCLE"){const c=xy(e,10,20),r=Math.max(0,get(e.data,40));points.push([c[0]-r,c[1]-r],[c[0]+r,c[1]+r]);shapes.push('<circle cx="'+c[0]+'" cy="'+c[1]+'" r="'+r+'"/>');}
-    else if(e.type==="POINT"){const p=xy(e,10,20);points.push(p);shapes.push('<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.5"/>');}
-    else if(e.type==="LWPOLYLINE"){
+    if(e.type==="LINE"){
+      const a=xy(e,10,20),b=xy(e,11,21);include(...a);include(...b);
+      shapes.push('<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'"/>');
+    }else if(e.type==="CIRCLE"){
+      const center=xy(e,10,20),radius=Math.max(0,get(e.data,40));include(center[0]-radius,center[1]-radius);include(center[0]+radius,center[1]+radius);
+      shapes.push('<circle cx="'+center[0]+'" cy="'+center[1]+'" r="'+radius+'"/>');
+    }else if(e.type==="POINT"){
+      const point=xy(e,10,20);include(...point);shapes.push('<circle cx="'+point[0]+'" cy="'+point[1]+'" r="1.5"/>');
+    }else if(e.type==="LWPOLYLINE"){
       const vertices:Array<[number,number]>=[];let x:number|null=null;
-      for(const [g,v] of e.data){if(g===10)x=Number(v);else if(g===20&&x!==null){const y=Number(v);if(Number.isFinite(x)&&Number.isFinite(y))vertices.push([x,y]);x=null;}}
-      if(vertices.length>1){points.push(...vertices);const coords=vertices.map(p=>p[0]+","+p[1]).join(" ");if((get(e.data,70)&1)===1)shapes.push('<polygon points="'+coords+'"/>');else shapes.push('<polyline points="'+coords+'"/>');}
+      for(const [group,value] of e.data){
+        if(group===10){x=Number(value);}
+        else if(group===20&&x!==null){const y=Number(value);if(Number.isFinite(x)&&Number.isFinite(y)){vertices.push([x,y]);include(x,y);}x=null;}
+      }
+      if(vertices.length>1){
+        const coords=vertices.map(point=>point[0]+","+point[1]).join(" ");
+        shapes.push((get(e.data,70)&1)===1?'<polygon points="'+coords+'"/>':'<polyline points="'+coords+'"/>');
+      }
     }
   }
-  if(!shapes.length)return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><text x="20" y="40" font-family="sans-serif" font-size="16">No supported entities to preview</text></svg>';
-  const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
-  let minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  if(!shapes.length||!Number.isFinite(minX)||!Number.isFinite(maxX))return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><text x="20" y="40" font-family="sans-serif" font-size="16">No supported entities to preview</text></svg>';
   if(maxX-minX<1){minX-=5;maxX+=5;} if(maxY-minY<1){minY-=5;maxY+=5;}
-  const pad=Math.max(maxX-minX,maxY-minY)*0.06||5;
-  const vb=[minX-pad,minY-pad,maxX-minX+2*pad,maxY-minY+2*pad].join(" ");
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+vb+'" preserveAspectRatio="xMidYMid meet"><g transform={`translate(0 ${minY+maxY}) scale(1 -1)`} fill="none" stroke="#1769aa" stroke-width="'+Math.max(maxX-minX,maxY-minY)*0.004+'" stroke-linecap="round" stroke-linejoin="round">'+shapes.join("")+'</g></svg>';
+  const width=maxX-minX,height=maxY-minY,pad=Math.max(width,height)*0.06||5;
+  const viewBox=[minX-pad,minY-pad,width+2*pad,height+2*pad].join(" ");
+  const stroke=Math.max(width,height)*0.004||0.5;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+viewBox+'" preserveAspectRatio="xMidYMid meet"><g transform="translate(0 '+(minY+maxY)+') scale(1 -1)" fill="none" stroke="#1769aa" stroke-width="'+stroke+'" stroke-linecap="round" stroke-linejoin="round">'+shapes.join("")+'</g></svg>';
 }
-
 function createSourceBlob(sourceData: SourceData): Blob {
   const mimeTypes: Record<string,string> = {
     html: "text/html;charset=utf-8", svg: "image/svg+xml;charset=utf-8", dxf: "application/dxf;charset=utf-8",
@@ -1201,7 +1211,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             {message.presentationData && previewingDocument===index && <div style={{display:"grid",gap:12,width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,i)=><section key={i} style={{border:"1px solid var(--border,#59616c)",borderRadius:10,padding:14,background:"linear-gradient(145deg,#182334,#101722)",color:"#f1f5f9",minHeight:130}}><small style={{color:"#d8b978"}}>{ar?"شريحة":"Slide"} {i+1}</small><h3 style={{fontSize:17,margin:"8px 0 10px",color:"#f8fafc"}}>{slide.title}</h3><ul style={{margin:0,paddingInlineStart:20,lineHeight:1.65}}>{slide.bullets.map((bullet,j)=><li key={j}>{bullet}</li>)}</ul></section>)}</div>}
             {message.sourceData && message.sourceData.language==="svg" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة الرسم الهندسي SVG":"SVG drawing preview"}</div><iframe title={message.sourceData.name} srcDoc={withPreviewCsp(message.sourceData.code)} sandbox="" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && message.sourceData.language==="dxf" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة رسم DXF (الكيانات المدعومة)":"DXF drawing preview (supported entities)"}</div><iframe title={message.sourceData.name} srcDoc={withPreviewCsp(dxfToSvg(message.sourceData.code))} sandbox="" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
-            {message.sourceData && message.sourceData.language==="html" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة HTML آمنة":"Sandboxed HTML preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
+            {message.sourceData && message.sourceData.language==="html" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة HTML آمنة":"Sandboxed HTML preview"}</div><iframe title={message.sourceData.name} srcDoc={withPreviewCsp(message.sourceData.code)} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && !["html","svg","dxf"].includes(message.sourceData.language) && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#11151b"}}><div style={{padding:"9px 12px",color:"#d5b477",fontSize:12,borderBottom:"1px solid #343a44"}}>{message.sourceData.name} · {message.sourceData.language}</div><pre dir="ltr" style={{margin:0,padding:14,overflowX:"auto",maxHeight:"65vh",color:"#e8edf4",fontSize:13,lineHeight:1.65,whiteSpace:"pre"}}><code>{message.sourceData.code}</code></pre></div>}
             {message.spreadsheetData && previewingDocument===index && <div style={{display:"grid",gap:14,width:"100%",minWidth:0}}>
               <strong style={{display:"block"}}>{message.spreadsheetData.title}</strong>
