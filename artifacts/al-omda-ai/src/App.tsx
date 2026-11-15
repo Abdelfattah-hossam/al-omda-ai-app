@@ -962,6 +962,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
+      <section className="dashboard-pulse panel" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
+        <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
+        <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
+        <Link href={active>0?'/history?status=review':'/workbench'} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
+      </section>
       <section className="app-launcher-section" aria-labelledby="app-launcher-title">
         <div className="app-launcher-heading">
           <div>
@@ -1485,6 +1490,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </details>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
+    <section className="marketplace-intro panel" aria-label={isAr?'نظرة عامة على التخصصات':'Specialty directory overview'}>
+      <div className="marketplace-intro-mark"><Bot size={25}/></div>
+      <div className="marketplace-intro-copy"><span className="eyebrow">{isAr?'شبكة المتخصصين':'SPECIALIST NETWORK'}</span><h2>{isAr?'اختار العقل المناسب لمهمتك':'Find the right specialist for the job'}</h2><p>{isAr?'كل تخصص يوجّه طلبك بخطة مناسبة، وتقدر تراجع الخطة قبل الموافقة على أي خطوة.':'Each specialty shapes a focused plan. Review the plan before approving any step.'}</p></div>
+      <Link href="/workbench" className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
+    </section>
     <section className="agent-marketplace-toolbar" aria-label={isAr?'تصفية التخصصات':'Specialty filters'}>
       <div className="agent-marketplace-summary">
         <div><span className="eyebrow">{isAr?'دليل التخصصات':'SPECIALTY DIRECTORY'}</span><strong>{specialties.length.toLocaleString(isAr?'ar':'en')} <span>{isAr?'تخصصات':'specialties'}</span></strong><p>{isAr?'اختار التخصص الأقرب لمهمتك، وتابع إنجازاته من هنا.':'Choose the specialty closest to your task and track its activity here.'}</p></div>
@@ -1508,6 +1518,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <li className="workbench-flow-step"><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
         <li className="workbench-flow-step"><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
       </ol>
+      <section className="workbench-context panel" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
+        <div className="workbench-context-icon"><ShieldCheck size={18}/></div>
+        <div><strong>{active?(isAr?'أنت تتابع مهمة محفوظة':'You are continuing a saved task'):(isAr?'ابدأ بطلب واضح ومحدد':'Start with a clear, specific request')}</strong><p>{active?active.title:(isAr?'حدد الهدف والتخصص، وبعدها راجع الخطة قبل اعتمادها.':'Set the goal and specialty, then review the proposed plan before approving it.')}</p></div>
+        {active&&<Link href={'/history/'+active.id} className="button button-quiet button-small">{isAr?'تفاصيل المهمة':'Task details'}<ArrowLeft size={13}/></Link>}
+      </section>
       <div className="workbench-layout">
         <form className="panel request-card" onSubmit={createPlan}>
           <div className="section-head"><h2 className="section-title">{t('request')}</h2><span className="section-meta">{t('preview')}</span></div>
@@ -1740,6 +1755,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><Link key={filter.key} href={filter.href} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')}><span>{filter.label}</span><strong>{filter.count}</strong></Link>)}
         </nav>
       </section>
+      <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'مرتبة حسب أحدث نشاط محفوظ':'Showing saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
       <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
         <Link href={`/history/${task.id}`} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
@@ -1762,6 +1778,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const trendLabel = marketTrend === 'up' ? (isAr?'نجاحات أكثر':'More successful runs') : marketTrend === 'down' ? (isAr?'إخفاقات أكثر':'More failed runs') : (isAr?'نتائج متساوية':'Even results');
     return <div className="page-enter">
       {pageHeading(t('detail'),task.title,`${label(task.specialty)} · ${dateLabel(task.createdAt,language)}`,<Link href="/history" className="button button-quiet"><ArrowRight size={14}/>{t('backHistory')}</Link>)}
+      <section className="task-detail-overview panel" aria-label={isAr?'ملخص تقدم المهمة':'Task progress overview'}>
+        <div className="task-detail-progress-copy"><span className="eyebrow">{isAr?'تقدم الخطة':'PLAN PROGRESS'}</span><strong>{count(task)} <small>/ {task.steps.length} {isAr?'خطوات معتمدة':'steps approved'}</small></strong><p>{isAr?'تابع حالة كل خطوة ومخرجات التنفيذ المسجلة.':'Track each step and its recorded execution results.'}</p></div>
+        <div className="task-detail-progress-track" role="progressbar" aria-valuenow={task.steps.length?Math.round(count(task)/task.steps.length*100):0} aria-valuemin={0} aria-valuemax={100}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+        <div className="task-detail-progress-meta">{statusBadge(task.status)}<span>{successfulExecutions} {isAr?'ناجحة':'successful'}</span><span>{failedExecutions} {isAr?'فاشلة':'failed'}</span></div>
+      </section>
       <div className="history-detail">
         <div>{renderPlan(task)}</div>
         <aside className="project-tracking">
