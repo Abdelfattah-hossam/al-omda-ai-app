@@ -29,13 +29,15 @@ export function requestPinnedHttp(
     }
     callback(null, address.address, address.family);
   }) as LookupFunction;
+  const outgoingHeaders = new Headers(headers);
+  outgoingHeaders.set("accept-encoding", "identity");
   const requestOptions = {
     protocol: url.protocol,
     hostname,
     port: url.port || undefined,
     path: url.pathname + url.search,
     method,
-    headers: Object.fromEntries(headers.entries()),
+    headers: Object.fromEntries(outgoingHeaders.entries()),
     lookup: lookupPinned,
     ...(url.protocol === "https:" && !isIP(hostname) ? { servername: hostname } : {}),
     rejectUnauthorized: true,
