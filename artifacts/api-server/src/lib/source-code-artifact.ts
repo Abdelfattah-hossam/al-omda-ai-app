@@ -65,6 +65,70 @@ export function isValidDxfSource(code: string): boolean {
 
   if (!sawEof || activeSection || entitiesSectionCount !== 1) return false;
 
+  const validatePreviewEntity = (type: string, data: Array<[number, string]>): boolean => {
+    const values = (group: number) => data.filter(([code]) => code === group).map(([, value]) => value);
+    const has = (group: number) => values(group).some((value) => value !== "");
+    const number = (group: number) => Number(values(group)[0]);
+    if (type === "LINE") return [10, 20, 11, 21].every(has);
+    if (type === "POINT") return has(10) && has(20);
+    if (type === "CIRCLE") return has(10) && has(20) && has(40) && number(40) > 0;
+    if (type === "ARC") return has(10) && has(20) && has(40) && number(40) > 0 && has(50) && has(51);
+    if (type === "TEXT" || type === "MTEXT") return has(10) && has(20) && has(40) && number(40) > 0 && (has(1) || has(3));
+    if (type === "LWPOLYLINE") {
+      const declaredCounts = values(90);
+      if (declaredCounts.length !== 1 || !/^\d+$/.test(declaredCounts[0])) return false;
+      const vertexCount = Number(declaredCounts[0]);
+      const flags = has(70) ? number(70) : 0;
+      if (!Number.isSafeInteger(vertexCount) || vertexCount < 2 || !Number.isInteger(flags) || flags < 0 || flags > 255) return false;
+      if ((flags & 1) === 1 && vertexCount < 3) return false;
+      let pendingX = false;
+      let actualVertices = 0;
+      for (const [group] of data) {
+        if (group === 10) {
+          if (pendingX) return false;
+          pendingX = true;
+        } else if (group === 20) {
+          if (!pendingX) return false;
+          pendingX = false;
+          actualVertices++;
+        }
+      }
+      return !pendingX && actualVertices === vertexCount;
+    }
+    return true;
+  };
+
+  let checkingEntities = false;
+  let currentEntityType = "";
+  let currentEntityData: Array<[number, string]> = [];
+  const flushEntity = () => {
+    if (checkingEntities && currentEntityType && !validatePreviewEntity(currentEntityType, currentEntityData)) return false;
+    currentEntityType = "";
+    currentEntityData = [];
+    return true;
+  };
+  for (let index = 0; index < pairs.length; index++) {
+    const [group, value] = pairs[index];
+    if (group !== 0) continue;
+    const marker = value.toUpperCase();
+    if (marker === "SECTION" && pairs[index + 1]?.[0] === 2 && pairs[index + 1]?.[1].toUpperCase() === "ENTITIES") {
+      if (!flushEntity()) return false;
+      checkingEntities = true;
+      index++;
+      continue;
+    }
+    if (marker === "ENDSEC" && checkingEntities) {
+      if (!flushEntity()) return false;
+      checkingEntities = false;
+      continue;
+    }
+    if (checkingEntities) {
+      if (!flushEntity()) return false;
+      currentEntityType = marker;
+    }
+  }
+  if (!flushEntity()) return false;
+
   for (const [group, value] of pairs) {
     if ([10, 20, 11, 21, 30, 31, 40, 41, 42, 50, 51, 70, 90].includes(group) && value !== "" && !Number.isFinite(Number(value))) return false;
   }
