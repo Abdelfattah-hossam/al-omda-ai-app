@@ -1924,7 +1924,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <Link href={focusedHref("/agents","agent-marketplace-grid")} className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/workbench","request-input")} className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/history","history-list")} className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href={focusedHref("/ai/usage","ai-usage-grid")} className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
+            <Link href={focusedHref("/ai/usage","ai-usage-page")} className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
           </div>
         </section>
 
