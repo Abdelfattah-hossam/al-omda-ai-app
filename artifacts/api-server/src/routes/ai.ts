@@ -60,7 +60,7 @@ function isPowerPointRequest(messages: ChatMessage[]): boolean {
 }
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
-  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isPowerPointRequest(messages) || isDesktopAppRequest(latest) ||
+  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isPowerPointRequest(messages) || isSourceCodeFileRequest(messages) || isDesktopAppRequest(latest) ||
     /project plan|خطة مشروع|خطة تنفيذ|create a practical project plan/i.test(latest);
 }
 
