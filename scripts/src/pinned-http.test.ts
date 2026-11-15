@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { createServer, type AddressInfo } from "node:net";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { requestPinnedHttp } from "./pinned-http.js";
 
 test("connects to the validated IP while preserving the requested hostname", async () => {
