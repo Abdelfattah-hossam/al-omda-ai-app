@@ -1816,8 +1816,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>}
         <div className="top-actions">
           {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-quick-actions">
-            <Link href="/ai" className="button button-quiet topbar-quick-link"><Bot size={14}/><span>{isAr?'الشات':'Chat'}</span></Link>
-            <Link href="/workbench" className="button button-primary topbar-quick-link"><Plus size={14}/><span>{isAr?'طلب جديد':'New task'}</span></Link>
+            <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={isAr?'الشات':'Chat'}><Bot size={14}/><span>{isAr?'الشات':'Chat'}</span></Link>
+            <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={isAr?'طلب جديد':'New task'}><Plus size={14}/><span>{isAr?'طلب جديد':'New task'}</span></Link>
           </div>}
           <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
