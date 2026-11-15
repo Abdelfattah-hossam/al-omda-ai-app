@@ -5645,3 +5645,59 @@ body:has(.ai-chat-page){
     margin-inline-start:auto;
   }
 }
+
+
+/* Usage & memory is a first-class workspace page and shares the same finish. */
+.app-shell[data-chat-active="true"] .ai-usage-page .page-heading {
+  padding-bottom:20px;
+  border-bottom:1px solid rgba(224,181,101,.15);
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .page-title {
+  color:#f6f1e7!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .page-subtitle {
+  color:#aaa092!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .panel {
+  border:1px solid rgba(224,181,101,.2)!important;
+  border-radius:16px!important;
+  color:#f6f1e7!important;
+  background:linear-gradient(150deg,rgba(35,31,32,.96),rgba(19,18,20,.98))!important;
+  box-shadow:0 12px 32px rgba(0,0,0,.18),inset 0 1px 0 rgba(246,220,160,.035)!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .section-head {
+  border-bottom:1px solid rgba(224,181,101,.12);
+  padding-bottom:12px;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .section-title,
+.app-shell[data-chat-active="true"] .ai-usage-page .setting-row strong {
+  color:#f0e7d5!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .setting-row {
+  border-color:rgba(224,181,101,.13)!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .setting-row small,
+.app-shell[data-chat-active="true"] .ai-usage-page .muted {
+  color:#aaa092!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .notice-bar {
+  border-color:rgba(224,181,101,.18)!important;
+  border-radius:12px!important;
+  color:#d8c9aa!important;
+  background:rgba(224,181,101,.055)!important;
+}
+.app-shell[data-chat-active="true"] .ai-usage-page .ai-usage-grid .panel {
+  min-width:0;
+}
+@media(max-width:650px) {
+  .app-shell[data-chat-active="true"] .ai-usage-page .page-heading {
+    gap:12px;
+    padding-bottom:15px;
+  }
+  .app-shell[data-chat-active="true"] .ai-usage-page .page-title {
+    font-size:24px;
+  }
+  .app-shell[data-chat-active="true"] .ai-usage-page .panel {
+    padding:15px!important;
+  }
+}
