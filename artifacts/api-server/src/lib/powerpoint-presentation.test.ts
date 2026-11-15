@@ -39,3 +39,9 @@ test("rejects oversized titles and malformed JSON", () => {
   assert.equal(parsePowerPointPresentation(JSON.stringify({ ...base, title: "x".repeat(181) })), null);
   assert.equal(parsePowerPointPresentation("{\"title\":"), null);
 });
+
+
+test("rejects slides without any content bullets", () => {
+  const emptyBullets = { ...base, slides: base.slides.map((slide, index) => index === 1 ? { ...slide, bullets: [] } : slide) };
+  assert.equal(parsePowerPointPresentation(JSON.stringify(emptyBullets)), null);
+});
