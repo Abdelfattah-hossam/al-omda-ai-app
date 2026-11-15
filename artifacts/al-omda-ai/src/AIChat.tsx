@@ -7,7 +7,7 @@ import { detectProjectSpecialty } from "./lib/project-intent";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
-type SpreadsheetData = { title: string; columns: string[]; rows: string[][] };
+type SpreadsheetData = { title: string; columns: string[]; rows: string[][]; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: string[][]; formulas?: Record<string,string> }> };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[] }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
@@ -479,13 +479,38 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       }
     }
     const XLSX = (lib as any).default ?? lib;
-    const worksheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
-    worksheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
+    const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    const expectedFormulas: Array<{ sheet: string; cell: string }> = [];
+    for (const sheet of sheets) {
+      const worksheet = XLSX.utils.aoa_to_sheet([sheet.columns, ...sheet.rows]);
+      worksheet["!cols"] = sheet.columns.map(() => ({ wch: 20 }));
+      for (const [address, rawFormula] of Object.entries(sheet.formulas || {})) {
+        const formula = String(rawFormula).trim().replace(/^=/, "");
+        if (!formula || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
+          throw new Error(ar ? "تم رفض صيغة Excel غير آمنة." : "An unsafe Excel formula was rejected.");
+        }
+        const cell = XLSX.utils.decode_cell(address);
+        if (cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
+        worksheet[address] = { t: "n", f: formula };
+        expectedFormulas.push({ sheet: sheet.name, cell: address });
+      }
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
+    }
+    workbook.Workbook = workbook.Workbook || {};
+    workbook.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
     const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const roundTrip = XLSX.read(bytes, { type: "array" });
-    if (!roundTrip.SheetNames?.includes("Sheet1") || XLSX.utils.sheet_to_json(roundTrip.Sheets.Sheet1, { header: 1 }).length !== data.rows.length + 1) throw new Error(ar ? "فشل التحقق من محتوى ملف Excel." : "Excel workbook content validation failed.");
+    const roundTrip = XLSX.read(bytes, { type: "array", cellFormula: true });
+    if (roundTrip.SheetNames?.length !== sheets.length) throw new Error(ar ? "فشل التحقق من عدد أوراق Excel." : "Excel worksheet count validation failed.");
+    for (const sheet of sheets) {
+      const outputSheet = roundTrip.Sheets[sheet.name];
+      if (!outputSheet || XLSX.utils.sheet_to_json(outputSheet, { header: 1 }).length !== sheet.rows.length + 1) {
+        throw new Error(ar ? "فشل التحقق من محتوى ورقة Excel." : "Excel worksheet content validation failed.");
+      }
+    }
+    for (const formula of expectedFormulas) {
+      if (!roundTrip.Sheets[formula.sheet]?.[formula.cell]?.f) throw new Error(ar ? "لم يتم حفظ إحدى صيغ Excel." : "An Excel formula was not preserved in the workbook.");
+    }
     const file = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     if (!(await isValidZipBlob(file))) throw new Error(ar ? "ملف Excel الناتج غير صالح." : "The generated Excel file is invalid.");
     const url = URL.createObjectURL(file);
