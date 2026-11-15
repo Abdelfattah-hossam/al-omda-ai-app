@@ -413,6 +413,10 @@ function App() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty>('business');
   const [filter, setFilter] = useState<Specialty | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<'all'|'review'|'approved'|'stopped'>(() => {
+    const status = new URLSearchParams(window.location.search).get('status');
+    return status === 'review' || status === 'approved' || status === 'stopped' ? status : 'all';
+  });
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -433,6 +437,10 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
   const [workspaceError, setWorkspaceError] = useState('');
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get('status');
+    setHistoryStatusFilter(status === 'review' || status === 'approved' || status === 'stopped' ? status : 'all');
+  }, [location]);
   const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
@@ -1761,9 +1769,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const historyPage = () => {
-    const statusFilter = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : window.location.search).get('status');
     const filtered = tasks.filter((task)=>
-      (!statusFilter || (statusFilter === 'review' ? task.status === 'review' || task.status === 'paused' : task.status === statusFilter)) &&
+      (historyStatusFilter === 'all' || (historyStatusFilter === 'review' ? task.status === 'review' || task.status === 'paused' : task.status === historyStatusFilter)) &&
       `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
     );
     return <div className="page-enter">
@@ -1774,7 +1781,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="history-results-count" role="status"><strong>{filtered.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
         </div>
         <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
-          {[{key:'all',href:focusedHref('/history','history-list'),label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:focusedHref('/history?status=review','history-list'),label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:focusedHref('/history?status=approved','history-list'),label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><button key={filter.key} type="button" onClick={()=>setLocation(filter.href)} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')} data-testid={'history-filter-'+filter.key}><span>{filter.label}</span><strong>{filter.count}</strong></button>)}
+          {[{key:'all',href:focusedHref('/history','history-list'),label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:focusedHref('/history?status=review','history-list'),label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:focusedHref('/history?status=approved','history-list'),label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:focusedHref('/history?status=stopped','history-list'),label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><button key={filter.key} type="button" onClick={()=>{setHistoryStatusFilter(filter.key as 'all'|'review'|'approved'|'stopped');setLocation(filter.href);}} aria-pressed={historyStatusFilter===filter.key} aria-current={historyStatusFilter===filter.key?'page':undefined} className={'history-filter-chip '+(historyStatusFilter===filter.key?'active':'')} data-testid={'history-filter-'+filter.key}><span>{filter.label}</span><strong>{filter.count}</strong></button>)}
         </nav>
       </section>
       <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'تعرض مهامك وحالتها الحالية':'Your saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
