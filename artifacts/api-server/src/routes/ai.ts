@@ -693,6 +693,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Return ONLY valid JSON: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Rent","1000"],["Total",""]],"formulas":{"B3":"SUM(B2:B2)"}}]}',
       "Create multiple named worksheets when the approved request needs them, with unique Excel-compatible names. Every sheet needs 1 to 30 columns and 1 to 500 rows; every row must match its sheet column count.",
       "Use real formulas in each sheet formulas map, keyed by cell addresses such as C2, for requested totals, calculations, percentages, balances, and summaries. Do not replace formulas with guessed values. Do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
+      "Represent numeric values as JSON numbers and boolean values as JSON booleans, not quoted strings, to preserve Excel calculation behavior.",
       "Use the previously approved requirements and data. Preserve exact approved columns and sample products. For a blank template, keep body cells blank. Never invent unrelated data.",
       "Project: " + task.title,
       "Original request: " + task.request,
@@ -1125,6 +1126,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "SPECIAL OUTPUT MODE: Create a real editable Excel workbook. Return ONLY valid JSON with this schema: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Example",""]],"formulas":{"B2":"SUM(B3:B8)"}}]}',
         "Create multiple named worksheets when the request needs them (up to 12). Every sheet needs 1 to 30 columns, 1 to 500 rows, and rows matching the column count. Sheet names must be unique and Excel-compatible.",
         "Use real Excel formulas in the formulas object, keyed by cell address such as C2, whenever calculations, totals, balances, percentages, dates, or summaries are requested. Formula strings omit the leading equals sign. Never replace a requested formula with a guessed static result. Use only ordinary local worksheet formulas; do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
+        "Represent numeric values as JSON numbers and true/false values as JSON booleans, not quoted text, so Excel can calculate with them. Keep dates in a consistent documented format and do not invent missing values.",
         "Create useful blank rows when the user asks for a blank template. Otherwise populate only relevant, accurate data. Preserve units, dates, currency, and the user's language. Never return instructions for manually creating the workbook.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
