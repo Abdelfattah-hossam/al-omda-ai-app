@@ -45,3 +45,8 @@ test("rejects slides without any content bullets", () => {
   const emptyBullets = { ...base, slides: base.slides.map((slide, index) => index === 1 ? { ...slide, bullets: [] } : slide) };
   assert.equal(parsePowerPointPresentation(JSON.stringify(emptyBullets)), null);
 });
+
+
+test("rejects oversized presentation payloads before parsing", () => {
+  assert.equal(parsePowerPointPresentation(" ".repeat(1_000_001)), null);
+});
