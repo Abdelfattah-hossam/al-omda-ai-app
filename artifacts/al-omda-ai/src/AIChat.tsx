@@ -896,7 +896,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           <p>{ar ? "العمدة يختار النموذج الأنسب تلقائيًا ويجرّب البدائل عند التعطل." : "AL OMDA chooses the best available model and tries alternatives."}</p>
         </div>}
       </div>
-      {agentMode && <span className="ai-chat-agent-badge"><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
+      <div className="ai-chat-topbar-actions">
+      {agentMode && <span className="ai-chat-agent-badge" title={ar ? "وكيل محلي" : "Local Agent"} aria-label={ar ? "وكيل محلي" : "Local Agent"}><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
       <button type="button" className="ai-chat-header-icon" onClick={openCodeCanvas} title={ar ? "محرر الأكواد" : "Code Canvas"}><Code2 size={16}/></button>
       <button type="button" className="ai-chat-header-icon" onClick={openSettings} title={ar ? "الإعدادات والحد اليومي" : "Settings and daily usage"}><Settings2 size={16}/></button>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
@@ -913,6 +914,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         <button type="button" onClick={()=>{const item=conversations.find(entry=>entry.id===activeConversationId);if(item)void renameConversation(item);setShowChatMenu(false);}} disabled={!activeConversationId}><Pencil size={16}/>{ar ? "إعادة تسمية المحادثة" : "Rename conversation"}</button>
         <button type="button" className="danger" onClick={()=>{if(loadingRef.current || historyLoadingRef.current || !activeConversationId)return;setShowChatMenu(false);void deleteConversation(activeConversationId);}} disabled={loading || historyLoading || !activeConversationId}><Trash2 size={16}/>{ar ? "حذف المحادثة" : "Delete conversation"}</button>
       </div>}
+      </div>
     </header>
     {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA selects a free specialist model and tries alternatives when needed."}</span></div>}
     {currentMode && <div className="ai-chat-mode-banner"><span>{currentMode === "word" ? <FileText size={14}/> : currentMode === "excel" ? <Sheet size={14}/> : currentMode === "ppt" ? <Presentation size={14}/> : <BriefcaseBusiness size={14}/>} {currentMode === "word" ? (ar ? "وضع Word نشط" : "Word mode active") : currentMode === "excel" ? (ar ? "وضع Excel نشط" : "Excel mode active") : currentMode === "ppt" ? (ar ? "إعداد محتوى العرض التقديمي" : "Presentation content mode") : (ar ? "حزمة الأوفيس جاهزة" : "Office suite ready")}</span><button type="button" onClick={clearMode} aria-label={ar ? "إلغاء الوضع" : "Clear mode"}><X size={14}/></button></div>}
