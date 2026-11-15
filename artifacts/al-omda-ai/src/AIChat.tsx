@@ -76,7 +76,7 @@ function dxfToSvg(source: string): string {
     }else if(e.type==="TEXT"||e.type==="MTEXT"){
       const point=xy(e,10,20),height=Math.max(0.5,get(e.data,40,2.5)),rotation=get(e.data,50);
       const raw=e.data.filter(pair=>e.type==="TEXT"?pair[0]===1||pair[0]===3:pair[0]===1||pair[0]===3).map(pair=>pair[1]).join("");
-      const label=raw.replace(/\\\\P/g," ").replace(/\\\\~/g," ").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+      const label=raw.replace(/\\P/g," ").replace(/\\~/g," ").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
       if(label){include(point[0],point[1]);shapes.push('<text x="'+point[0]+'" y="'+point[1]+'" transform="translate('+point[0]+' '+point[1]+') scale(1 -1) rotate('+(-rotation)+') translate('+(-point[0])+' '+(-point[1])+')" font-family="sans-serif" font-size="'+height+'" fill="#20252b" stroke="none">'+label+'</text>');}
     }else if(e.type==="LWPOLYLINE"){
       const vertices:Array<[number,number]>=[];let x:number|null=null;
