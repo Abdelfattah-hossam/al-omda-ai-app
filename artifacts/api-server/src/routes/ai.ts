@@ -215,7 +215,7 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
 function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
   const request = getLatestUserRequest(messages);
   if (!request || isHowToRequest(request)) return false;
-  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|toml|ini)\b/i.test(request);
+  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(request);
   return hasSourceExtension || (isCodingRequest(messages) && /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request));
 }
 
