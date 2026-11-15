@@ -1734,26 +1734,29 @@ pnpm --filter @workspace/scripts agent:runtime`;
     link.href = url;
     link.download = 'al-omda-projects-' + new Date().toISOString().slice(0,10) + '.csv';
     document.body.appendChild(link);
+    document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    // Keep the object URL alive long enough for iOS Safari and other browsers
+    // to start consuming the generated CSV download.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
   const historyPage = () => {
-    const statusFilter = new URLSearchParams(window.location.search).get('status');
+    const statusFilter = new URLSearchParams(location.split('?')[1] || '').get('status');
     const filtered = tasks.filter((task)=>
       (!statusFilter || (statusFilter === 'review' ? task.status === 'review' || task.status === 'paused' : task.status === statusFilter)) &&
       `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
     );
     return <div className="page-enter">
-      {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length}><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><Link href="/workbench" className="button button-primary"><Plus size={15}/>{t('newTask')}</Link></div>)}
+      {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length} aria-label={isAr?'تصدير المشاريع الظاهرة إلى ملف CSV':'Export visible projects to CSV'} data-testid="button-export-tasks"><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><button type="button" className="button button-primary" onClick={()=>setLocation('/workbench')} data-testid="button-create-task"><Plus size={15}/>{t('newTask')}</button></div>)}
       <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المهام':'Task filters'}>
         <div className="history-search-wrap">
           <div className="field-group history-search-field"><label className="form-label" htmlFor="history-search">{isAr?'ابحث في مشاريعك':'Find a project'}</label><div className="history-search-control"><Search size={16} aria-hidden="true"/><input id="history-search" className="field" placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
           <div className="history-results-count" role="status"><strong>{filtered.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
         </div>
         <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
-          {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><Link key={filter.key} href={filter.href} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')}><span>{filter.label}</span><strong>{filter.count}</strong></Link>)}
+          {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><button key={filter.key} type="button" onClick={()=>setLocation(filter.href)} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')} data-testid={'history-filter-'+filter.key}><span>{filter.label}</span><strong>{filter.count}</strong></button>)}
         </nav>
       </section>
       <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'تعرض مهامك وحالتها الحالية':'Your saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
