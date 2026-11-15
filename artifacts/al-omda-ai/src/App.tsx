@@ -708,7 +708,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       setSaved((prev) => ({ ...prev, tasks:[savedTask,...prev.tasks] }));
       setRequest('');
       setSelectedTaskId(savedTask.id);
-      setLocation('/workbench?task='+savedTask.id);
+      setLocation('/workbench?task='+savedTask.id+'&focus=task-plan');
     } catch (error) { setWorkspaceError(readApiError(error, isAr ? 'تعذر إنشاء الخطة بالذكاء الاصطناعي.' : 'AI plan generation failed.')); }
     finally { setPlanGenerating(false); }
   };
@@ -1433,7 +1433,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <p className="section-meta" style={{marginTop:14}}>{isAr?'تنبيه أمان: لا تشغّل أوامر الطرفية إلا داخل مشروع تثق به. كل تعديل أو أمر طرفية يحتاج موافقتك.':'Security: only run terminal commands in projects you trust. Every file write or terminal command requires your approval.'}</p>
     </section>
-    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="desktop-workspace" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">DESKTOP WORKSPACE</span><h2 className="section-title">{isAr?'مساحة سطح المكتب والتحكم المحلي':'Desktop Workspace & local control'}</h2><p className="section-meta">{isAr?'اكتشاف أدوات التحكم في التطبيقات والنوافذ على جهازك المحلي. كل إجراء يتطلب موافقتك، كما يجب منح صلاحيات نظام التشغيل يدويًا.':'Discover local app and window control tools. Every action requires your approval, and operating-system permissions must be granted manually.'}</p></div>
         <button type="button" className="button button-quiet button-small" onClick={loadDesktopWorkspace} disabled={desktopWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{desktopWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
@@ -1447,7 +1447,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </>}
       {desktopWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{desktopWorkspaceError}</div>}
     </section>
-    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="browser-workspace" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">BROWSER WORKSPACE</span><h2 className="section-title">{isAr?'مساحة المتصفح وصلاحيات المواقع':'Browser Workspace & site permissions'}</h2><p className="section-meta">{isAr?'إدارة قائمة المواقع المسموح بها واكتشاف أدوات Playwright المحلية. كل إجراء متصفح يظل خاضعًا لموافقة منفصلة.':'Manage exact allowed hostnames and inspect local Playwright tools. Every browser action still requires separate approval.'}</p></div>
         <button type="button" className="button button-quiet button-small" onClick={loadBrowserWorkspace} disabled={browserWorkspaceBusy||!localAgentToken.trim()}><RefreshCw size={14}/>{browserWorkspaceBusy?(isAr?'جارٍ التحديث...':'Refreshing...'):(isAr?'تحديث':'Refresh')}</button>
@@ -1463,7 +1463,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </>}
       {browserWorkspaceError&&<div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{browserWorkspaceError}</div>}
     </section>
-    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="http-flow-tools" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">HTTPFLOW</span><h2 className="section-title">{isAr?'مقارنة الاستجابات والصلاحيات':'HTTP response & role diff'}</h2><p className="section-meta">{isAr?'قارن نفس المسار بين الزائر والمستخدم والمدير باستخدام بيانات الاعتماد المحلية.':'Compare the same endpoint across anonymous, user, and admin roles using local credentials.'}</p></div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -1500,7 +1500,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>)}
       </div>}
     </section>
-    <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
+    <section className="panel panel-pad" id="model-router" style={{marginBottom:20}}>
       <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
       {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
@@ -1767,7 +1767,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
     );
     return <div className="page-enter">
-      {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length} aria-label={isAr?'تصدير المشاريع الظاهرة إلى ملف CSV':'Export visible projects to CSV'} data-testid="button-export-tasks"><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><button type="button" className="button button-primary" onClick={()=>setLocation('/workbench')} data-testid="button-create-task"><Plus size={15}/>{t('newTask')}</button></div>)}
+      {pageHeading(t('history'),t('history'),t('historySub'),<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-quiet" onClick={()=>exportTasksSheet(filtered)} disabled={!filtered.length} aria-label={isAr?'تصدير المشاريع الظاهرة إلى ملف CSV':'Export visible projects to CSV'} data-testid="button-export-tasks"><FileText size={14}/>{isAr?'تصدير الجدول':'Export sheet'}</button><button type="button" className="button button-primary" onClick={()=>setLocation(focusedHref('/workbench','request-input'))} data-testid="button-create-task"><Plus size={15}/>{t('newTask')}</button></div>)}
       <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المهام':'Task filters'}>
         <div className="history-search-wrap">
           <div className="field-group history-search-field"><label className="form-label" htmlFor="history-search">{isAr?'ابحث في مشاريعك':'Find a project'}</label><div className="history-search-control"><Search size={16} aria-hidden="true"/><input id="history-search" className="field" placeholder={t('searchTasks')} value={query} onChange={(event)=>setQuery(event.target.value)} data-testid="input-search-tasks"/></div></div>
