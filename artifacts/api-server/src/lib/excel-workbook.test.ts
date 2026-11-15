@@ -65,3 +65,16 @@ test("rejects unbalanced formulas", () => {
   const value = { title: "Bad", sheets: [{ name: "Data", columns: ["A"], rows: [[""]], formulas: { A2: "SUM(A1:A2" } }] };
   assert.equal(parseExcelWorkbook(json(value)), null);
 });
+
+
+test("rejects duplicate formula addresses with different letter casing", () => {
+  const value = {
+    title: "Bad",
+    sheets: [{ name: "Data", columns: ["Amount"], rows: [[""]], formulas: { A2: "SUM(A1:A1)", a2: "SUM(A1:A1)" } }]
+  };
+  assert.equal(parseExcelWorkbook(json(value)), null);
+});
+
+test("rejects oversized workbook payloads before parsing", () => {
+  assert.equal(parseExcelWorkbook(" ".repeat(1_000_001)), null);
+});
