@@ -491,7 +491,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const expectedFormulas: Array<{ sheet: string; cell: string }> = [];
     for (const sheet of sheets) {
       const worksheet = XLSX.utils.aoa_to_sheet([sheet.columns, ...sheet.rows]);
-      worksheet["!cols"] = sheet.columns.map(() => ({ wch: 20 }));
+      worksheet["!cols"] = sheet.columns.map((column, index) => ({ wch: Math.min(42, Math.max(14, String(column).length + 4, ...sheet.rows.slice(0, 40).map((row) => String(row[index] ?? "").length + 2))) }));
+      worksheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sheet.rows.length, c: sheet.columns.length - 1 } }) };
       for (const [address, rawFormula] of Object.entries(sheet.formulas || {})) {
         const formula = String(rawFormula).trim().replace(/^=/, "");
         if (!formula || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
@@ -499,7 +500,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         }
         const cell = XLSX.utils.decode_cell(address);
         if (cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
-        worksheet[address] = { t: "n", f: formula };
+        worksheet[address] = { f: formula };
         expectedFormulas.push({ sheet: sheet.name, cell: address });
       }
       XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
