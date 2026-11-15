@@ -636,8 +636,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         }
         const cell = XLSX.utils.decode_cell(address);
         if (cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
-        worksheet[address] = { f: formula };
-        expectedFormulas.push({ sheet: sheet.name, cell: address });
+        const canonicalAddress = XLSX.utils.encode_cell(cell);
+        worksheet[canonicalAddress] = { f: formula };
+        expectedFormulas.push({ sheet: sheet.name, cell: canonicalAddress });
       }
       XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
     }
@@ -650,6 +651,18 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const outputSheet = roundTrip.Sheets[sheet.name];
       if (!outputSheet || XLSX.utils.sheet_to_json(outputSheet, { header: 1 }).length !== sheet.rows.length + 1) {
         throw new Error(ar ? "فشل التحقق من محتوى ورقة Excel." : "Excel worksheet content validation failed.");
+      }
+      const expectedRows = [sheet.columns, ...sheet.rows];
+      for (let rowIndex = 0; rowIndex < expectedRows.length; rowIndex++) {
+        for (let columnIndex = 0; columnIndex < sheet.columns.length; columnIndex++) {
+          const expectedValue = expectedRows[rowIndex][columnIndex];
+          if (expectedValue === "" || expectedValue === null || expectedValue === undefined) continue;
+          const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+          const actualCell = outputSheet[address];
+          if (!actualCell || typeof actualCell.v !== typeof expectedValue || !Object.is(actualCell.v, expectedValue)) {
+            throw new Error(ar ? "فشل التحقق من قيمة أو نوع خلية في ورقة Excel." : "An Excel cell value or data type failed round-trip validation.");
+          }
+        }
       }
     }
     for (const formula of expectedFormulas) {
