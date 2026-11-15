@@ -920,7 +920,12 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     </header>
     {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA selects a free specialist model and tries alternatives when needed."}</span></div>}
     {currentMode && <div className="ai-chat-mode-banner"><span>{currentMode === "word" ? <FileText size={14}/> : currentMode === "excel" ? <Sheet size={14}/> : currentMode === "ppt" ? <Presentation size={14}/> : <BriefcaseBusiness size={14}/>} {currentMode === "word" ? (ar ? "وضع Word نشط" : "Word mode active") : currentMode === "excel" ? (ar ? "وضع Excel نشط" : "Excel mode active") : currentMode === "ppt" ? (ar ? "إعداد محتوى العرض التقديمي" : "Presentation content mode") : (ar ? "حزمة الأوفيس جاهزة" : "Office suite ready")}</span><button type="button" onClick={clearMode} aria-label={ar ? "إلغاء الوضع" : "Clear mode"}><X size={14}/></button></div>}
-    {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <>
+    {!signedIn ? <section className="panel panel-pad ai-chat-auth-gate" dir={ar?"rtl":"ltr"}>
+      <div className="ai-chat-auth-gate-mark"><LockKeyhole size={25}/></div>
+      <h2>{ar?"سجّل دخولك لفتح مساحة الشات":"Sign in to open your chat workspace"}</h2>
+      <p className="account-copy">{copy.login}</p>
+      <button type="button" className="ai-chat-auth-gate-button" onClick={()=>setLocation("/profile")}>{ar?"تسجيل الدخول أو إنشاء حساب":"Sign in or create an account"}</button>
+    </section> : <>
       {showConversationList && <section className="panel ai-conversations-panel">
         <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
         {conversations.length === 0 && <p className="muted">{ar ? "لا توجد محادثات محفوظة بعد." : "No saved conversations yet."}</p>}
