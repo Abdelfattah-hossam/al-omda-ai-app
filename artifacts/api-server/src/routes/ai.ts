@@ -50,9 +50,17 @@ function getProviders() {
 function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
+function isPowerPointRequest(messages: ChatMessage[]): boolean {
+  const request = getLatestUserRequest(messages);
+  if (!request || isHowToRequest(request)) return false;
+  const asksForPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(request);
+  const asksToCreate = /(?:اعمل|اعملي|أنشئ|انشئ|جهز|جهّز|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|عايز|عاوز|محتاج|اريد|أريد|create|make|build|generate|prepare|design|produce|export|download)/i.test(request);
+  const asksForExplanation = /(?:شرح|اشرح|كيفية|ازاي|كيف\s*(?:أ|ا)?عمل|tutorial|how\s+to|explain)/i.test(request);
+  return asksForPresentation && asksToCreate && !asksForExplanation;
+}
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
-  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isDesktopAppRequest(latest) ||
+  return isWordDocumentRequest(messages) || isExcelRequest(messages) || isPowerPointRequest(messages) || isDesktopAppRequest(latest) ||
     /project plan|خطة مشروع|خطة تنفيذ|create a practical project plan/i.test(latest);
 }
 
@@ -99,6 +107,23 @@ function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   return /7\s*(?:خانات|أعمدة|اعمدة|حقول|columns)|سبع\s*(?:خانات|أعمدة|اعمدة|حقول)|جدول.{0,45}(?:7|سبع)|(?:7|سبع).{0,30}جدول/i.test(request);
 }
 
+function parsePowerPointPresentation(text: string): { title: string; slides: Array<{ title: string; bullets: string[] }> } | null {
+  try {
+    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    const start = source.indexOf("{");
+    const end = source.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    const value = JSON.parse(source.slice(start, end + 1));
+    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 || !Array.isArray(value.slides) || value.slides.length < 3 || value.slides.length > 30) return null;
+    const slides = value.slides.map((slide: any) => {
+      if (!slide || typeof slide.title !== "string" || !slide.title.trim() || slide.title.length > 180 || !Array.isArray(slide.bullets) || slide.bullets.length > 8 || slide.bullets.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 700)) return null;
+      return { title: slide.title.trim(), bullets: slide.bullets.map((item: string) => item.trim()) };
+    });
+    if (slides.some((slide: any) => !slide)) return null;
+    if (JSON.stringify({ title: value.title, slides }).length > 65000) return null;
+    return { title: value.title.trim(), slides };
+  } catch { return null; }
+}
 function parseExcelWorkbook(text: string): { title: string; columns: string[]; rows: string[][] } | null {
   try {
     let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
