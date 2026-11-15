@@ -72,7 +72,7 @@ export function isValidDxfSource(code: string): boolean {
     if (type === "LINE") return [10, 20, 11, 21].every(has);
     if (type === "POINT") return has(10) && has(20);
     if (type === "CIRCLE") return has(10) && has(20) && has(40) && number(40) > 0;
-    if (type === "ARC") return has(10) && has(20) && has(40) && number(40) > 0 && has(50) && has(51);
+    if (type === "ARC") return has(10) && has(20) && has(40) && number(40) > 0 && has(50) && has(51) && number(50) >= 0 && number(50) < 360 && number(51) >= 0 && number(51) < 360;
     if (type === "TEXT" || type === "MTEXT") return has(10) && has(20) && has(40) && number(40) > 0 && (has(1) || has(3));
     if (type === "LWPOLYLINE") {
       const declaredCounts = values(90);
