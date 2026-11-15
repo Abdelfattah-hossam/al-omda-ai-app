@@ -99,3 +99,15 @@ test("rejects DXF with an incomplete group-code/value pair or missing ENDSEC", (
 test("rejects oversized DXF input before parsing", () => {
   assert.equal(parseSourceCodeFile(fenced("dxf", "0\nSECTION\n" + "x".repeat(100001)), "Create plan.dxf"), null);
 });
+
+
+test("accepts DXF ARC, TEXT, and MTEXT entities for preview-capable drawings", () => {
+  const dxf = [
+    "0","SECTION","2","ENTITIES",
+    "0","ARC","10","5","20","5","40","3","50","0","51","180",
+    "0","TEXT","10","1","20","2","40","2.5","1","Entrance",
+    "0","MTEXT","10","3","20","4","40","2.5","1","Room\\\\PLabel",
+    "0","ENDSEC","0","EOF"
+  ].join("\n");
+  assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create annotations.dxf")?.language, "dxf");
+});
