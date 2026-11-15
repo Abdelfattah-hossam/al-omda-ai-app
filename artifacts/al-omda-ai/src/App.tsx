@@ -607,9 +607,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     setWorkspaceLoaded(true);
     setWorkspaceLoadError('');
     const storedDisplayName = workspace.profile.displayName.trim();
-    const remoteName = storedDisplayName && storedDisplayName.toLocaleLowerCase() !== email.toLocaleLowerCase()
-      ? storedDisplayName
-      : (language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user');
+    const profileInputName = storedDisplayName.toLocaleLowerCase() === email.toLocaleLowerCase() ? '' : storedDisplayName;
+    const remoteName = profileInputName || (language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user');
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
     const remoteTasks = workspace.tasks as Task[];
     // Workspace polling runs in the background. Do not replace React state with
@@ -619,7 +618,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (prev.name === remoteName && prev.org === remoteOrg && sameTasks) return prev;
       return { ...prev, name:remoteName, org:remoteOrg, tasks:remoteTasks };
     });
-    setProfileName((current) => current === storedDisplayName ? current : storedDisplayName);
+    setProfileName((current) => current === profileInputName ? current : profileInputName);
     setProfileOrg((current) => current === remoteOrg ? current : remoteOrg);
     setAvatarPath((current) => current === workspace.profile.avatarPath ? current : workspace.profile.avatarPath);
   };
