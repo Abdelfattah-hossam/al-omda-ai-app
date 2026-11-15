@@ -39,12 +39,13 @@ function decodeXmlEntities(value: string): string {
   });
 }
 
-function parseXmlText(xml: string): { root: string; officeText: string[] } | null {
+function parseXmlText(xml: string): { root: string; officeText: string[]; relationships: Array<{ target: string; external: boolean }> } | null {
   if (!xml || xml.length > 8_000_000 || /<!DOCTYPE|<!ENTITY/i.test(xml)) return null;
   const tokens = xml.match(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<[^>]*>|[^<]+/g);
   if (!tokens || tokens.join("") !== xml) return null;
   const stack: string[] = [];
   const officeText: string[] = [];
+  const relationships: Array<{ target: string; external: boolean }> = [];
   let root = "";
   let roots = 0;
   for (const token of tokens) {
@@ -71,6 +72,13 @@ function parseXmlText(xml: string): { root: string; officeText: string[] } | nul
       if (!match) return null;
       const name = match[1];
       const attrs = match[2];
+      if (name === "Relationship" || name.endsWith(":Relationship")) {
+        const targetMatch = attrs.match(/(?:^|\\s)Target\\s*=\\s*("[^"]*"|'[^']*')/);
+        if (!targetMatch) return null;
+        const target = targetMatch[1].slice(1, -1);
+        const modeMatch = attrs.match(/(?:^|\\s)TargetMode\\s*=\\s*("[^"]*"|'[^']*')/);
+        relationships.push({ target, external: modeMatch?.[1].slice(1, -1) === "External" });
+      }
       const attrPattern = /\s+([A-Za-z_][\w:.-]*)\s*=\s*("[^"]*"|'[^']*')/g;
       let consumed = "";
       let attrMatch: RegExpExecArray | null;
@@ -89,7 +97,7 @@ function parseXmlText(xml: string): { root: string; officeText: string[] } | nul
     if (stack.length && /^(?:[A-Za-z_][\w.-]*:)?t$/.test(stack[stack.length - 1])) officeText.push(decodeXmlEntities(token));
   }
   if (stack.length || roots !== 1) return null;
-  return { root, officeText };
+  return { root, officeText, relationships };
 }
 
 async function readEntry(bytes: Uint8Array, view: DataView, entry: ZipEntry): Promise<Uint8Array | null> {
@@ -206,16 +214,41 @@ export async function validateOoxmlPackage(blob: Blob, options: OoxmlValidationO
     }
     const xmlParts = names.filter((name) => name.endsWith(".xml") || name.endsWith(".rels"));
     const allText: string[] = [];
+    const relationshipParts: Array<{ name: string; relationships: Array<{ target: string; external: boolean }> }> = [];
     for (const name of xmlParts) {
       const entry = entries.get(name)!;
       const raw = await readEntry(bytes, view, entry);
       if (!raw) return false;
-      const parsed = parseXmlText(decoder.decode(raw));
+      const xml = decoder.decode(raw);
+      const parsed = parseXmlText(xml);
       if (!parsed) return false;
+      if (name.endsWith(".rels")) relationshipParts.push({ name, relationships: parsed.relationships });
       allText.push(...parsed.officeText);
-      if (name === "word/document.xml" && (parsed.root !== "w:document" || !/<w:body(?:\s|>)/.test(decoder.decode(raw)))) return false;
-      if (/^ppt\/slides\/slide\d+\.xml$/.test(name) && parsed.root !== "p:sld") return false;
-      if (/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(name) && parsed.root !== "p:notes") return false;
+      if (name === "word/document.xml" && (parsed.root !== "w:document" || !/<w:body(?:\\s|>)/.test(xml))) return false;
+      if (name === "ppt/presentation.xml" && parsed.root !== "p:presentation") return false;
+      if (/^ppt\\/slides\\/slide\\d+\\.xml$/.test(name) && parsed.root !== "p:sld") return false;
+      if (/^ppt\\/notesSlides\\/notesSlide\\d+\\.xml$/.test(name) && parsed.root !== "p:notes") return false;
+    }
+    for (const part of relationshipParts) {
+      const sourcePath = part.name === "_rels/.rels" ? "" : part.name.replace("/_rels/", "/").replace(/\\.rels$/, "");
+      const baseDirectory = sourcePath.includes("/") ? sourcePath.slice(0, sourcePath.lastIndexOf("/") + 1) : "";
+      for (const relationship of part.relationships) {
+        if (relationship.external) continue;
+        if (!relationship.target || /^[a-z][a-z0-9+.-]*:/i.test(relationship.target) || relationship.target.includes("\\\\")) return false;
+        const targetParts = (relationship.target.startsWith("/") ? relationship.target.slice(1) : baseDirectory + relationship.target).split("/");
+        const resolved: string[] = [];
+        for (const segment of targetParts) {
+          if (!segment || segment === ".") continue;
+          if (segment === "..") { if (!resolved.length) return false; resolved.pop(); }
+          else {
+            let decoded: string;
+            try { decoded = decodeURIComponent(segment); } catch { return false; }
+            if (!decoded || decoded.includes("/") || decoded.includes("\\\\")) return false;
+            resolved.push(decoded);
+          }
+        }
+        if (!entries.has(resolved.join("/"))) return false;
+      }
     }
     if (options.expectedText?.length) {
       const joined = allText.join("\n");
