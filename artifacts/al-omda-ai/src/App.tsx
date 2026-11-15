@@ -151,7 +151,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
 
 const translations = {
   ar: {
-    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
+    overview:'الرئيسية', aiChat:'الشات الذكي', usage:'الاستخدام والذاكرة', agents:'سوق الوكلاء', agentNetwork:'شبكة الوكلاء', workbench:'مساحة العمل', history:'سجل المهام', profile:'الملف الشخصي',
     workspace:'مساحة العمل', account:'الحساب', control:'أنت صاحب القرار', controlText:'كل خطوة تحتاج موافقتك. لا ينفّذ هذا العرض أي إجراء خارجي.',
     developerTitle:'وحدة المطور', developerSub:'نظرة تقنية على مساحة العمل', dashboard:'لوحة التحكم', welcome:'مساحة عملك، بوضوح كامل.', hello:'مرحباً بك،', hero:'ابدأ محادثتك مع العمدة، ودعه يساعدك في إنجاز العمل.', heroText:'اسأل، أنشئ ملفاتك ومشروعاتك، أو فوّض مهمة لوكيل متخصص مع الاحتفاظ بالتحكم في قراراتك.', newRequest:'طلب جديد', activeTasks:'مهام قيد المراجعة', approvedPlans:'خطط معتمدة', specialists:'اختصاصات متاحة', totalTasks:'إجمالي المهام', preview:'عرض تجريبي محلي', recent:'أحدث المهام', seeHistory:'عرض السجل', specialties:'اختصاصات الوكلاء', allSix:'كل الاختصاصات الستة', demoNotice:'هذه بيانات عرض تجريبية. الخطط محاكاة محلية محددة مسبقاً وليست ناتجة عن ذكاء اصطناعي أو تنفيذ حقيقي.',
     marketplace:'سوق الوكلاء', marketplaceSub:'مساعدون متخصصون، تحت إشرافك الكامل.', all:'الكل', available:'متاح الآن', useAgent:'ابدأ بطلب', request:'اطلب مساعدة', workbenchSub:'اكتب ما تحتاجه، ثم راجع الخطة قبل الموافقة.', requestLabel:'ما المهمة التي تريد تفويضها؟', requestPlaceholder:'مثال: أريد خطة إطلاق لخدمة اشتراك موجهة للشركات الصغيرة في السعودية...', chooseSpecialty:'اختر الاختصاص', generatePlan:'اعرض الخطة المقترحة', yourPlan:'الخطة المقترحة', planEmptyTitle:'خطتك تبدأ من هنا', planEmptyText:'اكتب طلبك واختر اختصاصاً. سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لتراجعها قبل التنفيذ.', planDisclaimer:'سيُنشئ العمدة خطة مخصصة بالذكاء الاصطناعي لمراجعتها قبل بدء التنفيذ.', edit:'تعديل', save:'حفظ التعديل', stepDetails:'تفاصيل الخطوة', expectedOutput:'النتيجة المطلوبة', completionCheck:'معيار الاكتمال', approve:'موافقة وتنفيذ', reject:'رفض الخطوة', approvedStep:'تمت الموافقة', rejectedStep:'مرفوضة — عدّلها أو وافق عليها للمتابعة', pendingStep:'بانتظار موافقتك', step:'الخطوة', pause:'إيقاف مؤقت', resume:'استئناف المراجعة', stop:'إيقاف المهمة', paused:'متوقفة مؤقتاً', stopped:'متوقفة', completed:'الخطة معتمدة', reviewStatus:'بانتظار المراجعة', progress:'تقدم الخطة', allApproved:'تمت الموافقة على كل خطوات الخطة.', noExecution:'بعد موافقتك على كل خطوة، ينفّذها العمدة تلقائياً ويحفظ مخرجها هنا.',
@@ -164,7 +164,7 @@ const translations = {
     confirmStop:'هل تريد إيقاف هذه المهمة؟', active:'نشط', availableFor:'اختصاص متاح', privacy:'خصوصية وتحكم', assistantLabel:'موجّه AL OMDA', noMore:'هذا العرض لا يتصل بأي خدمة خارجية.', chatWelcome:'أهلاً بك. صف المهمة التي تريد تفويضها، وسأعرض لك تصوراً محلياً لتراجعه.', localResponse:'هذا تصور توضيحي مبني على قالب محلي. لا يتصل بذكاء اصطناعي ولا ينفّذ أي خطوة.',
   },
   en: {
-    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', workbench:'Workbench', history:'Task history', profile:'Profile',
+    overview:'Overview', aiChat:'AI Chat', usage:'Usage & memory', agents:'Agent marketplace', agentNetwork:'Agent Network', workbench:'Workbench', history:'Task history', profile:'Profile',
     workspace:'WORKSPACE', account:'ACCOUNT', control:'You stay in control', controlText:'Every step needs your approval. This preview takes no external action.',
     developerTitle:'Developer console', developerSub:'A technical view of your workspace', dashboard:'Dashboard', welcome:'Your workspace, in full view.', hello:'Welcome back,', hero:'Start a conversation with AL OMDA and get things done.', heroText:'Ask questions, create files and projects, or delegate work to a specialist while keeping control of every decision.', newRequest:'New request', activeTasks:'Awaiting review', approvedPlans:'Plans approved', specialists:'Specialties available', totalTasks:'Total tasks', preview:'LOCAL PREVIEW', recent:'Recent tasks', seeHistory:'View history', specialties:'Agent specialties', allSix:'All six specialties', demoNotice:'Seeded demo data. Plans are deterministic local previews—not AI output and not real execution.',
     marketplace:'Agent marketplace', marketplaceSub:'Specialists for focused work, always under your oversight.', all:'All', available:'Available now', useAgent:'Start a request', request:'Request help', workbenchSub:'Describe what you need, then review every proposed step.', requestLabel:'What would you like to delegate?', requestPlaceholder:'Example: Outline a launch plan for a subscription service for small businesses in Riyadh...', chooseSpecialty:'Choose a specialty', generatePlan:'Propose a plan', yourPlan:'Proposed plan', planEmptyTitle:'Your plan starts here', planEmptyText:'Describe your request and choose a specialty. AL OMDA will create a tailored AI plan for your review before execution.', planDisclaimer:'AL OMDA will create a tailored AI plan for your review before execution begins.', edit:'Edit', save:'Save changes', stepDetails:'Step details', expectedOutput:'Expected output', completionCheck:'Completion check', approve:'Approve & run', reject:'Reject step', approvedStep:'Approved', rejectedStep:'Rejected — edit or approve to continue', pendingStep:'Awaiting your approval', step:'Step', pause:'Pause task', resume:'Resume review', stop:'Stop task', paused:'Paused', stopped:'Stopped', completed:'Plan approved', reviewStatus:'Awaiting review', progress:'Plan progress', allApproved:'All proposed steps have been approved.', noExecution:'Once you approve a step, AL OMDA executes it automatically and saves the deliverable here.',
@@ -342,12 +342,12 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 }
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
-  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agents', icon:Compass },
+  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
-  { path:'/agents', key:'agents', icon:Compass },
+  { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness },
   { path:'/history', key:'history', icon:History },
   { path:'/profile', key:'profile', icon:UserRound },
@@ -413,6 +413,7 @@ function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<'checking'|'unconfigured'|'configured'|'offline'>('checking');
   const [authLoading, setAuthLoading] = useState(true);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [authUser, setAuthUser] = useState<ApiAuthUser | null>(null);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -421,6 +422,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
   const [workspaceError, setWorkspaceError] = useState('');
+  const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
@@ -468,6 +470,27 @@ function App() {
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
+  const showWorkspaceHeader = path !== '/ai' && path !== '/ai/usage';
+  const workspaceMetrics = useMemo(() => {
+    if (!showWorkspaceHeader) return { total:0, needsReview:0, approved:0 };
+    return tasks.reduce((metrics, task) => {
+      if (!task.demo) {
+        metrics.total += 1;
+        if (task.status === 'review' || task.status === 'paused') metrics.needsReview += 1;
+        if (task.status === 'approved') metrics.approved += 1;
+      }
+      return metrics;
+    }, { total:0, needsReview:0, approved:0 });
+  }, [tasks, showWorkspaceHeader]);
+  const runtimeStatusLabels = {
+    idle: { ar:'لم يتم فحص Runtime', en:'Runtime not checked' },
+    checking: { ar:'جارٍ الفحص', en:'Checking runtime' },
+    ready: { ar:'Runtime متصل', en:'Runtime connected' },
+    running: { ar:'الوكيل يعمل', en:'Agent running' },
+    approval: { ar:'بانتظار موافقتك', en:'Approval required' },
+    error: { ar:'تعذر الاتصال', en:'Runtime error' },
+  } as const;
+  const runtimeStatusLabel = runtimeStatusLabels[localAgentStatus]?.[language] ?? runtimeStatusLabels[localAgentStatus]?.en ?? 'Unknown';
 
   const copyAgentSetup = async (value:string) => {
     try {
@@ -525,6 +548,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(localSnapshot)); } catch { /* local preview remains usable without storage */ }
   }, [saved, authLoading, authUser]);
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
+    setWorkspaceLoaded(true);
+    setWorkspaceLoadError('');
     const remoteName = workspace.profile.displayName.trim() || email;
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
     const remoteTasks = workspace.tasks as Task[];
@@ -542,6 +567,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   useEffect(() => {
     let cancelled = false;
     const initializeAccount = async () => {
+      let hasAccountSession = false;
       try {
         const status = await getAuthStatus(apiRequestOptions);
         if (cancelled) return;
@@ -552,6 +578,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         setAuthStatus('configured');
         const session = await getAuthSession(apiRequestOptions);
         if (cancelled || !session.user) return;
+        hasAccountSession = true;
         setAuthUser(session.user);
         setSaved((prev) => ({ ...prev, tasks:[], name:session.user!.email, org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
         setProfileName(session.user.email);
@@ -560,7 +587,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
           const workspace = await getWorkspace(apiRequestOptions);
           if (!cancelled) applyWorkspace(workspace, session.user.email);
         } catch (error) {
-          if (!cancelled) setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+          if (!cancelled) {
+            setWorkspaceLoadError(readApiError(error, t('saveTaskFailed')));
+            setWorkspaceLoaded(true);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -568,7 +598,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
           setAuthError(readApiError(error, t('apiUnavailable')));
         }
       } finally {
-        if (!cancelled) setAuthLoading(false);
+        if (!cancelled) {
+          if (!hasAccountSession) setWorkspaceLoaded(true);
+          setAuthLoading(false);
+        }
       }
     };
     void initializeAccount();
@@ -690,6 +723,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }
       if (!result.user) throw new Error(t('apiUnavailable'));
       setAuthUser(result.user);
+      setWorkspaceLoaded(false);
       setSaved((prev) => ({ ...prev, tasks:[], name:result.user!.email, org:isAr ? 'مساحة العمل' : 'Workspace' }));
       setProfileName(result.user.email);
       setProfileOrg(isAr ? 'مساحة العمل' : 'Workspace');
@@ -697,6 +731,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       applyWorkspace(workspace, result.user.email);
       setAuthPassword('');
     } catch (error) {
+      setWorkspaceLoadError(readApiError(error, t('apiUnavailable')));
+      setWorkspaceLoaded(true);
       setAuthError(readApiError(error, t('apiUnavailable')));
     } finally {
       setAuthWorking(false);
@@ -710,6 +746,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       // Clearing the local view is still required if the remote revoke is unavailable.
     } finally {
       setAuthUser(null);
+      setWorkspaceLoaded(true);
       setAvatarPath(null);
       setWorkspaceError('');
       const local = readInitial();
@@ -917,7 +954,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
         <div className="stats-grid dashboard-kpis">
-          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:t('specialists'),value:specialties.length,foot:isAr?'وكلاء متخصصون':'Available agents',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
+          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:isAr?'قوالب تخصص متاحة':'Specialty templates',value:specialties.length,foot:isAr?'قوالب التخصصات المتاحة':'Available specialty templates',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
         </div>
       </section>
       <div className="dashboard-analytics-grid">
@@ -940,20 +977,35 @@ pnpm --filter @workspace/scripts agent:runtime`;
     } catch { /* Session ID persistence is optional when browser storage is unavailable. */ }
   }, [localAgentSessionId]);
 
+  const withLocalRuntimeTimeout = async <T,>(operation: (signal: AbortSignal) => Promise<T>, timeoutMs = 8000): Promise<T> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await operation(controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error(isAr ? "انتهت مهلة الاتصال بالوكيل المحلي." : "Local runtime request timed out.");
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
   const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" | "DELETE" = "GET", body?: Record<string, unknown>) => {
     const base = new URL(localAgentUrl.trim());
     if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) {
       throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
     }
     if (!localAgentToken.trim()) throw new Error(isAr ? "أدخل مفتاح الاتصال المحلي." : "Enter the local runtime token.");
-    const response = await fetch(base.origin + endpoint, {
-      method,
-      headers: { authorization: "Bearer " + localAgentToken.trim(), ...(body ? { "content-type": "application/json" } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}),
+    return withLocalRuntimeTimeout(async (signal) => {
+      const response = await fetch(base.origin + endpoint, {
+        method,
+        headers: { authorization: "Bearer " + localAgentToken.trim(), ...(body ? { "content-type": "application/json" } : {}) },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Local agent runtime request failed.");
+      return result;
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Local agent runtime request failed.");
-    return result;
   };
   const streamLocalAgent = async (
     action: "run" | "resume" | "continue" | "delegate",
@@ -971,13 +1023,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return await readAgentEventStream(response, onEvent);
   };
   const checkLocalAgent = async () => {
+    const checkedUrl = localAgentUrl.trim();
     setLocalAgentBusy(true); setLocalAgentStatus("checking"); setLocalAgentMessage("");
     try {
-      const healthUrl = new URL(localAgentUrl.trim());
+      const healthUrl = new URL(checkedUrl);
       if (healthUrl.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(healthUrl.hostname)) throw new Error(isAr ? "استخدم عنوان الجهاز المحلي فقط." : "Use a localhost runtime URL only.");
-      const healthResponse = await fetch(healthUrl.origin + "/health");
-      if (!healthResponse.ok) throw new Error("Local runtime is not responding.");
-      const health = await healthResponse.json();
+      const health = await withLocalRuntimeTimeout(async (signal) => {
+        const response = await fetch(healthUrl.origin + "/health", { signal });
+        if (!response.ok) throw new Error("Local runtime is not responding.");
+        return response.json();
+      });
       const tools = await callLocalAgentRuntime("/v1/tools");
       setLocalAgentStatus("ready");
       setLocalAgentMessage((isAr ? "متصل · " : "Connected · ") + String(tools.tools?.length || 0) + (isAr ? " أداة متاحة" : " tools available") + " · " + String(health.execution || "disabled"));
@@ -1253,8 +1308,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'online-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:14}}>
-        <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} onChange={event=>setLocalAgentUrl(event.target.value)} placeholder="http://127.0.0.1:4318"/></label>
-        <label className="field-group"><span className="form-label">{isAr?'مفتاح الاتصال المحلي':'Local runtime token'}</span><input className="field" type="password" autoComplete="off" value={localAgentToken} onChange={event=>setLocalAgentToken(event.target.value)} placeholder={isAr?'أدخل المفتاح من إعدادات التشغيل':'Paste OMDA_AGENT_TOKEN'}/></label>
+        <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} disabled={localAgentBusy} onChange={event=>{setLocalAgentUrl(event.target.value);setLocalAgentStatus("idle");setLocalAgentMessage("");}} placeholder="http://127.0.0.1:4318"/></label>
+        <label className="field-group"><span className="form-label">{isAr?'مفتاح الاتصال المحلي':'Local runtime token'}</span><input className="field" type="password" autoComplete="off" value={localAgentToken} disabled={localAgentBusy} onChange={event=>{setLocalAgentToken(event.target.value);setLocalAgentStatus("idle");setLocalAgentMessage("");}} placeholder={isAr?'أدخل المفتاح من إعدادات التشغيل':'Paste OMDA_AGENT_TOKEN'}/></label>
       </div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',marginTop:10}}>
         <button type="button" className="button button-quiet button-small" onClick={checkLocalAgent} disabled={localAgentBusy || !localAgentToken.trim()}>{isAr?'اختبار الاتصال':'Test connection'}</button>
@@ -1418,7 +1473,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="field-group"><div className="form-label">{t('chooseSpecialty')}</div><div className="select-grid">{specialties.map(({id,icon:Icon})=><button type="button" key={id} className={`select-specialty ${selectedSpecialty===id?'selected':''}`} onClick={()=>setSelectedSpecialty(id)} data-testid={`select-specialty-${id}`}><Icon size={14}/>{label(id)}</button>)}</div></div>
           <div className="notice-bar" style={{marginBottom:17}}><ShieldCheck size={14}/><span>{t('planDisclaimer')}</span></div>
           <button type="submit" className="button button-primary" disabled={!request.trim() || planGenerating} data-testid="button-propose-plan"><Sparkles size={15}/>{planGenerating ? (isAr ? 'جارٍ إنشاء الخطة...' : 'Generating plan...') : t('generatePlan')}<Send size={13}/></button>
-          {workspaceError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceError}</div>}
+          {(workspaceLoadError || workspaceError) && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceLoadError || workspaceError}</div>}
         </form>
         {active ? renderPlan(active) : <section className="panel plan-empty"><div><span className="empty-mark"><MessageSquareText size={22}/></span><h3>{t('planEmptyTitle')}</h3><p>{t('planEmptyText')}</p></div></section>}
       </div>
@@ -1718,7 +1773,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {!authLoading && authStatus==='offline' && <div className="notice-bar"><ShieldCheck size={15}/><span>{authError||t('apiUnavailable')}</span></div>}
           {!authLoading && authStatus==='configured' && !authUser && <><p className="account-copy">{t('authConfigured')}</p><form className="account-form" onSubmit={handleAuthSubmit}><div className="field-group"><label className="form-label" htmlFor="auth-email">{t('email')}</label><input id="auth-email" type="email" className="field" autoComplete="email" required maxLength={254} value={authEmail} onChange={(event)=>setAuthEmail(event.target.value)} data-testid="input-auth-email"/></div><div className="field-group"><label className="form-label" htmlFor="auth-password">{t('password')}</label><input id="auth-password" type="password" className="field" autoComplete={authMode==='login'?'current-password':'new-password'} required minLength={8} maxLength={128} value={authPassword} onChange={(event)=>setAuthPassword(event.target.value)} data-testid="input-auth-password"/></div>{authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}<button className="button button-primary" type="submit" disabled={authWorking} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?t('signIn'):t('signUp')}</button></form><button type="button" className="text-button" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-mode">{authMode==='login'?t('switchToSignUp'):t('switchToSignIn')}</button></>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
-          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
+          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{(workspaceLoadError||workspaceError)&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError||workspaceError}</div>}
         
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
@@ -1793,7 +1848,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
-  return <div className="app-shell" data-chat-active={location.split("?")[0] === "/ai" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
       <div className="sidebar-scroll">
@@ -1805,11 +1860,24 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <div className="sidebar-bottom"><Link href="/profile" className="sidebar-settings-link"><Settings2 size={16}/>{isAr?'الإعدادات':'Settings'}</Link><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div><div className="top-actions">
-        <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
-        <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
-        <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
-      </div></header>
+      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
+        {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'} title={workspaceLoadError ? (isAr?'تعذر تحميل بيانات مساحة العمل':'Workspace data could not be loaded') : undefined}>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.total}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.needsReview}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.approved}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
+          <span className={`topbar-runtime-state ${localAgentStatus}`} title={isAr?'حالة اتصال الوكيل المحلي':'Local runtime connection state'}>
+            <i aria-hidden="true"/>{runtimeStatusLabel}
+          </span>
+        </div>}
+        <div className="top-actions">
+          {showWorkspaceHeader && <div className="topbar-quick-actions">
+            <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
+            <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
+          </div>}
+          <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
+          <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
+          <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
+        </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>

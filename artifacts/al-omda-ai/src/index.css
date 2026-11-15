@@ -1708,7 +1708,7 @@ body:has(.ai-chat-page){
   .mobile-nav a span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:650px){
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))>.main-area>.content-wrap{
+  .app-shell:not([data-chat-active="true"])>.main-area>.content-wrap{
     padding:18px 12px 90px!important;
   }
   .profile-settings-page .page-heading{align-items:flex-start}
@@ -3046,7 +3046,7 @@ body:has(.ai-chat-page){
   50% { border-color:rgba(224,181,101,.42); }
 }
 
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) {
+.app-shell:not([data-chat-active="true"]) {
   --omda-design-bg:#08080a;
   --omda-design-panel:#151419;
   --omda-design-panel-raised:#1b191d;
@@ -3074,15 +3074,15 @@ body:has(.ai-chat-page){
   color:var(--omda-design-text);
   background:var(--omda-design-bg)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after {
+.app-shell:not([data-chat-active="true"])::before,
+.app-shell:not([data-chat-active="true"])::after {
   content:"";
   position:fixed;
   inset:0;
   z-index:-1;
   pointer-events:none;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before {
+.app-shell:not([data-chat-active="true"])::before {
   background:
     radial-gradient(650px 420px at 16% 4%,rgba(224,181,101,.17),transparent 72%),
     radial-gradient(560px 390px at 88% 34%,rgba(190,112,72,.11),transparent 72%),
@@ -3090,7 +3090,7 @@ body:has(.ai-chat-page){
   background-size:150% 150%;
   animation:omda-reference-ambient 20s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after {
+.app-shell:not([data-chat-active="true"])::after {
   opacity:.42;
   background-image:
     radial-gradient(circle at 18% 28%,rgba(246,220,160,.75) 0 1px,transparent 2px),
@@ -3099,57 +3099,57 @@ body:has(.ai-chat-page){
   background-size:310px 310px,370px 370px,430px 430px;
   animation:omda-reference-stars 58s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .sidebar {
+.app-shell:not([data-chat-active="true"]) .sidebar {
   background:#111014!important;
   border-color:var(--omda-design-line)!important;
   box-shadow:12px 0 44px rgba(0,0,0,.3)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .topbar {
+.app-shell:not([data-chat-active="true"]) .topbar {
   background:#0e0d10!important;
   border-color:var(--omda-design-line)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark {
+.app-shell:not([data-chat-active="true"]) .brand-mark {
   color:#1a1306!important;
   border:1px solid rgba(246,220,160,.72)!important;
   background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
   box-shadow:0 0 20px rgba(224,181,101,.24),inset 0 1px 0 rgba(255,255,255,.42)!important;
   animation:omda-reference-glow 3.4s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-name { color:var(--omda-design-text)!important; }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-sub,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-caption,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .crumb,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .page-subtitle,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-label,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-foot {
+.app-shell:not([data-chat-active="true"]) .brand-name { color:var(--omda-design-text)!important; }
+.app-shell:not([data-chat-active="true"]) .brand-sub,
+.app-shell:not([data-chat-active="true"]) .nav-caption,
+.app-shell:not([data-chat-active="true"]) .crumb,
+.app-shell:not([data-chat-active="true"]) .page-subtitle,
+.app-shell:not([data-chat-active="true"]) .stat-label,
+.app-shell:not([data-chat-active="true"]) .stat-foot {
   color:var(--omda-design-muted)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link {
+.app-shell:not([data-chat-active="true"]) .nav-link {
   color:#c0b8a8!important;
   border-color:transparent!important;
   transition:background .24s,color .24s,border-color .24s,transform .24s,box-shadow .24s;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link:hover {
+.app-shell:not([data-chat-active="true"]) .nav-link:hover {
   color:var(--omda-design-gold-light)!important;
   background:rgba(224,181,101,.08)!important;
   border-color:rgba(224,181,101,.15)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .nav-link.active {
+.app-shell:not([data-chat-active="true"]) .nav-link.active {
   color:var(--omda-design-gold-light)!important;
   background:rgba(224,181,101,.12)!important;
   border:1px solid rgba(224,181,101,.28)!important;
   box-shadow:inset -2px 0 var(--omda-design-gold),0 0 22px rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .control-note {
+.app-shell:not([data-chat-active="true"]) .control-note {
   background:#19171a!important;
   border-color:var(--omda-design-line)!important;
   box-shadow:inset 0 1px 0 rgba(224,181,101,.08)!important;
 }
 /* Only explicit surface components receive card treatment. Avoid matching
    text rows such as .stat-card-top, which created unwanted boxes around labels. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,
   .dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,
   .history-item,.profile-main-card,.profile-account-profile-card,
@@ -3169,7 +3169,7 @@ body:has(.ai-chat-page){
   -webkit-backdrop-filter:none!important;
   transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .panel,.dashboard-hero,.stat-card,.agent-card,.request-card,.plan-card,
   .history-item,.profile-main-card,.profile-setting-card,.profile-features-card
 ) {
@@ -3180,32 +3180,32 @@ body:has(.ai-chat-page){
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.12),rgba(224,181,101,.58),rgba(255,159,107,.28),rgba(246,220,160,.55),rgba(224,181,101,.12)) border-box!important;
   animation:omda-reference-border 11s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.panel,.stat-card,.agent-card,.request-card,.plan-card,.history-item):hover {
+.app-shell:not([data-chat-active="true"]) :is(.panel,.stat-card,.agent-card,.request-card,.plan-card,.history-item):hover {
   transform:translateY(-3px);
   border-color:rgba(224,181,101,.48)!important;
   box-shadow:0 20px 46px rgba(0,0,0,.34),0 0 22px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.1)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-hero {
+.app-shell:not([data-chat-active="true"]) .dashboard-hero {
   background:
     radial-gradient(ellipse at 90% 0%,rgba(224,181,101,.2),transparent 55%),
     linear-gradient(115deg,#211d18 0%,#171519 60%,#121115 100%) padding-box,
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.18),rgba(224,181,101,.62),rgba(255,159,107,.3),rgba(246,220,160,.58),rgba(224,181,101,.18)) border-box!important;
   overflow:hidden;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-hero:after {
+.app-shell:not([data-chat-active="true"]) .dashboard-hero:after {
   border-color:rgba(224,181,101,.2)!important;
   box-shadow:0 0 0 25px rgba(224,181,101,.035),0 0 0 55px rgba(224,181,101,.025)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.page-title,.section-title,.section-head h2,.profile-section-heading h2,.hero-copy h2) {
+.app-shell:not([data-chat-active="true"]) :is(.page-title,.section-title,.section-head h2,.profile-section-heading h2,.hero-copy h2) {
   color:var(--omda-design-text)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.eyebrow,.section-meta,.crumb,.task-main small,.agent-tag,.specialty-row small) {
+.app-shell:not([data-chat-active="true"]) :is(.eyebrow,.section-meta,.crumb,.task-main small,.agent-tag,.specialty-row small) {
   color:var(--omda-design-muted)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stat-value,.hero-side,.task-icon,.specialty-icon,.agent-symbol,.profile-avatar,.status-chip) {
+.app-shell:not([data-chat-active="true"]) :is(.stat-value,.hero-side,.task-icon,.specialty-icon,.agent-symbol,.profile-avatar,.status-chip) {
   color:var(--omda-design-gold-light)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-value {
+.app-shell:not([data-chat-active="true"]) .stat-value {
   background:linear-gradient(110deg,var(--omda-design-gold),var(--omda-design-gold-light),var(--omda-design-gold));
   background-size:200% 100%;
   -webkit-background-clip:text;
@@ -3213,17 +3213,17 @@ body:has(.ai-chat-page){
   -webkit-text-fill-color:transparent;
   animation:omda-reference-stars 8s linear infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar) {
+.app-shell:not([data-chat-active="true"]) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar) {
   background:linear-gradient(145deg,#30271a,#1b1917)!important;
   border:1px solid rgba(224,181,101,.25)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button {
+.app-shell:not([data-chat-active="true"]) .button {
   position:relative;
   overflow:hidden;
   border-radius:999px!important;
   transition:transform .18s ease,box-shadow .24s ease,background .24s ease,border-color .24s ease!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button::after {
+.app-shell:not([data-chat-active="true"]) .button::after {
   content:"";
   position:absolute;
   top:0;
@@ -3234,90 +3234,90 @@ body:has(.ai-chat-page){
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.52),transparent);
   animation:omda-reference-sheen 4.2s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary {
+.app-shell:not([data-chat-active="true"]) .button-primary {
   color:#1a1306!important;
   background:linear-gradient(135deg,var(--omda-design-gold-light),var(--omda-design-gold))!important;
   border:1px solid rgba(246,220,160,.72)!important;
   box-shadow:0 5px 20px rgba(224,181,101,.18)!important;
   animation:omda-reference-glow 3s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary:hover {
+.app-shell:not([data-chat-active="true"]) .button-primary:hover {
   color:#100d07!important;
   background:linear-gradient(135deg,#ffe7b2,#e6b95e)!important;
   box-shadow:0 9px 30px rgba(224,181,101,.34)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-quiet {
+.app-shell:not([data-chat-active="true"]) .button-quiet {
   color:var(--omda-design-text)!important;
   background:#1b191d!important;
   border-color:var(--omda-design-line)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-quiet:hover {
+.app-shell:not([data-chat-active="true"]) .button-quiet:hover {
   color:var(--omda-design-gold-light)!important;
   border-color:rgba(224,181,101,.5)!important;
   background:#211d18!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-danger {
+.app-shell:not([data-chat-active="true"]) .button-danger {
   color:#f2a29a!important;
   background:rgba(116,39,35,.22)!important;
   border-color:rgba(239,120,108,.32)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select) {
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select) {
   color:var(--omda-design-text);
   background:#0e0d10!important;
   border-color:rgba(224,181,101,.2)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select)::placeholder {
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select)::placeholder {
   color:#827968!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.field,input,textarea,select):focus {
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select):focus {
   border-color:var(--omda-design-gold)!important;
   box-shadow:0 0 0 3px rgba(224,181,101,.13),0 0 18px rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip {
+.app-shell:not([data-chat-active="true"]) .status-chip {
   background:rgba(224,181,101,.1)!important;
   border-color:rgba(224,181,101,.28)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip.completed {
+.app-shell:not([data-chat-active="true"]) .status-chip.completed {
   color:#8dd2b0!important;
   background:rgba(52,211,153,.1)!important;
   border-color:rgba(52,211,153,.3)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .status-chip.stopped {
+.app-shell:not([data-chat-active="true"]) .status-chip.stopped {
   color:#f19b92!important;
   background:rgba(239,68,68,.1)!important;
   border-color:rgba(239,68,68,.28)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note) {
+.app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note) {
   animation:omda-reference-edge 5.5s ease-in-out infinite;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .route-page-transition,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .page-enter {
+.app-shell:not([data-chat-active="true"]) .route-page-transition,
+.app-shell:not([data-chat-active="true"]) .page-enter {
   animation:omda-reference-enter .48s cubic-bezier(.2,.7,.2,1) both;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid,.profile-settings-layout)>* {
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid,.profile-settings-layout)>* {
   animation:omda-reference-enter .55s cubic-bezier(.2,.7,.2,1) both;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(2) { animation-delay:.07s; }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(3) { animation-delay:.14s; }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(4) { animation-delay:.21s; }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .sidebar-bottom .control-note { animation:omda-reference-edge 5.5s ease-in-out infinite; }
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(2) { animation-delay:.07s; }
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(3) { animation-delay:.14s; }
+.app-shell:not([data-chat-active="true"]) :is(.stats-grid,.dashboard-grid,.market-grid)>:nth-child(4) { animation-delay:.21s; }
+.app-shell:not([data-chat-active="true"]) .sidebar-bottom .control-note { animation:omda-reference-edge 5.5s ease-in-out infinite; }
 
 @media (prefers-reduced-motion:reduce) {
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::before,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))::after,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *::before,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) *::after {
+  .app-shell:not([data-chat-active="true"])::before,
+  .app-shell:not([data-chat-active="true"])::after,
+  .app-shell:not([data-chat-active="true"]) *,
+  .app-shell:not([data-chat-active="true"]) *::before,
+  .app-shell:not([data-chat-active="true"]) *::after {
     animation:none!important;
     transition:none!important;
     scroll-behavior:auto!important;
   }
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"]::before,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"]::after,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *::before,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] *::after {
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::before,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"]::after,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::before,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] *::after {
   animation:none!important;
   transition:none!important;
 }
@@ -3325,103 +3325,103 @@ body:has(.ai-chat-page){
 
 /* Finish the non-chat shell recolor: content canvas, mobile navigation,
    developer surfaces, filters, toggles, and small status controls. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .main-area {
+.app-shell:not([data-chat-active="true"]) .main-area {
   background:transparent!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav {
+.app-shell:not([data-chat-active="true"]) .mobile-nav {
   background:#111014!important;
   border-top:1px solid rgba(224,181,101,.22)!important;
   box-shadow:0 -12px 36px rgba(0,0,0,.38)!important;
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav a {
+.app-shell:not([data-chat-active="true"]) .mobile-nav a {
   color:#a39b88!important;
   transition:color .2s,transform .2s;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav a.active {
+.app-shell:not([data-chat-active="true"]) .mobile-nav a.active {
   color:var(--omda-design-gold-light)!important;
   text-shadow:0 0 14px rgba(224,181,101,.25);
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .developer-console {
+.app-shell:not([data-chat-active="true"]) .developer-console {
   color:var(--omda-design-text)!important;
   background:linear-gradient(145deg,#211d18,#121115)!important;
   border:1px solid rgba(224,181,101,.25)!important;
   box-shadow:0 16px 42px rgba(0,0,0,.3),inset 0 1px 0 rgba(246,220,160,.06)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .developer-code {
+.app-shell:not([data-chat-active="true"]) .developer-code {
   color:#e8d9b8!important;
   background:#0c0b0d!important;
   border-color:rgba(224,181,101,.16)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .console-lights i {
+.app-shell:not([data-chat-active="true"]) .console-lights i {
   background:var(--omda-design-gold)!important;
   box-shadow:0 0 10px rgba(224,181,101,.45)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .console-lights i:nth-child(2) {
+.app-shell:not([data-chat-active="true"]) .console-lights i:nth-child(2) {
   background:#f0c77e!important;
   box-shadow:0 0 10px rgba(240,199,126,.42)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .console-lights i:nth-child(3) {
+.app-shell:not([data-chat-active="true"]) .console-lights i:nth-child(3) {
   background:#8dd2b0!important;
   box-shadow:0 0 10px rgba(141,210,176,.4)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.icon-button,.filter-pill,.select-specialty,.step-edit) {
+.app-shell:not([data-chat-active="true"]) :is(.icon-button,.filter-pill,.select-specialty,.step-edit) {
   color:#d8c9aa!important;
   background:#171519!important;
   border-color:rgba(224,181,101,.2)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .icon-button:hover {
+.app-shell:not([data-chat-active="true"]) .icon-button:hover {
   color:var(--omda-design-gold-light)!important;
   border-color:rgba(224,181,101,.5)!important;
   background:#211d18!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.filter-pill.active,.select-specialty.selected) {
+.app-shell:not([data-chat-active="true"]) :is(.filter-pill.active,.select-specialty.selected) {
   color:var(--omda-design-gold-light)!important;
   background:linear-gradient(110deg,rgba(224,181,101,.18),rgba(190,112,72,.1))!important;
   border-color:rgba(224,181,101,.48)!important;
   box-shadow:0 0 18px rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .step-number {
+.app-shell:not([data-chat-active="true"]) .step-number {
   color:var(--omda-design-gold-light)!important;
   border-color:rgba(224,181,101,.34)!important;
   background:rgba(224,181,101,.08)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .step-number.approved {
+.app-shell:not([data-chat-active="true"]) .step-number.approved {
   color:#8dd2b0!important;
   border-color:rgba(141,210,176,.35)!important;
   background:rgba(52,211,153,.1)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .step-number.rejected {
+.app-shell:not([data-chat-active="true"]) .step-number.rejected {
   color:#f19b92!important;
   border-color:rgba(239,120,108,.35)!important;
   background:rgba(239,68,68,.1)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .step-current {
+.app-shell:not([data-chat-active="true"]) .step-current {
   background:rgba(224,181,101,.07)!important;
   border-color:rgba(224,181,101,.24)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .toggle.on {
+.app-shell:not([data-chat-active="true"]) .toggle.on {
   background:linear-gradient(90deg,#b98945,#f0cf8a)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .toggle.on:after {
+.app-shell:not([data-chat-active="true"]) .toggle.on:after {
   background:#fff2d3!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.text-button,.icon-button:hover) {
+.app-shell:not([data-chat-active="true"]) :is(.text-button,.icon-button:hover) {
   color:var(--omda-design-gold-light)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .empty-mark {
+.app-shell:not([data-chat-active="true"]) .empty-mark {
   color:var(--omda-design-gold-light)!important;
   background:linear-gradient(145deg,#30271a,#1b1917)!important;
   border-color:rgba(224,181,101,.3)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .divider {
+.app-shell:not([data-chat-active="true"]) .divider {
   background:rgba(224,181,101,.17)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.plan-step,.agent-footer,.profile-summary) {
+.app-shell:not([data-chat-active="true"]) :is(.plan-step,.agent-footer,.profile-summary) {
   border-color:rgba(224,181,101,.15)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .developer-console-foot i {
+.app-shell:not([data-chat-active="true"]) .developer-console-foot i {
   background:#8dd2b0!important;
   box-shadow:0 0 9px rgba(141,210,176,.5)!important;
 }
@@ -3429,7 +3429,7 @@ body:has(.ai-chat-page){
 
 /* Final reference-match corrections: no miniature text boxes and no blue nav accents.
    Scoped to non-chat screens; chat markup, dimensions, colors and scroll remain untouched. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .stat-card-top,.stat-label,.stat-value,.stat-foot,.section-head,.section-title,
   .section-meta,.eyebrow,.dashboard-card-subtitle,.dashboard-chart-menu,
   .dashboard-kpi-icon,.task-main,.agent-card-stats,.history-item-open,
@@ -3444,93 +3444,93 @@ body:has(.ai-chat-page){
   background-color:transparent!important;
   background-image:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-card-top,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-card-top * {
+.app-shell:not([data-chat-active="true"]) .stat-card-top,
+.app-shell:not([data-chat-active="true"]) .stat-card-top * {
   border-color:transparent!important;
   outline:0!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi {
+.app-shell:not([data-chat-active="true"]) .dashboard-kpi {
   --kpi-glow:rgba(224,181,101,.34)!important;
   background:linear-gradient(145deg,#1b191d 0%,#111014 100%) padding-box,
     conic-gradient(from var(--omda-reference-angle),rgba(224,181,101,.14),rgba(224,181,101,.58),rgba(246,220,160,.42),rgba(224,181,101,.14)) border-box!important;
   border:1px solid transparent!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi-icon {
+.app-shell:not([data-chat-active="true"]) .dashboard-kpi-icon {
   color:#f6dca0!important;
   background:linear-gradient(145deg,#30271a,#1b1917)!important;
   border:1px solid rgba(224,181,101,.28)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-kpi:after {
+.app-shell:not([data-chat-active="true"]) .dashboard-kpi:after {
   background:radial-gradient(circle,rgba(224,181,101,.32),transparent 72%)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav {
+.app-shell:not([data-chat-active="true"]) .mobile-nav {
   background:#111014!important;
   border:1px solid rgba(224,181,101,.24)!important;
   border-bottom:0!important;
   box-shadow:0 -12px 36px rgba(0,0,0,.42),0 0 24px rgba(224,181,101,.06)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link {
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link {
   color:#aaa18f!important;
   border:1px solid transparent!important;
   background:transparent!important;
   text-shadow:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active {
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active {
   color:#f6dca0!important;
   border-color:rgba(224,181,101,.3)!important;
   background:linear-gradient(145deg,rgba(224,181,101,.16),rgba(224,181,101,.055))!important;
   box-shadow:0 0 18px rgba(224,181,101,.13),inset 0 1px 0 rgba(246,220,160,.1)!important;
   text-shadow:0 0 12px rgba(224,181,101,.2)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active svg {
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active svg {
   color:#f6dca0!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-analytics-grid,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-history-panel,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-chart-card {
+.app-shell:not([data-chat-active="true"]) .dashboard-analytics-grid,
+.app-shell:not([data-chat-active="true"]) .dashboard-history-panel,
+.app-shell:not([data-chat-active="true"]) .dashboard-chart-card {
   color:#f6f1e7!important;
   background-color:#151419!important;
   border-color:rgba(224,181,101,.22)!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .dashboard-chart-card :is(.pipeline-track,.activity-chart-grid) {
+.app-shell:not([data-chat-active="true"]) .dashboard-chart-card :is(.pipeline-track,.activity-chart-grid) {
   background-color:rgba(224,181,101,.09)!important;
 }
 
 
 /* Review fixes: keep KPI values readable and preserve entrance + border motion. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stat-value {
+.app-shell:not([data-chat-active="true"]) .stat-value {
   color:#f6dca0!important;
   background:transparent!important;
   background-image:none!important;
   -webkit-text-fill-color:#f6dca0!important;
   animation:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card {
+.app-shell:not([data-chat-active="true"]) .stats-grid>.stat-card {
   animation:omda-reference-enter .55s cubic-bezier(.2,.7,.2,1) both,
             omda-reference-border 11s linear infinite!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(2) {animation-delay:.07s,0s!important}
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(3) {animation-delay:.14s,0s!important}
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card:nth-child(4) {animation-delay:.21s,0s!important}
+.app-shell:not([data-chat-active="true"]) .stats-grid>.stat-card:nth-child(2) {animation-delay:.07s,0s!important}
+.app-shell:not([data-chat-active="true"]) .stats-grid>.stat-card:nth-child(3) {animation-delay:.14s,0s!important}
+.app-shell:not([data-chat-active="true"]) .stats-grid>.stat-card:nth-child(4) {animation-delay:.21s,0s!important}
 
 /* Animate glow on a filter layer instead of an !important box-shadow. */
 @keyframes omda-reference-filter-glow {
   0%,100% {filter:drop-shadow(0 4px 8px rgba(224,181,101,.12))}
   50% {filter:drop-shadow(0 7px 15px rgba(224,181,101,.38))}
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary {
+.app-shell:not([data-chat-active="true"]) .button-primary {
   animation:omda-reference-filter-glow 3s ease-in-out infinite!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark {
+.app-shell:not([data-chat-active="true"]) .brand-mark {
   animation:omda-reference-filter-glow 3.4s ease-in-out infinite!important;
 }
 
 /* Animated notice edge uses a separate overlay; static border remains the fallback. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note) {
+.app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note) {
   position:relative;
   isolation:isolate;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note)::after {
+.app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note)::after {
   content:"";
   position:absolute;
   inset:0;
@@ -3547,7 +3547,7 @@ body:has(.ai-chat-page){
 
 
 /* Accessibility review: retain a clear keyboard focus ring on task links. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .history-item-open,.dashboard-task-name
 ):focus-visible {
   outline:2px solid #f6dca0!important;
@@ -3558,25 +3558,25 @@ body:has(.ai-chat-page){
 
 /* Reduced-motion must win over every later, high-specificity animation rule. */
 @media (prefers-reduced-motion:reduce) {
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .stats-grid>.stat-card,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .button-primary,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .brand-mark,
-  .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(.notice-bar,.notice,.control-note)::after {
+  .app-shell:not([data-chat-active="true"]) .stats-grid>.stat-card,
+  .app-shell:not([data-chat-active="true"]) .button-primary,
+  .app-shell:not([data-chat-active="true"]) .brand-mark,
+  .app-shell:not([data-chat-active="true"]) :is(.notice-bar,.notice,.control-note)::after {
     animation:none!important;
     transition:none!important;
   }
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .stats-grid>.stat-card,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .button-primary,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] .brand-mark,
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading))[data-reduced-motion="true"] :is(.notice-bar,.notice,.control-note)::after {
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] .stats-grid>.stat-card,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] .button-primary,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] .brand-mark,
+.app-shell:not([data-chat-active="true"])[data-reduced-motion="true"] :is(.notice-bar,.notice,.control-note)::after {
   animation:none!important;
   transition:none!important;
 }
 
 
 /* Gold reference pass: actual cards get a moving gradient edge; text never does. */
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
   .agent-card,.request-card,.plan-card,.history-item,.profile-main-card,
   .profile-account-profile-card,.profile-setting-card,.profile-features-card,
@@ -3590,7 +3590,7 @@ body:has(.ai-chat-page){
   animation:omda-reference-border 12s linear infinite!important;
   transition:transform .28s ease,box-shadow .28s ease!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+.app-shell:not([data-chat-active="true"]) :is(
   .stat-card-top,.stat-label,.stat-value,.stat-foot,.dashboard-card-subtitle,
   .section-head,.section-title,.section-meta,.eyebrow,.dashboard-chart-menu,
   .dashboard-kpi-icon,.dashboard-task-name,.dashboard-task-table th,
@@ -3602,7 +3602,7 @@ body:has(.ai-chat-page){
   background:transparent!important;background-image:none!important;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .lang-button {
+.app-shell:not([data-chat-active="true"]) .lang-button {
   display:inline-flex!important;align-items:center!important;justify-content:center!important;
   gap:7px!important;min-height:36px!important;padding:0 13px!important;
   border:1px solid rgba(224,181,101,.38)!important;border-radius:999px!important;
@@ -3612,12 +3612,12 @@ body:has(.ai-chat-page){
   font:600 11px/1 var(--app-font-sans)!important;
   transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease!important;
 }
-.app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .lang-button:hover {
+.app-shell:not([data-chat-active="true"]) .lang-button:hover {
   transform:translateY(-2px)!important;border-color:rgba(246,220,160,.72)!important;
   box-shadow:0 0 22px rgba(224,181,101,.2)!important;
 }
 @media(max-width:650px){
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav{
+ .app-shell:not([data-chat-active="true"]) .mobile-nav{
    display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
    align-items:stretch!important;justify-content:initial!important;gap:6px!important;
    inset-inline:10px!important;bottom:calc(7px + env(safe-area-inset-bottom))!important;
@@ -3628,7 +3628,7 @@ body:has(.ai-chat-page){
    box-shadow:0 12px 38px rgba(0,0,0,.46),0 0 25px rgba(224,181,101,.08),inset 0 1px 0 rgba(246,220,160,.08)!important;
    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
  }
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link{
+ .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link{
    display:flex!important;min-width:0!important;width:100%!important;min-height:58px!important;
    flex-direction:column!important;align-items:center!important;justify-content:center!important;
    gap:5px!important;padding:5px 2px!important;border:1px solid transparent!important;
@@ -3636,21 +3636,21 @@ body:has(.ai-chat-page){
    font-size:9px!important;line-height:1.15!important;text-decoration:none!important;
    transition:transform .22s ease,color .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease!important;
  }
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link svg{
+ .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link svg{
    width:19px!important;height:19px!important;stroke-width:1.8!important;
  }
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active{
+ .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active{
    color:#f6dca0!important;border-color:rgba(224,181,101,.4)!important;
    background:linear-gradient(145deg,rgba(224,181,101,.2),rgba(224,181,101,.07))!important;
    box-shadow:0 0 20px rgba(224,181,101,.14),inset 0 1px 0 rgba(246,220,160,.12)!important;
    transform:translateY(-2px)!important;
  }
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) .mobile-nav .mobile-nav-link.active svg{
+ .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active svg{
    color:#f6dca0!important;filter:drop-shadow(0 0 6px rgba(224,181,101,.4))!important;
  }
 }
 @media(prefers-reduced-motion:reduce){
- .app-shell:not([data-chat-active="true"]):not(:has(.ai-chat-heading)) :is(
+ .app-shell:not([data-chat-active="true"]) :is(
    .panel,.dashboard-hero,.stat-card,.dashboard-chart-card,.dashboard-history-panel,
    .agent-card,.request-card,.plan-card,.history-item,.profile-main-card,
    .profile-account-profile-card,.profile-setting-card,.profile-features-card,
@@ -4943,4 +4943,116 @@ body:has(.ai-chat-page){
 }
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-live-modal :is(button,.ai-chat-live-test,.ai-chat-live-end) {
   border-color:rgba(224,181,101,.24)!important;
+}
+
+
+/* Dashboard header metrics: factual workspace counts, isolated from the chat UI. */
+.app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics {
+  display:flex;
+  align-items:center;
+  gap:clamp(8px,1.2vw,18px);
+  min-width:0;
+  margin-inline-start:auto;
+  padding-inline:12px;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric {
+  display:grid;
+  gap:2px;
+  min-width:44px;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric strong {
+  color:var(--omda-design-text,#f6f1e7);
+  font-size:14px;
+  line-height:1.1;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric small {
+  color:var(--omda-design-muted,#a39b88);
+  font-size:9px;
+  white-space:nowrap;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  max-width:170px;
+  color:var(--omda-design-muted,#a39b88);
+  font-size:10px;
+  white-space:nowrap;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state i {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  flex:none;
+  background:#77736b;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.ready i { background:#62bd91; }
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.running i,
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.checking i { background:#d6b36c; }
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.error i { background:#d87979; }
+.app-shell:not([data-chat-active="true"]) .topbar-quick-actions {
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-quick-link {
+  min-height:34px;
+  padding:7px 10px;
+  font-size:10px;
+  white-space:nowrap;
+}
+@media(max-width:1100px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { gap:8px; padding-inline:6px; }
+  .app-shell:not([data-chat-active="true"]) .topbar-runtime-state { display:none; }
+}
+@media(max-width:900px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-actions { gap:5px; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link span { display:none; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link { width:34px; min-width:34px; min-height:34px; padding:0; justify-content:center; }
+  .app-shell:not([data-chat-active="true"]) .top-actions { gap:6px; }
+  .app-shell:not([data-chat-active="true"]) .status-button { gap:0; padding-inline:8px; font-size:0; }
+  .app-shell:not([data-chat-active="true"]) .lang-button span { display:none; }
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { display:none; }
+}
+
+
+/* Restore the requested desktop sidebar layout for non-chat workspace pages.
+   Tablet and phone navigation remain docked; the chat workspace is untouched. */
+@media(min-width:801px) {
+  .app-shell:not([data-chat-active="true"]) > .sidebar {
+    display:flex!important;
+    position:fixed!important;
+    inset-block:0!important;
+    inset-inline-start:0!important;
+    inset-inline-end:auto!important;
+    width:260px!important;
+    min-width:260px!important;
+    max-width:260px!important;
+    z-index:30!important;
+  }
+  .app-shell:not([data-chat-active="true"]) > .main-area {
+    width:auto!important;
+    margin-inline-start:260px!important;
+    margin-inline-end:0!important;
+    padding-inline:24px!important;
+    padding-bottom:24px!important;
+  }
+  .app-shell:not([data-chat-active="true"]) > .mobile-nav {
+    display:none!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .curtain-trigger {
+    display:none!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar {
+    height:72px!important;
+    padding-inline:28px!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .content-wrap {
+    max-width:1440px!important;
+    padding:28px 24px 56px!important;
+  }
 }
