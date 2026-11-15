@@ -66,13 +66,13 @@ test("rejects active SVG content and event handlers", () => {
 test("accepts a minimal ASCII DXF drawing with a LINE entity", () => {
   const dxf = [
     "0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","100","21","50","0","ENDSEC","0","EOF"
-  ].join("\\n");
+  ].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create site-plan.dxf")?.name, "al-omda-source.dxf");
 });
 
 test("rejects malformed and unsupported DXF source", () => {
-  const malformed = ["0","SECTION","2","ENTITIES","0","LINE","10","not-a-number","20","0","0","ENDSEC","0","EOF"].join("\\n");
-  const unsupported = ["0","SECTION","2","ENTITIES","0","UNSAFE_ENTITY","0","ENDSEC","0","EOF"].join("\\n");
+  const malformed = ["0","SECTION","2","ENTITIES","0","LINE","10","not-a-number","20","0","0","ENDSEC","0","EOF"].join("\n");
+  const unsupported = ["0","SECTION","2","ENTITIES","0","UNSAFE_ENTITY","0","ENDSEC","0","EOF"].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", malformed), "Create site-plan.dxf"), null);
   assert.equal(parseSourceCodeFile(fenced("dxf", unsupported), "Create site-plan.dxf"), null);
 });
