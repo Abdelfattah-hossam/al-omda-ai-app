@@ -8,9 +8,15 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#12151b",
-  "theme_color": "#12151b",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
   "icons": [
+    {
+      "src": "/brand/al-omda-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",
