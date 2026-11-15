@@ -917,7 +917,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
         <div className="stats-grid dashboard-kpis">
-          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:t('specialists'),value:specialties.length,foot:isAr?'وكلاء متخصصون':'Available agents',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
+          {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:'/history?status=review',tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:'/history?status=approved',tone:'teal'},{label:t('specialists'),value:specialties.length,foot:isAr?'قوالب تخصص متاحة':'Specialty templates',icon:Bot,href:'/agents',tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:'/history',tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
         </div>
       </section>
       <div className="dashboard-analytics-grid">
@@ -1805,11 +1805,24 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <div className="sidebar-bottom"><Link href="/profile" className="sidebar-settings-link"><Settings2 size={16}/>{isAr?'الإعدادات':'Settings'}</Link><div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div><Link href="/profile" className="profile-mini"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span><ArrowUpLeft size={13} style={{marginInlineStart:'auto',color:'#777e87'}}/></Link></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div><div className="top-actions">
-        <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
-        <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
-        <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
-      </div></header>
+      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
+        {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-workspace-metrics" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'}>
+          <span className="topbar-metric"><strong>{tasks.length}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
+          <span className="topbar-metric"><strong>{tasks.filter(task=>task.status==='review'||task.status==='paused').length}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
+          <span className="topbar-metric"><strong>{tasks.filter(task=>task.status==='approved').length}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
+          <span className={`topbar-runtime-state ${localAgentStatus}`} title={isAr?'حالة اتصال الوكيل المحلي':'Local runtime connection state'}>
+            <i aria-hidden="true"/>{localAgentStatus==='ready'?(isAr?'Runtime متصل':'Runtime connected'):localAgentStatus==='checking'?(isAr?'جارٍ الفحص':'Checking runtime'):localAgentStatus==='running'?(isAr?'الوكيل يعمل':'Agent running'):localAgentStatus==='approval'?(isAr?'بانتظار موافقتك':'Approval required'):localAgentStatus==='error'?(isAr?'تعذر الاتصال':'Runtime error'):(isAr?'لم يتم فحص Runtime':'Runtime not checked')}
+          </span>
+        </div>}
+        <div className="top-actions">
+          {path !== '/ai' && path !== '/ai/usage' && <div className="topbar-quick-actions">
+            <Link href="/ai" className="button button-quiet topbar-quick-link"><Bot size={14}/><span>{isAr?'الشات':'Chat'}</span></Link>
+            <Link href="/workbench" className="button button-primary topbar-quick-link"><Plus size={14}/><span>{isAr?'طلب جديد':'New task'}</span></Link>
+          </div>}
+          <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status"><span className={`online-dot ${authUser?'':'offline-dot'}`}/>{authUser?'Supabase':t('localOnly')}</button>
+          <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
+          <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
+        </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
