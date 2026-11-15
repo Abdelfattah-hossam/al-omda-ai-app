@@ -6289,3 +6289,93 @@ body:has(.ai-chat-page){
     padding:10px 8px;
   }
 }
+
+
+/* Cross-page layout refinements: dashboard, directory, workbench, history, details. */
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse {
+  display:grid;
+  grid-template-columns:minmax(190px,1.1fr) minmax(250px,1fr) auto;
+  align-items:center;
+  gap:18px;
+  margin:0 0 22px;
+  padding:17px 19px;
+  border:1px solid color-mix(in srgb,var(--omda-accent,#d7b477) 23%,var(--border));
+  background:linear-gradient(110deg,color-mix(in srgb,var(--omda-accent,#d7b477) 9%,var(--panel,#17191f)),var(--panel,#17191f) 58%);
+}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-copy {display:grid;gap:5px;min-width:0}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-copy > strong {font-size:14px;color:var(--text,#f1eee8)}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-copy > p {margin:0;color:var(--muted,#aaa39a);font-size:11px;line-height:1.6}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics > div {display:grid;gap:4px;padding:8px 11px;border-inline-start:1px solid var(--border)}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics strong {font-size:20px;line-height:1.1;font-weight:850;font-variant-numeric:tabular-nums;color:var(--text,#f1eee8)}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-metrics span {font-size:10px;color:var(--muted,#aaa39a)}
+.app-shell:not([data-chat-active="true"]) .dashboard-pulse-action {white-space:nowrap}
+.app-shell:not([data-chat-active="true"]) .marketplace-intro {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:16px;
+  margin:0 0 16px;
+  padding:20px;
+  border:1px solid color-mix(in srgb,var(--omda-accent,#d7b477) 24%,var(--border));
+  background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--omda-accent,#d7b477) 12%,transparent),transparent 65%),var(--panel,#17191f);
+}
+.app-shell:not([data-chat-active="true"]) .marketplace-intro-mark {display:grid;place-items:center;width:54px;height:54px;border-radius:17px;color:var(--omda-accent,#d7b477);background:color-mix(in srgb,var(--omda-accent,#d7b477) 12%,transparent);border:1px solid color-mix(in srgb,var(--omda-accent,#d7b477) 25%,transparent)}
+.app-shell:not([data-chat-active="true"]) .marketplace-intro-copy {min-width:0}
+.app-shell:not([data-chat-active="true"]) .marketplace-intro-copy h2 {margin:4px 0 5px;font-size:17px;color:var(--text,#f1eee8);font-weight:800}
+.app-shell:not([data-chat-active="true"]) .marketplace-intro-copy p {margin:0;color:var(--muted,#aaa39a);font-size:11px;line-height:1.7}
+.app-shell:not([data-chat-active="true"]) .workbench-context {
+  display:flex;
+  align-items:center;
+  gap:13px;
+  margin:0 0 16px;
+  padding:13px 16px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb,var(--panel,#17191f) 90%,var(--omda-accent,#d7b477) 10%);
+}
+.app-shell:not([data-chat-active="true"]) .workbench-context-icon {display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;color:var(--omda-accent,#d7b477);background:color-mix(in srgb,var(--omda-accent,#d7b477) 12%,transparent)}
+.app-shell:not([data-chat-active="true"]) .workbench-context > div:nth-child(2) {display:grid;gap:3px;min-width:0;flex:1}
+.app-shell:not([data-chat-active="true"]) .workbench-context strong {font-size:12px;color:var(--text,#f1eee8)}
+.app-shell:not([data-chat-active="true"]) .workbench-context p {margin:0;color:var(--muted,#aaa39a);font-size:11px;overflow-wrap:anywhere}
+.app-shell:not([data-chat-active="true"]) .history-list-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 2px 10px}
+.app-shell:not([data-chat-active="true"]) .history-list-heading > div {display:grid;gap:3px}
+.app-shell:not([data-chat-active="true"]) .history-list-heading strong {font-size:13px;color:var(--text,#f1eee8)}
+.app-shell:not([data-chat-active="true"]) .history-list-heading span {font-size:10px;color:var(--muted,#aaa39a)}
+.app-shell:not([data-chat-active="true"]) .history-list-total {padding:5px 9px;border:1px solid var(--border);border-radius:999px;font-variant-numeric:tabular-nums}
+.app-shell:not([data-chat-active="true"]) .task-detail-overview {
+  display:grid;
+  grid-template-columns:minmax(170px,.85fr) minmax(130px,1fr) auto;
+  align-items:center;
+  gap:18px;
+  margin:0 0 18px;
+  padding:17px 19px;
+  border:1px solid color-mix(in srgb,var(--omda-accent,#d7b477) 22%,var(--border));
+  background:linear-gradient(115deg,color-mix(in srgb,var(--omda-accent,#d7b477) 8%,var(--panel,#17191f)),var(--panel,#17191f) 62%);
+}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-copy {display:grid;gap:4px}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-copy > strong {font-size:24px;color:var(--text,#f1eee8);font-variant-numeric:tabular-nums}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-copy > strong small {font-size:11px;color:var(--muted,#aaa39a);font-weight:500}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-copy > p {margin:0;color:var(--muted,#aaa39a);font-size:10px}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-track {height:9px;overflow:hidden;border-radius:99px;background:color-mix(in srgb,var(--text,#f1eee8) 9%,transparent)}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-track > span {display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--omda-accent,#d7b477),#69cdb3);transition:width .25s ease}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-meta {display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.app-shell:not([data-chat-active="true"]) .task-detail-progress-meta > span:not(.status-chip) {font-size:10px;color:var(--muted,#aaa39a);white-space:nowrap}
+@media(max-width:850px) {
+  .app-shell:not([data-chat-active="true"]) .dashboard-pulse {grid-template-columns:1fr;gap:12px}
+  .app-shell:not([data-chat-active="true"]) .dashboard-pulse-action {justify-self:start}
+  .app-shell:not([data-chat-active="true"]) .task-detail-overview {grid-template-columns:1fr 1fr;gap:12px}
+  .app-shell:not([data-chat-active="true"]) .task-detail-progress-meta {grid-column:1/-1;justify-content:flex-start}
+}
+@media(max-width:620px) {
+  .app-shell:not([data-chat-active="true"]) .marketplace-intro {grid-template-columns:auto minmax(0,1fr);padding:15px;gap:12px}
+  .app-shell:not([data-chat-active="true"]) .marketplace-intro-mark {width:44px;height:44px;border-radius:14px}
+  .app-shell:not([data-chat-active="true"]) .marketplace-intro > .button {grid-column:1/-1;justify-content:center;width:100%}
+  .app-shell:not([data-chat-active="true"]) .workbench-context {align-items:flex-start;flex-wrap:wrap}
+  .app-shell:not([data-chat-active="true"]) .workbench-context > .button {margin-inline-start:49px}
+  .app-shell:not([data-chat-active="true"]) .task-detail-overview {grid-template-columns:1fr}
+  .app-shell:not([data-chat-active="true"]) .task-detail-progress-meta {grid-column:auto}
+  .app-shell:not([data-chat-active="true"]) .history-list-heading {align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce) {
+  .app-shell:not([data-chat-active="true"]) .task-detail-progress-track > span {transition:none}
+}
