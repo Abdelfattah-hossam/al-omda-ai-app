@@ -22,7 +22,9 @@ export function parsePowerPointPresentation(text: string): PowerPointPresentatio
       };
     });
     if (slides.some((slide) => slide === null)) return null;
-    const normalized = { title: value.title.trim(), slides: slides as PowerPointSlide[] };
+    const validSlides = slides as PowerPointSlide[];
+    if (validSlides.some((slide) => slide.bullets.reduce((total, bullet) => total + bullet.length, 0) > 2400)) return null;
+    const normalized = { title: value.title.trim(), slides: validSlides };
     if (JSON.stringify(normalized).length > 85000) return null;
     return normalized;
   } catch {
