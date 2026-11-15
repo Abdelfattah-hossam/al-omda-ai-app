@@ -33,7 +33,7 @@ function withPreviewCsp(html: string): string {
 
 
 function dxfToSvg(source: string): string {
-  const lines = source.replace(/\\r/g, "").split("\\n");
+  const lines = source.replace(/\r/g, "").split("\n");
   const entities: Array<{type:string;data:Array<[number,string]>}> = [];
   let inEntities=false;
   let current: {type:string;data:Array<[number,string]>}|null=null;
