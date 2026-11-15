@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
+import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
 import { useLocation } from "wouter";
 import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
@@ -600,7 +601,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       footers: { default: footer },
       children,
     }] }));
-    if (!(file instanceof Blob) || !(await validateOoxmlPackage(file, { requiredEntries: ["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/header1.xml", "word/footer1.xml"], expectedText: [documentData.title, ...documentData.paragraphs.map((value) => value.replace(/^#{1,3}\\s+/, "").replace(/^[-*]\\s+/, "")), ...documentData.columns, ...documentData.rows.flat()] }))) throw new Error(ar ? "ملف Word الناتج لا يحتوي على بنية DOCX المطلوبة ولم يتم إرفاقه." : "The generated Word file is missing required DOCX package entries and was not attached.");
+    if (!(file instanceof Blob) || !(await validateOoxmlPackage(file, { requiredEntries: ["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/header1.xml", "word/footer1.xml"], expectedText: getWordArtifactExpectedText(documentData) }))) throw new Error(ar ? "ملف Word الناتج لا يحتوي على بنية DOCX المطلوبة ولم يتم إرفاقه." : "The generated Word file is missing required DOCX package entries and was not attached.");
     const url = URL.createObjectURL(file);
     const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
     return { name: safeName + ".docx", url };
