@@ -1874,7 +1874,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <Link href="/ai" className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
             <Link href="/workbench" className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
           </div>}
-          <button type="button" className="status-chip status-button" onClick={()=>setLocation('/profile')} data-testid="button-auth-status" aria-label={authUser?'Supabase':t('localOnly')}><span className={`online-dot ${authUser?'':'offline-dot'}`}/><span className="status-label">{authUser?'Supabase':t('localOnly')}</span></button>
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
           <Link href="/profile" className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
         </div></header>
