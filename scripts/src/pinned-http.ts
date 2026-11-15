@@ -51,14 +51,8 @@ export function requestPinnedHttp(
 
   return new Promise((resolve, reject) => {
     let settled = false;
-    const connectDeadline = setTimeout(() => {
-      request.destroy(new Error("HTTP connection timed out."));
-    }, timeoutMs);
-    connectDeadline.unref?.();
-    const overallDeadline = setTimeout(() => {
-      request.destroy(new Error("HTTP request exceeded its total deadline."));
-    }, timeoutMs);
-    overallDeadline.unref?.();
+    let connectDeadline: ReturnType<typeof setTimeout>;
+    let overallDeadline: ReturnType<typeof setTimeout>;
     const clearConnectDeadline = () => clearTimeout(connectDeadline);
     const clearOverallDeadline = () => clearTimeout(overallDeadline);
 
@@ -89,6 +83,15 @@ export function requestPinnedHttp(
         body,
       });
     });
+    connectDeadline = setTimeout(() => {
+      request.destroy(new Error("HTTP connection timed out."));
+    }, timeoutMs);
+    connectDeadline.unref?.();
+    overallDeadline = setTimeout(() => {
+      request.destroy(new Error("HTTP request exceeded its total deadline."));
+    }, timeoutMs);
+    overallDeadline.unref?.();
+
     request.once("socket", (socket) => {
       const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
       if (!socket.connecting && (url.protocol !== "https:" || !("secureConnecting" in socket) || !socket.secureConnecting)) {
