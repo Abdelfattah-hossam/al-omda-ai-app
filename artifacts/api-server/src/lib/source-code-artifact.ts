@@ -1,13 +1,13 @@
 export type SourceCodeArtifact = { title: string; name: string; language: string; code: string };
 
 export function isValidDxfSource(code: string): boolean {
-  if (!code.trim() || code.length > 100000 || code.includes("\\0")) return false;
-  const lines = code.replace(/\\r/g, "").split("\\n");
+  if (!code.trim() || code.length > 100000 || code.includes("\0")) return false;
+  const lines = code.replace(/\r/g, "").split("\n");
   if (lines.length < 8 || lines.length % 2 !== 0) return false;
   const pairs: Array<[number, string]> = [];
   for (let i = 0; i < lines.length; i += 2) {
     const group = lines[i].trim();
-    if (!/^-?\\d+$/.test(group)) return false;
+    if (!/^-?\d+$/.test(group)) return false;
     pairs.push([Number(group), lines[i + 1].trim()]);
   }
   const markers = pairs.map((pair, index) => pair[0] === 0 ? { type: pair[1].toUpperCase(), index } : null).filter((item): item is { type: string; index: number } => item !== null);
