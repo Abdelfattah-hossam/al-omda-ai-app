@@ -4944,3 +4944,71 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-live-modal :is(button,.ai-chat-live-test,.ai-chat-live-end) {
   border-color:rgba(224,181,101,.24)!important;
 }
+
+
+/* Dashboard header metrics: factual workspace counts, isolated from the chat UI. */
+.app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics {
+  display:flex;
+  align-items:center;
+  gap:clamp(8px,1.2vw,18px);
+  min-width:0;
+  margin-inline-start:auto;
+  padding-inline:12px;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric {
+  display:grid;
+  gap:2px;
+  min-width:44px;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric strong {
+  color:var(--omda-design-text,#f6f1e7);
+  font-size:14px;
+  line-height:1.1;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-metric small {
+  color:var(--omda-design-muted,#a39b88);
+  font-size:9px;
+  white-space:nowrap;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  max-width:170px;
+  color:var(--omda-design-muted,#a39b88);
+  font-size:10px;
+  white-space:nowrap;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state i {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  flex:none;
+  background:#77736b;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.ready i { background:#62bd91; }
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.running i,
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.checking i { background:#d6b36c; }
+.app-shell:not([data-chat-active="true"]) .topbar-runtime-state.error i { background:#d87979; }
+.app-shell:not([data-chat-active="true"]) .topbar-quick-actions {
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.app-shell:not([data-chat-active="true"]) .topbar-quick-link {
+  min-height:34px;
+  padding:7px 10px;
+  font-size:10px;
+  white-space:nowrap;
+}
+@media(max-width:1100px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { gap:8px; padding-inline:6px; }
+  .app-shell:not([data-chat-active="true"]) .topbar-runtime-state { display:none; }
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { display:none; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link span { display:none; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link { width:36px; min-width:36px; padding:0; justify-content:center; }
+}
