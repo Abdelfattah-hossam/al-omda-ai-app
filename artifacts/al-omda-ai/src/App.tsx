@@ -1511,12 +1511,13 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const workbenchPage = () => {
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
+    const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
     return <div className="page-enter">
       {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span>)}
       <ol className="workbench-flow" aria-label={isAr?'مراحل تنفيذ المهمة':'Task workflow'}>
-        <li className="workbench-flow-step"><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
-        <li className="workbench-flow-step"><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
-        <li className="workbench-flow-step"><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
+        <li className="workbench-flow-step" data-stage={workflowStage===0?'current':workflowStage>0?'complete':'upcoming'}><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
+        <li className="workbench-flow-step" data-stage={workflowStage===1?'current':workflowStage>1?'complete':'upcoming'}><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
+        <li className="workbench-flow-step" data-stage={workflowStage===2?'current':'upcoming'}><span>03</span><div><strong>{isAr?'وافق وتابع':'Approve & track'}</strong><small>{isAr?'احتفظ بالتحكم في التنفيذ':'Stay in control of execution'}</small></div></li>
       </ol>
       <section className="workbench-context panel" aria-label={isAr?'سياق مساحة العمل':'Workbench context'}>
         <div className="workbench-context-icon"><ShieldCheck size={18}/></div>
@@ -1755,7 +1756,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {[{key:'all',href:'/history',label:isAr?'كل المشاريع':'All projects',count:tasks.length},{key:'review',href:'/history?status=review',label:isAr?'تحتاج متابعة':'Needs review',count:tasks.filter(task=>task.status==='review'||task.status==='paused').length},{key:'approved',href:'/history?status=approved',label:isAr?'معتمدة':'Approved',count:tasks.filter(task=>task.status==='approved').length},{key:'stopped',href:'/history?status=stopped',label:isAr?'متوقفة':'Stopped',count:tasks.filter(task=>task.status==='stopped').length}].map(filter=><Link key={filter.key} href={filter.href} aria-current={(statusFilter||'all')===filter.key?'page':undefined} className={'history-filter-chip '+((statusFilter||'all')===filter.key?'active':'')}><span>{filter.label}</span><strong>{filter.count}</strong></Link>)}
         </nav>
       </section>
-      <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'مرتبة حسب أحدث نشاط محفوظ':'Showing saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
+      <div className="history-list-heading"><div><strong>{isAr?'مشاريعك':'Your projects'}</strong><span>{isAr?'تعرض مهامك وحالتها الحالية':'Your saved tasks and their current status'}</span></div><span className="history-list-total">{filtered.length} {isAr?'نتيجة':'results'}</span></div>
       <div className="history-layout">{filtered.map((task)=><div className="panel history-item history-item-manage" key={task.id} data-testid={`history-task-${task.id}`}>
         <Link href={`/history/${task.id}`} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
