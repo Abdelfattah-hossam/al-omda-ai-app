@@ -34,6 +34,22 @@ function createSourceBlob(sourceData: SourceData): Blob {
   return new Blob([sourceData.code], { type: mimeTypes[extension] || "text/plain;charset=utf-8" });
 }
 
+function getWordCopyText(data: WordDocumentData): string {
+  const parts = [data.title, ...data.paragraphs];
+  if (data.columns.length) parts.push([data.columns.join("\t"), ...data.rows.map((row) => row.join("\t"))].join("\n"));
+  return parts.filter(Boolean).join("\n\n");
+}
+function getSpreadsheetCopyText(data: SpreadsheetData): string {
+  const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
+  return sheets.map((sheet) => [sheet.name, sheet.columns.join("\t"), ...sheet.rows.map((row, index) => sheet.columns.map((_, columnIndex) => {
+    const address = excelColumnName(columnIndex) + (index + 2);
+    return sheet.formulas?.[address] ? "=" + sheet.formulas[address] : String(row[columnIndex] ?? "");
+  }).join("\t"))].join("\n")).join("\n\n");
+}
+function getPresentationCopyText(data: PresentationData): string {
+  return [data.title, ...data.slides.map((slide, index) => [\`[Slide \${index + 1}] \${slide.title}\`, ...slide.bullets.map((bullet) => "• " + bullet)].join("\n"))].join("\n\n");
+}
+
 function excelColumnName(index: number): string {
   let value = index + 1;
   let result = "";
@@ -581,6 +597,17 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     }
   };
 
+  const copyArtifactText = async (value: string, index: number, failureMessage: string) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error(failureMessage);
+      await navigator.clipboard.writeText(value);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex((current) => current === index ? null : current), 1800);
+    } catch {
+      setError(failureMessage);
+    }
+  };
+
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
@@ -1076,6 +1103,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.sourceData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
               <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):message.presentationData?(ar?"تحميل PowerPoint":"Download PowerPoint"):message.sourceData?(ar?"تحميل ملف الكود":"Download source file"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
               {message.appData && <button type="button" className="button button-quiet button-small" onClick={()=>{void navigator.clipboard.writeText(message.appData!.html).then(()=>{setCopiedIndex(index);window.setTimeout(()=>setCopiedIndex((current)=>current===index?null:current),1800);}).catch(()=>setError(ar?"تعذر نسخ كود HTML.":"Could not copy HTML source."));}} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم نسخ الكود":"Code copied"):(ar?"نسخ الكود":"Copy code")}</button>}
+              {message.documentData && <button type="button" className="button button-quiet button-small" onClick={()=>void copyArtifactText(getWordCopyText(message.documentData!),index,ar?"تعذر نسخ محتوى Word.":"Could not copy Word content.")} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم النسخ":"Copied"):(ar?"نسخ النص والجدول":"Copy text & table")}</button>}
+              {message.spreadsheetData && <button type="button" className="button button-quiet button-small" onClick={()=>void copyArtifactText(getSpreadsheetCopyText(message.spreadsheetData!),index,ar?"تعذر نسخ بيانات Excel.":"Could not copy Excel data.")} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم النسخ":"Copied"):(ar?"نسخ بيانات الجداول":"Copy sheet data")}</button>}
+              {message.presentationData && <button type="button" className="button button-quiet button-small" onClick={()=>void copyArtifactText(getPresentationCopyText(message.presentationData!),index,ar?"تعذر نسخ محتوى العرض.":"Could not copy presentation content.")} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم النسخ":"Copied"):(ar?"نسخ محتوى الشرائح":"Copy slide content")}</button>}
               {message.sourceData && <button type="button" className="button button-quiet button-small" onClick={()=>{void navigator.clipboard.writeText(message.sourceData!.code).then(()=>{setCopiedIndex(index);window.setTimeout(()=>setCopiedIndex((current)=>current===index?null:current),1800);}).catch(()=>setError(ar?"تعذر نسخ الكود.":"Could not copy source code."));}} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم نسخ الكود":"Code copied"):(ar?"نسخ الكود":"Copy code")}</button>}
               <button type="button" className="button button-quiet button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>
               {typeof navigator !== "undefined" && typeof navigator.share === "function" && <button type="button" className="button button-quiet button-small" onClick={()=>void shareAttachment(message.attachment!, message.appData?.title || message.presentationData?.title || message.sourceData?.title || message.documentData?.title || message.spreadsheetData?.title || message.attachment!.name)} style={{display:"inline-flex",alignItems:"center",gap:8}}><Share2 size={15}/>{ar?"مشاركة الملف":"Share file"}</button>}
@@ -1084,7 +1114,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             {message.presentationData && previewingDocument===index && <div style={{display:"grid",gap:12,width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:12,background:"var(--surface,#10151b)"}}><strong>{message.presentationData.title} · {message.presentationData.slides.length} {ar?"شرائح":"slides"}</strong>{message.presentationData.slides.map((slide,i)=><section key={i} style={{border:"1px solid var(--border,#59616c)",borderRadius:10,padding:14,background:"linear-gradient(145deg,#182334,#101722)",color:"#f1f5f9",minHeight:130}}><small style={{color:"#d8b978"}}>{ar?"شريحة":"Slide"} {i+1}</small><h3 style={{fontSize:17,margin:"8px 0 10px",color:"#f8fafc"}}>{slide.title}</h3><ul style={{margin:0,paddingInlineStart:20,lineHeight:1.65}}>{slide.bullets.map((bullet,j)=><li key={j}>{bullet}</li>)}</ul></section>)}</div>}
             {message.sourceData && message.sourceData.language==="svg" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة الرسم الهندسي SVG":"SVG drawing preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && message.sourceData.language==="html" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة HTML آمنة":"Sandboxed HTML preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
-            {message.sourceData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#11151b"}}><div style={{padding:"9px 12px",color:"#d5b477",fontSize:12,borderBottom:"1px solid #343a44"}}>{message.sourceData.name} · {message.sourceData.language}</div><pre dir="ltr" style={{margin:0,padding:14,overflowX:"auto",maxHeight:"65vh",color:"#e8edf4",fontSize:13,lineHeight:1.65,whiteSpace:"pre"}}><code>{message.sourceData.code}</code></pre></div>}
+            {message.sourceData && !["html","svg"].includes(message.sourceData.language) && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#11151b"}}><div style={{padding:"9px 12px",color:"#d5b477",fontSize:12,borderBottom:"1px solid #343a44"}}>{message.sourceData.name} · {message.sourceData.language}</div><pre dir="ltr" style={{margin:0,padding:14,overflowX:"auto",maxHeight:"65vh",color:"#e8edf4",fontSize:13,lineHeight:1.65,whiteSpace:"pre"}}><code>{message.sourceData.code}</code></pre></div>}
             {message.spreadsheetData && previewingDocument===index && <div style={{display:"grid",gap:14,width:"100%",minWidth:0}}>
               <strong style={{display:"block"}}>{message.spreadsheetData.title}</strong>
               {(message.spreadsheetData.sheets?.length ? message.spreadsheetData.sheets : [{name:"Sheet1",columns:message.spreadsheetData.columns,rows:message.spreadsheetData.rows,formulas:message.spreadsheetData.formulas}]).map((sheet,sheetIndex)=><section key={sheet.name || sheetIndex} style={{minWidth:0,overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}>
