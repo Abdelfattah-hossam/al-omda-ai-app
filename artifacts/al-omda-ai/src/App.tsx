@@ -587,7 +587,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
           const workspace = await getWorkspace(apiRequestOptions);
           if (!cancelled) applyWorkspace(workspace, session.user.email);
         } catch (error) {
-          if (!cancelled) setWorkspaceLoadError(readApiError(error, t('saveTaskFailed')));
+          if (!cancelled) {
+            setWorkspaceLoadError(readApiError(error, t('saveTaskFailed')));
+            setWorkspaceLoaded(true);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -728,6 +731,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       applyWorkspace(workspace, result.user.email);
       setAuthPassword('');
     } catch (error) {
+      setWorkspaceLoadError(readApiError(error, t('apiUnavailable')));
+      setWorkspaceLoaded(true);
       setAuthError(readApiError(error, t('apiUnavailable')));
     } finally {
       setAuthWorking(false);
@@ -1856,10 +1861,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </aside>
     <main className="main-area">
       <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
-        {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'}>
-          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.total : '—'}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
-          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.needsReview : '—'}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
-          <span className="topbar-metric"><strong>{workspaceLoaded ? workspaceMetrics.approved : '—'}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
+        {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'} title={workspaceLoadError ? (isAr?'تعذر تحميل بيانات مساحة العمل':'Workspace data could not be loaded') : undefined}>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.total}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.needsReview}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
+          <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.approved}</strong><small>{isAr?'معتمدة':'Approved'}</small></span>
           <span className={`topbar-runtime-state ${localAgentStatus}`} title={isAr?'حالة اتصال الوكيل المحلي':'Local runtime connection state'}>
             <i aria-hidden="true"/>{runtimeStatusLabel}
           </span>
