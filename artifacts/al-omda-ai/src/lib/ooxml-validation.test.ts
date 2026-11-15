@@ -81,7 +81,7 @@ test("rejects missing expected text and malformed XML despite valid ZIP structur
 
 test("validates PowerPoint slide and notes counts and text payload", async () => {
   const files: Array<[string, string]> = [
-    ["[Content_Types].xml", contentTypes], ["_rels/.rels", rootRels],
+    ["[Content_Types].xml", contentTypes], ["_rels/.rels", '<Relationships xmlns="r"><Relationship Id="rId1" Target="ppt/presentation.xml"/></Relationships>'],
     ["ppt/presentation.xml", '<p:presentation xmlns:p="p"/>'],
     ["ppt/_rels/presentation.xml.rels", '<Relationships xmlns="r"/>'],
     ["ppt/slides/slide1.xml", '<p:sld xmlns:p="p" xmlns:a="a"><p:cSld><a:t>Quarterly results</a:t><a:t>Revenue increased</a:t></p:cSld></p:sld>'],
