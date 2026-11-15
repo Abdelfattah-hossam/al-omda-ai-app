@@ -7029,3 +7029,23 @@ body:has(.ai-chat-page){
   background:#d6b36c!important;
   box-shadow:0 0 0 3px rgba(224,181,101,.1)!important;
 }
+
+/* Non-chat workspace controls: warm brass interaction, no idle blue pulsing. */
+@media (prefers-reduced-motion:no-preference) {
+  .app-shell:not([data-chat-active="true"]) button:not(:disabled):not(.toggle),
+  .app-shell:not([data-chat-active="true"]) a.button,
+  .app-shell:not([data-chat-active="true"]) [role="button"]:not([aria-disabled="true"]):not(.toggle) {
+    animation:none!important;
+  }
+}
+.app-shell:not([data-chat-active="true"]) button:not(:disabled):not(.toggle):hover,
+.app-shell:not([data-chat-active="true"]) a.button:hover,
+.app-shell:not([data-chat-active="true"]) [role="button"]:not(:disabled):not(.toggle):hover {
+  border-color:rgba(218,177,105,.58)!important;
+  box-shadow:0 0 0 1px rgba(218,177,105,.10),0 0 14px rgba(218,177,105,.16),inset 0 0 10px rgba(218,177,105,.045)!important;
+}
+.app-shell:not([data-chat-active="true"]) :is(button,a,[role="button"]):focus-visible {
+  outline:2px solid rgba(218,177,105,.88)!important;
+  outline-offset:3px;
+  box-shadow:0 0 0 4px rgba(218,177,105,.13)!important;
+}
