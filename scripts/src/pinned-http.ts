@@ -21,7 +21,8 @@ export function requestPinnedHttp(
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     return Promise.reject(new Error("Only HTTP and HTTPS requests are supported."));
   }
-  const hostname = url.hostname.replace(/^\\[|\\]$/g, "");
+  const rawHostname = url.hostname;
+  const hostname = rawHostname.startsWith("[") && rawHostname.endsWith("]") ? rawHostname.slice(1, -1) : rawHostname;
   const lookupPinned = ((_: string, options: unknown, callback: (...args: any[]) => void) => {
     if (options && typeof options === "object" && "all" in options && (options as { all?: boolean }).all) {
       callback(null, [{ address: address.address, family: address.family }]);
