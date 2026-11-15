@@ -5064,7 +5064,7 @@ body:has(.ai-chat-page){
   color:#f6f1e7!important;
   background:linear-gradient(180deg,#171519 0%,#111014 52%,#0c0b0e 100%)!important;
   border-inline-end:1px solid rgba(224,181,101,.2)!important;
-  box-shadow:12px 0 38px rgba(0,0,0,.34),inset -1px 0 rgba(246,220,160,.035)!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.34),inset 0 1px 0 rgba(246,220,160,.035)!important;
 }
 .app-shell:not([data-chat-active="true"]) .brand-lockup {
   min-height:58px;
@@ -5105,8 +5105,8 @@ body:has(.ai-chat-page){
 .app-shell:not([data-chat-active="true"]) .nav-caption {
   padding:11px 10px 8px!important;
   color:#9d9073!important;
-  font-size:9px!important;
-  letter-spacing:.12em!important;
+  font-size:10px!important;
+  letter-spacing:.1em!important;
 }
 .app-shell:not([data-chat-active="true"]) .nav-stack { gap:5px!important; }
 .app-shell:not([data-chat-active="true"]) .nav-link {
@@ -5126,7 +5126,13 @@ body:has(.ai-chat-page){
   color:#f6dca0!important;
   border-color:rgba(224,181,101,.16)!important;
   background:rgba(224,181,101,.075)!important;
-  transform:translateX(-2px);
+  transform:none!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link:focus-visible {
+  color:#f6dca0!important;
+  outline:2px solid rgba(246,220,160,.55)!important;
+  outline-offset:2px!important;
+  background:rgba(224,181,101,.075)!important;
 }
 .app-shell:not([data-chat-active="true"]) .nav-link:hover svg,
 .app-shell:not([data-chat-active="true"]) .nav-link.active svg {
@@ -5136,7 +5142,8 @@ body:has(.ai-chat-page){
   color:#f6dca0!important;
   border-color:rgba(224,181,101,.3)!important;
   background:linear-gradient(100deg,rgba(224,181,101,.14),rgba(224,181,101,.055))!important;
-  box-shadow:inset -2px 0 #e0b565,0 5px 18px rgba(0,0,0,.12)!important;
+  border-inline-start:2px solid #e0b565!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.12)!important;
 }
 .app-shell:not([data-chat-active="true"]) .sidebar-group-caption {
   margin-top:9px;
@@ -5154,7 +5161,8 @@ body:has(.ai-chat-page){
   color:#e7d5ad!important;
   background:rgba(224,181,101,.045)!important;
 }
-.app-shell:not([data-chat-active="true"]) .sidebar-settings-link:hover {
+.app-shell:not([data-chat-active="true"]) .sidebar-settings-link:hover,
+.app-shell:not([data-chat-active="true"]) .sidebar-settings-link:focus-visible {
   color:#ffe8b7!important;
   border-color:rgba(246,220,160,.42)!important;
   background:rgba(224,181,101,.1)!important;
@@ -5285,7 +5293,10 @@ body:has(.ai-chat-page){
     min-width:34px!important;
     justify-content:center!important;
     padding:0!important;
-    font-size:0!important;
+    font-size:inherit!important;
+  }
+  .app-shell[data-chat-active="true"] > .main-area > .topbar .status-button .status-label {
+    display:none!important;
   }
   .app-shell[data-chat-active="true"] > .main-area > .topbar .lang-button {
     display:inline-flex!important;
@@ -5296,5 +5307,32 @@ body:has(.ai-chat-page){
   }
   .app-shell[data-chat-active="true"] > .main-area > .topbar .lang-button span {
     display:none!important;
+  }
+}
+
+/* Structural base styles also support isolated component renders and tests. */
+.ai-chat-topbar-actions {
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex:0 0 auto;
+  gap:5px;
+  min-width:0;
+  margin-inline-start:auto;
+}
+@media(max-width:760px) {
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-agent-badge {
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:29px!important;
+    height:29px!important;
+    padding:0!important;
+    font-size:0!important;
+    flex:0 0 29px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-agent-badge svg {
+    flex:none!important;
   }
 }
