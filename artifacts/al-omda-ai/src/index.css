@@ -5056,3 +5056,245 @@ body:has(.ai-chat-page){
     padding:28px 24px 56px!important;
   }
 }
+
+
+/* Final consistency pass: finish the workspace sidebar theme and keep the chat
+   header controls in one measured group. No chat body or scroll geometry changes. */
+.app-shell:not([data-chat-active="true"]) > .sidebar {
+  color:#f6f1e7!important;
+  background:linear-gradient(180deg,#171519 0%,#111014 52%,#0c0b0e 100%)!important;
+  border-inline-end:1px solid rgba(224,181,101,.2)!important;
+  box-shadow:12px 0 38px rgba(0,0,0,.34),inset -1px 0 rgba(246,220,160,.035)!important;
+}
+.app-shell:not([data-chat-active="true"]) .brand-lockup {
+  min-height:58px;
+  padding:0 7px 22px!important;
+  border-bottom:1px solid rgba(224,181,101,.12);
+  margin-bottom:12px;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-search {
+  display:flex!important;
+  align-items:center;
+  gap:9px;
+  min-height:40px;
+  margin:0 2px 14px;
+  padding:0 11px!important;
+  border:1px solid rgba(224,181,101,.18)!important;
+  border-radius:12px!important;
+  color:#c7b994!important;
+  background:rgba(224,181,101,.045)!important;
+  box-shadow:inset 0 1px 0 rgba(246,220,160,.025)!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-search:focus-within {
+  border-color:rgba(246,220,160,.48)!important;
+  box-shadow:0 0 0 3px rgba(224,181,101,.08)!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-search input {
+  min-width:0;
+  color:#f6f1e7!important;
+  background:transparent!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-search input::placeholder {
+  color:#938a78!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-search kbd {
+  color:#b8a77f!important;
+  border:1px solid rgba(224,181,101,.16)!important;
+  background:rgba(224,181,101,.06)!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-caption {
+  padding:11px 10px 8px!important;
+  color:#9d9073!important;
+  font-size:9px!important;
+  letter-spacing:.12em!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-stack { gap:5px!important; }
+.app-shell:not([data-chat-active="true"]) .nav-link {
+  min-height:42px!important;
+  padding:0 12px!important;
+  border:1px solid transparent!important;
+  border-radius:11px!important;
+  color:#c7c0b2!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link svg {
+  flex:none;
+  color:#a99b7d!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link:hover {
+  color:#f6dca0!important;
+  border-color:rgba(224,181,101,.16)!important;
+  background:rgba(224,181,101,.075)!important;
+  transform:translateX(-2px);
+}
+.app-shell:not([data-chat-active="true"]) .nav-link:hover svg,
+.app-shell:not([data-chat-active="true"]) .nav-link.active svg {
+  color:#f6dca0!important;
+}
+.app-shell:not([data-chat-active="true"]) .nav-link.active {
+  color:#f6dca0!important;
+  border-color:rgba(224,181,101,.3)!important;
+  background:linear-gradient(100deg,rgba(224,181,101,.14),rgba(224,181,101,.055))!important;
+  box-shadow:inset -2px 0 #e0b565,0 5px 18px rgba(0,0,0,.12)!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-group-caption {
+  margin-top:9px;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-recents .nav-link {
+  min-height:35px!important;
+  font-size:11px!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-settings-link {
+  min-height:40px;
+  margin:0 0 12px!important;
+  padding:10px 11px!important;
+  border:1px solid rgba(224,181,101,.16)!important;
+  border-radius:11px!important;
+  color:#e7d5ad!important;
+  background:rgba(224,181,101,.045)!important;
+}
+.app-shell:not([data-chat-active="true"]) .sidebar-settings-link:hover {
+  color:#ffe8b7!important;
+  border-color:rgba(246,220,160,.42)!important;
+  background:rgba(224,181,101,.1)!important;
+}
+.app-shell:not([data-chat-active="true"]) .control-note {
+  padding:13px!important;
+  border:1px solid rgba(224,181,101,.2)!important;
+  border-radius:14px!important;
+  color:#f1e6cf!important;
+  background:linear-gradient(145deg,rgba(224,181,101,.09),rgba(18,16,18,.96))!important;
+}
+.app-shell:not([data-chat-active="true"]) .control-note p {
+  color:#a99f8e!important;
+}
+.app-shell:not([data-chat-active="true"]) .profile-mini {
+  min-width:0;
+  margin-top:12px;
+  padding:13px 5px 0!important;
+  border-top:1px solid rgba(224,181,101,.13);
+  color:#f6f1e7!important;
+}
+.app-shell:not([data-chat-active="true"]) .profile-mini .avatar {
+  color:#21180b!important;
+  background:linear-gradient(135deg,#f6dca0,#c99742)!important;
+  box-shadow:0 0 16px rgba(224,181,101,.16)!important;
+}
+.app-shell:not([data-chat-active="true"]) .profile-mini strong { color:#f6f1e7!important; }
+.app-shell:not([data-chat-active="true"]) .profile-mini small { color:#a99f8e!important; }
+
+/* The actual chat markup now groups the action buttons; size the group as one
+   unit so the model selector cannot collide with code/settings/menu controls. */
+.app-shell[data-chat-active="true"] .ai-chat-topbar {
+  justify-content:flex-start!important;
+  gap:8px!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-model-wrap {
+  flex:1 1 auto!important;
+  min-width:0!important;
+  max-width:min(38vw,360px)!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-model-button {
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar-actions {
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex:0 0 auto!important;
+  gap:5px!important;
+  min-width:0!important;
+  margin-inline-start:auto!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-top-menu {
+  inset-inline-start:auto!important;
+  inset-inline-end:0!important;
+}
+.app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-exit {
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+@media(max-width:760px) {
+  .app-shell[data-chat-active="true"] .ai-chat-topbar {
+    justify-content:flex-start!important;
+    gap:5px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-model-wrap {
+    max-width:none!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions {
+    gap:2px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-header-icon,
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-menu-trigger {
+    flex-basis:31px!important;
+    width:31px!important;
+    height:33px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar-actions .ai-chat-agent-badge {
+    display:none!important;
+  }
+}
+@media(max-width:390px) {
+  .app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-exit {
+    width:34px!important;
+    min-width:34px!important;
+    padding:0!important;
+    justify-content:center!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-exit span {
+    display:none!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-topbar .ai-chat-model-button {
+    padding-inline:5px!important;
+    font-size:10px!important;
+  }
+}
+
+/* Keep the shared app header compact on chat routes without letting its
+   account/language controls collide at phone widths. */
+.app-shell[data-chat-active="true"] > .main-area > .topbar {
+  min-width:0!important;
+  gap:10px!important;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar .crumb {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.app-shell[data-chat-active="true"] > .main-area > .topbar .top-actions {
+  flex:0 0 auto!important;
+  gap:8px!important;
+  min-width:0!important;
+}
+@media(max-width:760px) {
+  .app-shell[data-chat-active="true"] > .main-area > .topbar {
+    padding-inline:12px!important;
+    gap:7px!important;
+  }
+  .app-shell[data-chat-active="true"] > .main-area > .topbar .top-actions {
+    gap:5px!important;
+  }
+  .app-shell[data-chat-active="true"] > .main-area > .topbar .status-button {
+    width:34px!important;
+    min-width:34px!important;
+    justify-content:center!important;
+    padding:0!important;
+    font-size:0!important;
+  }
+  .app-shell[data-chat-active="true"] > .main-area > .topbar .lang-button {
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:4px!important;
+    padding:6px!important;
+    white-space:nowrap!important;
+  }
+  .app-shell[data-chat-active="true"] > .main-area > .topbar .lang-button span {
+    display:none!important;
+  }
+}
