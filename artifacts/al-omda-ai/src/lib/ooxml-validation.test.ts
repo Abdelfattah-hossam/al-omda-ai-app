@@ -55,6 +55,7 @@ test("validates Word package XML and confirms generated text and table cells", a
     ["[Content_Types].xml", contentTypes], ["_rels/.rels", rootRels],
     ["word/document.xml", '<w:document xmlns:w="w"><w:body><w:p><w:r><w:t>Project report</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:t>Task</w:t></w:tc><w:tc><w:t>Owner</w:t></w:tc></w:tr><w:tr><w:tc><w:t>Design</w:t></w:tc><w:tc><w:t>Team A</w:t></w:tc></w:tr></w:tbl></w:body></w:document>'],
     ["word/styles.xml", '<w:styles xmlns:w="w"/>'],
+    ["word/_rels/document.xml.rels", '<Relationships xmlns="r"><Relationship Id="rId1" Target="styles.xml"/></Relationships>'],
     ["word/header1.xml", '<w:hdr xmlns:w="w"><w:p><w:r><w:t>Header title</w:t></w:r></w:p></w:hdr>'],
     ["word/footer1.xml", '<w:ftr xmlns:w="w"><w:p><w:r><w:t>Page</w:t></w:r></w:p></w:ftr>'],
   ];
@@ -107,4 +108,17 @@ test("rejects duplicate ZIP paths and path traversal entries", async () => {
   assert.equal(await validateOoxmlPackage(zip(files), options), false);
   files.pop(); files.push(["../evil.xml", "<x/>"]);
   assert.equal(await validateOoxmlPackage(zip(files), options), false);
+});
+
+test("rejects internal relationships that point to missing package parts", async () => {
+  const files: Array<[string, string]> = [
+    ["[Content_Types].xml", contentTypes], ["_rels/.rels", rootRels],
+    ["word/document.xml", '<w:document xmlns:w="w"><w:body/></w:document>'],
+    ["word/styles.xml", '<w:styles xmlns:w="w"/>'],
+    ["word/header1.xml", '<w:hdr xmlns:w="w"/>'], ["word/footer1.xml", '<w:ftr xmlns:w="w"/>'],
+    ["word/_rels/document.xml.rels", '<Relationships xmlns="r"><Relationship Id="rId1" Target="missing.xml"/></Relationships>'],
+  ];
+  assert.equal(await validateOoxmlPackage(zip(files), {
+    requiredEntries: ["[Content_Types].xml", "_rels/.rels", "word/document.xml", "word/styles.xml", "word/header1.xml", "word/footer1.xml"],
+  }), false);
 });
