@@ -462,6 +462,53 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     return { name: safeName + ".xlsx", url };
   };
 
+  const createPowerPointAttachment = async (data: PresentationData) => {
+    const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
+    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
+    let imported: any;
+    try { imported = await import(/* @vite-ignore */ primaryModuleUrl); }
+    catch {
+      try { imported = await import(/* @vite-ignore */ fallbackModuleUrl); }
+      catch { throw new Error(ar ? "تعذر تحميل مكتبة إنشاء PowerPoint المجانية. تحقق من الاتصال ثم أعد المحاولة." : "Could not load the free PowerPoint generator. Check your connection and retry."); }
+    }
+    const PptxGenJS = imported.default ?? imported;
+    const pptx = new PptxGenJS();
+    pptx.layout = "LAYOUT_WIDE";
+    pptx.author = "AL OMDA AI";
+    pptx.subject = data.title;
+    pptx.title = data.title;
+    pptx.company = "AL OMDA AI";
+    pptx.lang = ar ? "ar-SA" : "en-US";
+    pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: pptx.lang };
+    for (const item of data.slides) {
+      const slide = pptx.addSlide();
+      slide.background = { color: "101722" };
+      slide.addText(item.title, { x: 0.55, y: 0.45, w: 12.2, h: 0.85, fontFace: "Arial", fontSize: 26, bold: true, color: "D8B978", align: ar ? "right" : "left", rtlMode: ar, margin: 0.08, breakLine: false });
+      if (item.bullets.length) slide.addText(item.bullets.map((text) => ({ text, options: { bullet: { indent: 18 }, hanging: 4, breakLine: true } })), { x: 0.75, y: 1.65, w: 11.8, h: 5.15, fontFace: "Arial", fontSize: 19, color: "F1F5F9", paraSpaceAfterPt: 16, valign: "mid", align: ar ? "right" : "left", rtlMode: ar, margin: 0.12, breakLine: false });
+      slide.addText("AL OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
+    }
+    const blob = await pptx.write({ outputType: "blob" }) as Blob;
+    if (!(blob instanceof Blob) || blob.size < 1000) throw new Error(ar ? "لم يتم إنشاء ملف PowerPoint صالح." : "PowerPoint export did not produce a valid file.");
+    const url = URL.createObjectURL(blob);
+    const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
+    return { name: safeName + ".pptx", url };
+  };
+
+  const shareAttachment = async (attachment: { name: string; url: string }, title: string) => {
+    try {
+      if (typeof navigator.share !== "function") throw new Error(ar ? "المشاركة المباشرة للملفات غير مدعومة في هذا المتصفح." : "Direct file sharing is not supported by this browser.");
+      const response = await fetch(attachment.url);
+      if (!response.ok) throw new Error(ar ? "تعذر تجهيز الملف للمشاركة." : "Could not prepare the file for sharing.");
+      const blob = await response.blob();
+      const file = new File([blob], attachment.name, { type: blob.type || "application/octet-stream" });
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) throw new Error(ar ? "مشاركة هذا النوع من الملفات غير مدعومة على جهازك." : "This device cannot share this file type.");
+      await navigator.share({ files: [file], title });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setError(error instanceof Error ? error.message : (ar ? "تعذرت مشاركة الملف." : "Could not share the file."));
+    }
+  };
+
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
