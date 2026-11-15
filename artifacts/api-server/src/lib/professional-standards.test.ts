@@ -42,7 +42,7 @@ test("software and office standards require actual implementation checks and hon
     "run relevant tests, type checks, lint/build",
     "Never claim tests, deployment, security, or production readiness without actual verification",
     "Never render inert, misleading, duplicate, or irrelevant buttons",
-    "Never claim an attachment exists before it has been generated and checked",
+    "Never invent a URL, file, preview, or share link",
   ]) assert.ok(professionalStandards.includes(phrase), `Missing delivery requirement: ${phrase}`);
 });
 
