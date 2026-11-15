@@ -422,6 +422,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
   const [workspaceError, setWorkspaceError] = useState('');
+  const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
@@ -545,7 +546,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [saved, authLoading, authUser]);
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
     setWorkspaceLoaded(true);
-    setWorkspaceError('');
+    setWorkspaceLoadError('');
     const remoteName = workspace.profile.displayName.trim() || email;
     const remoteOrg = workspace.profile.organization.trim() || (language === 'ar' ? 'مساحة العمل' : 'Workspace');
     const remoteTasks = workspace.tasks as Task[];
@@ -583,7 +584,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           const workspace = await getWorkspace(apiRequestOptions);
           if (!cancelled) applyWorkspace(workspace, session.user.email);
         } catch (error) {
-          if (!cancelled) setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+          if (!cancelled) setWorkspaceLoadError(readApiError(error, t('saveTaskFailed')));
         }
       } catch (error) {
         if (!cancelled) {
@@ -1451,7 +1452,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="field-group"><div className="form-label">{t('chooseSpecialty')}</div><div className="select-grid">{specialties.map(({id,icon:Icon})=><button type="button" key={id} className={`select-specialty ${selectedSpecialty===id?'selected':''}`} onClick={()=>setSelectedSpecialty(id)} data-testid={`select-specialty-${id}`}><Icon size={14}/>{label(id)}</button>)}</div></div>
           <div className="notice-bar" style={{marginBottom:17}}><ShieldCheck size={14}/><span>{t('planDisclaimer')}</span></div>
           <button type="submit" className="button button-primary" disabled={!request.trim() || planGenerating} data-testid="button-propose-plan"><Sparkles size={15}/>{planGenerating ? (isAr ? 'جارٍ إنشاء الخطة...' : 'Generating plan...') : t('generatePlan')}<Send size={13}/></button>
-          {workspaceError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceError}</div>}
+          {(workspaceLoadError || workspaceError) && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceLoadError || workspaceError}</div>}
         </form>
         {active ? renderPlan(active) : <section className="panel plan-empty"><div><span className="empty-mark"><MessageSquareText size={22}/></span><h3>{t('planEmptyTitle')}</h3><p>{t('planEmptyText')}</p></div></section>}
       </div>
@@ -1751,7 +1752,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {!authLoading && authStatus==='offline' && <div className="notice-bar"><ShieldCheck size={15}/><span>{authError||t('apiUnavailable')}</span></div>}
           {!authLoading && authStatus==='configured' && !authUser && <><p className="account-copy">{t('authConfigured')}</p><form className="account-form" onSubmit={handleAuthSubmit}><div className="field-group"><label className="form-label" htmlFor="auth-email">{t('email')}</label><input id="auth-email" type="email" className="field" autoComplete="email" required maxLength={254} value={authEmail} onChange={(event)=>setAuthEmail(event.target.value)} data-testid="input-auth-email"/></div><div className="field-group"><label className="form-label" htmlFor="auth-password">{t('password')}</label><input id="auth-password" type="password" className="field" autoComplete={authMode==='login'?'current-password':'new-password'} required minLength={8} maxLength={128} value={authPassword} onChange={(event)=>setAuthPassword(event.target.value)} data-testid="input-auth-password"/></div>{authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}<button className="button button-primary" type="submit" disabled={authWorking} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?t('signIn'):t('signUp')}</button></form><button type="button" className="text-button" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-mode">{authMode==='login'?t('switchToSignUp'):t('switchToSignIn')}</button></>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
-          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
+          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{(workspaceLoadError||workspaceError)&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError||workspaceError}</div>}
         
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
@@ -1826,7 +1827,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
-  return <div className="app-shell" data-chat-active={location.split("?")[0] === "/ai" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <Link href="/" className="brand-lockup"><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link>
       <div className="sidebar-scroll">
