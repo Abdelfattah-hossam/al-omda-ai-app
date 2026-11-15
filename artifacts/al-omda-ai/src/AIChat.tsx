@@ -136,6 +136,7 @@ function getPresentationCopyText(data: PresentationData): string {
   const slides = data.slides.map((slide, index) => {
     const lines = ["[Slide " + (index + 1) + "] " + slide.title];
     for (const bullet of slide.bullets) lines.push("• " + bullet);
+    if (slide.notes) lines.push("Speaker notes: " + slide.notes);
     return lines.join("\\n");
   });
   return [data.title, ...slides].join("\\n\\n");

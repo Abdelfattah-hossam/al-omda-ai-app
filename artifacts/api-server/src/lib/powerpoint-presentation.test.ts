@@ -37,5 +37,5 @@ test("rejects malformed bullets and oversized speaker notes", () => {
 
 test("rejects oversized titles and malformed JSON", () => {
   assert.equal(parsePowerPointPresentation(JSON.stringify({ ...base, title: "x".repeat(181) })), null);
-  assert.equal(parsePowerPointPresentation('{"title":')), null);
+  assert.equal(parsePowerPointPresentation("{\"title\":"), null);
 });
