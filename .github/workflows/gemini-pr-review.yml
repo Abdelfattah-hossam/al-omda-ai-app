@@ -92,7 +92,7 @@ jobs:
             attempt=$((attempt + 1))
           done
 
-          if ! jq -er '[.candidates[0].content.parts[]? | .text // empty] | join("\n") | select(length > 0)' \
+          if ! jq -er '[.candidates[0].content.parts[]? | .text // empty] | join("\n") | gsub("^[[:space:]]+|[[:space:]]+$"; "") | select(length > 0)' \
             gemini-response.json > gemini-review.md || [ ! -s gemini-review.md ]; then
             echo "reviewed=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Gemini returned no usable review text; advisory review skipped."
