@@ -39,12 +39,9 @@ test("returns an empty body for HEAD requests", async () => {
 });
 
 test("rejects protocol upgrades instead of leaving the request pending", async () => {
-  const server = createServer((_request, response) => {
-    response.writeHead(101, { connection: "Upgrade", upgrade: "test" });
-    response.end();
-  });
+  const server = createServer();
   server.on("upgrade", (_request, socket) => {
-    socket.write("HTTP/1.1 101 Switching Protocols\\r\\nConnection: Upgrade\\r\\nUpgrade: test\\r\\n\\r\\n");
+    socket.end("HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: test\r\n\r\n");
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as AddressInfo;
