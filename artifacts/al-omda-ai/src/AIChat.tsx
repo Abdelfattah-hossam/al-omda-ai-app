@@ -33,6 +33,13 @@ function createSourceBlob(sourceData: SourceData): Blob {
   const extension = sourceData.name.split(".").pop()?.toLowerCase() || "";
   return new Blob([sourceData.code], { type: mimeTypes[extension] || "text/plain;charset=utf-8" });
 }
+
+function excelColumnName(index: number): string {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) { const remainder = (value - 1) % 26; result = String.fromCharCode(65 + remainder) + result; value = Math.floor((value - 1) / 26); }
+  return result;
+}
 type Conversation = { id: string; title: string; created_at: string; updated_at: string };
 async function isValidZipBlob(blob: Blob): Promise<boolean> {
   if (blob.size < 4) return false;
@@ -1069,10 +1076,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             {message.sourceData && message.sourceData.language==="svg" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة الرسم الهندسي SVG":"SVG drawing preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && message.sourceData.language==="html" && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#fff"}}><div style={{padding:"9px 12px",color:"#d5b477",background:"#11151b",fontSize:12}}>{ar?"معاينة HTML آمنة":"Sandboxed HTML preview"}</div><iframe title={message.sourceData.name} srcDoc={message.sourceData.code} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:"block",width:"100%",height:"min(65vh, 620px)",minHeight:320,border:0,background:"#fff"}} /></div>}
             {message.sourceData && previewingDocument===index && <div style={{width:"100%",border:"1px solid var(--border,#343a44)",borderRadius:10,overflow:"hidden",background:"#11151b"}}><div style={{padding:"9px 12px",color:"#d5b477",fontSize:12,borderBottom:"1px solid #343a44"}}>{message.sourceData.name} · {message.sourceData.language}</div><pre dir="ltr" style={{margin:0,padding:14,overflowX:"auto",maxHeight:"65vh",color:"#e8edf4",fontSize:13,lineHeight:1.65,whiteSpace:"pre"}}><code>{message.sourceData.code}</code></pre></div>}
-            {message.spreadsheetData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}>
-              <strong style={{display:"block",marginBottom:10}}>{message.spreadsheetData.title}</strong>
-              <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{message.spreadsheetData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
-              <tbody>{message.spreadsheetData.rows.map((row,i)=><tr key={i}>{message.spreadsheetData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{row[j] ?? ""}</td>)}</tr>)}</tbody></table>
+            {message.spreadsheetData && previewingDocument===index && <div style={{display:"grid",gap:14,width:"100%",minWidth:0}}>
+              <strong style={{display:"block"}}>{message.spreadsheetData.title}</strong>
+              {(message.spreadsheetData.sheets?.length ? message.spreadsheetData.sheets : [{name:"Sheet1",columns:message.spreadsheetData.columns,rows:message.spreadsheetData.rows,formulas:message.spreadsheetData.formulas}]).map((sheet,sheetIndex)=><section key={sheet.name || sheetIndex} style={{minWidth:0,overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}>
+                <strong style={{display:"block",marginBottom:10}}>{sheet.name || (ar?"ورقة":"Sheet")} · {sheet.rows.length} {ar?"صفوف":"rows"}</strong>
+                <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{sheet.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
+                  <tbody>{sheet.rows.map((row,rowIndex)=><tr key={rowIndex}>{sheet.columns.map((_,columnIndex)=><td key={columnIndex} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:80}}>{sheet.formulas?.[excelColumnName(columnIndex)+(rowIndex+2)] ? <span title={"="+sheet.formulas[excelColumnName(columnIndex)+(rowIndex+2)]} style={{fontFamily:"monospace",color:"#d8b978"}}>{"="+sheet.formulas[excelColumnName(columnIndex)+(rowIndex+2)]}</span> : (row[columnIndex] ?? "")}</td>)}</tr>)}</tbody>
+                </table>
+              </section>)}
+              {Object.keys(message.spreadsheetData.formulas || {}).length>0 || message.spreadsheetData.sheets?.some(sheet=>Object.keys(sheet.formulas || {}).length>0) ? <small style={{color:"var(--muted,#9aa3af)"}}>{ar?"الصيغ محفوظة داخل Excel وسيعيد البرنامج حسابها عند فتح المصنف.":"Formulas are stored in Excel and will recalculate when the workbook is opened."}</small> : null}
             </div>}
             {message.documentData && previewingDocument===index && <div style={{width:"100%",overflowX:"auto",border:"1px solid var(--border,#343a44)",borderRadius:10,padding:10,background:"var(--surface,#10151b)"}}><strong style={{display:"block",marginBottom:10}}>{message.documentData.title}</strong>{message.documentData.paragraphs.map((paragraph,i)=><p key={i} style={{margin:"8px 0",lineHeight:1.8,whiteSpace:"pre-wrap"}}>{paragraph}</p>)}{message.documentData.columns.length>0 && <table dir={ar?"rtl":"ltr"} style={{width:"100%",borderCollapse:"collapse",minWidth:480}}><thead><tr>{message.documentData.columns.map((column,i)=><th key={i} style={{border:"1px solid var(--border,#59616c)",padding:8,background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead><tbody>{message.documentData.rows.map((row,i)=><tr key={i}>{message.documentData!.columns.map((_,j)=><td key={j} style={{border:"1px solid var(--border,#59616c)",padding:8,minWidth:70,height:34}}>{row[j]||" "}</td>)}</tr>)}</tbody></table>}</div>}
             {message.role === "assistant" && <div className="ai-message-actions" aria-label={ar ? "إجراءات الرد" : "Message actions"}>
