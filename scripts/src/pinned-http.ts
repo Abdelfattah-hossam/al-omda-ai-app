@@ -40,13 +40,18 @@ export function requestPinnedHttp(
     method,
     headers: Object.fromEntries(outgoingHeaders.entries()),
     lookup: lookupPinned,
-    ...(url.protocol === "https:" && !isIP(hostname) ? { servername: hostname } : {}),
-    rejectUnauthorized: true,
+    // A pooled socket may have been opened using a different validated IP for
+    // the same hostname. Do not reuse sockets across pinned destinations.
+    agent: false,
+    ...(url.protocol === "https:" && !isIP(hostname)
+      ? { servername: hostname, rejectUnauthorized: true }
+      : {}),
   };
   const transport = url.protocol === "https:" ? httpsRequest : httpRequest;
 
   return new Promise((resolve, reject) => {
     const request = transport(requestOptions, (incoming) => {
+      clearConnectDeadline();
       const responseHeaders = new Headers();
       for (const [name, value] of Object.entries(incoming.headers)) {
         if (value === undefined) continue;
@@ -68,8 +73,37 @@ export function requestPinnedHttp(
         body,
       });
     });
+    let settled = false;
+    const connectDeadline = setTimeout(() => {
+      request.destroy(new Error("HTTP connection timed out."));
+    }, timeoutMs);
+    connectDeadline.unref?.();
+    const clearConnectDeadline = () => clearTimeout(connectDeadline);
+
+    request.once("socket", (socket) => {
+      const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
+      if (!socket.connecting && (url.protocol !== "https:" || !("secureConnecting" in socket) || !socket.secureConnecting)) {
+        clearConnectDeadline();
+      } else {
+        socket.once(connectedEvent, clearConnectDeadline);
+      }
+    });
     request.setTimeout(timeoutMs, () => request.destroy(new Error("HTTP request timed out.")));
-    request.once("error", reject);
+    request.once("upgrade", (_incoming, socket) => {
+      clearConnectDeadline();
+      socket.destroy();
+      if (!settled) {
+        settled = true;
+        reject(new Error("Protocol upgrades are not supported by the HTTP tool."));
+      }
+    });
+    request.once("error", (error) => {
+      clearConnectDeadline();
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
     request.end();
   });
 }
