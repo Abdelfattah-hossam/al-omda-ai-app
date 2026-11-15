@@ -6395,3 +6395,24 @@ body:has(.ai-chat-page){
   border-color:rgba(246,220,160,.65);
   background:linear-gradient(135deg,#f0d59b,#c99a48);
 }
+
+
+/* Unified navigation shell — scoped to the shared application frame */
+.sidebar-brand-area{display:flex;flex-direction:column;gap:12px;padding:2px 2px 18px;border-bottom:1px solid var(--sidebar-border);margin-bottom:16px}
+.sidebar-workspace-state{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--sidebar-border);border-radius:10px;color:var(--sidebar-foreground);font-size:10px;font-weight:700;letter-spacing:.08em;opacity:.78}
+.sidebar-workspace-state i,.sidebar-account-status{width:7px;height:7px;flex:none;border-radius:50%;background:#e0b86e;box-shadow:0 0 0 3px color-mix(in srgb,#e0b86e 15%,transparent)}
+.sidebar-nav-group{margin:0 0 18px}
+.sidebar-nav-group .nav-caption{margin:0 0 9px;padding-inline:9px}
+.sidebar-nav-group .nav-stack{gap:5px}
+.sidebar-nav-group .nav-link{min-height:42px;border:1px solid transparent;border-radius:11px;padding-inline:12px;transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.sidebar-nav-group .nav-link:hover{border-color:var(--sidebar-border);transform:translateX(-2px)}
+.sidebar-nav-group .nav-link.active{border-color:color-mix(in srgb,var(--sidebar-primary) 32%,transparent);background:color-mix(in srgb,var(--sidebar-primary) 13%,transparent);box-shadow:inset 3px 0 0 var(--sidebar-primary)}
+.sidebar-account-card{display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid var(--sidebar-border);border-radius:14px;background:color-mix(in srgb,var(--sidebar-accent) 58%,transparent)}
+.sidebar-account-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.sidebar-account-copy strong,.sidebar-account-copy small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-account-copy strong{font-size:12px;color:var(--sidebar-foreground)}
+.sidebar-account-copy small{font-size:10px;color:var(--muted-foreground)}
+.sidebar-account-status{background:#56c995;box-shadow:0 0 0 3px color-mix(in srgb,#56c995 15%,transparent)}
+.sidebar-account-status.local{background:#e0b86e;box-shadow:0 0 0 3px color-mix(in srgb,#e0b86e 15%,transparent)}
+@media(max-width:900px){.sidebar-brand-area{padding-bottom:14px}.sidebar-nav-group{margin-bottom:14px}}
+@media(prefers-reduced-motion:reduce){.sidebar-nav-group .nav-link{transition:none}.sidebar-nav-group .nav-link:hover{transform:none}}
