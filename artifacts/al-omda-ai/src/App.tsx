@@ -951,6 +951,32 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href="/ai" className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href="/workbench" className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
+      <section className="app-launcher-section" aria-labelledby="app-launcher-title">
+        <div className="app-launcher-heading">
+          <div>
+            <span className="eyebrow">{isAr?'مساحة التطبيقات':'APP LAUNCHER'}</span>
+            <h2 id="app-launcher-title">{isAr?'كل أدواتك في مكان واحد':'Everything you need, one place'}</h2>
+            <p>{isAr?'وصول سريع ومنظم إلى الوظائف الأساسية، مع فصل أدوات المتابعة والحساب.':'A clear shortcut grid for core work, analytics, and account tools.'}</p>
+          </div>
+          <span className="app-launcher-count">{isAr?'٦ أدوات أساسية':'06 CORE TOOLS'}</span>
+        </div>
+        <div className="app-launcher-group">
+          <div className="app-launcher-group-title"><strong>{isAr?'العمل الأساسي':'CORE WORKSPACE'}</strong><span>{isAr?'ابدأ وأنجز وتابع':'Create, delegate, and track'}</span></div>
+          <div className="app-launcher-grid">
+            <Link href="/ai" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><Bot size={21}/></span><span className="app-launcher-copy"><strong>{t('aiChat')}</strong><small>{isAr?'ابدأ محادثة مع العمدة':'Talk to AL OMDA'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+            <Link href="/workbench" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><BriefcaseBusiness size={21}/></span><span className="app-launcher-copy"><strong>{t('workbench')}</strong><small>{isAr?'حوّل طلبك إلى خطة':'Turn a request into a plan'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+            <Link href="/agents" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><Compass size={21}/></span><span className="app-launcher-copy"><strong>{t('agentNetwork')}</strong><small>{isAr?'اختر التخصص المناسب':'Choose a specialist'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+            <Link href="/history" className="app-launcher-tile launcher-primary"><span className="app-launcher-icon"><History size={21}/></span><span className="app-launcher-copy"><strong>{t('history')}</strong><small>{isAr?'راجع مشاريعك ونتائجك':'Review projects and results'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+          </div>
+        </div>
+        <div className="app-launcher-group app-launcher-secondary-group">
+          <div className="app-launcher-group-title"><strong>{isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT'}</strong><span>{isAr?'إحصاءات وتفضيلات التطبيق':'Usage and preferences'}</span></div>
+          <div className="app-launcher-grid app-launcher-grid-secondary">
+            <Link href="/ai/usage" className="app-launcher-tile"><span className="app-launcher-icon"><Activity size={19}/></span><span className="app-launcher-copy"><strong>{t('usage')}</strong><small>{isAr?'الاستهلاك والذاكرة':'Usage and memory'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+            <Link href="/profile" className="app-launcher-tile"><span className="app-launcher-icon"><UserRound size={19}/></span><span className="app-launcher-copy"><strong>{t('profile')}</strong><small>{isAr?'بياناتك وتفضيلاتك':'Personal details and settings'}</small></span><ArrowUpLeft size={14} className="app-launcher-arrow"/></Link>
+          </div>
+        </div>
+      </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
         <div className="stats-grid dashboard-kpis">
@@ -1883,8 +1909,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
         <div className="curtain-head"><Link href="/" className="brand-lockup" onClick={()=>setCurtainOpen(false)}><span className="brand-mark">ع</span><span><span className="brand-name">AL OMDA AI</span><span className="brand-sub" style={{display:'block'}}>{isAr?'مساعدون تحت إشرافك':'SPECIALISTS, YOUR CALL'}</span></span></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
-        <div className="curtain-caption">{t('workspace')}</div><nav className="curtain-nav">{navItems.map(item=>navLink(item))}</nav>
-        <button type="button" className="curtain-profile-link" onClick={()=>{setCurtainOpen(false);setLocation('/profile')}}><UserRound size={17}/>{t('profile')}<ArrowUpLeft size={15}/></button>
+        <div className="curtain-launcher-groups">
+          <section className="curtain-launcher-group">
+            <div className="curtain-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?'أدوات العمل الأساسية':'Core workspace tools'}>
+              {navItems.map(item=><Link key={item.path} href={item.path} onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path===item.path?'active':''}`}><span className="curtain-launcher-icon"><item.icon size={19}/></span><strong>{t(item.key)}</strong></Link>)}
+            </nav>
+          </section>
+          <section className="curtain-launcher-group">
+            <div className="curtain-caption">{isAr?'المتابعة والحساب':'INSIGHTS & ACCOUNT'}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?'المتابعة وإعدادات الحساب':'Analytics and account'}>
+              <Link href="/ai/usage" onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path==='/ai/usage'?'active':''}`}><span className="curtain-launcher-icon"><Activity size={19}/></span><strong>{t('usage')}</strong></Link>
+              <Link href="/profile" onClick={()=>setCurtainOpen(false)} className={`curtain-launcher-item ${path==='/profile'?'active':''}`}><span className="curtain-launcher-icon"><Settings2 size={19}/></span><strong>{t('profile')}</strong></Link>
+            </nav>
+          </section>
+        </div>
       </aside>
     </div>}
     {path !== '/ai' && path !== '/ai/usage' && <Link href="/ai" className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
