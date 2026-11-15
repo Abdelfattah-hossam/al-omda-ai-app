@@ -831,7 +831,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   if (view === "usage") return <div className="page-enter ai-usage-page">
     <div className="page-heading ai-chat-heading">
       <div><div className="eyebrow">AL OMDA AI</div><h1 className="page-title">{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</h1><p className="page-subtitle">{ar ? "تابع رصيدك وتحكم في ذاكرة العمدة الخاصة بحسابك." : "Track your allowance and manage your private AL OMDA memory."}</p></div>
-      <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai")}><ArrowLeft size={14}/>{ar ? "العودة إلى الشات" : "Back to chat"}</button>
+      <button type="button" className="button button-quiet button-small" onClick={()=>setLocation("/ai?focus=ai-chat-input")}><ArrowLeft size={14}/>{ar ? "العودة إلى الشات" : "Back to chat"}</button>
     </div>
     {!signedIn ? <section className="panel panel-pad"><p className="account-copy">{copy.login}</p></section> : <div className="ai-usage-grid" id="ai-usage-grid">
       <section className="panel panel-pad">
