@@ -1858,7 +1858,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </section>
     <div className="profile-settings-layout">
-              <section className="panel panel-pad profile-main-card profile-account-profile-card">
+              <section className="panel panel-pad profile-main-card profile-account-profile-card profile-account-first">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && !authUser && <>
@@ -1871,7 +1871,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}
               <button className="button button-primary" type="submit" disabled={authWorking || authStatus!=='configured'} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?(isAr?'تسجيل الدخول':t('signIn')):(isAr?'إنشاء حساب':t('signUp'))}</button>
             </form>
-            <button type="button" className="text-button" onClick={()=>{setAuthMode(authMode==='login'?'signup':'login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-mode">{authMode==='login'?(isAr?'ليس لديك حساب؟ إنشاء حساب':t('switchToSignUp')):(isAr?'لديك حساب بالفعل؟ تسجيل الدخول':t('switchToSignIn'))}</button>
+            <div className="account-mode-switch" role="group" aria-label={isAr?'اختيار نوع الحساب':'Choose account action'}>
+              <button type="button" className={'account-mode-button'+(authMode==='login'?' is-active':'')} aria-pressed={authMode==='login'} onClick={()=>{setAuthMode('login');setAuthError('');setAuthNotice('');}} data-testid="button-auth-login-mode">{isAr?'تسجيل الدخول':t('signIn')}</button>
+              <button type="button" className={'account-mode-button'+(authMode==='signup'?' is-active':'')} aria-pressed={authMode==='signup'} onClick={()=>{setAuthMode('signup');setAuthError('');setAuthNotice('');}} data-testid="button-auth-signup-mode">{isAr?'إنشاء حساب جديد':t('signUp')}</button>
+            </div>
           </>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{(workspaceLoadError||workspaceError)&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError||workspaceError}</div>}
