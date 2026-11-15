@@ -6859,3 +6859,20 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-login-cta:hover {background:#fff;transform:translateY(-1px)}
 @media(max-width:760px){.app-shell[data-chat-active="true"] .ai-chat-login-cta{min-height:31px;padding:0 8px;font-size:9px;gap:4px}}
 @media(max-width:390px){.app-shell[data-chat-active="true"] .ai-chat-login-cta{font-size:8px;padding:0 6px}}
+
+/* Account entry: clear controls, no blue focus glow on the sign-up switch. */
+.profile-settings-layout .profile-account-first{grid-column:1/-1;order:-1}
+.profile-account-first .account-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:end}
+.profile-account-first .account-form .field-group{min-width:0}
+.profile-account-first .account-form .button-primary{grid-column:1/-1;min-height:46px}
+.account-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.account-mode-button{display:flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;background:rgba(255,255,255,.045)!important;color:#e8e8e8!important;font-size:13px;font-weight:700;box-shadow:none!important;text-shadow:none!important;outline:none!important}
+.account-mode-button.is-active{background:#e8e8e8!important;color:#111!important;border-color:#e8e8e8!important;box-shadow:none!important}
+.account-mode-button:focus,.account-mode-button:focus-visible{outline:none!important;box-shadow:none!important}
+@media(max-width:650px){.profile-account-first .account-form{grid-template-columns:1fr}}
+.ai-chat-auth-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;max-width:520px;margin:clamp(28px,9vh,90px) auto;padding:30px 22px!important;text-align:center;border:1px solid rgba(255,255,255,.14)!important;background:rgba(255,255,255,.035)!important}
+.ai-chat-auth-gate-mark{display:grid;place-items:center;width:58px;height:58px;border:1px solid rgba(255,255,255,.16);border-radius:18px;color:#eee;background:rgba(255,255,255,.06)}
+.ai-chat-auth-gate h2{margin:0;color:#fff;font-size:19px}
+.ai-chat-auth-gate .account-copy{margin:0;color:#aaa;line-height:1.8}
+.ai-chat-auth-gate-button{min-height:46px;padding:0 20px;border:1px solid #eee!important;border-radius:12px!important;background:#eee!important;color:#111!important;font-weight:800;box-shadow:none!important}
+.ai-chat-auth-gate-button:hover,.ai-chat-auth-gate-button:focus,.ai-chat-auth-gate-button:focus-visible{background:#fff!important;color:#000!important;box-shadow:none!important;outline:none!important}
