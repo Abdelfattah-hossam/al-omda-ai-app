@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { parseExcelWorkbook } from "../lib/excel-workbook.js";
+import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -109,23 +110,6 @@ function isSevenColumnTableRequest(messages: ChatMessage[]): boolean {
   return /7\s*(?:خانات|أعمدة|اعمدة|حقول|columns)|سبع\s*(?:خانات|أعمدة|اعمدة|حقول)|جدول.{0,45}(?:7|سبع)|(?:7|سبع).{0,30}جدول/i.test(request);
 }
 
-function parsePowerPointPresentation(text: string): { title: string; slides: Array<{ title: string; bullets: string[] }> } | null {
-  try {
-    let source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
-    const start = source.indexOf("{");
-    const end = source.lastIndexOf("}");
-    if (start < 0 || end <= start) return null;
-    const value = JSON.parse(source.slice(start, end + 1));
-    if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.length > 180 || !Array.isArray(value.slides) || value.slides.length < 3 || value.slides.length > 30) return null;
-    const slides = value.slides.map((slide: any) => {
-      if (!slide || typeof slide.title !== "string" || !slide.title.trim() || slide.title.length > 180 || !Array.isArray(slide.bullets) || slide.bullets.length > 8 || slide.bullets.some((item: unknown) => typeof item !== "string" || !item.trim() || item.length > 700)) return null;
-      return { title: slide.title.trim(), bullets: slide.bullets.map((item: string) => item.trim()) };
-    });
-    if (slides.some((slide: any) => !slide)) return null;
-    if (JSON.stringify({ title: value.title, slides }).length > 65000) return null;
-    return { title: value.title.trim(), slides };
-  } catch { return null; }
-}
 function parseWordDocument(text: string, forceSevenColumns: boolean, tableOnly: boolean, requireTable = false): { title: string; paragraphs: string[]; columns: string[]; rows: string[][] } | null {
   try {
     const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
@@ -1141,7 +1125,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ] : powerPointRequest ? [
       ...messages,
       { role: "user", content: [
-        "SPECIAL OUTPUT MODE: Create a complete editable PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["concise point 1","concise point 2"]}]}',
+        "SPECIAL OUTPUT MODE: Create a complete editable PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["concise point 1","concise point 2"],"notes":"Optional speaker notes"}]}',
         "Create 3 to 30 slides in a logical narrative. Each slide must have a meaningful title and 1 to 8 concise, relevant bullet points. Keep each bullet under 700 characters. Use the customer's language. Include an opening slide and a conclusion when appropriate. Do not invent facts, figures, citations, or sources; mark assumptions and cite only sources actually verified.",
         "Do not return a tutorial or instructions for making slides. The result must be ready to convert into an editable .pptx file.",
         "Original customer request: " + latestCustomerRequest
@@ -1224,7 +1208,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     let validatedPowerPoint = powerPointRequest ? parsePowerPointPresentation(answer.text) : null;
     if (powerPointRequest && !validatedPowerPoint) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair the PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point 1","point 2"]}]}',
+        "Repair the PowerPoint presentation. Return ONLY valid JSON with this exact schema: " + '{"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point 1","point 2"],"notes":"Optional speaker notes"}]}',
         "Create 3 to 30 slides. Every slide needs a non-empty title and 1 to 8 concise non-empty bullets. Keep each bullet under 700 characters. Preserve the original request and do not invent facts or citations.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 12000)
