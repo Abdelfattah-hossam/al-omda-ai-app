@@ -490,8 +490,23 @@ function App() {
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
   const focusTarget = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : '').get('focus');
-  const focusedHref = (href:string, target:string) => href + (href.includes('?') ? '&' : '?') + 'focus=' + encodeURIComponent(target);
-  const navigationHref = (href:string) => focusedHref(href, href === '/ai' ? (authUser ? 'ai-chat-input' : 'ai-chat-login-cta') : href === '/workbench' ? 'request-input' : href === '/agents' ? 'agent-marketplace-grid' : href === '/history' ? 'history-list' : href === '/ai/usage' ? 'ai-usage-page' : href === '/profile' ? 'profile-account-card' : 'dashboard-overview');
+  const focusedHref = (href:string, target:string) => {
+    const url = new URL(href, window.location.origin);
+    url.searchParams.set('focus', target);
+    return `${url.pathname}${url.search}${url.hash}`;
+  };
+  const navigationHref = (href:string) => {
+    const pathname = new URL(href, window.location.origin).pathname;
+    const target = pathname === '/ai' ? (authUser ? 'ai-chat-input' : 'ai-chat-login-cta')
+      : pathname === '/workbench' ? 'request-input'
+      : pathname === '/agents' ? 'agent-marketplace-grid'
+      : pathname === '/history' ? 'history-list'
+      : pathname.startsWith('/history/') ? 'task-plan'
+      : pathname === '/ai/usage' ? 'ai-usage-page'
+      : pathname === '/profile' ? 'profile-account-card'
+      : 'dashboard-overview';
+    return focusedHref(href, target);
+  };
   const showWorkspaceHeader = path !== '/ai' && path !== '/ai/usage';
   const workspaceMetrics = useMemo(() => {
     if (!showWorkspaceHeader) return { total:0, needsReview:0, approved:0 };
