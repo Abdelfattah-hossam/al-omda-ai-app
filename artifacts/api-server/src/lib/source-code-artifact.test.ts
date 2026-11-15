@@ -85,17 +85,17 @@ test("accepts DXF with multiple supported entities and a closed polyline", () =>
     "0","CIRCLE","10","5","20","5","40","2",
     "0","LWPOLYLINE","90","3","70","1","10","0","20","0","10","10","20","0","10","5","20","8",
     "0","ENDSEC","0","EOF"
-  ].join("\\n");
+  ].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", dxf), "Create plan.dxf")?.language, "dxf");
 });
 
 test("rejects DXF with an incomplete group-code/value pair or missing ENDSEC", () => {
-  const incomplete = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","ENDSEC","0"].join("\\n");
-  const missingEndsec = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","EOF"].join("\\n");
+  const incomplete = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","ENDSEC","0"].join("\n");
+  const missingEndsec = ["0","SECTION","2","ENTITIES","0","LINE","10","0","20","0","11","10","21","10","0","EOF"].join("\n");
   assert.equal(parseSourceCodeFile(fenced("dxf", incomplete), "Create plan.dxf"), null);
   assert.equal(parseSourceCodeFile(fenced("dxf", missingEndsec), "Create plan.dxf"), null);
 });
 
 test("rejects oversized DXF input before parsing", () => {
-  assert.equal(parseSourceCodeFile(fenced("dxf", "0\\nSECTION\\n" + "x".repeat(100001)), "Create plan.dxf"), null);
+  assert.equal(parseSourceCodeFile(fenced("dxf", "0\nSECTION\n" + "x".repeat(100001)), "Create plan.dxf"), null);
 });
