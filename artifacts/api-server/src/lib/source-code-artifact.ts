@@ -1,5 +1,16 @@
 export type SourceCodeArtifact = { title: string; name: string; language: string; code: string };
 
+export function isSafeSvgSource(code: string): boolean {
+  if (!/<svg\b[\s\S]*<\/svg\s*>/i.test(code)) return false;
+  if (/<!DOCTYPE|<!ENTITY|<\s*(?:script|foreignObject|iframe|object|embed|audio|video)\b/i.test(code)) return false;
+  if (/\bon[a-z][\w:-]*\s*=/i.test(code)) return false;
+  if (/javascript\s*:/i.test(code) || /data\s*:\s*text\/html/i.test(code)) return false;
+  if (/@import\b/i.test(code)) return false;
+  if (/\b(?:href|xlink:href)\s*=\s*["']\s*(?!#|data:image\/(?:png|jpeg|gif|webp);base64,)[^"']+/i.test(code)) return false;
+  if (/url\(\s*["']?\s*(?!#)[^)]+\)/i.test(code)) return false;
+  return true;
+}
+
 export function parseSourceCodeFile(text: string, request: string): SourceCodeArtifact | null {
   const fence = String.fromCharCode(96).repeat(3);
   const trimmed = text.trim();
@@ -19,7 +30,7 @@ export function parseSourceCodeFile(text: string, request: string): SourceCodeAr
   if (requestedExtension && language !== extension && !(extension === "mjs" && language === "js") && !(extension === "cjs" && language === "js")) return null;
   if (extension === "json") { try { JSON.parse(code); } catch { return null; } }
   if (extension === "html" && !/<[a-z][\s\S]*>/i.test(code)) return null;
-  if (extension === "svg" && !/<svg\b[\s\S]*<\/svg\s*>/i.test(code)) return null;
+  if (extension === "svg" && !isSafeSvgSource(code)) return null;
   if (extension === "css") {
     let depth = 0;
     for (const char of code) { if (char === "{") depth++; if (char === "}") depth--; if (depth < 0) return null; }
