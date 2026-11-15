@@ -5007,10 +5007,16 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { gap:8px; padding-inline:6px; }
   .app-shell:not([data-chat-active="true"]) .topbar-runtime-state { display:none; }
 }
+@media(max-width:900px) {
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-actions { gap:5px; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link span { display:none; }
+  .app-shell:not([data-chat-active="true"]) .topbar-quick-link { width:34px; min-width:34px; min-height:34px; padding:0; justify-content:center; }
+  .app-shell:not([data-chat-active="true"]) .top-actions { gap:6px; }
+  .app-shell:not([data-chat-active="true"]) .status-button { gap:0; padding-inline:8px; font-size:0; }
+  .app-shell:not([data-chat-active="true"]) .lang-button span { display:none; }
+}
 @media(max-width:760px) {
   .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics { display:none; }
-  .app-shell:not([data-chat-active="true"]) .topbar-quick-link span { display:none; }
-  .app-shell:not([data-chat-active="true"]) .topbar-quick-link { width:36px; min-width:36px; padding:0; justify-content:center; }
 }
 
 
