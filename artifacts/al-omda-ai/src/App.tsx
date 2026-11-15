@@ -1734,7 +1734,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
     link.href = url;
     link.download = 'al-omda-projects-' + new Date().toISOString().slice(0,10) + '.csv';
     document.body.appendChild(link);
-    document.body.appendChild(link);
     link.click();
     link.remove();
     // Keep the object URL alive long enough for iOS Safari and other browsers
@@ -1743,7 +1742,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const historyPage = () => {
-    const statusFilter = new URLSearchParams(location.split('?')[1] || '').get('status');
+    const statusFilter = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : window.location.search).get('status');
     const filtered = tasks.filter((task)=>
       (!statusFilter || (statusFilter === 'review' ? task.status === 'review' || task.status === 'paused' : task.status === statusFilter)) &&
       `${task.title} ${task.request} ${label(task.specialty)}`.toLowerCase().includes(query.toLowerCase())
