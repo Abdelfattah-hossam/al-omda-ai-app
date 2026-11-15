@@ -2,6 +2,7 @@ export type PowerPointSlide = { title: string; bullets: string[]; notes?: string
 export type PowerPointPresentation = { title: string; slides: PowerPointSlide[] };
 
 export function parsePowerPointPresentation(text: string): PowerPointPresentation | null {
+  if (typeof text !== "string" || text.length > 1_000_000) return null;
   try {
     const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
