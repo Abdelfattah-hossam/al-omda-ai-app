@@ -20,7 +20,11 @@ function validSheet(raw: unknown): raw is ExcelSheet {
     if (!s.formulas || typeof s.formulas !== "object" || Array.isArray(s.formulas)) return false;
     const entries = Object.entries(s.formulas as Record<string, unknown>);
     if (entries.length > 15000) return false;
+    const normalizedAddresses = new Set<string>();
     for (const [address, rawFormula] of entries) {
+      const normalizedAddress = address.toUpperCase();
+      if (normalizedAddresses.has(normalizedAddress)) return false;
+      normalizedAddresses.add(normalizedAddress);
       const match = address.match(CELL_REF);
       if (!match || colIndex(match[1]) >= columns.length || Number(match[2]) > s.rows.length + 1) return false;
       if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 500 || BLOCKED.test(rawFormula)) return false;
@@ -34,6 +38,7 @@ function validSheet(raw: unknown): raw is ExcelSheet {
   return true;
 }
 export function parseExcelWorkbook(text: string): ExcelWorkbookData | null {
+  if (typeof text !== "string" || text.length > 1_000_000) return null;
   try {
     const source = text.trim().replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
     const start = source.indexOf("{");
