@@ -172,7 +172,9 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const startedAt = Date.now();
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
-  let target = await resolveAllowedTarget(String(body.url || ""));
+  const rawUrl = typeof body.url === "string" ? body.url.trim() : "";
+  if (!rawUrl || rawUrl.length > 2048) throw new Error("Provide a valid HTTP(S) URL no longer than 2048 characters.");
+  let target = await resolveAllowedTarget(rawUrl);
   let url = target.url;
   const inputHeaders = body.headers && typeof body.headers === "object" ? body.headers as Record<string, unknown> : {};
   const headers = new Headers();
