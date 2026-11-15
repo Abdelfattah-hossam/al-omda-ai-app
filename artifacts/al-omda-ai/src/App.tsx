@@ -1485,8 +1485,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </details>
     <div className="notice-bar"><ShieldCheck size={15} style={{flex:'none'}}/><span>{t('controlText')}</span></div>
-    <div className="filter-row"><button className={`filter-pill ${filter==='all'?'active':''}`} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button key={id} className={`filter-pill ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
-    <div className="market-grid">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
+    <section className="agent-marketplace-toolbar" aria-label={isAr?'تصفية التخصصات':'Specialty filters'}>
+      <div className="agent-marketplace-summary">
+        <div><span className="eyebrow">{isAr?'دليل التخصصات':'SPECIALTY DIRECTORY'}</span><strong>{specialties.length.toLocaleString(isAr?'ar':'en')} <span>{isAr?'تخصصات':'specialties'}</span></strong><p>{isAr?'اختار التخصص الأقرب لمهمتك، وتابع إنجازاته من هنا.':'Choose the specialty closest to your task and track its activity here.'}</p></div>
+        <div className="agent-marketplace-total"><strong>{tasks.length.toLocaleString(isAr?'ar':'en')}</strong><span>{isAr?'إجمالي المهام':'total tasks'}</span></div>
+      </div>
+      <div className="agent-marketplace-filter-head"><span className="form-label">{isAr?'تصفية حسب التخصص':'Filter by specialty'}</span><span className="section-meta" role="status">{specialties.filter(({id})=>filter==='all'||filter===id).length} {isAr?'نتائج':'results'}</span></div>
+      <div className="filter-row" role="group" aria-label={isAr?'التخصصات':'Specialties'}><button type="button" className={`filter-pill ${filter==='all'?'active':''}`} aria-pressed={filter==='all'} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button type="button" key={id} className={`filter-pill ${filter===id?'active':''}`} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
+    </section>
+    <div className="market-grid" aria-live="polite">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
       <div className="agent-top"><span className="agent-symbol"><Icon size={20}/></span><span className="section-meta">0{index+1} / 06</span></div>
       <h3>{label(id)}</h3><p>{t(specialtyDesc(id))}</p><div className="agent-card-stats"><span>{tasks.filter(task=>task.specialty===id).length} {isAr?'مهمة مسجلة':'recorded tasks'}</span><span>{tasks.filter(task=>task.specialty===id&&(task.status==='review'||task.status==='paused')).length} {isAr?'تحتاج متابعة':'need attention'}</span></div><div className="agent-footer"><span className="agent-tag">{t(specialtyLabel(id))}</span><Link href={`/workbench?specialty=${id}`} className="button button-quiet button-small" onClick={()=>setSelectedSpecialty(id)}>{t('useAgent')}<ArrowLeft size={12}/></Link></div>
     </article>)}</div>
