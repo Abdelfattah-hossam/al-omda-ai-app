@@ -38,6 +38,12 @@ test("rejects steps that are not pending or already contain execution data", () 
     plan.steps[0] = { ...plan.steps[0], [field]: "already executed" };
     assert.equal(isValidNewTaskPlan(plan), false, "must reject " + field);
   }
+  const emptyResult = makePlan();
+  emptyResult.steps[0] = { ...emptyResult.steps[0], result: "" };
+  assert.equal(isValidNewTaskPlan(emptyResult), false, "must reject an explicitly present empty result");
+  const emptyExecutionError = makePlan();
+  emptyExecutionError.steps[0] = { ...emptyExecutionError.steps[0], executionError: "" };
+  assert.equal(isValidNewTaskPlan(emptyExecutionError), false, "must reject an explicitly present empty execution error");
   const approved = makePlan();
   approved.steps[0] = { ...approved.steps[0], state: "approved" };
   assert.equal(isValidNewTaskPlan(approved), false);
