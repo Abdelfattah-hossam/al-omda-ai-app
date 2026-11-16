@@ -72,9 +72,19 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     unavailable: ar ? "المحادثة الصوتية غير متاحة حاليًا." : "Live voice is unavailable right now.",
   };
 
+  const setConnectingState = (value: boolean) => {
+    connectingRef.current = value;
+    if (mountedRef.current) setConnecting(value);
+  };
+
+  const setActiveState = (value: boolean) => {
+    activeRef.current = value;
+    if (mountedRef.current) setActive(value);
+  };
+
   const cleanup = () => {
-    connectingRef.current = false;
-    activeRef.current = false;
+    setConnectingState(false);
+    setActiveState(false);
     sessionReadyRef.current = false;
     speechActiveRef.current = false;
     silenceFramesRef.current = 0;
@@ -94,17 +104,16 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     assistantResponseActiveRef.current = false;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     fallbackUtteranceRef.current = null;
-    if (mountedRef.current) {
-      setActive(false);
-      setConnecting(false);
-      setSpeaking(false);
-    }
+    if (mountedRef.current) setSpeaking(false);
   };
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      connectingRef.current = false;
+      activeRef.current = false;
+      sessionReadyRef.current = false;
       processorRef.current?.disconnect();
       sourceRef.current?.disconnect();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -115,8 +124,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
 
   const start = async () => {
     if (activeRef.current || connectingRef.current || disabled) return;
-    connectingRef.current = true;
-    setConnecting(true);
+    setConnectingState(true);
     setStatus(labels.connecting);
     try {
       // Request microphone permission before creating a billable temporary Gemini session.
@@ -248,10 +256,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       processor.connect(context.destination);
 
       sessionReadyRef.current = true;
-      connectingRef.current = false;
-      activeRef.current = true;
-      setConnecting(false);
-      setActive(true);
+      setConnectingState(false);
+      setActiveState(true);
       setStatus(labels.listening);
 
       let receivedAudioChunks = 0;
