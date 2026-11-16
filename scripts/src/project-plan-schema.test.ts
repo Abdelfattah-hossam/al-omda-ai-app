@@ -8,6 +8,7 @@ const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eig
 const sequenceMigrationUrl = new URL("../../supabase/migrations/20261116174738_revoke_all_public_sequence_defaults.sql", import.meta.url);
 const openapiUrl = new URL("../../lib/api-spec/openapi.yaml", import.meta.url);
 const generatedApiUrl = new URL("../../lib/api-zod/src/generated/api.ts", import.meta.url);
+const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
 
 test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
   const [setup, migration, sequenceMigration, openapi] = await Promise.all([
@@ -28,10 +29,12 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
   assert.match(taskUpdateSpec, /minItems: 3[\s\S]*maxItems: 8/);
+  assert.ok(openapi.includes("minLength: 1\n          maxLength: 1200"), "OpenAPI plan guidance fields must reject empty strings");
+  assert.ok(setup.includes("from anon;"), "setup SQL must explicitly revoke task creation from anon");
 });
 
 test("generated API validators enforce complete 3-to-8-step task plans", async () => {
-  const api = await readFile(generatedApiUrl, "utf8");
+  const [api, route] = await Promise.all([readFile(generatedApiUrl, "utf8"), readFile(workspaceRouteUrl, "utf8")]);
   const createStart = api.indexOf("export const CreateTaskBody = zod.object({");
   const createEnd = api.indexOf("export const createTaskResponseOneTitleMax", createStart);
   const updateStart = api.indexOf("export const UpdateTaskBody = zod.object({");
@@ -50,4 +53,15 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
   assert.match(create, /"status": zod\.literal\('review'\)/, "new tasks must start in review");
   assert.match(update, /"state": zod\.enum\(\['pending', 'approved', 'rejected'\]\)/, "updates must preserve supported step states");
   assert.match(update, /"status": zod\.enum\(\['review', 'paused', 'approved', 'stopped'\]\)/, "updates must preserve supported task statuses");
+  for (const name of ["GetWorkspaceResponse", "CreateTaskResponse", "UpdateTaskResponse"]) {
+    const start = api.indexOf("export const " + name + " = zod.object({");
+    const end = api.indexOf("\n\nexport const ", start + 1);
+    const response = api.slice(start, end < 0 ? api.length : end);
+    assert.ok(response.includes('"output": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing output guidance");
+    assert.ok(response.includes('"complete": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing completion guidance");
+  }
+  assert.ok(route.includes("plan.steps.length < 3"));
+  assert.ok(route.includes("plan.steps.length > 8"));
+  assert.ok(route.includes("new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length"));
+  assert.ok(route.includes("Boolean(step.result || step.executedAt || step.executionStatus || step.executionError)"));
 });
