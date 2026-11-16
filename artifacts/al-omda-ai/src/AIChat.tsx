@@ -7,7 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
-import { buildBoundedChatContext, getChatMessageSyncSignature, truncateTextWithEllipsis } from "./lib/chat-context";
+import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature } from "./lib/chat-context";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -243,6 +243,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const lastSyncedConversationUpdatedAtRef = useRef("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -314,6 +315,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const data = await response.json();
       if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       setActiveConversationId(id);
+      lastSyncedConversationUpdatedAtRef.current = typeof data.conversation.updated_at === "string" ? data.conversation.updated_at : "";
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
       const withFiles = await Promise.all(restored.map(async (item) => {
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
@@ -356,7 +358,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (!response.ok || !data.conversation?.id) throw new Error(data.error || (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation."));
       const item = data.conversation as Conversation;
       setConversations((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
-      setActiveConversationId(item.id); setMessages([]); setInput(""); setError(""); setShowConversationList(false);
+      setActiveConversationId(item.id); lastSyncedConversationUpdatedAtRef.current = typeof item.updated_at === "string" ? item.updated_at : ""; setMessages([]); setInput(""); setError(""); setShowConversationList(false);
       return item.id;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation.")); return ""; }
   };
@@ -381,7 +383,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, presentationData, sourceData, appData, taskId, taskTitle }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(sourceData ? { sourceData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
-      if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
+      if (data.conversation) {
+        if (conversationId === activeConversationId && typeof data.conversation.updated_at === "string") lastSyncedConversationUpdatedAtRef.current = data.conversation.updated_at;
+        setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
+      }
       return true;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save conversation.")); return false; }
   };
@@ -476,28 +481,37 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (stopped || syncing || document.visibilityState !== "visible" || loadingRef.current || historyLoadingRef.current) return;
       syncing = true;
       try {
-        const [listResponse, conversationResponse] = await Promise.all([
-          fetch("/api/ai/conversations", { credentials: "same-origin" }),
-          fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin" }),
-        ]);
-        if (!listResponse.ok || !conversationResponse.ok) return;
-        const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
+        const listResponse = await fetch("/api/ai/conversations", { credentials: "same-origin", cache: "no-store" });
+        if (!listResponse.ok) return;
+        const listData = await listResponse.json();
         // A send may have started while the network requests were in flight.
         // Never let a stale poll overwrite the active draft/transcript mid-send.
         if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current) return;
         if (Array.isArray(listData.conversations) && JSON.stringify(conversationsRef.current) !== JSON.stringify(listData.conversations)) {
           setConversations(listData.conversations);
         }
-        // Compare only visible content; metadata-only differences must never reload the transcript.
-        const remote = Array.isArray(conversationData.conversation?.messages)
+        const activeSummary = Array.isArray(listData.conversations)
+          ? listData.conversations.find((item: any) => item?.id === activeConversationId)
+          : undefined;
+        const listedUpdatedAt = typeof activeSummary?.updated_at === "string" ? activeSummary.updated_at : "";
+        // Conversation messages can contain large Office artifacts. Fetch and compare
+        // those payloads only after the server's updated_at changes, not on every poll.
+        if (listedUpdatedAt && listedUpdatedAt === lastSyncedConversationUpdatedAtRef.current) return;
+        const conversationResponse = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin", cache: "no-store" });
+        if (!conversationResponse.ok) return;
+        const conversationData = await conversationResponse.json();
+        if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current || !conversationData.conversation) return;
+        const remote = Array.isArray(conversationData.conversation.messages)
           ? conversationData.conversation.messages
               .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
               .slice(-100)
           : [];
         const local = messagesRef.current;
-        // Include persisted deliverable data in the sync comparison, but exclude
-        // attachment URLs because each device rebuilds its own local Blob URL.
-        if (getChatMessageSyncSignature(remote) !== getChatMessageSyncSignature(local) && !loadingRef.current && !historyLoadingRef.current) {
+        const remoteUpdatedAt = typeof conversationData.conversation.updated_at === "string"
+          ? conversationData.conversation.updated_at
+          : listedUpdatedAt;
+        lastSyncedConversationUpdatedAtRef.current = remoteUpdatedAt;
+        if (getChatMessageSyncSignature(remote) !== getChatMessageSyncSignature(local)) {
           shouldAutoScrollRef.current = false;
           await loadConversation(activeConversationId);
         }
@@ -945,10 +959,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             planSummary +
             (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**.");
           const maxVisibleChars = 7800;
-          const visiblePlan = truncateTextWithEllipsis(planContent, maxVisibleChars);
-          const replyBudget = Math.max(0, maxVisibleChars - visiblePlan.length);
-          const visibleReply = truncateTextWithEllipsis(assistantMessage.content, replyBudget);
-          const combinedContent = visibleReply + visiblePlan;
+          const combinedContent = combineReplyAndPlan(assistantMessage.content, planContent, maxVisibleChars);
           assistantMessage = {
             ...assistantMessage,
             content: combinedContent,
