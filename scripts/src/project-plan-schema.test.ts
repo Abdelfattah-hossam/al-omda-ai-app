@@ -30,6 +30,9 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
   assert.match(taskUpdateSpec, /minItems: 3[\s\S]*maxItems: 8/);
+  const taskResponseSpec = openapi.slice(openapi.indexOf("    Task:"), openapi.indexOf("    Workspace:"));
+  assert.ok(taskResponseSpec.includes('$ref: "#/components/schemas/PlanStep"'), "task responses must retain legacy-compatible optional step guidance");
+  assert.ok(!taskResponseSpec.includes("minItems:"), "task responses must not reject persisted legacy step counts");
   assert.ok(openapi.includes("minLength: 1\n          maxLength: 1200"), "OpenAPI plan guidance fields must reject empty strings");
   assert.ok(setup.includes("from anon;"), "setup SQL must explicitly revoke task creation from anon");
   const anonMigration = await readFile(anonMigrationUrl, "utf8");
