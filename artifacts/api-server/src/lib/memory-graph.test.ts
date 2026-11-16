@@ -72,5 +72,6 @@ test("captures explicit corrections without storing sensitive personal data", ()
   assert.equal(correction?.source, "conversation_confirmed");
   assert.equal(extractUserCorrectionNode("That's incorrect: the task has eight steps")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("التصحيح هو عدم تغيير حركة الشات")?.nodeType, "correction");
+  assert.equal(extractUserCorrectionNode("لا، ده غلط: لازم نحافظ على حركة الشات")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
 });
