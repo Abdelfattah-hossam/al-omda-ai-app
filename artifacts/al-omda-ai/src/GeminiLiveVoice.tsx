@@ -267,12 +267,18 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         const outputText = serverContent.outputTranscription?.text;
         if (typeof outputText === "string" && outputText.trim()) {
           assistantResponseActiveRef.current = true;
+          speechActiveRef.current = false;
+          silenceFramesRef.current = 0;
           assistantTranscriptRef.current += outputText;
           if (mountedRef.current) setStatus(ar ? "وصل رد العمدة..." : "AL OMDA's reply arrived...");
         }
         const parts = serverContent.modelTurn?.parts;
         if (Array.isArray(parts)) {
-          if (parts.length) assistantResponseActiveRef.current = true;
+          if (parts.length) {
+            assistantResponseActiveRef.current = true;
+            speechActiveRef.current = false;
+            silenceFramesRef.current = 0;
+          }
           for (const part of parts) {
             const data = part?.inlineData?.data ?? part?.inline_data?.data;
             if (typeof data !== "string" || data.length < 8) continue;
