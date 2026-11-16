@@ -31,7 +31,7 @@ type StepState = 'pending' | 'approved' | 'rejected';
 type TaskStatus = 'review' | 'paused' | 'approved' | 'stopped';
 type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research' | 'assistant';
 type PlanStepNote = { id:string; author:'user'|'assistant'|'system'; text:string; createdAt:string };
-type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
+type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
 type TaskSpreadsheet = { title: string; columns: string[]; rows: string[][] };
