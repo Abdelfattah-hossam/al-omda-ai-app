@@ -49,7 +49,7 @@ function normalizeDetails(value: unknown, maxBytes: number): Record<string, unkn
   const details = value as Record<string, unknown>;
   if (containsBlockedDetailKey(details)) throw new Error("Memory details must not contain credentials or sensitive personal-data fields.");
   const serialized = JSON.stringify(details);
-  if (serialized.length > maxBytes) throw new Error("Memory details exceed the allowed size.");
+  if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("Memory details exceed the allowed size.");
   if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
   if (BLOCKED_SENSITIVE_TEXT.test(serialized)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   return details;
