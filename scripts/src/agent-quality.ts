@@ -3,8 +3,8 @@ export type AgentDomain = "legal" | "engineering" | "medical" | "software" | "fi
 export function inferAgentDomain(goal: string): AgentDomain {
   const text = goal.normalize("NFKC").toLocaleLowerCase();
   if (/\b(law|legal|lawyer|attorney|contract|compliance|statute|regulation|litigation)\b|قانون|قانوني|محامي|عقد|امتثال|تشريع|لائحة|قضية/u.test(text)) return "legal";
-  if (/\b(engineer|engineering|architecture|structural|civil|mechanical|electrical|boq|aci|iec|iso)\b|هندسة|هندسي|معماري|إنشائي|انشائي|كميات|أحمال|احمال|مخطط هندسي/u.test(text)) return "engineering";
-  if (/\b(medical|medicine|clinical|doctor|diagnosis|patient|clinical trial|peer.reviewed)\b|طب|طبي|طبيب|تشخيص|مريض|دواء|دراسة سريرية/u.test(text)) return "medical";
+  if (/\b(engineer|engineering|architecture|structural|civil|mechanical|electrical|boq|aci|iec|iso|reinforced concrete|concrete beam|beam load|structural load|load calculation|quantity survey)\b|هندسة|هندسي|معماري|إنشائي|انشائي|خرسانة|كمرة|كمرات|كميات|أحمال|احمال|مخطط هندسي/u.test(text)) return "engineering";
+  if (/\b(medical|medicine|clinical|doctor|diagnosis|patient|clinical trial|peer.reviewed)\b|(?:^|[\s،,؛])(?:ال)?(?:طب|طبي|طبيب|تشخيص|مريض|دواء)(?:$|[\s،,؛])|دراسة سريرية/u.test(text)) return "medical";
   if (/\b(finance|financial|investment|accounting|valuation|cash flow|roi|budget|forecast)\b|مالي|مالية|استثمار|محاسبة|تقييم مالي|تدفق نقدي|عائد الاستثمار|ميزانية|توقعات مالية/u.test(text)) return "finance";
   if (/\b(code|coding|program|programming|developer|software|bug|refactor|debug|typescript|javascript|python|api|database)\b|برمج|برمجة|كود|تطوير برمجي|موقع|تطبيق|قاعدة بيانات|واجهة برمجية/u.test(text)) return "software";
   if (/\b(business|strategy|marketing|sales|management|operations|content|campaign|brand)\b|أعمال|اعمال|تجارة|إدارة|ادارة|تسويق|مبيعات|تشغيل|محتوى|حملة|علامة تجارية/u.test(text)) return "business";
