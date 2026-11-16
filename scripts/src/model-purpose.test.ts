@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { inferModelPurpose } from "./model-purpose.js";
-import { getModelTemperature, inferAgentDomain, parseAuditIssues, shouldAuditFinalAnswer } from "./agent-quality.js";
+import { buildToolCallingOptions, getModelTemperature, inferAgentDomain, parseAuditIssues, shouldAuditFinalAnswer } from "./agent-quality.js";
 
 test("routes requests to profession-specific model pools", () => {
   assert.equal(inferModelPurpose("Review the security of this pull request"), "review");
@@ -41,4 +41,10 @@ test("flags high-impact deliverables for internal quality review", () => {
   assert.equal(shouldAuditFinalAnswer("How are you today?"), false);
   assert.deepEqual(parseAuditIssues("PASS\nNo issues"), []);
   assert.deepEqual(parseAuditIssues("ISSUE: Missing source\nBLOCKER: Incorrect unit\nNote: ok"), ["Missing source", "Incorrect unit"]);
+});
+
+test("enables automatic function calling only when tool definitions are available", () => {
+  const tools = [{ type: "function", function: { name: "web.search" } }];
+  assert.deepEqual(buildToolCallingOptions(tools), { tools, tool_choice: "auto" });
+  assert.deepEqual(buildToolCallingOptions([]), {});
 });
