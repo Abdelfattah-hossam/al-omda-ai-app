@@ -253,7 +253,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 
 HTTPFlow audit summaries are stored in `.omda/httpflow-history.json` inside the configured workspace, capped at 100 records, and written with restrictive permissions and atomic replacement. They retain the target origin/path, method, role names, status codes, timings, body lengths, and names of changed headers; URL query strings/fragments, response bodies, and header values are not persisted. The Agents workspace can export the summaries as JSON or clear them. All history endpoints require the bearer token.
 
-All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` is an explicit exception for isolated local CTF labs; exact allowlisting is still required. Redirects are revalidated.
+All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. The local-lab exception applies only when both `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` and `OMDA_AGENT_ENVIRONMENT=development` are set; exact host allowlisting is still required. Redirects are revalidated.
 
 ## Local CTF lab mode
 
