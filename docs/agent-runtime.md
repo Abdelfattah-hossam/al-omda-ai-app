@@ -55,6 +55,12 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 
 Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add only that endpoint hostname to `OMDA_AGENT_ALLOWED_HOSTS`. If the provider uses the standard Bing Web Search authentication header, set `OMDA_AGENT_SEARCH_API_KEY`; the key is read only by the local runtime and is never included in model prompts or tool output.
 
+### Private user knowledge graph
+
+The hosted chat API can read a private per-user graph of confirmed memory nodes and relationships. Supported nodes include preferences, projects, decisions, constraints, corrections, people, organizations, tools, and other non-sensitive facts. Edges express relationships such as works_on, prefers, decided, uses, and corrected. The graph is protected by Supabase RLS and composite ownership foreign keys so a relationship cannot connect nodes owned by different users.
+
+The chat service records facts only when the user explicitly asks AL OMDA to remember them, or clearly states a correction in a supported correction format. It does not automatically retain every conversation. Credential-like values and common sensitive personal-data fields are rejected. The graph is added to later chat context alongside the existing private text memory. Authenticated graph APIs support listing, upserting, and clearing the user's graph.
+
 ### Hosted chat API configuration
 
 The Cloudflare-hosted chat API now selects temperature from the latest user request:
