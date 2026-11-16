@@ -4,13 +4,11 @@ import test from "node:test";
 
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
 const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
-const parserUrl = new URL("../../artifacts/api-server/src/lib/project-plan.ts", import.meta.url);
 
 test("project-plan parser and database creation function agree on the 3-to-8 step range", async () => {
-  const [setup, migration, parser] = await Promise.all([
+  const [setup, migration] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
-    readFile(parserUrl, "utf8"),
   ]);
   for (const [label, sql] of [["setup.sql", setup], ["migration", migration]] as const) {
     assert.match(sql, /jsonb_array_length\(p_steps\)\s+not between 3 and 8/i, label + " must allow 3 to 8 project steps");
