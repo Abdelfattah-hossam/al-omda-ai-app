@@ -312,6 +312,28 @@ async function stopMockModel(mock: MockModelHandle): Promise<void> {
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
 
+test("returns a controlled tool error for malformed HTTP target URLs", async () => {
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "invalid-url-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "not-a-valid-url", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The malformed URL was rejected safely." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+    OMDA_AGENT_ALLOWED_HOSTS: "example.com",
+    OMDA_AGENT_ENVIRONMENT: "production",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Fetch the supplied HTTP URL safely." });
+    const body = await response.text();
+    assert.equal(response.status, 200, body + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(body) as { status: string }).status, "completed");
+    assert.equal(mock.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+  }
+});
+
 test("revalidates redirect hostnames before following an allowlisted HTTP request", async () => {
   let redirectedRequests = 0;
   let targetPort = 0;
