@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, hasChatMessagePayload, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
@@ -263,5 +263,15 @@ describe("source-code artifact intent", () => {
     ]);
     assert.equal(intent.kind, "how_to");
     assert.equal(classifyLatestChatIntent([{ role: "user", content: "Create a file named app.ts" }]).kind, "source_code_file");
+  });
+});
+
+describe("chat message payload validation", () => {
+  test("accepts image-only messages but rejects empty messages without an image", () => {
+    assert.equal(hasChatMessagePayload("", true), true);
+    assert.equal(hasChatMessagePayload("   ", true), true);
+    assert.equal(hasChatMessagePayload("Describe this", false), true);
+    assert.equal(hasChatMessagePayload("", false), false);
+    assert.equal(hasChatMessagePayload("   ", false), false);
   });
 });

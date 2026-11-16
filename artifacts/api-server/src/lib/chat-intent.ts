@@ -110,3 +110,8 @@ export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessa
   if (isExplicitSourceCodeFileRequest(request)) return { kind: "source_code_file", request };
   return { kind: "conversation", request };
 }
+
+/** A message may be text-only or image-only; empty payloads are invalid. */
+export function hasChatMessagePayload(content: string, hasImage: boolean): boolean {
+  return content.trim().length > 0 || hasImage;
+}
