@@ -144,7 +144,44 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
   const query = new URLSearchParams({ select: "memory_text", user_id: "eq." + userId, limit: "1" });
   const response = await supabaseFetch("/rest/v1/ai_user_memory?" + query.toString(), {}, accessToken);
   const rows = await readSupabaseJson<Array<{ memory_text?: string }>>(response);
-  return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  const memoryText = typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  try {
+    const nodesQuery = new URLSearchParams({
+      select: "id,node_type,label,normalized_label,details,source,confidence",
+      user_id: "eq." + userId,
+      order: "updated_at.desc",
+      limit: "80",
+    });
+    const edgesQuery = new URLSearchParams({
+      select: "source_node_id,target_node_id,relation",
+      user_id: "eq." + userId,
+      order: "created_at.desc",
+      limit: "120",
+    });
+    const [nodesResponse, edgesResponse] = await Promise.all([
+      supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, accessToken),
+      supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, accessToken),
+    ]);
+    const [nodes, edges] = await Promise.all([
+      readSupabaseJson<Array<{ id: string; node_type: string; label: string; details?: Record<string, unknown>; source?: string; confidence?: number }>>(nodesResponse),
+      readSupabaseJson<Array<{ source_node_id: string; target_node_id: string; relation: string }>>(edgesResponse),
+    ]);
+    const labels = new Map(nodes.map((node) => [node.id, node.label]));
+    const facts = nodes.map((node) => {
+      const detail = node.details && Object.keys(node.details).length ? " — " + JSON.stringify(node.details).slice(0, 500) : "";
+      return "- [" + node.node_type + "] " + node.label + detail;
+    });
+    const relationships = edges.flatMap((edge) => {
+      const from = labels.get(edge.source_node_id);
+      const to = labels.get(edge.target_node_id);
+      return from && to ? ["- " + from + " --" + edge.relation + "--> " + to] : [];
+    });
+    const graph = [...facts, ...relationships].join("\n").slice(0, 6000);
+    return [memoryText, graph ? "CONFIRMED PRIVATE USER KNOWLEDGE GRAPH:\n" + graph : ""].filter(Boolean).join("\n\n").slice(0, 12000);
+  } catch (error) {
+    console.warn("[AI memory graph unavailable] Using saved text memory only.", error instanceof Error ? error.message : "Unknown error");
+    return memoryText;
+  }
 }
 
 function chooseProviders(messages: ChatMessage[]) {
