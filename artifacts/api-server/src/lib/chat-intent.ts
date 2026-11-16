@@ -72,12 +72,23 @@ export function isStandaloneGreeting(request: string): boolean {
 }
 
 
+
+export function isExplicitSourceCodeFileRequest(request: string): boolean {
+  const text = normalizeRequest(request);
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(text);
+  const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
+  const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\s*code|python|javascript|typescript|html|css|sql)/i.test(text);
+  return asksToCreateOrExport && (hasSourceExtension || namesSourceFile);
+}
+
 export type LatestChatIntent =
   | { kind: "greeting"; request: string }
   | { kind: "how_to"; request: string }
   | { kind: "word_file"; request: string }
   | { kind: "excel_file"; request: string }
   | { kind: "powerpoint_file"; request: string }
+  | { kind: "source_code_file"; request: string }
   | { kind: "conversation"; request: string };
 
 /**
@@ -91,5 +102,6 @@ export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessa
   if (isExcelFileRequest(request)) return { kind: "excel_file", request };
   if (isWordFileRequest(request)) return { kind: "word_file", request };
   if (isPowerPointFileRequest(request)) return { kind: "powerpoint_file", request };
+  if (isExplicitSourceCodeFileRequest(request)) return { kind: "source_code_file", request };
   return { kind: "conversation", request };
 }
