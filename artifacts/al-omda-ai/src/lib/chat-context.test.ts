@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildBoundedChatContext, combineReplyAndPlan, truncateTextAtCodePointBoundary, truncateTextFromStartAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
+import { buildBoundedChatContext, combineReplyAndPlan, hasConversationUpdatedAtChanged, truncateTextAtCodePointBoundary, truncateTextFromStartAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
 
 test("keeps the newest messages within the message-count limit", () => {
   const result = buildBoundedChatContext([
@@ -113,4 +113,10 @@ test("per-message tail truncation never starts inside an emoji surrogate pair", 
   assert.equal(content, "b".repeat(7));
   assert.doesNotMatch(content, /^[\uDC00-\uDFFF]/);
   assert.doesNotMatch(content, /[\uD800-\uDBFF]$/);
+});
+
+test("conversation payloads are fetched only when the persisted revision changes", () => {
+  assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:00Z", "2026-11-16T10:00:00Z"), false);
+  assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:01Z", "2026-11-16T10:00:00Z"), true);
+  assert.equal(hasConversationUpdatedAtChanged("", "2026-11-16T10:00:00Z"), true);
 });
