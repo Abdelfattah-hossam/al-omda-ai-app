@@ -54,8 +54,6 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
   catch {
     try { module = await import(/* @vite-ignore */ fallback); }
     catch {
-      const escapeCsv = (value: unknown) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
-      const csv = "\ufeff" + [data.columns, ...data.rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
       const blob = createXlsxBlob(data);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
