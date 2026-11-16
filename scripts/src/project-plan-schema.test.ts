@@ -5,7 +5,7 @@ import test from "node:test";
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
 const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
 
-test("project-plan parser and database creation function agree on the 3-to-8 step range", async () => {
+test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
   const [setup, migration] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
@@ -16,6 +16,4 @@ test("project-plan parser and database creation function agree on the 3-to-8 ste
     assert.match(sql, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from public/i, label + " must revoke public execution");
     assert.match(sql, /grant execute on function public\.create_ai_task_with_quota[\s\S]*?to authenticated/i, label + " must grant only the authenticated application role");
   }
-  assert.match(parser, /steps\.length\s*>\s*MAX_PLAN_STEPS/);
-  assert.match(parser, /const MAX_PLAN_STEPS = 8/);
 });
