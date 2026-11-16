@@ -272,7 +272,7 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
     ) ||
     new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length
   ) {
-    res.status(400).json({ error: "New plans must start with every step awaiting your review." });
+    res.status(400).json({ error: "Invalid new plan: provide 3–8 pending steps, each with non-empty text, output, and completion criteria of at most 1,200 characters." });
     return;
   }
   try {
