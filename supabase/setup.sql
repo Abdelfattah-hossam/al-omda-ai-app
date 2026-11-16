@@ -563,6 +563,7 @@ end;
 $$;
 
 revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public;
+revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from anon;
 grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
 
 -- Keep future public sequences private unless an application migration grants access explicitly.
