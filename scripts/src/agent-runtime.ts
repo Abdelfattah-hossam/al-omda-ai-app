@@ -13,7 +13,7 @@ import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js"
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress, isLocalLabTargetOverrideEnabled } from "./network-safety.js";
-import { requestPinnedHttp, type PinnedAddress } from "./pinned-http.js";
+import { requestPinnedHttpWithFallback, type PinnedAddress } from "./pinned-http.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -140,8 +140,13 @@ async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address
   if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) {
     throw new Error("Target resolves to a private or local network address.");
   }
-  const pinned = addresses[0];
-  return { url, address: { address: pinned.address, family: pinned.family as 4 | 6 } };
+  // Keep every validated candidate so an unreachable IPv6/IPv4 route does
+  // not prevent trying another already-validated address for the same host.
+  const validatedAddresses: PinnedAddress[] = addresses.slice(0, 8).map((entry) => ({
+    address: entry.address,
+    family: entry.family as 4 | 6,
+  }));
+  return { url, addresses: validatedAddresses };
 }
 async function assertAllowedTarget(rawUrl: string): Promise<URL> {
   return (await resolveAllowedTarget(rawUrl)).url;
@@ -190,7 +195,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   // network policy. Native fetch would perform a second DNS lookup.
   let response: Awaited<ReturnType<typeof requestPinnedHttp>> | null = null;
   for (let hop = 0; hop < 4; hop++) {
-    response = await requestPinnedHttp(url, target.address, method, headers, 12000);
+    response = await requestPinnedHttpWithFallback(url, target.addresses, method, headers, 12000);
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get("location");
     if (!location) break;
@@ -307,7 +312,7 @@ async function searchWeb(body: Json): Promise<Json> {
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
   const target = await resolveAllowedTarget(url.toString());
   const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, async (_input, init) => {
-    const response = await requestPinnedHttp(target.url, target.address, "GET", new Headers(init?.headers), 12000);
+    const response = await requestPinnedHttpWithFallback(target.url, target.addresses, "GET", new Headers(init?.headers), 12000);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
