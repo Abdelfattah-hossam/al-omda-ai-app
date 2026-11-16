@@ -5,6 +5,7 @@ import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-wor
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
+import { getHostedModelTemperature, parseHostedAuditIssues, shouldAuditChatRequest } from "../lib/ai-model-policy.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -183,7 +184,7 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
       model,
       messages: groqMessages,
       max_completion_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800,
-      ...(hasImage ? { temperature: 0.7 } : {}),
+      temperature: getHostedModelTemperature(getLatestUserRequest(messages)),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -230,7 +231,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
           contents,
-          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
+          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: getHostedModelTemperature(getLatestUserRequest(messages)) },
         }),
       });
       const payload = await response.json().catch(() => null) as any;
@@ -347,7 +348,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
             { type: "text", text: message.content },
             { type: "image_url", image_url: { url: `data:${message.image.mimeType};base64,${message.image.data}` } },
           ],
-        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: getHostedModelTemperature(getLatestUserRequest(messages)) }),
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
@@ -391,7 +392,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
         ...messages.map((message) => ({ role: message.role, content: message.content })),
       ],
       max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
-      temperature: 0.4,
+      temperature: getHostedModelTemperature(getLatestUserRequest(messages)),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -1413,6 +1414,35 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         usage: latestUsage,
       });
       return;
+    }
+    if (shouldAuditChatRequest(latestCustomerRequest)) {
+      try {
+        const reviewProvider = providers.find((candidate) => candidate !== usedProvider) || usedProvider;
+        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
+          role: "user",
+          content: [
+            "You are AL OMDA's independent final quality auditor. Check the draft against the exact request and supplied evidence for unsupported facts, fabricated citations, arithmetic/unit errors, legal or professional risk, contradictions, security issues, and missing requirements.",
+            "Do not reveal private reasoning. Do not invent sources or facts. Reply exactly PASS if there is no concrete material defect. Otherwise return only concise actionable lines beginning ISSUE:.",
+            "Original user request: " + latestCustomerRequest,
+            "Draft answer: " + answer.text
+          ].join("\n")
+        }], userMemory);
+        const issues = parseHostedAuditIssues(reviewAnswer.text);
+        if (issues.length) {
+          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
+            role: "user",
+            content: [
+              "Correct only the concrete defects listed below. Preserve all supported facts and the user's exact requirements. Do not invent sources, legal authorities, standards, calculations, or test results. If a fact cannot be verified, state the limitation. Return only the complete corrected answer.",
+              "Original user request: " + latestCustomerRequest,
+              "Draft answer: " + answer.text,
+              "Required corrections: " + issues.join("; ")
+            ].join("\n")
+          }], userMemory);
+          if (refined.text.trim()) answer = refined;
+        }
+      } catch (error) {
+        console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
+      }
     }
     res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
   } catch (error) {
