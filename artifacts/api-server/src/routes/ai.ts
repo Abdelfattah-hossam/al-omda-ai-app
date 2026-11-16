@@ -1485,7 +1485,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest);
     if (explicitMemory) {
       try {
-        const memoryNode = parseMemoryNode(explicitMemory, session.user.id);
+        const memoryNode = { ...parseMemoryNode(explicitMemory, session.user.id), updated_at: new Date().toISOString() };
         const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?on_conflict=user_id,node_type,normalized_label", {
           method: "POST",
           headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
