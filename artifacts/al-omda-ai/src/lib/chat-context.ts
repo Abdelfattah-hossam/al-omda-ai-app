@@ -1,5 +1,17 @@
 export type BoundedChatMessage = { role: "user" | "assistant"; content: string };
 
+/** Keep the tail of a UTF-16 string without starting on a low surrogate. */
+export function truncateTextFromStartAtCodePointBoundary(value: string, maxChars: number): string {
+  const text = String(value ?? "");
+  const limit = Math.max(0, Math.floor(maxChars));
+  if (text.length <= limit) return text;
+  let start = text.length - limit;
+  const first = text.charCodeAt(start);
+  const previous = text.charCodeAt(start - 1);
+  if (first >= 0xdc00 && first <= 0xdfff && previous >= 0xd800 && previous <= 0xdbff) start += 1;
+  return text.slice(start);
+}
+
 /** Keep the newest useful context while respecting per-message and aggregate API limits. */
 export function buildBoundedChatContext(
   messages: readonly BoundedChatMessage[],
@@ -13,7 +25,7 @@ export function buildBoundedChatContext(
   for (let index = messages.length - 1; index >= 0 && selected.length < maxMessages && remaining > 0; index -= 1) {
     const message = messages[index];
     const rawContent = String(message.content ?? "");
-    const content = rawContent.slice(-Math.min(maxMessageChars, remaining));
+    const content = truncateTextFromStartAtCodePointBoundary(rawContent, Math.min(maxMessageChars, remaining));
     if (!content.trim()) {
       // Keep the newest message even when it contains only an image attachment.
       // The caller attaches image data to the final bounded message, so dropping
@@ -47,7 +59,7 @@ export function truncateTextAtCodePointBoundary(value: string, maxChars: number)
 
 /** Truncate to a visible character budget without splitting emoji or adding an ellipsis when no space remains. */
 export function truncateTextWithEllipsis(value: string, maxChars: number): string {
-  const text = String(value ?? "");
+  const text = String(value ?? "").trimEnd();
   const limit = Math.max(0, Math.floor(maxChars));
   if (limit === 0) return "";
   if (text.length <= limit) return text;
@@ -57,8 +69,6 @@ export function truncateTextWithEllipsis(value: string, maxChars: number): strin
 export type SyncableChatMessage = {
   role: "user" | "assistant";
   content: string;
-  provider?: string;
-  agentPending?: unknown;
   documentData?: unknown;
   spreadsheetData?: unknown;
   presentationData?: unknown;
@@ -68,19 +78,40 @@ export type SyncableChatMessage = {
   taskTitle?: string;
 };
 
-/** Compare persisted message content and deliverables while ignoring per-device blob URLs. */
+function stableJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableJsonValue);
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, stableJsonValue(record[key])]));
+  }
+  return value;
+}
+
+/** Compare persisted message content and deliverables while ignoring transient provider state and per-device blob URLs. */
 export function getChatMessageSyncSignature(messages: readonly SyncableChatMessage[]): string {
   return JSON.stringify(messages.map((message) => ({
     role: message.role,
     content: message.content,
-    ...(message.provider ? { provider: message.provider } : {}),
-    ...(message.agentPending ? { agentPending: message.agentPending } : {}),
-    ...(message.documentData ? { documentData: message.documentData } : {}),
-    ...(message.spreadsheetData ? { spreadsheetData: message.spreadsheetData } : {}),
-    ...(message.presentationData ? { presentationData: message.presentationData } : {}),
-    ...(message.sourceData ? { sourceData: message.sourceData } : {}),
-    ...(message.appData ? { appData: message.appData } : {}),
+    ...(message.documentData ? { documentData: stableJsonValue(message.documentData) } : {}),
+    ...(message.spreadsheetData ? { spreadsheetData: stableJsonValue(message.spreadsheetData) } : {}),
+    ...(message.presentationData ? { presentationData: stableJsonValue(message.presentationData) } : {}),
+    ...(message.sourceData ? { sourceData: stableJsonValue(message.sourceData) } : {}),
+    ...(message.appData ? { appData: stableJsonValue(message.appData) } : {}),
     ...(message.taskId ? { taskId: message.taskId } : {}),
     ...(message.taskTitle ? { taskTitle: message.taskTitle } : {}),
   })));
+}
+
+
+/** Reserve a readable portion of the character budget for the actual assistant reply. */
+export function combineReplyAndPlan(reply: string, plan: string, maxChars = 7800): string {
+  const limit = Math.max(0, Math.floor(maxChars));
+  if (limit === 0) return "";
+  const replyText = String(reply ?? "").trimEnd();
+  const planText = String(plan ?? "").trimEnd();
+  const minimumReplyBudget = replyText ? Math.min(limit, Math.max(1, Math.floor(limit * 0.25))) : 0;
+  const planBudget = Math.min(planText.length, Math.max(0, limit - minimumReplyBudget));
+  const visiblePlan = truncateTextWithEllipsis(planText, planBudget);
+  const visibleReply = truncateTextWithEllipsis(replyText, Math.max(0, limit - visiblePlan.length));
+  return visibleReply + visiblePlan;
 }
