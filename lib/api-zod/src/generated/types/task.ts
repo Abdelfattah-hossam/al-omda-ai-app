@@ -5,9 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { TaskCreate } from './taskCreate';
+import type { TaskUpdate } from './taskUpdate';
 
-export type Task = TaskCreate & {
+export type Task = TaskUpdate & {
   id: string;
   createdAt: string;
 };
