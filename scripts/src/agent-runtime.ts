@@ -930,11 +930,24 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
+    const finishCancelled = async (remainingCalls: AgentToolCall[]): Promise<Json> => {
+      for (const call of remainingCalls) {
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ cancelled: true, message: "The user cancelled this run before the tool was started. Do not retry it." }) });
+      }
+      appendMcpImageObservations(state.messages, imageQueue);
+      await saveAgentState(id, state);
+      onProgress?.({ type: "status", status: "cancelled" });
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; remaining tools were not started and the latest checkpoint is available to resume.", ...agentExecutionWarnings(state), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+    };
+    if (signal?.aborted) return await finishCancelled(calls);
     const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || "") || (call.function?.name || "").startsWith("mcp_tool_"));
     if (approvalCalls.length) {
       // Execute read-only/allowlisted research calls now, but pause all writes and
       // terminal work until the user approves the exact pending call IDs.
-      for (const call of calls.filter((item) => !approvalCalls.includes(item))) {
+      const readOnlyCalls = calls.filter((item) => !approvalCalls.includes(item));
+      for (let index = 0; index < readOnlyCalls.length; index += 1) {
+        if (signal?.aborted) return await finishCancelled([...readOnlyCalls.slice(index), ...approvalCalls]);
+        const call = readOnlyCalls[index];
         try {
           const result = await runTool(call, onProgress);
           appendMcpToolResult(state.messages, call, result, imageQueue);
@@ -943,6 +956,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
           state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
         }
       }
+      if (signal?.aborted) return await finishCancelled(approvalCalls);
       appendMcpImageObservations(state.messages, imageQueue);
       const pendingMcpTools: Record<string, PendingMcpTool> = {};
       for (const call of approvalCalls) {
@@ -955,7 +969,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       await saveAgentState(id, state);
       return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", ...agentExecutionWarnings(state), pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
-    for (const call of calls) {
+    for (let index = 0; index < calls.length; index += 1) {
+      if (signal?.aborted) return await finishCancelled(calls.slice(index));
+      const call = calls[index];
       try {
         const result = await runTool(call, onProgress);
         appendMcpToolResult(state.messages, call, result, imageQueue);

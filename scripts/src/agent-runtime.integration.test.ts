@@ -455,6 +455,54 @@ test("cancels an active agent model request and preserves a resumable checkpoint
   }
 });
 
+test("cancelling during a running read-only tool prevents later tools in the same model turn", async () => {
+  let slowStarted = false;
+  let laterToolCalls = 0;
+  const target = createHttpServer((req, res) => {
+    if (req.url === "/slow") {
+      slowStarted = true;
+      setTimeout(() => { res.writeHead(200, { "content-type": "text/plain" }); res.end("finished"); }, 900);
+      return;
+    }
+    if (req.url === "/must-not-run") laterToolCalls += 1;
+    res.writeHead(200, { "content-type": "text/plain" });
+    res.end("ok");
+  });
+  await new Promise<void>((resolve, reject) => { target.once("error", reject); target.listen(0, "127.0.0.1", resolve); });
+  const port = (target.address() as AddressInfo).port;
+  const model = await startMockModel(() => ({
+    payload: { choices: [{ delta: { tool_calls: [
+      { index: 0, id: "slow-read", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/slow", method: "GET" }) } },
+      { index: 1, id: "later-read", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/must-not-run", method: "GET" }) } },
+    ] }, finish_reason: "tool_calls" }] },
+  }));
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "cancel-tools-test-model",
+    OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
+    OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+  });
+  try {
+    const running = postTo(isolated, "/v1/agent/run", { sessionId: "cancel-tools-session", goal: "Check both authorized local endpoints." });
+    const deadline = Date.now() + 3000;
+    while (!slowStarted && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(slowStarted, true, "The first read-only tool should have started.");
+    const cancelled = await postTo(isolated, "/v1/agent/cancel", { sessionId: "cancel-tools-session" });
+    assert.equal(cancelled.status, 200);
+    assert.equal((await cancelled.json() as { status: string }).status, "cancelling");
+    const response = await running;
+    const body = await response.text();
+    assert.equal(response.status, 200, body + " " + isolated.stderr);
+    assert.equal((JSON.parse(body) as { status: string }).status, "cancelled");
+    assert.equal(laterToolCalls, 0, "A later tool call must not start after cancellation.");
+    assert.equal(model.requests, 1);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(model);
+    await new Promise<void>((resolve) => target.close(() => resolve()));
+  }
+});
+
 test("cancels a saved pending approval without executing its side effect", async () => {
   const model = await startMockModel(() => ({
     payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "cancel-pending-write", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "must-not-exist.txt", content: "cancelled" }) } }] }, finish_reason: "tool_calls" }] },
