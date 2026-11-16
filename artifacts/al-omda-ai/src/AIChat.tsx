@@ -936,14 +936,16 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             (ar ? "   المخرج: " : "   Deliverable: ") + String(step.output || "").slice(0, 160),
             (ar ? "   معيار الإنجاز: " : "   Acceptance: ") + String(step.complete || "").slice(0, 160),
           ].join("\n")).join("\n\n");
+          const planContent =
+            (ar
+              ? "\n\n**خطة التنفيذ المقترحة — " + taskData.title + " (بانتظار موافقتك):**\n"
+              : "\n\n**Proposed execution plan — " + taskData.title + " (awaiting your approval):**\n") +
+            planSummary +
+            (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**.");
+          const combinedContent = assistantMessage.content + planContent;
           assistantMessage = {
             ...assistantMessage,
-            content: assistantMessage.content +
-              (ar
-                ? "\n\n**خطة التنفيذ المقترحة — " + taskData.title + " (بانتظار موافقتك):**\n"
-                : "\n\n**Proposed execution plan — " + taskData.title + " (awaiting your approval):**\n") +
-              planSummary +
-              (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**."),
+            content: combinedContent.length > 7800 ? combinedContent.slice(0, 7790).trimEnd() + "…" : combinedContent,
             taskId: taskData.id,
             taskTitle: taskData.title,
           };
