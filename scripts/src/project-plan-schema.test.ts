@@ -6,6 +6,7 @@ import test from "node:test";
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
 const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
 const sequenceMigrationUrl = new URL("../../supabase/migrations/20261116174738_revoke_all_public_sequence_defaults.sql", import.meta.url);
+const anonMigrationUrl = new URL("../../supabase/migrations/20261116183805_revoke_anon_task_creation.sql", import.meta.url);
 const openapiUrl = new URL("../../lib/api-spec/openapi.yaml", import.meta.url);
 const generatedApiUrl = new URL("../../lib/api-zod/src/generated/api.ts", import.meta.url);
 const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
@@ -31,6 +32,8 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   assert.match(taskUpdateSpec, /minItems: 3[\s\S]*maxItems: 8/);
   assert.ok(openapi.includes("minLength: 1\n          maxLength: 1200"), "OpenAPI plan guidance fields must reject empty strings");
   assert.ok(setup.includes("from anon;"), "setup SQL must explicitly revoke task creation from anon");
+  const anonMigration = await readFile(anonMigrationUrl, "utf8");
+  assert.match(anonMigration, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from anon/i);
 });
 
 test("generated API validators enforce complete 3-to-8-step task plans", async () => {
