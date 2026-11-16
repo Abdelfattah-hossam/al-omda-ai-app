@@ -51,14 +51,11 @@ export function requestPinnedHttp(
 
   return new Promise((resolve, reject) => {
     let settled = false;
-    let connectDeadline: ReturnType<typeof setTimeout>;
     let overallDeadline: ReturnType<typeof setTimeout>;
-    const clearConnectDeadline = () => clearTimeout(connectDeadline);
     const clearOverallDeadline = () => clearTimeout(overallDeadline);
 
     const request = transport(requestOptions, (incoming) => {
       settled = true;
-      clearConnectDeadline();
       incoming.once("end", clearOverallDeadline);
       incoming.once("close", clearOverallDeadline);
       incoming.once("error", clearOverallDeadline);
@@ -83,26 +80,15 @@ export function requestPinnedHttp(
         body,
       });
     });
-    connectDeadline = setTimeout(() => {
-      request.destroy(new Error("HTTP connection timed out."));
-    }, timeoutMs);
-    connectDeadline.unref?.();
+    // One end-to-end deadline covers DNS-pinned TCP/TLS setup and response
+    // delivery. This avoids relying on undocumented socket handshake flags.
     overallDeadline = setTimeout(() => {
       request.destroy(new Error("HTTP request exceeded its total deadline."));
     }, timeoutMs);
     overallDeadline.unref?.();
 
-    request.once("socket", (socket) => {
-      const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
-      if (!socket.connecting && (url.protocol !== "https:" || !("secureConnecting" in socket) || !socket.secureConnecting)) {
-        clearConnectDeadline();
-      } else {
-        socket.once(connectedEvent, clearConnectDeadline);
-      }
-    });
     request.setTimeout(timeoutMs, () => request.destroy(new Error("HTTP request timed out.")));
     request.once("upgrade", (_incoming, socket) => {
-      clearConnectDeadline();
       clearOverallDeadline();
       socket.destroy();
       if (!settled) {
@@ -111,7 +97,6 @@ export function requestPinnedHttp(
       }
     });
     request.once("error", (error) => {
-      clearConnectDeadline();
       clearOverallDeadline();
       if (!settled) {
         settled = true;
