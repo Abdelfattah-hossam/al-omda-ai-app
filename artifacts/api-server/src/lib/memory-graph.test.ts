@@ -44,6 +44,6 @@ test("stores only explicit, non-sensitive memory requests", () => {
   assert.equal(extractExplicitMemoryNode("How are you?"), null);
   assert.equal(extractExplicitMemoryNode("Do not remember my password"), null);
   assert.equal(extractExplicitMemoryNode("Remember my medical diagnosis"), null);
-  assert.equal(extractExplicitMemoryNode("افتكر إن الشات مايتغيرش"), null);
+  assert.equal(extractExplicitMemoryNode("افتكر إن الشات مايتغيرش")?.nodeType, "constraint");
   assert.equal(extractExplicitMemoryNode("احفظ أني أفضّل الرد بالعربية")?.nodeType, "preference");
 });
