@@ -819,7 +819,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       setMessages(next);
       setError("");
       await saveHistory(next.slice(-100), conversationId);
-      if (agentMode) {
+      const officeArtifactIntent = currentMode !== null || /(?:word|docx?|excel|xlsx|spreadsheet|workbook|power\s*point|powerpoint|pptx|وورد|مستند\s*وورد|ملف\s*وورد|إكسل|اكسيل|اكسل|شيت|ملف\s*اكسل|بوربوينت|عرض\s*تقديمي)/i.test(text);
+      if (agentMode && !officeArtifactIntent) {
         if (imageForRequest) throw new Error(ar ? "وضع Agent المحلي لا يستقبل الصور حاليًا. أوقف وضع Agent لتحليل الصورة." : "Local Agent mode does not accept images yet. Turn it off to analyze the image.");
         if (!agentRuntimeUrl.trim() || !agentToken.trim()) throw new Error(ar ? "أدخل عنوان Runtime المحلي ورمز الاتصال أولًا." : "Enter the local runtime URL and access token first.");
         const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
@@ -946,6 +947,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       setMessages(completed);
       if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
       await saveHistory(completed, conversationId);
+      if (officeArtifactIntent) setCurrentMode(null);
       setInput((current) => current === submittedDraft ? "" : current);
       if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
       if (data.usage) setUsage(data.usage);
