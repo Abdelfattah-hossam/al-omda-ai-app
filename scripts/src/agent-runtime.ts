@@ -902,7 +902,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       if (!signal?.aborted) throw error;
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
-      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Its last saved checkpoint is available to resume.", turns: turn, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; the latest checkpoint is available to resume.", turns: turn, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     totalDurationMs += completion.durationMs;
     lastProvider = completion.provider;
