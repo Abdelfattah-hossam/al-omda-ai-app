@@ -39,8 +39,8 @@ export function isPowerPointFileRequest(request: string): boolean {
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
   const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
   if (!mentionsPresentation) return false;
-  const comparisonOnly = /^(?:ممكن\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|create|make)\s+(?:لي\s*)?(?:مقارنة|compare|comparison)\b/i.test(text);
-  const explanationOnly = /^(?:اشرح|تشرح|شرح|اكتبلي\s+شرح|اعمل\s+شرح|ممكن\s+شرح|explain|write\s+an?\s+explanation)\b/i.test(text);
+  const comparisonOnly = /^(?:ممكن\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|create|make)\s+(?:لي\s*)?(?:مقارنة|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
+  const explanationOnly = /^(?:اشرح|تشرح|شرح|اكتبلي\s+شرح|اعمل\s+شرح|ممكن\s+شرح|explain|write\s+an?\s+explanation)(?:$|[\s،,.?!])/i.test(text);
   if (comparisonOnly || explanationOnly) return false;
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
   const directlyRequestsPresentation = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|powerpoint(?:\s+presentation)?|presentation|pptx|slide\s*deck)/i.test(text);
