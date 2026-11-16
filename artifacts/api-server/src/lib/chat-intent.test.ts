@@ -173,6 +173,23 @@ describe("authoritative latest-turn chat intent", () => {
 });
 
 
+
+describe("comparison intent remains conversational", () => {
+  test("does not create Word or Excel files for comparison requests", () => {
+    for (const request of [
+      "اعمل مقارنة بين ملفات Word وExcel",
+      "قارنلي بين مستندات Word",
+      "Make a comparison of Excel workbooks",
+      "Create a comparison between Word documents",
+    ]) {
+      assert.equal(isWordFileRequest(request), false, "unexpected Word artifact intent: " + request);
+      assert.equal(isExcelFileRequest(request), false, "unexpected Excel artifact intent: " + request);
+    }
+    assert.equal(isWordFileRequest("جهزلي ملف Word يحتوي على مقارنة بين النظامين"), true);
+    assert.equal(isExcelFileRequest("Create an Excel workbook with a comparison table"), true);
+  });
+});
+
 describe("PowerPoint artifact intent", () => {
   test("requires a clear request to create a presentation", () => {
     for (const request of [
