@@ -796,7 +796,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (!authUser) { setWorkspaceError(isAr ? 'سجّل الدخول أولاً لتشغيل المشروع.' : 'Sign in before running the project.'); return; }
     if (task.demo) { setWorkspaceError(isAr ? 'هذه مهمة عرض تجريبية ولا يمكن تنفيذها.' : 'This is a demo task and cannot be executed.'); return; }
     if (task.status === 'paused' || task.status === 'stopped') { setWorkspaceError(isAr ? 'استأنف المشروع قبل التنفيذ.' : 'Resume the project before execution.'); return; }
-    if (projectRunLockRef.current || taskExecutionLockRef.current || executingStepId) return;
+    if (projectRunLockRef.current || taskExecutionLockRef.current || approvalLockRef.current || commentSubmissionLockRef.current || executingStepId) return;
     projectRunLockRef.current = true;
     setWorkspaceError('');
     setExecutionError('');
@@ -939,7 +939,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const approveStep = async (task:Task, stepId:string) => {
     const stepIndex = task.steps.findIndex((step) => step.id === stepId);
-    if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
+    if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (stepIndex !== firstOpen) return;
     approvalLockRef.current = true;
@@ -976,7 +976,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const addStepComment = async (task:Task, stepId:string) => {
     const text = (commentDrafts[stepId] ?? '').trim();
-    if (!text || text.length > 2000 || !authUser || executingStepId || commentSubmissionLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current) return;
+    if (!text || text.length > 2000 || !authUser || executingStepId || commentSubmissionLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || approvalLockRef.current) return;
     const target = task.steps.find((step) => step.id === stepId);
     if (!target || (target.comments?.length ?? 0) >= 50) return;
     commentSubmissionLockRef.current = true;
