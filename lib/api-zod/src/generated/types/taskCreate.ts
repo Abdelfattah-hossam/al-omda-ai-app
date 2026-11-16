@@ -22,8 +22,8 @@ export interface TaskCreate {
   request: string;
   specialty: Specialty;
   /**
-     * @minItems 1
-     * @maxItems 20
+     * @minItems 3
+     * @maxItems 8
      */
   steps: PlanStep[];
   status: TaskStatus;

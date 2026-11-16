@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { CreateTaskBody } from "../../lib/api-zod/src/generated/api";
 
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
 const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
@@ -16,4 +17,21 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
     assert.match(sql, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from public/i, label + " must revoke public execution");
     assert.match(sql, /grant execute on function public\.create_ai_task_with_quota[\s\S]*?to authenticated/i, label + " must grant only the authenticated application role");
   }
+});
+
+test("API task schema accepts only complete plans with 3 to 8 bounded steps", () => {
+  const step = (id: number) => ({
+    id: "step-" + id,
+    text: "Do step " + id,
+    output: "Step " + id + " output",
+    complete: "Step " + id + " is verified",
+    state: "pending" as const,
+  });
+  const base = { title: "A project", request: "Complete a project", specialty: "assistant" as const, status: "review" as const };
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: [step(1), step(2), step(3)] }).success, true);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: Array.from({ length: 8 }, (_, i) => step(i + 1)) }).success, true);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: [step(1), step(2)] }).success, false);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: Array.from({ length: 9 }, (_, i) => step(i + 1)) }).success, false);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), output: "" }, step(2), step(3)] }).success, false);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), text: "x".repeat(1201) }, step(2), step(3)] }).success, false);
 });

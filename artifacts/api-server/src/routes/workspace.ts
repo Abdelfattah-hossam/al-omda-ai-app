@@ -261,8 +261,15 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
   const plan = parsed.data;
   if (
     plan.status !== "review" ||
-    plan.steps.length === 0 ||
-    plan.steps.some((step) => step.state !== "pending" || Boolean(step.result || step.executedAt || step.executionStatus || step.executionError)) ||
+    plan.steps.length < 3 ||
+    plan.steps.length > 8 ||
+    plan.steps.some((step) =>
+      step.state !== "pending" ||
+      typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 ||
+      typeof step.output !== "string" || !step.output.trim() || step.output.length > 1200 ||
+      typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > 1200 ||
+      Boolean(step.result || step.executedAt || step.executionStatus || step.executionError)
+    ) ||
     new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length
   ) {
     res.status(400).json({ error: "New plans must start with every step awaiting your review." });
