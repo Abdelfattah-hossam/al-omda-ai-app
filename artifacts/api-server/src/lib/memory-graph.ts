@@ -35,7 +35,8 @@ const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Be
 const BLOCKED_SENSITIVE_TEXT = /\b(?:my|our|i have|i am)\b.{0,60}\b(?:medical|health|diagnos|illness|disease|diabetes|cancer|religion|political affiliation|sexual orientation|race|ethnic identity)\b|صحتي|مرضي|تشخيصي|ديانتي|معتقدي|انتمائي السياسي|ميولي الجنسية|عرقي/i;
 
 function containsBlockedDetailKey(value: unknown, depth = 0): boolean {
-  if (depth > 8 || !value || typeof value !== "object") return false;
+  if (depth > 8) return true;
+  if (!value || typeof value !== "object") return false;
   if (Array.isArray(value)) return value.some((item) => containsBlockedDetailKey(item, depth + 1));
   return Object.entries(value as Record<string, unknown>).some(([key, item]) =>
     BLOCKED_DETAIL_KEYS.test(key) || containsBlockedDetailKey(item, depth + 1)
@@ -76,6 +77,7 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   const label = value.label.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (BLOCKED_SENSITIVE_TEXT.test(label)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   const normalizedLabel = label.toLocaleLowerCase().replace(/[؟?!.,،؛;:]+/g, "").replace(/\s+/g, " ");
+  if (!normalizedLabel) throw new Error("Memory node label must contain searchable text.");
   return {
     user_id: userId,
     node_type: value.nodeType as MemoryNodeType,
