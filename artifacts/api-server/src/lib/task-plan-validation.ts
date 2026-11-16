@@ -22,7 +22,7 @@ export function isValidNewTaskPlan(plan: NewTaskPlanLike): boolean {
       typeof step.text === "string" && Boolean(step.text.trim()) && step.text.length <= 1200 &&
       typeof step.output === "string" && Boolean(step.output.trim()) && step.output.length <= 1200 &&
       typeof step.complete === "string" && Boolean(step.complete.trim()) && step.complete.length <= 1200 &&
-      !step.result && !step.executedAt && !step.executionStatus && !step.executionError
+      !("result" in step) && !("executedAt" in step) && !("executionStatus" in step) && !("executionError" in step)
     ) &&
     new Set(plan.steps.map((step) => step.id)).size === plan.steps.length;
 }
