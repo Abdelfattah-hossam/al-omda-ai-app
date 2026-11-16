@@ -931,9 +931,19 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           });
           const taskData = await taskResponse.json().catch(() => ({}));
           if (!taskResponse.ok || !taskData.id) throw new Error(taskData.error || "تعذر حفظ المشروع في سجل المهام.");
+          const planSummary = plan.steps.map((step: any, index: number) => [
+            (index + 1) + ". " + String(step.text || "").slice(0, 240),
+            (ar ? "   المخرج: " : "   Deliverable: ") + String(step.output || "").slice(0, 160),
+            (ar ? "   معيار الإنجاز: " : "   Acceptance: ") + String(step.complete || "").slice(0, 160),
+          ].join("\n")).join("\n\n");
           assistantMessage = {
             ...assistantMessage,
-            content: assistantMessage.content + (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام** بعنوان: " : "\n\nThis project was automatically added to **Task History**: ") + taskData.title,
+            content: assistantMessage.content +
+              (ar
+                ? "\n\n**خطة التنفيذ المقترحة — " + taskData.title + " (بانتظار موافقتك):**\n"
+                : "\n\n**Proposed execution plan — " + taskData.title + " (awaiting your approval):**\n") +
+              planSummary +
+              (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**."),
             taskId: taskData.id,
             taskTitle: taskData.title,
           };
