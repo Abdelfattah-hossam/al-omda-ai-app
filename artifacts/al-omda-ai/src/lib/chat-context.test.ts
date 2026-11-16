@@ -36,3 +36,13 @@ test("truncates without splitting a surrogate pair", () => {
   assert.equal(truncateTextAtCodePointBoundary("abc😀tail", 4), "abc");
   assert.equal(truncateTextAtCodePointBoundary("abc😀tail", 5), "abc😀");
 });
+
+test("skips whitespace-only fragments at the aggregate context boundary", () => {
+  const result = buildBoundedChatContext([
+    { role: "user", content: "a".repeat(10) },
+    { role: "assistant", content: "b".repeat(9) + "\n" },
+    { role: "user", content: "latest" },
+  ], { maxTotalChars: 6 });
+  assert.deepEqual(result, [{ role: "user", content: "latest" }]);
+  assert.ok(result.every((message) => message.content.trim().length > 0));
+});
