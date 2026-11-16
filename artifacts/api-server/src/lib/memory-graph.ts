@@ -33,11 +33,19 @@ export type MemoryEdgeInput = {
 const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race/i;
 const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Bearer\s+[A-Za-z0-9._~-]{20,})/i;
 
+function containsBlockedDetailKey(value: unknown, depth = 0): boolean {
+  if (depth > 8 || !value || typeof value !== "object") return false;
+  if (Array.isArray(value)) return value.some((item) => containsBlockedDetailKey(item, depth + 1));
+  return Object.entries(value as Record<string, unknown>).some(([key, item]) =>
+    BLOCKED_DETAIL_KEYS.test(key) || containsBlockedDetailKey(item, depth + 1)
+  );
+}
+
 function normalizeDetails(value: unknown, maxBytes: number): Record<string, unknown> {
   if (value === undefined) return {};
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Memory details must be a JSON object.");
   const details = value as Record<string, unknown>;
-  if (Object.keys(details).some((key) => BLOCKED_DETAIL_KEYS.test(key))) throw new Error("Memory details must not contain credentials or sensitive personal-data fields.");
+  if (containsBlockedDetailKey(details)) throw new Error("Memory details must not contain credentials or sensitive personal-data fields.");
   const serialized = JSON.stringify(details);
   if (serialized.length > maxBytes) throw new Error("Memory details exceed the allowed size.");
   if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
