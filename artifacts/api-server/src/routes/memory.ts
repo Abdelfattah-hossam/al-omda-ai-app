@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { parseMemoryEdge, parseMemoryNode } from "../lib/memory-graph.js";
+import { parseMemoryEdge, parseMemoryNode, type MemoryEdgeInput, type MemoryNodeInput } from "../lib/memory-graph.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -114,7 +114,7 @@ router.post("/ai/memory/graph/nodes", requireSameOrigin, async (req, res): Promi
       res.status(400).json({ error: "Send between 1 and 25 memory nodes." });
       return;
     }
-    let nodes;
+    let nodes: MemoryNodeInput[];
     try {
       nodes = input.map((item: unknown) => parseMemoryNode(item, session.user.id));
     } catch (error) {
@@ -145,7 +145,7 @@ router.post("/ai/memory/graph/edges", requireSameOrigin, async (req, res): Promi
       res.status(400).json({ error: "Send between 1 and 50 memory relationships." });
       return;
     }
-    let edges;
+    let edges: MemoryEdgeInput[];
     try {
       edges = input.map((item: unknown) => parseMemoryEdge(item, session.user.id));
     } catch (error) {
