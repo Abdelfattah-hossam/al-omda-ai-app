@@ -139,3 +139,29 @@ export function extractExplicitMemoryNode(request: string): Record<string, unkno
     confidence: 1,
   };
 }
+
+
+export function extractUserCorrectionNode(request: string): Record<string, unknown> | null {
+  const text = request.normalize("NFKC").trim();
+  const patterns = [
+    /^(?:correction|that's incorrect|that is incorrect|you got that wrong|i said)\s*[:,—-]?\s*(.+)$/i,
+    /^(?:التصحيح(?:\s+هو)?|الصح(?:\s+إن|\s+ان)?|انا\s+قلتلك(?:\s+ان|\s+إن)?|أنا\s+قلت\s+لك(?:\s+أن|\s+ان)?)\s*(.+)$/i,
+  ];
+  let correction = "";
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      correction = match[1].trim().replace(/^[،,:؛\s]+|[.!؟?]+$/g, "");
+      break;
+    }
+  }
+  if (!correction || correction.length > 400) return null;
+  if (/password|passcode|secret|api.?key|access.?token|bank.?account|credit.?card|passport|national.?id|diagnos|health condition|religion|political party|sexual orientation|race|ethnic|كلمة المرور|كلمة السر|رمز سري|مفتاح api|رقم بطاقة|حساب بنكي|جواز سفر|تشخيص|مرض|ديانة|انتماء سياسي|ميول جنسية|عرق|أصل عرقي/i.test(correction)) return null;
+  return {
+    nodeType: "correction",
+    label: correction,
+    details: { userCorrection: true },
+    source: "conversation_confirmed",
+    confidence: 1,
+  };
+}
