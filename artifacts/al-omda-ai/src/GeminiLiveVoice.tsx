@@ -57,6 +57,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const silenceFramesRef = useRef(0);
   const pendingPcmPlaybackRef = useRef(0);
   const assistantTurnCompleteRef = useRef(false);
+  const assistantResponseActiveRef = useRef(false);
   const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const labels = {
@@ -84,6 +85,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     nextPlayTimeRef.current = 0;
     pendingPcmPlaybackRef.current = 0;
     assistantTurnCompleteRef.current = false;
+    assistantResponseActiveRef.current = false;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     fallbackUtteranceRef.current = null;
     if (mountedRef.current) {
@@ -195,7 +197,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       sourceRef.current = source;
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
-        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current) return;
+        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         let energy = 0;
         for (let i = 0; i < input.length; i++) energy += input[i] * input[i];
@@ -264,11 +266,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         if (typeof inputText === "string" && inputText.trim()) userTranscriptRef.current += inputText;
         const outputText = serverContent.outputTranscription?.text;
         if (typeof outputText === "string" && outputText.trim()) {
+          assistantResponseActiveRef.current = true;
           assistantTranscriptRef.current += outputText;
           if (mountedRef.current) setStatus(ar ? "وصل رد العمدة..." : "AL OMDA's reply arrived...");
         }
         const parts = serverContent.modelTurn?.parts;
         if (Array.isArray(parts)) {
+          if (parts.length) assistantResponseActiveRef.current = true;
           for (const part of parts) {
             const data = part?.inlineData?.data ?? part?.inline_data?.data;
             if (typeof data !== "string" || data.length < 8) continue;
@@ -292,7 +296,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             // Audio chunks can arrive in trailing/duplicate frames after turnComplete.
             player.onended = () => {
               pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
-              if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
+              if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0) {
+                assistantResponseActiveRef.current = false;
+                if (mountedRef.current) setSpeaking(false);
+              }
             };
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
@@ -321,6 +328,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               utterance.onend = () => {
                 if (fallbackUtteranceRef.current === utterance) {
                   fallbackUtteranceRef.current = null;
+                  assistantResponseActiveRef.current = false;
                   if (mountedRef.current) setSpeaking(false);
                 }
               };
@@ -336,10 +344,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
                 setStatus(ar ? "العمدة بيرد بالصوت المتاح على جهازك..." : "AL OMDA is replying with your device voice...");
               }
             } else if (mountedRef.current) {
+              assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
               setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
             }
           } else if (mountedRef.current) {
-            setStatus(ar ? "Gemini استقبل دور الكلام لكنه لم يرسل ردًا. جرّب جملة أقصر." : "Gemini received the turn but sent no reply. Try a shorter sentence.");
+            assistantResponseActiveRef.current = false;
+            setStatus(ar ? "Gemini استقبل دور الكلام لكنه لم يرسل ردًا. جرّب جملة أقصر." : "Gemini received the turn but sent no reply.");
           }
           userTranscriptRef.current = "";
           assistantTranscriptRef.current = "";
