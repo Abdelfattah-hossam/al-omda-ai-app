@@ -707,7 +707,7 @@ function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: u
 }
 function agentExecutionWarnings(state: AgentState): { executionStatus: string; toolFailures: AgentToolFailure[] } {
   const toolFailures = state.toolFailures || [];
-  return { executionStatus: toolFailures.length ? "completed_with_warnings" : "completed", toolFailures };
+  return { toolExecutionStatus: toolFailures.length ? "with_warnings" : "no_tool_errors", toolFailures };
 }
 const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
