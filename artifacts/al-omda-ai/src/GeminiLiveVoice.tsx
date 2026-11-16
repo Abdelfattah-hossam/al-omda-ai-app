@@ -50,6 +50,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef(0);
   const mountedRef = useRef(true);
+  // State updates are asynchronous; refs prevent rapid taps from opening
+  // multiple live sessions before React has rendered the connecting state.
+  const connectingRef = useRef(false);
+  const activeRef = useRef(false);
   const sessionReadyRef = useRef(false);
   const userTranscriptRef = useRef("");
   const assistantTranscriptRef = useRef("");
@@ -69,6 +73,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   };
 
   const cleanup = () => {
+    connectingRef.current = false;
+    activeRef.current = false;
     sessionReadyRef.current = false;
     speechActiveRef.current = false;
     silenceFramesRef.current = 0;
@@ -108,7 +114,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   }, []);
 
   const start = async () => {
-    if (active || connecting || disabled) return;
+    if (activeRef.current || connectingRef.current || disabled) return;
+    connectingRef.current = true;
     setConnecting(true);
     setStatus(labels.connecting);
     try {
@@ -241,6 +248,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       processor.connect(context.destination);
 
       sessionReadyRef.current = true;
+      connectingRef.current = false;
+      activeRef.current = true;
       setConnecting(false);
       setActive(true);
       setStatus(labels.listening);
