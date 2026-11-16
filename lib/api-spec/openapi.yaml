@@ -472,7 +472,6 @@ components:
               type: string
               minLength: 1
               maxLength: 1200
-          required: [output, complete]
     TaskUpdate:
       type: object
       properties:
@@ -488,8 +487,8 @@ components:
           $ref: "#/components/schemas/Specialty"
         steps:
           type: array
-          minItems: 3
-          maxItems: 8
+          minItems: 1
+          maxItems: 20
           items:
             $ref: "#/components/schemas/TaskUpdateStep"
         status:
