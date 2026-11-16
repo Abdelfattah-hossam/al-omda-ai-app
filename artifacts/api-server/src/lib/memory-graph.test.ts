@@ -23,6 +23,7 @@ test("rejects invalid node types, empty labels, oversized details, and sensitive
   assert.throws(() => parseMemoryNode({ nodeType: "medical", label: "x" }, userId), /Unsupported/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: " " }, userId), /label/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { apiKey: "do-not-store" } }, userId), /credentials or sensitive/);
+  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { metadata: { medicalNotes: "private" } } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { text: "sk-abcdefghijklmnopqrstuvwxyz123456" } }, userId), /credential or access token/);
 });
 
