@@ -478,7 +478,7 @@ components:
       required: [title, request, specialty, steps, status]
     Task:
       allOf:
-        - $ref: "#/components/schemas/TaskCreate"
+        - $ref: "#/components/schemas/TaskUpdate"
         - type: object
           properties:
             id:
