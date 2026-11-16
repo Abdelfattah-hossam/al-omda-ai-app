@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { isValidNewTaskPlan } from "./task-plan-validation.js";
 
-const makeStep = (id: number) => ({
+type TestStep = { id: string; text: string; output: string; complete: string; state: string; result?: string; executedAt?: string; executionStatus?: string; executionError?: string };
+
+const makeStep = (id: number): TestStep => ({
   id: "step-" + id,
   text: "Do step " + id,
   output: "Expected output " + id,
