@@ -134,7 +134,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     const isCurrentSession = () => mountedRef.current && sessionIdRef.current === sessionId;
     setConnectingState(true);
     try {
-      setStatus(labels.connecting);
+      if (mountedRef.current) setStatus(labels.connecting);
       // Request microphone permission before creating a billable temporary Gemini session.
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
@@ -199,8 +199,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           }));
         };
         socket.onerror = () => {
+          if (!isCurrentSession()) return;
           window.clearTimeout(timeout);
-          if (!isCurrentSession() && setupComplete) return;
           reject(new Error(opened ? (ar ? "فُتح اتصال Gemini لكن حدث خطأ أثناء تهيئة الجلسة." : "Gemini WebSocket opened but failed during session setup.") : labels.unavailable));
         };
         socket.onmessage = async (event) => {
@@ -208,6 +208,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           let message: any;
           try {
             const raw = typeof event.data === "string" ? event.data : await event.data.text();
+            if (!isCurrentSession()) return;
             lastServerMessage = raw;
             message = JSON.parse(raw);
           } catch { return; }
@@ -297,9 +298,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         let message: any;
         try {
           const raw = typeof event.data === "string" ? event.data : await event.data.text();
+          if (!isCurrentSession()) return;
           message = JSON.parse(raw);
         } catch {
-          if (mountedRef.current) setStatus(ar ? "وصلت رسالة غير مفهومة من Gemini." : "Received an unreadable message from Gemini.");
+          if (isCurrentSession() && mountedRef.current) setStatus(ar ? "وصلت رسالة غير مفهومة من Gemini." : "Received an unreadable message from Gemini.");
           return;
         }
         if (message.error) {
