@@ -381,9 +381,11 @@ components:
           maxLength: 1200
         output:
           type: string
+          minLength: 1
           maxLength: 1200
         complete:
           type: string
+          minLength: 1
           maxLength: 1200
         result:
           type: string
@@ -416,6 +418,14 @@ components:
         - $ref: "#/components/schemas/PlanStep"
         - type: object
           properties:
+            output:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            complete:
+              type: string
+              minLength: 1
+              maxLength: 1200
             state:
               type: string
               enum: [pending]
@@ -453,6 +463,15 @@ components:
       allOf:
         - $ref: "#/components/schemas/PlanStep"
         - type: object
+          properties:
+            output:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            complete:
+              type: string
+              minLength: 1
+              maxLength: 1200
           required: [output, complete]
     TaskUpdate:
       type: object
