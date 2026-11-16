@@ -940,8 +940,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
           appendMcpToolResult(state.messages, call, result, imageQueue);
         } catch (error) {
           recordAgentToolFailure(state, call, error);
-        recordAgentToolFailure(state, call, error);
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+          state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
         }
       }
       appendMcpImageObservations(state.messages, imageQueue);
@@ -962,8 +961,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
-        recordAgentToolFailure(state, call, error);
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
     appendMcpImageObservations(state.messages, imageQueue);
