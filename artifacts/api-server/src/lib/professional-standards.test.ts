@@ -51,3 +51,25 @@ test("professional standards preserve user intent and avoid forcing file creatio
   assert.match(professionalStandards, /never carry over an old file\/task to a casual message or unrelated request/i);
   assert.match(professionalStandards, /Do not force every request into Word or create a file when the user only wants a conversational answer/i);
 });
+
+test("medical and scientific standards require verified evidence and clear uncertainty", () => {
+  for (const phrase of [
+    "MEDICAL AND SCIENTIFIC ACCURACY",
+    "current official clinical guidance",
+    "peer-reviewed primary research",
+    "contraindications",
+    "Never invent a study, statistic, dosage, approval, or citation",
+    "qualified clinician",
+  ]) assert.ok(professionalStandards.includes(phrase), `Missing medical requirement: ${phrase}`);
+});
+
+test("finance standards require dated inputs, explicit assumptions, and reconciled formulas", () => {
+  for (const phrase of [
+    "FINANCE AND ACCOUNTING ACCURACY",
+    "as-of date",
+    "currency",
+    "Separate actuals from estimates and projections",
+    "Reconcile totals and independently check formulas",
+    "Never fabricate transactions, market prices, financial statements, or guaranteed returns",
+  ]) assert.ok(professionalStandards.includes(phrase), `Missing finance requirement: ${phrase}`);
+});
