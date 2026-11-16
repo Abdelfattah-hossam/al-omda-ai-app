@@ -104,3 +104,13 @@ test("reserves visible space for the assistant reply when a plan is long", () =>
 test("uses available space efficiently when the plan is short", () => {
   assert.equal(combineReplyAndPlan("A concise answer.", "A short plan.", 100), "A concise answer.A short plan.");
 });
+
+test("per-message tail truncation never starts inside an emoji surrogate pair", () => {
+  const result = buildBoundedChatContext([
+    { role: "user", content: "a".repeat(7) + "😀" + "b".repeat(7) },
+  ], { maxMessageChars: 8 });
+  const content = result[0].content;
+  assert.equal(content, "b".repeat(7));
+  assert.doesNotMatch(content, /^[\uDC00-\uDFFF]/);
+  assert.doesNotMatch(content, /[\uD800-\uDBFF]$/);
+});
