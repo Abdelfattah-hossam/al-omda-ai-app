@@ -125,8 +125,8 @@ export const GetWorkspaceResponse = zod.object({
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(getWorkspaceResponseTasksItemOneStepsItemIdMax),
   "text": zod.string().min(1).max(getWorkspaceResponseTasksItemOneStepsItemTextMax),
-  "output": zod.string().min(1).max(1200).optional(),
-  "complete": zod.string().min(1).max(1200).optional(),
+  "output": zod.string().min(1).max(1200),
+  "complete": zod.string().min(1).max(1200),
   "result": zod.string().max(12000).optional(),
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
@@ -238,8 +238,8 @@ export const CreateTaskResponse = zod.object({
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(createTaskResponseOneStepsItemIdMax),
   "text": zod.string().min(1).max(createTaskResponseOneStepsItemTextMax),
-  "output": zod.string().min(1).max(1200).optional(),
-  "complete": zod.string().min(1).max(1200).optional(),
+  "output": zod.string().min(1).max(1200),
+  "complete": zod.string().min(1).max(1200),
   "result": zod.string().max(12000).optional(),
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
@@ -321,8 +321,8 @@ export const UpdateTaskResponse = zod.object({
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(updateTaskResponseOneStepsItemIdMax),
   "text": zod.string().min(1).max(updateTaskResponseOneStepsItemTextMax),
-  "output": zod.string().min(1).max(1200).optional(),
-  "complete": zod.string().min(1).max(1200).optional(),
+  "output": zod.string().min(1).max(1200),
+  "complete": zod.string().min(1).max(1200),
   "result": zod.string().max(12000).optional(),
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
