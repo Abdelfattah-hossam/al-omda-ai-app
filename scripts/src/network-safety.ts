@@ -50,3 +50,15 @@ export function isBlockedNetworkAddress(address: string): boolean {
     (first & 0xff00) === 0xff00 ||
     (first === 0x2001 && groups[1] === 0x0db8);
 }
+
+
+/**
+ * Local/private targets are available only in an explicitly marked development
+ * environment. The opt-in flag alone must never weaken production SSRF defenses.
+ */
+export function isLocalLabTargetOverrideEnabled(
+  environment: Readonly<Record<string, string | undefined>>,
+): boolean {
+  return environment.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true" &&
+    environment.OMDA_AGENT_ENVIRONMENT === "development";
+}
