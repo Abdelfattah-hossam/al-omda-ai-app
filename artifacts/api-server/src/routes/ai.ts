@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
