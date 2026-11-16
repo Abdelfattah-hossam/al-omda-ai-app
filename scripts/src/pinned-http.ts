@@ -21,11 +21,18 @@ export async function requestPinnedHttpWithFallback(
   if (!addresses.length) throw new Error("The target has no validated network addresses.");
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
-  for (const address of addresses) {
+  for (const [index, address] of addresses.entries()) {
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) break;
+    // Reserve part of the overall budget for each remaining validated address.
+    // A stalled first route must not consume the time needed to try the next one.
+    const remainingAddresses = addresses.length - index;
+    const connectBudgetMs = Math.min(
+      remainingMs,
+      Math.max(1000, Math.floor(remainingMs / remainingAddresses)),
+    );
     try {
-      return await requestPinnedHttp(url, address, method, headers, remainingMs);
+      return await requestPinnedHttp(url, address, method, headers, remainingMs, connectBudgetMs);
     } catch (error) {
       lastError = error;
     }
@@ -40,6 +47,7 @@ export function requestPinnedHttp(
   method: string,
   headers: Headers,
   timeoutMs = 12000,
+  connectTimeoutMs = timeoutMs,
 ): Promise<PinnedHttpResponse> {
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     return Promise.reject(new Error("Only HTTP and HTTPS requests are supported."));
@@ -75,10 +83,16 @@ export function requestPinnedHttp(
   return new Promise((resolve, reject) => {
     let settled = false;
     let overallDeadline: ReturnType<typeof setTimeout>;
+    let connectDeadline: ReturnType<typeof setTimeout> | undefined;
     const clearOverallDeadline = () => clearTimeout(overallDeadline);
+    const clearConnectDeadline = () => {
+      if (connectDeadline) clearTimeout(connectDeadline);
+      connectDeadline = undefined;
+    };
 
     const request = transport(requestOptions, (incoming) => {
       settled = true;
+      clearConnectDeadline();
       incoming.once("end", clearOverallDeadline);
       incoming.once("close", clearOverallDeadline);
       incoming.once("error", clearOverallDeadline);
@@ -110,8 +124,19 @@ export function requestPinnedHttp(
     }, timeoutMs);
     overallDeadline.unref?.();
 
+    request.once("socket", (socket) => {
+      // For HTTPS, wait for the TLS handshake as well as the TCP connection.
+      const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
+      socket.once(connectedEvent, clearConnectDeadline);
+      connectDeadline = setTimeout(() => {
+        request.destroy(new Error("HTTP connection could not be established before its connect deadline."));
+      }, Math.min(timeoutMs, Math.max(1, connectTimeoutMs)));
+      connectDeadline.unref?.();
+    });
+
     request.setTimeout(timeoutMs, () => request.destroy(new Error("HTTP request timed out.")));
     request.once("upgrade", (_incoming, socket) => {
+      clearConnectDeadline();
       clearOverallDeadline();
       socket.destroy();
       if (!settled) {
@@ -120,6 +145,7 @@ export function requestPinnedHttp(
       }
     });
     request.once("error", (error) => {
+      clearConnectDeadline();
       clearOverallDeadline();
       if (!settled) {
         settled = true;
