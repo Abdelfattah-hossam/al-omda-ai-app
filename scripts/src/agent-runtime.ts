@@ -193,7 +193,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
   // Connect to the exact address validated against the allowlist and private
   // network policy. Native fetch would perform a second DNS lookup.
-  let response: Awaited<ReturnType<typeof requestPinnedHttp>> | null = null;
+  let response: Awaited<ReturnType<typeof requestPinnedHttpWithFallback>> | null = null;
   for (let hop = 0; hop < 4; hop++) {
     response = await requestPinnedHttpWithFallback(url, target.addresses, method, headers, 12000);
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
