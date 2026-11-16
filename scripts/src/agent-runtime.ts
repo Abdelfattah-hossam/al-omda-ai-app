@@ -124,7 +124,7 @@ function authenticated(req: IncomingMessage): boolean {
   const b = Buffer.from(TOKEN);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address: PinnedAddress }> {
+async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; addresses: PinnedAddress[] }> {
   let url: URL;
   try {
     url = new URL(rawUrl);
