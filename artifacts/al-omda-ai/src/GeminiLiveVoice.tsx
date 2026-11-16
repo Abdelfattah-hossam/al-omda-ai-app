@@ -120,11 +120,19 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       connectingRef.current = false;
       activeRef.current = false;
       sessionReadyRef.current = false;
+      speechActiveRef.current = false;
+      assistantResponseActiveRef.current = false;
+      assistantTurnCompleteRef.current = true;
+      silenceFramesRef.current = 0;
+      pendingPcmPlaybackRef.current = 0;
+      nextPlayTimeRef.current = 0;
       processorRef.current?.disconnect();
       sourceRef.current?.disconnect();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       socketRef.current?.close();
       void contextRef.current?.close();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      fallbackUtteranceRef.current = null;
     };
   }, []);
 
