@@ -9,6 +9,7 @@ test("routes requests to profession-specific model pools", () => {
   assert.equal(inferModelPurpose("Calculate a reinforced concrete beam load"), "engineering");
   assert.equal(inferModelPurpose("Summarize clinical trial evidence"), "medical");
   assert.equal(inferModelPurpose("Build a TypeScript API"), "coding");
+  assert.equal(inferModelPurpose("Review my TypeScript code for security issues"), "review");
   assert.equal(inferModelPurpose("Analyze cash flow and ROI"), "finance");
   assert.equal(inferModelPurpose("Create a marketing strategy"), "business");
   assert.equal(inferModelPurpose("Research and compare model providers"), "research");
