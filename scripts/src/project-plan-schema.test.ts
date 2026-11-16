@@ -21,12 +21,12 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
     assert.match(sql, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from public/i, label + " must revoke public execution");
     assert.match(sql, /grant execute on function public\.create_ai_task_with_quota[\s\S]*?to authenticated/i, label + " must grant only the authenticated application role");
   }
-  assert.match(setup, /alter default privileges for role postgres in schema public\\s+revoke all on sequences from anon, authenticated, service_role/i);
+  assert.match(setup, /alter default privileges for role postgres in schema public\s+revoke all on sequences from anon, authenticated, service_role/i);
   assert.match(sequenceMigration, /revoke all on sequences from anon, authenticated, service_role/i);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
-  assert.match(taskCreateSpec, /minItems: 3[\\s\\S]*maxItems: 8/);
-  assert.match(taskUpdateSpec, /minItems: 3[\\s\\S]*maxItems: 8/);
+  assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
+  assert.match(taskUpdateSpec, /minItems: 3[\s\S]*maxItems: 8/);
 });
 
 test("API task schema accepts only complete plans with 3 to 8 bounded steps", () => {
