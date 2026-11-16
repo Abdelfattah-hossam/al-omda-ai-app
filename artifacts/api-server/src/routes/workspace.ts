@@ -410,6 +410,7 @@ router.post("/tasks/:id/revise-step", requireSameOrigin, async (req, res): Promi
       };
       return {
         ...step, state: "pending" as const,
+        ...(step.result ? { revisionHistory: [...(step.revisionHistory ?? []), { result: step.result, ...(step.executedAt ? { executedAt: step.executedAt } : {}), revisionRequestedAt: now, note: "أُبطلت هذه النسخة لأن مرحلة سابقة تغيرت؛ يلزم إعادة التنفيذ والفحص." }].slice(-20) } : {}),
         comments: [...(step.comments ?? []), { id: crypto.randomUUID(), author: "system" as const, text: "أُعيدت هذه المرحلة إلى الانتظار لأن مخرج مرحلة سابقة تغيّر، ويلزم تنفيذها وفحصها مجددًا.", createdAt: now }].slice(-50),
         result: undefined, executedAt: undefined, executionStatus: undefined, executionError: undefined,
       };
