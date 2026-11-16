@@ -70,6 +70,7 @@ async function sessionOrReport(
 async function getTaskById(id: string, session: SupabaseSession): Promise<DbTask | null> {
   const query = new URLSearchParams({
     id: `eq.${id}`,
+    user_id: `eq.${session.user.id}`,
     select: "id,title,request,specialty,steps,status,created_at",
     limit: "1",
   });
@@ -165,6 +166,7 @@ router.get("/workspace", async (req, res): Promise<void> => {
       limit: "1",
     });
     const tasksQuery = new URLSearchParams({
+      user_id: `eq.${session.user.id}`,
       select: "id,title,request,specialty,steps,status,created_at",
       order: "created_at.desc",
     });
