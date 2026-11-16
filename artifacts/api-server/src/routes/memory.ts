@@ -116,7 +116,7 @@ router.post("/ai/memory/graph/nodes", requireSameOrigin, async (req, res): Promi
     }
     let nodes: MemoryNodeInput[];
     try {
-      nodes = input.map((item: unknown) => parseMemoryNode(item, session.user.id));
+      nodes = input.map((item: unknown) => ({ ...parseMemoryNode(item, session.user.id), updated_at: new Date().toISOString() }));
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory node." });
       return;
