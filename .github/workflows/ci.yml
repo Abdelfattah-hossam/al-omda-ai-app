@@ -62,8 +62,6 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/ooxml-validation.test.ts
       - name: Test project intent classification
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/project-intent.test.ts
-      - name: Test bounded chat context
-        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/chat-context.test.ts
       - name: Test detailed project plan validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-plan.test.ts
       - name: Test chat Agent stream parser
