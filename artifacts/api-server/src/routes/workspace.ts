@@ -29,7 +29,7 @@ type DbTask = {
   title: string;
   request: string;
   specialty: "business" | "development" | "design" | "marketing" | "research" | "assistant";
-  steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string; state: "pending" | "approved" | "rejected" }>;
+  steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string; comments?: Array<{id:string;author:"user"|"assistant"|"system";text:string;createdAt:string}>; state: "pending" | "approved" | "rejected" }>;
   status: "review" | "paused" | "approved" | "stopped";
   created_at: string;
 };
@@ -95,7 +95,6 @@ function sameStep(left: DbTask["steps"][number], right: DbTask["steps"][number])
 }
 
 function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
-  if (previous.status === "approved" || previous.status === "stopped") return false;
   if (
     previous.title !== next.title ||
     previous.request !== next.request ||
@@ -103,6 +102,12 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   ) return false;
   if (previous.steps.length !== next.steps.length) return false;
   if (previous.steps.some((step, index) => step.id !== next.steps[index]?.id)) return false;
+  const commentsOnly = previous.steps.every((step,index) => {
+    const before = step.comments ?? [];
+    const after = next.steps[index].comments ?? [];
+    return after.length >= before.length && before.every((note,noteIndex) => JSON.stringify(note) === JSON.stringify(after[noteIndex])) && after.slice(before.length).every(note => note.author === "user" && note.text.trim().length > 0);
+  });
+  if (!commentsOnly) return false;
   if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || step.executedAt !== next.steps[index]?.executedAt || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
 
   const changedIndices = previous.steps
@@ -121,7 +126,8 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   }
   if (changedIndices.length > 1) return false;
   if (changedIndices.length === 0) {
-    return next.status === "review" && previous.status === "review";
+    const onlyCommentsAdded = previous.steps.some((step,index) => (next.steps[index].comments?.length ?? 0) > (step.comments?.length ?? 0));
+    return onlyCommentsAdded ? next.status === previous.status : next.status === "review" && previous.status === "review";
   }
 
   const firstOpen = previous.steps.findIndex((step) => step.state !== "approved");

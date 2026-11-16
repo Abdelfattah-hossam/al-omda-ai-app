@@ -543,7 +543,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const taskResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
     const taskRows = await readSupabaseJson<Array<{
       id: string; title: string; request: string; specialty: string; status: string;
-      steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string }>;
+      steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string; comments?: Array<{id:string;author:"user"|"assistant"|"system";text:string;createdAt:string}> }>;
     }>>(taskResponse);
     const task = taskRows[0];
     if (!task) { res.status(404).json({ error: "Project not found in your account." }); return; }
@@ -562,7 +562,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         const latestStep = latest.steps.find((item) => item.id === stepId);
         if (!latestStep || latestStep.state !== "approved" || latestStep.result) return;
         const updatedSteps = latest.steps.map((item) => item.id === stepId
-          ? { ...item, executionStatus: "failed" as const, executionError: message.slice(0, 500) }
+          ? { ...item, executionStatus: "failed" as const, executionError: message.slice(0, 500), comments:[...(item.comments ?? []), {id:crypto.randomUUID(),author:"system" as const,text:"تعذر تنفيذ المرحلة: "+message.slice(0, 450),createdAt:new Date().toISOString()}].slice(-50) }
           : item);
         const failureQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id });
         await supabaseFetch("/rest/v1/tasks?" + failureQuery.toString(), {
@@ -636,7 +636,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Return the deliverable itself. Include code, structured content, calculations, or a ready-to-use draft when relevant. Be explicit about any external action you cannot perform; never claim to have changed files, deployed software, or contacted anyone.",
       "Keep the result focused and under 12,000 characters."
     ].join("\n");
-    const messages: ChatMessage[] = [{ role: "user", content: prompt }];
+    const feedback = (step.comments ?? []).map((note) => "[" + note.author + "] " + note.text).join("\n");
+    const messages: ChatMessage[] = [{ role: "user", content: prompt + (feedback ? "\n\nUser feedback and required corrections for this step (must be followed; do not skip):\n" + feedback : "") }];
     const failures: string[] = [];
     let answer: { text: string; model: string } | null = null;
     let provider = "";
