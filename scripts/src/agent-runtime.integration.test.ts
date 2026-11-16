@@ -500,12 +500,12 @@ test("reports failed tool execution even when the model later claims success", a
     assert.equal(response.status, 200, responseBody + " " + isolated.stderr);
     const result = JSON.parse(responseBody) as {
       status: string;
-      executionStatus: string;
+      toolExecutionStatus: string;
       toolFailures: Array<{ callId: string; tool: string; message: string }>;
       message: string;
     };
     assert.equal(result.status, "completed");
-    assert.equal(result.executionStatus, "completed_with_warnings");
+    assert.equal(result.toolExecutionStatus, "with_warnings");
     assert.equal(result.toolFailures.length, 1);
     assert.equal(result.toolFailures[0].callId, "read-missing-file");
     assert.equal(result.toolFailures[0].tool, "files.read");
