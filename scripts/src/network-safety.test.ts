@@ -27,3 +27,12 @@ test("allows ordinary public IPv6", () => {
 test("fails closed for malformed addresses", () => {
   assert.equal(isBlockedNetworkAddress("not-an-ip"), true);
 });
+
+
+test("local lab override requires an explicit development environment", async () => {
+  const { isLocalLabTargetOverrideEnabled } = await import("./network-safety.js");
+  assert.equal(isLocalLabTargetOverrideEnabled({ OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true" }), false);
+  assert.equal(isLocalLabTargetOverrideEnabled({ OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true", OMDA_AGENT_ENVIRONMENT: "production" }), false);
+  assert.equal(isLocalLabTargetOverrideEnabled({ OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true", OMDA_AGENT_ENVIRONMENT: "development" }), true);
+  assert.equal(isLocalLabTargetOverrideEnabled({ OMDA_AGENT_ENVIRONMENT: "development" }), false);
+});
