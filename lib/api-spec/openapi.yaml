@@ -384,7 +384,7 @@ components:
           maxLength: 1200
         complete:
           type: string
-          maxLength: 2000
+          maxLength: 1200
         result:
           type: string
           maxLength: 12000
