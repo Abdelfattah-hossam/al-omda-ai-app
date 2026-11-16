@@ -468,7 +468,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
         let jsonText = raw.trim();
         if (jsonText.startsWith("```")) jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
         const value = JSON.parse(jsonText);
-        if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 5 ||
+        if (!value || typeof value.title !== "string" || !value.title.trim() || !Array.isArray(value.steps) || value.steps.length < 3 || value.steps.length > 7 ||
           value.steps.some((step: any) => !step || typeof step.text !== "string" || !step.text.trim() || step.text.length > 1200 || typeof step.output !== "string" || !step.output.trim() || step.output.length > 1200 || typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > 1200)) return null;
         return value;
       } catch { return null; }
@@ -476,7 +476,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     let parsed = parsePlan(answer.text);
     if (!parsed) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair your previous project plan. Return ONLY valid JSON with a title and 3 to 5 sequential steps. Every step must contain non-empty text, output, and complete strings.",
+        "Repair your previous project plan. Return ONLY valid JSON with a title and 3 to 7 sequential steps. Every step must contain non-empty text, output, and complete strings.",
         "Preserve the exact customer request, constraints, quantities, budget, platform, location, and deadline. Avoid generic filler. Each step must describe work AL OMDA will perform and a clear deliverable.",
         "Required schema: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
         "Original customer request: " + request,
@@ -497,7 +497,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
             role: "user",
             content: [
               "Create a concise, accurate project plan. Return ONLY valid JSON with this exact shape: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
-              "Create 3 to 5 sequential steps, each with one concrete result and an objective completion check. Preserve every explicit requirement, quantity, budget, platform, location, deadline, language, and exclusion.",
+              "Create 3 to 7 sequential steps, each with one concrete result and an objective completion check. Preserve every explicit requirement, quantity, budget, platform, location, deadline, language, and exclusion.",
               "Do not add generic filler, duplicate work, or unnecessary files. Create downloadable files only if explicitly requested. Each step describes work AL OMDA will perform.",
               "Original request: " + request,
               "Relevant same-project context: " + context,
