@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
@@ -1087,13 +1087,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       currentUsage(accessToken),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
-    const latestCustomerRequest = getLatestUserRequest(messages);
-    const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
+    const latestIntent = classifyLatestChatIntent(messages);
+    const latestCustomerRequest = latestIntent.request;
+    const standaloneGreeting = latestIntent.kind === "greeting";
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
-    const excelRequest = isExcelRequest(messages);
-    const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
+    const excelRequest = latestIntent.kind === "excel_file";
+    const wordDocumentRequest = !excelRequest && latestIntent.kind === "word_file" && isWordDocumentRequest(messages);
     const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
     const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isSourceCodeFileRequest(messages);
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
