@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { extractExplicitMemoryNode, parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
 
 const userId = "11111111-1111-4111-8111-111111111111";
@@ -48,4 +49,19 @@ test("stores only explicit, non-sensitive memory requests", () => {
   assert.equal(extractExplicitMemoryNode("Remember my medical diagnosis"), null);
   assert.equal(extractExplicitMemoryNode("افتكر إن الشات مايتغيرش")?.nodeType, "constraint");
   assert.equal(extractExplicitMemoryNode("احفظ أني أفضّل الرد بالعربية")?.nodeType, "preference");
+});
+
+test("canonical setup SQL and the deployed migration define the same private graph protections", async () => {
+  const setupUrl = new URL("../../../../supabase/setup.sql", import.meta.url);
+  const migrationUrl = new URL("../../../../supabase/migrations/20261116190037_create_private_ai_memory_graph.sql", import.meta.url);
+  const [setup, migration] = await Promise.all([readFile(setupUrl, "utf8"), readFile(migrationUrl, "utf8")]);
+  for (const sql of [setup, migration]) {
+    assert.match(sql, /create table if not exists public\.ai_memory_nodes/i);
+    assert.match(sql, /create table if not exists public\.ai_memory_edges/i);
+    assert.match(sql, /alter table public\.ai_memory_nodes enable row level security/i);
+    assert.match(sql, /alter table public\.ai_memory_edges enable row level security/i);
+    assert.match(sql, /revoke all on public\.ai_memory_nodes from public, anon/i);
+    assert.match(sql, /revoke all on public\.ai_memory_edges from public, anon/i);
+    assert.match(sql, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
+  }
 });
