@@ -7,7 +7,6 @@
  */
 import type { PlanStep } from './planStep';
 import type { Specialty } from './specialty';
-import type { TaskStatus } from './taskStatus';
 
 export type TaskCreateStep = Omit<PlanStep, 'output' | 'complete' | 'state'> & {
   output: string;
