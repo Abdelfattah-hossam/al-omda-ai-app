@@ -415,7 +415,11 @@ components:
       allOf:
         - $ref: "#/components/schemas/PlanStep"
         - type: object
-          required: [output, complete]
+          properties:
+            state:
+              type: string
+              enum: [pending]
+          required: [output, complete, state]
     Specialty:
       type: string
       enum: [business, development, design, marketing, research, assistant]

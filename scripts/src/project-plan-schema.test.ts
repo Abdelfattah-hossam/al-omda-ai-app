@@ -33,6 +33,7 @@ test("API task schema accepts only complete plans with 3 to 8 bounded steps", ()
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: [step(1), step(2)] }).success, false);
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: Array.from({ length: 9 }, (_, i) => step(i + 1)) }).success, false);
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), output: "" }, step(2), step(3)] }).success, false);
+  assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), state: "approved" as const }, step(2), step(3)] }).success, false);
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), text: "x".repeat(1201) }, step(2), step(3)] }).success, false);
   const editable = { ...base, id: "00000000-0000-4000-8000-000000000001", steps: [step(1), step(2), step(3)] };
   assert.equal(UpdateTaskBody.safeParse(editable).success, true);

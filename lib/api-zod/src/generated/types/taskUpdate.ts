@@ -5,6 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlanStep } from './planStep';
 import type { TaskCreate } from './taskCreate';
 
-export type TaskUpdate = TaskCreate;
+export type TaskUpdateStep = Omit<PlanStep, 'output' | 'complete'> & {
+  output: string;
+  complete: string;
+};
+
+export type TaskUpdate = Omit<TaskCreate, 'steps'> & {
+  steps: TaskUpdateStep[];
+};

@@ -214,7 +214,7 @@ export const CreateTaskBody = zod.object({
   "text": zod.string().min(1).max(2000),
   "createdAt": zod.string().datetime()
 })).max(50).optional(),
-  "state": zod.enum(['pending', 'approved', 'rejected'])
+  "state": zod.literal('pending')
 })).min(3).max(createTaskBodyStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
 })
