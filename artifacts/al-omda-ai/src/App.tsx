@@ -372,6 +372,19 @@ const mobileNavItems: typeof navItems = [
   { path:'/profile', key:'profile', icon:UserRound },
 ];
 const STORE_KEY = 'al-omda-demo-v1';
+const workspaceCacheKey = (userId:string) => `${STORE_KEY}:workspace:${userId}`;
+function readWorkspaceTaskCache(userId:string): Task[] {
+  try {
+    const cached = JSON.parse(localStorage.getItem(workspaceCacheKey(userId)) || 'null');
+    if (!Array.isArray(cached)) return [];
+    return cached.filter((item): item is Task => {
+      if (!item || typeof item !== 'object') return false;
+      const task = item as Partial<Task>;
+      return typeof task.id === 'string' && typeof task.title === 'string' &&
+        typeof task.request === 'string' && Array.isArray(task.steps) && task.demo !== true;
+    });
+  } catch { return []; }
+}
 const starterTasks: Task[] = [
   { id:'demo-brief', title:'خطة إطلاق خدمة استشارية', request:'إعداد تصور أولي لإطلاق خدمة استشارية رقمية تستهدف الشركات الصغيرة.', specialty:'business', status:'approved', createdAt:'2025-02-20T10:30:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الشريحة المستهدفة والقيمة المقترحة',state:'approved'},{id:'s2',text:'تقسيم الإطلاق إلى مراحل ومخرجات',state:'approved'},{id:'s3',text:'اقتراح مؤشرات متابعة للمراجعة',state:'approved'}] },
   { id:'demo-content', title:'أفكار محتوى للربع القادم', request:'اقتراح محاور محتوى تعرّف الجمهور بخدماتنا دون مبالغة في الوعود.', specialty:'marketing', status:'review', createdAt:'2025-02-19T08:10:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الجمهور ونبرة التواصل المناسبة',state:'approved'},{id:'s2',text:'اقتراح محاور محتوى قابلة للمراجعة',state:'pending'},{id:'s3',text:'ترتيب المحاور في جدول نشر أولي',state:'pending'}] },
@@ -617,6 +630,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
       : saved;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(localSnapshot)); } catch { /* local preview remains usable without storage */ }
   }, [saved, authLoading, authUser]);
+  // Keep a private, account-scoped fallback so a temporary workspace request
+  // failure never makes a signed-in user's saved projects appear deleted.
+  useEffect(() => {
+    if (!authUser) return;
+    try {
+      localStorage.setItem(
+        workspaceCacheKey(authUser.id),
+        JSON.stringify(saved.tasks.filter((task) => !task.demo)),
+      );
+    } catch { /* The database remains the source of truth if local storage is unavailable. */ }
+  }, [authUser?.id, saved.tasks]);
   const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
     setWorkspaceLoaded(true);
     setWorkspaceLoadError('');
@@ -652,7 +676,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         if (cancelled || !session.user) return;
         hasAccountSession = true;
         setAuthUser(session.user);
-        setSaved((prev) => ({ ...prev, tasks:[], name:language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user', org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
+        setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(session.user.id), name:language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user', org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
         setProfileName('');
         setProfileOrg(language === 'ar' ? 'مساحة العمل' : 'Workspace');
         try {
@@ -859,7 +883,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (!result.user) throw new Error(t('apiUnavailable'));
       setAuthUser(result.user);
       setWorkspaceLoaded(false);
-      setSaved((prev) => ({ ...prev, tasks:[], name:defaultDisplayName, org:isAr ? 'مساحة العمل' : 'Workspace' }));
+      setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(result.user.id), name:defaultDisplayName, org:isAr ? 'مساحة العمل' : 'Workspace' }));
       setProfileName('');
       setProfileOrg(isAr ? 'مساحة العمل' : 'Workspace');
       const workspace = await getWorkspace(apiRequestOptions);
