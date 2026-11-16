@@ -12,6 +12,7 @@ test("routes precision and research requests to conservative temperature groups"
   assert.equal(inferHostedModelPurpose("Calculate structural engineering loads"), "precision");
   assert.equal(inferHostedModelPurpose("Review a clinical diagnosis"), "precision");
   assert.equal(inferHostedModelPurpose("Build and debug a TypeScript API"), "precision");
+  assert.equal(inferHostedModelPurpose("Build a website for a small business"), "precision");
   assert.equal(inferHostedModelPurpose("Analyze cash flow and ROI"), "precision");
   assert.equal(inferHostedModelPurpose("Research and compare three providers"), "research");
   assert.equal(inferHostedModelPurpose("Hello, how are you?"), "general");
