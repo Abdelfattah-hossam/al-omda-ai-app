@@ -7,7 +7,9 @@ function blockedIPv4(address: string): boolean {
   return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) || (a === 192 && b === 0) ||
-    (a === 198 && (b === 18 || b === 19)) || a >= 224;
+    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+    (a === 203 && b === 0 && parts[2] === 113) ||
+    (a === 192 && b === 88 && parts[2] === 99) || a >= 224;
 }
 
 function expandIPv6(input: string): number[] | null {
@@ -44,11 +46,17 @@ export function isBlockedNetworkAddress(address: string): boolean {
   }
   if (groups.slice(0, 6).every((part) => part === 0)) return true;
   const first = groups[0];
-  return groups.every((part) => part === 0) ||
-    (first & 0xfe00) === 0xfc00 ||
-    (first & 0xffc0) === 0xfe80 ||
-    (first & 0xff00) === 0xff00 ||
-    (first === 0x2001 && groups[1] === 0x0db8);
+  // Only IPv6 global-unicast space (2000::/3) is eligible for remote
+  // connections. Explicitly reject special-purpose ranges inside it too.
+  if ((first & 0xe000) !== 0x2000) return true;
+  const ietfAssignments = first === 0x2001 && (groups[1] & 0xfe00) === 0;
+  const nat64WellKnown = first === 0x0064 && groups[1] === 0xff9b && groups.slice(2, 6).every((part) => part === 0);
+  const nat64LocalUse = first === 0x0064 && groups[1] === 0xff9b && groups[2] === 0x0001;
+  const discardOnly = first === 0x0100 && groups[1] === 0 && groups[2] === 0 && (groups[3] === 0 || groups[3] === 1);
+  const documentation = (first === 0x2001 && groups[1] === 0x0db8) ||
+    (first === 0x3fff && (groups[1] & 0xf000) === 0);
+  return ietfAssignments || nat64WellKnown || nat64LocalUse || discardOnly ||
+    documentation || first === 0x2002 || first === 0x5f00;
 }
 
 
