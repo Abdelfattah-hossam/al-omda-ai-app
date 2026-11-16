@@ -32,6 +32,7 @@ export type MemoryEdgeInput = {
 
 const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race/i;
 const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Bearer\s+[A-Za-z0-9._~-]{20,})/i;
+const BLOCKED_SENSITIVE_TEXT = /\b(?:my|our|i have|i am)\b.{0,60}\b(?:medical|health|diagnos|illness|disease|diabetes|cancer|religion|political affiliation|sexual orientation|race|ethnic identity)\b|صحتي|مرضي|تشخيصي|ديانتي|معتقدي|انتمائي السياسي|ميولي الجنسية|عرقي/i;
 
 function containsBlockedDetailKey(value: unknown, depth = 0): boolean {
   if (depth > 8 || !value || typeof value !== "object") return false;
@@ -49,6 +50,7 @@ function normalizeDetails(value: unknown, maxBytes: number): Record<string, unkn
   const serialized = JSON.stringify(details);
   if (serialized.length > maxBytes) throw new Error("Memory details exceed the allowed size.");
   if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
+  if (BLOCKED_SENSITIVE_TEXT.test(serialized)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   return details;
 }
 
@@ -72,6 +74,7 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   if (!MEMORY_NODE_TYPES.includes(value.nodeType as MemoryNodeType)) throw new Error("Unsupported memory node type.");
   if (typeof value.label !== "string" || !value.label.trim() || value.label.trim().length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
   const label = value.label.normalize("NFKC").trim().replace(/\s+/g, " ");
+  if (BLOCKED_SENSITIVE_TEXT.test(label)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   const normalizedLabel = label.toLocaleLowerCase().replace(/[؟?!.,،؛;:]+/g, "").replace(/\s+/g, " ");
   return {
     user_id: userId,
