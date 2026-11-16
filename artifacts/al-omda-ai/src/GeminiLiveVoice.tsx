@@ -288,7 +288,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             player.connect(context.destination);
             const startAt = Math.max(context.currentTime + 0.03, nextPlayTimeRef.current);
             pendingPcmPlaybackRef.current += 1;
-            assistantTurnCompleteRef.current = false;
+            // Keep the turn-complete latch set until the next user utterance.
+            // Audio chunks can arrive in trailing/duplicate frames after turnComplete.
             player.onended = () => {
               pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
               if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
