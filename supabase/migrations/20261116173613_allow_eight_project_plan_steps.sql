@@ -4,7 +4,7 @@ create or replace function public.create_ai_task_with_quota(
   p_request text,
   p_specialty text,
   p_steps jsonb,
-  p_daily_limit integer default 1000
+  p_daily_limit integer default 1000 -- Reserved compatibility parameter; the supported daily limit is fixed at 1000
 )
 returns jsonb
 language plpgsql
