@@ -55,3 +55,13 @@ test("orders purpose-specific providers before global providers and uses priorit
   assert.deepEqual(orderModelProvidersByPurpose(providers, "coding").map((p) => p.name), ["coding-early", "coding-late", "global"]);
   assert.deepEqual(orderModelProvidersByPurpose(providers, "all").map((p) => p.name), ["global", "coding-early", "coding-late"]);
 });
+
+test("routes profession-specific providers ahead of global providers", () => {
+  const providers = parseModelProviderConfig([
+    { name: "global", baseUrl: "https://global.example/v1", model: "g", priority: 1 },
+    { name: "legal", baseUrl: "https://legal.example/v1", model: "l", purposes: ["legal"], priority: 10 },
+    { name: "engineering", baseUrl: "https://engineering.example/v1", model: "e", purposes: ["engineering"], priority: 5 },
+  ], {});
+  assert.deepEqual(orderModelProvidersByPurpose(providers, "legal").map((p) => p.name), ["legal", "global"]);
+  assert.deepEqual(orderModelProvidersByPurpose(providers, "engineering").map((p) => p.name), ["engineering", "global"]);
+});
