@@ -836,7 +836,7 @@ async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Pro
   return orderModelProvidersByPurpose(all, purpose);
 }
 
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general"): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general", signal?: AbortSignal): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
   const providers = await getModelProviders(purpose);
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
@@ -859,7 +859,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       const response = await fetch(provider.base + "/chat/completions", {
         method: "POST", headers,
         body: JSON.stringify({ model: provider.model, messages, tools: availableTools, tool_choice: "auto", temperature: 0.2, stream: true, stream_options: { include_usage: true } }),
-        signal: AbortSignal.timeout(90000),
+        signal: signal ? AbortSignal.any([AbortSignal.timeout(90000), signal]) : AbortSignal.timeout(90000),
       });
       responseStatus = response.status;
       retryAfter = response.headers.get("retry-after");
@@ -877,6 +877,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       clearProviderCooldown(providerKey, providerCooldowns);
       return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, provider: provider.name };
     } catch (error) {
+      if (signal?.aborted) throw error;
       const message = error instanceof Error ? error.message : "request failed";
       const cooldownMs = recordProviderFailure(providerKey, responseStatus, retryAfter, providerCooldowns);
       failures.push(provider.name + ": " + message);
@@ -886,7 +887,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
   }
   throw new Error("All configured model endpoints failed. " + failures.join(" | ").slice(0, 500));
 }
-async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: Json) => void, purpose: ModelPurpose = state.purpose || "general"): Promise<Json> {
+async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: Json) => void, purpose: ModelPurpose = state.purpose || "general", signal?: AbortSignal): Promise<Json> {
   state.purpose = purpose;
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
@@ -894,7 +895,15 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
   let lastProvider = "primary";
   for (let turn = 0; turn < 10; turn++) {
     onProgress?.({ type: "status", status: "thinking", turn: turn + 1 });
-    const completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose);
+    let completion: Awaited<ReturnType<typeof modelCompletion>>;
+    try {
+      completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose, signal);
+    } catch (error) {
+      if (!signal?.aborted) throw error;
+      await saveAgentState(id, state);
+      onProgress?.({ type: "status", status: "cancelled" });
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Its last saved checkpoint is available to resume.", turns: turn, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+    }
     totalDurationMs += completion.durationMs;
     lastProvider = completion.provider;
     if (typeof completion.usage?.prompt_tokens === "number") totalPromptTokens += completion.usage.prompt_tokens;
@@ -1090,12 +1099,13 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+  return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal) => {
     await saveAgentState(id, state);
-    return await runAgentLoop(id, state, onProgress, purpose);
+    return await runAgentLoop(id, state, onProgress, purpose, signal);
   });
 }
 const activeAgentSessions = new Set<string>();
+const activeAgentControllers = new Map<string, AbortController>();
 async function withAgentSessionLock<T>(id: string, conflictMessage: string, operation: () => Promise<T>): Promise<T> {
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("Invalid session ID.");
   if (activeAgentSessions.has(id)) throw new Error(conflictMessage);
@@ -1106,6 +1116,14 @@ async function withAgentSessionLock<T>(id: string, conflictMessage: string, oper
     activeAgentSessions.delete(id);
   }
 }
+async function withAgentSessionAbort<T>(id: string, conflictMessage: string, operation: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  return await withAgentSessionLock(id, conflictMessage, async () => {
+    const controller = new AbortController();
+    activeAgentControllers.set(id, controller);
+    try { return await operation(controller.signal); }
+    finally { if (activeAgentControllers.get(id) === controller) activeAgentControllers.delete(id); }
+  });
+}
 function pendingToolDisplayName(call: AgentToolCall, state: AgentState): string {
   const restored = state.pendingMcpTools?.[call.function.name];
   if (restored && typeof restored.serverName === "string" && typeof restored.toolName === "string") {
@@ -1115,7 +1133,7 @@ function pendingToolDisplayName(call: AgentToolCall, state: AgentState): string 
 }
 async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  return await withAgentSessionLock(id, "This agent session is already being processed. Wait for that request to finish.", async () => {
+  return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal) => {
     const state = await loadAgentState(id);
     if (typeof body.goal === "string" && body.goal.trim()) {
       if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
@@ -1132,12 +1150,12 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })) };
     }
     await saveAgentState(id, state);
-    return await runAgentLoop(id, state, onProgress);
+    return await runAgentLoop(id, state, onProgress, state.purpose, signal);
   });
 }
 async function continueAgent(body: Json, onProgress?: (event: Json) => void): Promise<Json> {
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
-  return await withAgentSessionLock(id, "This agent session is already processing an approval. Wait for that request to finish.", async () => {
+  return await withAgentSessionAbort(id, "This agent session is already processing an approval. Wait for that request to finish.", async (signal) => {
     const state = await loadAgentState(id);
     const pending = state.pendingToolCalls || [];
     if (!pending.length) throw new Error("This agent session has no pending approval request.");
@@ -1165,7 +1183,29 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
       const originalGoal = state.messages.find((message) => message.role === "user")?.content;
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
-    return await runAgentLoop(id, state, onProgress, state.purpose);
+    return await runAgentLoop(id, state, onProgress, state.purpose, signal);
+  });
+}
+
+async function cancelAgent(body: Json): Promise<Json> {
+  const id = typeof body.sessionId === "string" ? body.sessionId : "";
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id)) throw new Error("A valid agent session ID is required.");
+  const active = activeAgentControllers.get(id);
+  if (active) {
+    active.abort();
+    return { status: "cancelling", sessionId: id, message: "Cancellation requested. The active model request is being stopped." };
+  }
+  return await withAgentSessionLock(id, "This agent session is already changing state. Retry cancellation shortly.", async () => {
+    const state = await loadAgentState(id);
+    const pending = state.pendingToolCalls || [];
+    if (!pending.length) return { status: "not_running", sessionId: id, message: "No active run or pending approval exists for this session." };
+    delete state.pendingToolCalls;
+    delete state.pendingMcpTools;
+    for (const call of pending) {
+      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user cancelled this pending action. Do not retry it." }) });
+    }
+    await saveAgentState(id, state);
+    return { status: "cancelled", sessionId: id, message: "Pending approvals were cancelled. No pending action was executed." };
   });
 }
 
@@ -1257,6 +1297,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       if (!res.writableEnded) res.end();
     }
     return;
+  }
+  if (req.method === "POST" && url.pathname === "/v1/agent/cancel") {
+    const body = await readBody(req);
+    send(res, 200, await cancelAgent(body)); return;
   }
   if (req.method === "POST" && url.pathname === "/v1/agent/run") {
     const body = await readBody(req);
