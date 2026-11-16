@@ -54,6 +54,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/word-document.test.ts
       - name: Test professional legal and engineering standards
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/professional-standards.test.ts
+      - name: Test hosted AI model policy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/ai-model-policy.test.ts
       - name: Test Office artifact text normalization
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-artifact-text.test.ts
       - name: Test Office OOXML package validation
