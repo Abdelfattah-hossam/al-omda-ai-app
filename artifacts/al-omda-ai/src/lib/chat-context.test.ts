@@ -28,6 +28,6 @@ test("bounds every message and aggregate context while retaining the latest requ
 test("returns an empty context for empty input and clamps invalid limits", () => {
   assert.deepEqual(buildBoundedChatContext([]), []);
   assert.deepEqual(buildBoundedChatContext([{ role: "user", content: "hello" }], { maxTotalChars: 0 }), [
-    { role: "user", content: "hello" },
+    { role: "user", content: "o" },
   ]);
 });
