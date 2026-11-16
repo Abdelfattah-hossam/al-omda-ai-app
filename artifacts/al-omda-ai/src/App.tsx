@@ -920,12 +920,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }
     }
   };
-  const addStepComment = (task:Task, stepId:string) => {
+  const addStepComment = async (task:Task, stepId:string) => {
     const text = (commentDrafts[stepId] ?? '').trim();
     if (!text || text.length > 2000 || !authUser) return;
+    const target = task.steps.find((step) => step.id === stepId);
+    if (!target || (target.comments?.length ?? 0) >= 50) return;
     const note:PlanStepNote = { id:crypto.randomUUID(), author:'user', text, createdAt:new Date().toISOString() };
-    patchTask(task.id, (prev) => ({ ...prev, steps:prev.steps.map((step) => step.id === stepId ? { ...step, comments:[...(step.comments ?? []), note].slice(-50) } : step) }));
-    setCommentDrafts((prev) => ({ ...prev, [stepId]:'' }));
+    const updatedTask:Task = { ...task, steps:task.steps.map((step) => step.id === stepId ? { ...step, comments:[...(step.comments ?? []), note] } : step) };
+    setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? updatedTask : item) }));
+    try {
+      await saveRemoteTask(updatedTask);
+      setCommentDrafts((prev) => ({ ...prev, [stepId]:'' }));
+    } catch (error) {
+      setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+      try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* Keep the draft visible for retry. */ }
+    }
   };
   const rejectStep = (task:Task, stepId:string) => {
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
@@ -1002,7 +1011,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                </div> : <pre style={{margin:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,lineHeight:1.8,color:'var(--text-primary,#e5e7eb)'}}>{step.result}</pre>}
              </div>}
              {step.comments && step.comments.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل التعليقات والتعديلات':'Comments & change log'}</strong>{step.comments.map((note)=><div key={note.id} style={{padding:'9px 11px',borderRadius:8,border:'1px solid var(--border,#59616c)',background:'var(--surface,#10151b)'}}><div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:5}}><small style={{fontWeight:700}}>{note.author==='user'?(isAr?'أنت':'You'):note.author==='system'?(isAr?'تقرير النظام':'System report'):(isAr?'العمدة':'AL OMDA')}</small><small style={{opacity:.65}}>{dateLabel(note.createdAt,language)}</small></div><div style={{fontSize:12,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{note.text}</div></div>)}</div>}
-             <div style={{display:'grid',gap:7,marginTop:12}}><label className="form-label">{isAr?'تعليق أو تحديث على المرحلة':'Comment or progress update'}</label><textarea className="step-edit" rows={2} maxLength={2000} value={commentDrafts[step.id] ?? ''} onChange={(event)=>setCommentDrafts((prev)=>({...prev,[step.id]:event.target.value}))} placeholder={isAr?'مثال: أنجزت الجزء الأول، وهذه البيانات تحتاج تعديل...':'Example: I completed the first part; please revise these details...'} aria-label={isAr?'تعليق على المرحلة':'Step comment'}/><div className="step-actions"><button type="button" className="button button-quiet button-small" disabled={!(commentDrafts[step.id] ?? '').trim() || !authUser} onClick={()=>addStepComment(task,step.id)}><MessageSquareText size={13}/>{isAr?'إضافة التعليق':'Add comment'}</button></div></div>
+             <div style={{display:'grid',gap:7,marginTop:12}}><label className="form-label">{isAr?'تعليق أو تحديث على المرحلة':'Comment or progress update'}</label><textarea className="step-edit" rows={2} maxLength={2000} value={commentDrafts[step.id] ?? ''} onChange={(event)=>setCommentDrafts((prev)=>({...prev,[step.id]:event.target.value}))} placeholder={isAr?'مثال: أنجزت الجزء الأول، وهذه البيانات تحتاج تعديل...':'Example: I completed the first part; please revise these details...'} aria-label={isAr?'تعليق على المرحلة':'Step comment'}/><div className="step-actions"><button type="button" className="button button-quiet button-small" disabled={!(commentDrafts[step.id] ?? '').trim() || !authUser || (step.comments?.length ?? 0) >= 50} onClick={()=>void addStepComment(task,step.id)}><MessageSquareText size={13}/>{isAr?'إضافة التعليق':'Add comment'}</button></div></div>
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
                <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
