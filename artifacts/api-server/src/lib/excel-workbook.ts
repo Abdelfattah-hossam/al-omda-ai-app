@@ -1,3 +1,12 @@
+export const EXCEL_DATA_INTEGRITY_RULES = [
+  "DATA PROVENANCE IS MANDATORY: Populate business records only from facts explicitly supplied by the customer or verified in approved earlier task outputs.",
+  "NEVER invent or guess customer names, company names, contact details, products, SKUs, prices, quantities, suppliers, dates, addresses, inventory, sales, or financial figures.",
+  "A schema example is not customer data. Never copy example names, products, prices, or records from instructions into the workbook.",
+  "If the customer requests a populated business workbook but has not supplied the required records, create the requested headers and leave every unknown data cell blank. Add a clearly named Required data / البيانات المطلوبة area listing the missing inputs; do not fabricate sample rows.",
+  "Use sample data only when the customer explicitly asks for sample/demo data. Clearly label every affected sheet and sample record as SAMPLE / بيانات تجريبية.",
+  "For a blank template, keep all data cells blank. Formulas may be included only when they are requested or necessary for the requested calculations; never fabricate input values.",
+].join(" ");
+
 export type ExcelSheet = { name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string> };
 export type ExcelWorkbookData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string>; sheets?: ExcelSheet[] };
 

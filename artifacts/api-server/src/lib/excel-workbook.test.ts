@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseExcelWorkbook } from "./excel-workbook.js";
+import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "./excel-workbook.js";
 
 const valid = {
   title: "Budget",
@@ -77,4 +77,21 @@ test("rejects duplicate formula addresses with different letter casing", () => {
 
 test("rejects oversized workbook payloads before parsing", () => {
   assert.equal(parseExcelWorkbook(" ".repeat(1_000_001)), null);
+});
+
+
+test("provides strict shared data-provenance rules for every Excel generation path", () => {
+  assert.match(EXCEL_DATA_INTEGRITY_RULES, /NEVER invent or guess customer names/);
+  assert.match(EXCEL_DATA_INTEGRITY_RULES, /A schema example is not customer data/);
+  assert.match(EXCEL_DATA_INTEGRITY_RULES, /leave every unknown data cell blank/);
+  assert.match(EXCEL_DATA_INTEGRITY_RULES, /only when the customer explicitly asks for sample/);
+});
+
+test("accepts a genuinely blank template without filling invented records", () => {
+  const result = parseExcelWorkbook(json({
+    title: "Customer Register",
+    sheets: [{ name: "Customers", columns: ["Customer name", "Phone", "Email"], rows: [["", "", ""]] }]
+  }));
+  assert.deepEqual(result?.rows, [["", "", ""]]);
+  assert.deepEqual(result?.sheets?.[0].rows, [["", "", ""]]);
 });

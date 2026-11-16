@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
-import { parseExcelWorkbook } from "../lib/excel-workbook.js";
+import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
@@ -595,10 +595,11 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
-      "Return ONLY valid JSON: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Rent","1000"],["Total",""]],"formulas":{"B3":"SUM(B2:B2)"}}]}',
+      "Return ONLY valid JSON: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["",""]],"formulas":{}}]}',
       "Create multiple named worksheets when the approved request needs them, with unique Excel-compatible names. Every sheet needs 1 to 30 columns and 1 to 500 rows; every row must match its sheet column count.",
       "Use real formulas in each sheet formulas map, keyed by cell addresses such as C2, for requested totals, calculations, percentages, balances, and summaries. Do not replace formulas with guessed values. Do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
       "Represent numeric values as JSON numbers and boolean values as JSON booleans, not quoted strings, to preserve Excel calculation behavior.",
+       EXCEL_DATA_INTEGRITY_RULES,
       "Use ONLY information explicitly supplied in the original customer request or approved earlier step outputs. Never invent or guess customer names, company names, products, SKUs, quantities, prices, dates, addresses, suppliers, inventory, or sales. Do not create plausible-looking sample records. If the customer asks for a blank template, keep all data cells blank. If a populated workbook requires missing real-world data, leave those cells blank and clearly label the missing inputs in a dedicated Notes/Required data area; do not make up values. Preserve exact approved columns and supplied sample products only.",
       "Project: " + task.title,
       "Original request: " + task.request,
@@ -740,7 +741,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }
     if (excelStep && !validatedSpreadsheet) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair the Excel workbook. Return ONLY valid JSON with title and sheets. Every sheet needs a unique valid name, columns, rows, and optional formulas keyed by cell address. Every row must match its column count. Preserve all requested worksheets and formulas. CRITICAL DATA INTEGRITY: use only customer-supplied facts and approved outputs; never invent customer names, products, prices, quantities, suppliers, dates, or sample business records. Missing data stays blank and is listed as required input. Blank templates contain no sample rows.",
+        "Repair the Excel workbook. Return ONLY valid JSON with title and sheets. Every sheet needs a unique valid name, columns, rows, and optional formulas keyed by cell address. Every row must match its column count. Preserve all requested worksheets and formulas.",
+        EXCEL_DATA_INTEGRITY_RULES,
         "Preserve the original request, approved requirements, and actual data. Do not invent unrelated data.",
         "Original request: " + customerRequest,
         "Invalid output: " + answer.text.slice(0, 12000)
@@ -1029,10 +1031,11 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ] : excelRequest ? [
       ...messages,
       { role: "user", content: [
-        "SPECIAL OUTPUT MODE: Create a real editable Excel workbook. Return ONLY valid JSON with this schema: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["Example",""]],"formulas":{"B2":"SUM(B3:B8)"}}]}',
+        "SPECIAL OUTPUT MODE: Create a real editable Excel workbook. Return ONLY valid JSON with this schema: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["",""]],"formulas":{}}]}',
         "Create multiple named worksheets when the request needs them (up to 12). Every sheet needs 1 to 30 columns, 1 to 500 rows, and rows matching the column count. Sheet names must be unique and Excel-compatible.",
         "Use real Excel formulas in the formulas object, keyed by cell address such as C2, whenever calculations, totals, balances, percentages, dates, or summaries are requested. Formula strings omit the leading equals sign. Never replace a requested formula with a guessed static result. Use only ordinary local worksheet formulas; do not create external links, macros, DDE, HYPERLINK, WEBSERVICE, or INDIRECT formulas.",
         "Represent numeric values as JSON numbers and true/false values as JSON booleans, not quoted text, so Excel can calculate with them. Keep dates in a consistent documented format and do not invent missing values.",
+         EXCEL_DATA_INTEGRITY_RULES,
         "Create useful blank rows when the user asks for a blank template. Otherwise populate only relevant, accurate data. Preserve units, dates, currency, and the user's language. Never return instructions for manually creating the workbook.",
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
@@ -1225,6 +1228,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     if (excelRequest && !validatedSpreadsheet) {
       const repairRequest = [{ role: "user" as const, content: [
         "Repair the Excel workbook. Return ONLY valid JSON with title and sheets. Every sheet needs a unique valid name, columns, rows, and optional formulas keyed by cell address. Every row must match its column count. Preserve requested worksheets and formulas.",
+         EXCEL_DATA_INTEGRITY_RULES,
         "Use relevant columns and rows. Do not replace requested formulas with static values or add unrelated sample data.",
         "Original request: " + latestCustomerRequest,
         "Invalid previous output: " + answer.text.slice(0, 14000)
