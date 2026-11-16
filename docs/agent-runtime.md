@@ -262,6 +262,7 @@ Keep local targets disabled for normal browsing and bug-bounty work. Only when r
 ```sh
 export OMDA_AGENT_ALLOWED_HOSTS="127.0.0.1,localhost"
 export OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS="true"
+export OMDA_AGENT_ENVIRONMENT="development"
 ```
 
 Do not add broad private-network ranges or enable this mode when testing ordinary public targets.
