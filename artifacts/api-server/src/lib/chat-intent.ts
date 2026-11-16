@@ -56,3 +56,24 @@ export function isStandaloneGreeting(request: string): boolean {
   const normalized = normalizeRequest(request).replace(/[؟?!.,،؛]+$/g, "").trim().toLowerCase();
   return /^(?:كيفك|كيف حالك|ازيك|إزيك|ازيّك|عامل ايه|عامله ايه|اخبارك ايه|أخبارك ايه|صباح الخير|مساء الخير|السلام عليكم|السلام عليكم ورحمة الله وبركاته|اهلا|أهلا|مرحبا|hello|hi|hey|how are you|how's it going)$/.test(normalized);
 }
+
+
+export type LatestChatIntent =
+  | { kind: "greeting"; request: string }
+  | { kind: "how_to"; request: string }
+  | { kind: "word_file"; request: string }
+  | { kind: "excel_file"; request: string }
+  | { kind: "conversation"; request: string };
+
+/**
+ * One authoritative, latest-turn-only intent decision for chat artifact routing.
+ * Earlier turns may resolve references, but may not independently trigger a new file.
+ */
+export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessage>): LatestChatIntent {
+  const request = getLatestUserRequest(messages);
+  if (isStandaloneGreeting(request)) return { kind: "greeting", request };
+  if (isHowToRequest(request)) return { kind: "how_to", request };
+  if (isExcelFileRequest(request)) return { kind: "excel_file", request };
+  if (isWordFileRequest(request)) return { kind: "word_file", request };
+  return { kind: "conversation", request };
+}
