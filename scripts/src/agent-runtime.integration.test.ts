@@ -312,6 +312,46 @@ async function stopMockModel(mock: MockModelHandle): Promise<void> {
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
 
+test("revalidates redirect hostnames before following an allowlisted HTTP request", async () => {
+  let redirectedRequests = 0;
+  const target = createHttpServer((request, response) => {
+    if (request.url === "/start") {
+      response.writeHead(302, { location: "http://localhost:" + (target.address() as AddressInfo).port + "/blocked" });
+      response.end();
+      return;
+    }
+    redirectedRequests++;
+    response.end("redirect should not be reached");
+  });
+  await new Promise<void>((resolve, reject) => {
+    target.once("error", reject);
+    target.listen(0, "127.0.0.1", resolve);
+  });
+  const port = (target.address() as AddressInfo).port;
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "redirect-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/start", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The redirect target was rejected." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+    OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
+    OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+    OMDA_AGENT_ENVIRONMENT: "development",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Fetch the allowlisted endpoint and safely handle its redirect." });
+    const body = await response.text();
+    assert.equal(response.status, 200, body + "\\n" + isolated.stderr);
+    assert.equal((JSON.parse(body) as { status: string }).status, "completed");
+    assert.equal(mock.requests, 2);
+    assert.equal(redirectedRequests, 0, "a redirect to a hostname outside the allowlist must not be contacted");
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+    await new Promise<void>((resolve, reject) => target.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("approval gate pauses writes and executes only the exact approved call", async () => {
   const mock = await startMockModel((requestNumber) => requestNumber === 1
     ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "write-call-1", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "approved.txt", content: "approved content" }) } }] }, finish_reason: "tool_calls" }] } }
