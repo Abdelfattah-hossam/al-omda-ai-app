@@ -35,7 +35,7 @@ type PlanStepNote = { id:string; author:'user'|'assistant'|'system'; text:string
 type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 
-type TaskSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+type TaskSpreadsheet = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?:Record<string,string>; sheets?:Array<{name:string;columns:string[];rows:Array<Array<string|number|boolean>>;formulas?:Record<string,string>}> };
 function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
   if (!result?.startsWith("ALOMDA_XLSX_JSON:")) return null;
   try {
@@ -64,10 +64,18 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
     }
   }
   const XLSX = module.default ?? module;
-  const sheet = XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
-  sheet["!cols"] = data.columns.map(() => ({ wch: 20 }));
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Products");
+  const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
+  for (const item of sheets) {
+    const sheet = XLSX.utils.aoa_to_sheet([item.columns, ...item.rows]);
+    sheet["!cols"] = item.columns.map(() => ({ wch: 20 }));
+    for (const [address, formula] of Object.entries(item.formulas ?? {})) {
+      const normalized = String(formula).trim().replace(/^=/, "");
+      if (!normalized || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(normalized) || /[\[\]]/.test(normalized)) throw new Error("Unsafe Excel formula rejected.");
+      sheet[address] = { f: normalized };
+    }
+    XLSX.utils.book_append_sheet(workbook, sheet, item.name.slice(0,31));
+  }
   const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
