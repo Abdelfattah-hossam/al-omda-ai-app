@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
@@ -56,12 +56,7 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
 function isPowerPointRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  const asksForPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|أنشئ|انشئ|جهز|جهّز|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|عايز|عاوز|محتاج|اريد|أريد|create|make|build|generate|prepare|design|produce|export|download)/i.test(request);
-  const asksForExplanation = /(?:شرح|اشرح|كيفية|ازاي|كيف\s*(?:أ|ا)?عمل|tutorial|how\s+to|explain)/i.test(request);
-  return asksForPresentation && asksToCreate && !asksForExplanation;
+  return isPowerPointFileRequest(getLatestUserRequest(messages));
 }
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
