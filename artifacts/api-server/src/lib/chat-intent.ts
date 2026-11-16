@@ -23,9 +23,14 @@ export function isNegatedFileCreationRequest(text: string): boolean {
     /(?:^|[\s،,؛;])(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تجهزش)\s*(?:لي\s*)?(?:ملف|مستند|شيت|مصنف)/i.test(text) ||
     /\b(?:don't|do not|never|no need to)\s+(?:create|make|generate|prepare|export|download)\b/i.test(text);
 }
+
+function isComparisonOnlyRequest(text: string): boolean {
+  return /^(?:(?:ممكن|لو سمحت|من فضلك)\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|جهز|جهزلي|قارن|قارنلي|make|create|write|give|show)\s+(?:لي\s*)?(?:a\s+)?(?:مقارنة|مقارنات|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
+}
+
 export function isExcelFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || isComparisonOnlyRequest(text)) return false;
   const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل/i.test(text);
   const namesFileDeliverable = /(?:ملف|شيت|مصنف|جدول|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(text);
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(text);
@@ -36,7 +41,7 @@ export function isExcelFileRequest(request: string): boolean {
 
 export function isPowerPointFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || isComparisonOnlyRequest(text)) return false;
   const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
   if (!mentionsPresentation) return false;
   const comparisonOnly = /^(?:ممكن\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|create|make)\s+(?:لي\s*)?(?:مقارنة|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
@@ -49,7 +54,7 @@ export function isPowerPointFileRequest(request: string): boolean {
 
 export function isWordFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || isComparisonOnlyRequest(text)) return false;
   const mentionsWordFormat = /(?:و?ورد|\bword\b|\bdocx?\b)/i.test(text);
   const namesFileDeliverable = /(?:ملف|مستند|document|file|docx?)/i.test(text);
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(text);
@@ -75,7 +80,7 @@ export function isStandaloneGreeting(request: string): boolean {
 
 export function isExplicitSourceCodeFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || isComparisonOnlyRequest(text)) return false;
   const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(text);
   const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
   const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\s*code|python|javascript|typescript|html|css|sql)/i.test(text);
