@@ -705,7 +705,7 @@ function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: u
   };
   state.toolFailures = [...(state.toolFailures || []).filter((item) => item.callId !== failure.callId), failure].slice(-20);
 }
-function agentExecutionWarnings(state: AgentState): { executionStatus: string; toolFailures: AgentToolFailure[] } {
+function agentExecutionWarnings(state: AgentState): { toolExecutionStatus: string; toolFailures: AgentToolFailure[] } {
   const toolFailures = state.toolFailures || [];
   return { toolExecutionStatus: toolFailures.length ? "with_warnings" : "no_tool_errors", toolFailures };
 }
