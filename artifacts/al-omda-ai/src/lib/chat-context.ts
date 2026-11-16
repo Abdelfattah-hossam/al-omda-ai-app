@@ -115,3 +115,9 @@ export function combineReplyAndPlan(reply: string, plan: string, maxChars = 7800
   const visibleReply = truncateTextWithEllipsis(replyText, Math.max(0, limit - visiblePlan.length));
   return visibleReply + visiblePlan;
 }
+
+
+/** Only fetch large persisted message payloads when the server revision changes. */
+export function hasConversationUpdatedAtChanged(remoteUpdatedAt: string, lastSyncedUpdatedAt: string): boolean {
+  return !remoteUpdatedAt || remoteUpdatedAt !== lastSyncedUpdatedAt;
+}
