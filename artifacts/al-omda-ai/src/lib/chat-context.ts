@@ -37,3 +37,12 @@ export function truncateTextAtCodePointBoundary(value: string, maxChars: number)
   if (last >= 0xd800 && last <= 0xdbff) end -= 1;
   return text.slice(0, end);
 }
+
+/** Truncate to a visible character budget without splitting emoji or adding an ellipsis when no space remains. */
+export function truncateTextWithEllipsis(value: string, maxChars: number): string {
+  const text = String(value ?? "");
+  const limit = Math.max(0, Math.floor(maxChars));
+  if (limit === 0) return "";
+  if (text.length <= limit) return text;
+  return truncateTextAtCodePointBoundary(text, limit - 1).trimEnd() + "…";
+}
