@@ -70,6 +70,13 @@ export const PlanStepState = {
   rejected: 'rejected',
 } as const;
 
+export interface PlanStepNote {
+  id: string;
+  author: "user" | "assistant" | "system";
+  text: string;
+  createdAt: string;
+}
+
 export interface PlanStep {
   /**
      * @minLength 1
@@ -81,6 +88,13 @@ export interface PlanStep {
      * @maxLength 2000
      */
   text: string;
+  output?: string;
+  complete?: string;
+  result?: string;
+  executedAt?: string;
+  executionStatus?: "succeeded" | "failed";
+  executionError?: string;
+  comments?: PlanStepNote[];
   state: PlanStepState;
 }
 

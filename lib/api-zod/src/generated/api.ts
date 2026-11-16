@@ -131,6 +131,12 @@ export const GetWorkspaceResponse = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "comments": zod.array(zod.object({
+  "id": zod.string().min(1).max(80),
+  "author": zod.enum(['user', 'assistant', 'system']),
+  "text": zod.string().min(1).max(2000),
+  "createdAt": zod.string().datetime()
+})).max(50).optional(),
   "state": zod.enum(['pending', 'approved', 'rejected'])
 })).min(1).max(getWorkspaceResponseTasksItemOneStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
@@ -196,6 +202,12 @@ export const CreateTaskBody = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "comments": zod.array(zod.object({
+  "id": zod.string().min(1).max(80),
+  "author": zod.enum(['user', 'assistant', 'system']),
+  "text": zod.string().min(1).max(2000),
+  "createdAt": zod.string().datetime()
+})).max(50).optional(),
   "state": zod.enum(['pending', 'approved', 'rejected'])
 })).min(1).max(createTaskBodyStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
@@ -226,6 +238,12 @@ export const CreateTaskResponse = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "comments": zod.array(zod.object({
+  "id": zod.string().min(1).max(80),
+  "author": zod.enum(['user', 'assistant', 'system']),
+  "text": zod.string().min(1).max(2000),
+  "createdAt": zod.string().datetime()
+})).max(50).optional(),
   "state": zod.enum(['pending', 'approved', 'rejected'])
 })).min(1).max(createTaskResponseOneStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
@@ -267,6 +285,12 @@ export const UpdateTaskBody = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "comments": zod.array(zod.object({
+  "id": zod.string().min(1).max(80),
+  "author": zod.enum(['user', 'assistant', 'system']),
+  "text": zod.string().min(1).max(2000),
+  "createdAt": zod.string().datetime()
+})).max(50).optional(),
   "state": zod.enum(['pending', 'approved', 'rejected'])
 })).min(1).max(updateTaskBodyOneStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
@@ -297,6 +321,12 @@ export const UpdateTaskResponse = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "comments": zod.array(zod.object({
+  "id": zod.string().min(1).max(80),
+  "author": zod.enum(['user', 'assistant', 'system']),
+  "text": zod.string().min(1).max(2000),
+  "createdAt": zod.string().datetime()
+})).max(50).optional(),
   "state": zod.enum(['pending', 'approved', 'rejected'])
 })).min(1).max(updateTaskResponseOneStepsMax),
   "status": zod.enum(['review', 'paused', 'approved', 'stopped'])

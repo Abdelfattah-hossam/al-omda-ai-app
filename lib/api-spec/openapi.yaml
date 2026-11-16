@@ -342,6 +342,24 @@ components:
           type: string
           maxLength: 120
       required: [displayName, organization]
+    PlanStepNote:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 80
+        author:
+          type: string
+          enum: [user, assistant, system]
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, author, text, createdAt]
     PlanStep:
       type: object
       properties:
@@ -371,6 +389,11 @@ components:
         executionError:
           type: string
           maxLength: 500
+        comments:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PlanStepNote"
         state:
           type: string
           enum: [pending, approved, rejected]
