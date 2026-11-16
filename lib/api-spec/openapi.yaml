@@ -411,6 +411,11 @@ components:
           type: string
           enum: [pending, approved, rejected]
       required: [id, text, state]
+    TaskCreateStep:
+      allOf:
+        - $ref: "#/components/schemas/PlanStep"
+        - type: object
+          required: [output, complete]
     Specialty:
       type: string
       enum: [business, development, design, marketing, research, assistant]
@@ -435,7 +440,7 @@ components:
           minItems: 3
           maxItems: 8
           items:
-            $ref: "#/components/schemas/PlanStep"
+            $ref: "#/components/schemas/TaskCreateStep"
         status:
           $ref: "#/components/schemas/TaskStatus"
       required: [title, request, specialty, steps, status]
