@@ -758,7 +758,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر إلغاء المهمة." : "Could not cancel the Agent run."));
       setAgentConnectionStatus(data.status === "cancelling"
         ? (ar ? "جارٍ إيقاف الوكيل وحفظ نقطة الاستكمال..." : "Stopping the Agent and saving its checkpoint...")
-        : (ar ? "تم إلغاء الإجراءات المعلّقة." : "Pending actions were cancelled."));
+        : data.status === "cancelled"
+          ? (ar ? "تم إلغاء الإجراءات المعلّقة ولم يتم تنفيذها." : "Pending actions were cancelled and were not executed.")
+          : (ar ? "المهمة انتهت بالفعل ولا توجد إجراءات معلّقة." : "The run already finished; no pending actions remain."));
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر إلغاء المهمة." : "Could not cancel the Agent run."));
     } finally {
