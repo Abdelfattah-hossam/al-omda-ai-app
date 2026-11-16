@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
+import { extractExplicitMemoryNode, parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const nodeA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -34,4 +34,16 @@ test("validates graph edges and blocks self-links or unknown relationships", () 
   assert.equal(edge.target_node_id, nodeB);
   assert.throws(() => parseMemoryEdge({ sourceNodeId: nodeA, targetNodeId: nodeA, relation: "works_on" }, userId), /cannot connect/);
   assert.throws(() => parseMemoryEdge({ sourceNodeId: nodeA, targetNodeId: nodeB, relation: "secretly_knows" }, userId), /Unsupported/);
+});
+
+test("stores only explicit, non-sensitive memory requests", () => {
+  const preference = extractExplicitMemoryNode("Remember that I prefer Arabic replies");
+  assert.equal(preference?.nodeType, "preference");
+  assert.equal(preference?.label, "I prefer Arabic replies");
+  assert.equal(preference?.source, "user_confirmed");
+  assert.equal(extractExplicitMemoryNode("How are you?"), null);
+  assert.equal(extractExplicitMemoryNode("Do not remember my password"), null);
+  assert.equal(extractExplicitMemoryNode("Remember my medical diagnosis"), null);
+  assert.equal(extractExplicitMemoryNode("افتكر إن الشات مايتغيرش"), null);
+  assert.equal(extractExplicitMemoryNode("احفظ أني أفضّل الرد بالعربية")?.nodeType, "preference");
 });
