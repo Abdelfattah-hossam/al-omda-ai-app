@@ -18,7 +18,7 @@ export function isHowToRequest(request: string): boolean {
     /^(?:can you explain|could you explain|show me how)\b/i.test(text);
 }
 
-function isNegatedFileCreationRequest(text: string): boolean {
+export function isNegatedFileCreationRequest(text: string): boolean {
   return /(?:^|[\s،,؛;])(?:مش|موش|لا|بدون|من\s+غير)\s*(?:(?:عايز|عاوز|محتاج|اريد|أريد)\s*)?(?:اعمل|اعملي|اعمللي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|صمم|اكتب|ملف|مستند|شيت|مصنف)/i.test(text) ||
     /(?:^|[\s،,؛;])(?:ما|مت)\s*(?:تعملش|تعمليش|تنشئش|تجهزش)\s*(?:لي\s*)?(?:ملف|مستند|شيت|مصنف)/i.test(text) ||
     /\b(?:don't|do not|never|no need to)\s+(?:create|make|generate|prepare|export|download)\b/i.test(text);
@@ -31,6 +31,20 @@ export function isExcelFileRequest(request: string): boolean {
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(text);
   const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|مصنف|جدول)/i.test(text);
   return mentionsExcelFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
+}
+
+
+export function isPowerPointFileRequest(request: string): boolean {
+  const text = normalizeRequest(request);
+  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
+  const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
+  if (!mentionsPresentation) return false;
+  const comparisonOnly = /^(?:ممكن\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|create|make)\s+(?:لي\s*)?(?:مقارنة|compare|comparison)\b/i.test(text);
+  const explanationOnly = /^(?:اشرح|تشرح|شرح|اكتبلي\s+شرح|اعمل\s+شرح|ممكن\s+شرح|explain|write\s+an?\s+explanation)\b/i.test(text);
+  if (comparisonOnly || explanationOnly) return false;
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
+  const directlyRequestsPresentation = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|powerpoint(?:\s+presentation)?|presentation|pptx|slide\s*deck)/i.test(text);
+  return asksToCreate || directlyRequestsPresentation;
 }
 
 export function isWordFileRequest(request: string): boolean {
@@ -63,6 +77,7 @@ export type LatestChatIntent =
   | { kind: "how_to"; request: string }
   | { kind: "word_file"; request: string }
   | { kind: "excel_file"; request: string }
+  | { kind: "powerpoint_file"; request: string }
   | { kind: "conversation"; request: string };
 
 /**
@@ -75,5 +90,6 @@ export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessa
   if (isHowToRequest(request)) return { kind: "how_to", request };
   if (isExcelFileRequest(request)) return { kind: "excel_file", request };
   if (isWordFileRequest(request)) return { kind: "word_file", request };
+  if (isPowerPointFileRequest(request)) return { kind: "powerpoint_file", request };
   return { kind: "conversation", request };
 }
