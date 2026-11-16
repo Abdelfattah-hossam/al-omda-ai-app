@@ -101,3 +101,36 @@ export function parseMemoryEdge(input: unknown, userId: string): MemoryEdgeInput
     confidence: normalizeConfidence(value.confidence),
   };
 }
+
+
+export function extractExplicitMemoryNode(request: string): Record<string, unknown> | null {
+  const text = request.normalize("NFKC").trim();
+  if (!text || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
+  const patterns = [
+    /^(?:please\s+)?(?:remember|save|store|keep in memory)\s+(?:that\s+)?(.+)$/i,
+    /^(?:افتكر|افتكر\s+ان|افتكر\s+أن|احفظ|احفظ\s+ان|احفظ\s+أن|سجل\s+في\s+الذاكرة|سجل\s+عندك|ثبت\s+عندك|متنساش|ما\s+تنساش)\s*(.+)$/i,
+  ];
+  let fact = "";
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      fact = match[1].trim().replace(/^[،,:؛\s]+|[.!؟?]+$/g, "");
+      break;
+    }
+  }
+  if (!fact || fact.length > 400) return null;
+  if (/password|passcode|secret|api.?key|access.?token|bank.?account|credit.?card|passport|national.?id|diagnos|health condition|religion|political party|sexual orientation|race|ethnic|كلمة المرور|كلمة السر|رمز سري|مفتاح api|رقم بطاقة|حساب بنكي|جواز سفر|تشخيص|مرض|ديانة|انتماء سياسي|ميول جنسية|عرق|أصل عرقي/i.test(fact)) return null;
+  const nodeType = /project|مشروع|تطبيق|موقع|منصة/i.test(fact) ? "project"
+    : /decision|decided|قرار|قررت|اتفقنا/i.test(fact) ? "decision"
+    : /constraint|must|never|don't change|لا تغير|لا تعدل|ممنوع|شرط/i.test(fact) ? "constraint"
+    : /correct|correction|wrong|غلط|تصحيح|صحح/i.test(fact) ? "correction"
+    : /prefer|preference|أفضل|افضل|بحب|أفضلية|عايز|عاوز|اريد|أريد/i.test(fact) ? "preference"
+    : "other";
+  return {
+    nodeType,
+    label: fact,
+    details: { explicitlyRequestedForMemory: true },
+    source: "user_confirmed",
+    confidence: 1,
+  };
+}
