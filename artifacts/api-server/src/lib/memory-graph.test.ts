@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { extractExplicitMemoryNode, parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const nodeA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -64,4 +64,13 @@ test("canonical setup SQL and the deployed migration define the same private gra
     assert.match(sql, /revoke all on public\.ai_memory_edges from public, anon/i);
     assert.match(sql, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
   }
+});
+
+test("captures explicit corrections without storing sensitive personal data", () => {
+  const correction = extractUserCorrectionNode("Correction: keep the chat scroll position unchanged");
+  assert.equal(correction?.nodeType, "correction");
+  assert.equal(correction?.source, "conversation_confirmed");
+  assert.equal(extractUserCorrectionNode("That's incorrect: the task has eight steps"), null);
+  assert.equal(extractUserCorrectionNode("التصحيح هو عدم تغيير حركة الشات"), null);
+  assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
 });
