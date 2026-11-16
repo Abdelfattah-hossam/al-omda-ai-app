@@ -422,6 +422,11 @@ function App() {
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string,string>>({});
+  const [stepCommentErrors, setStepCommentErrors] = useState<Record<string,string>>({});
+  const taskExecutionLockRef = useRef(false);
+  const projectRunLockRef = useRef(false);
+  const approvalLockRef = useRef(false);
+  const commentSubmissionLockRef = useRef(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty>('business');
   const [filter, setFilter] = useState<Specialty | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -759,11 +764,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
     } catch (error) { setWorkspaceError(readApiError(error, isAr ? 'تعذر إنشاء الخطة بالذكاء الاصطناعي.' : 'AI plan generation failed.')); }
     finally { setPlanGenerating(false); }
   };
-    const executeStep = async (task:Task, step:PlanStep): Promise<{ result:string; executedAt:string } | null> => {
-    if (executingStepId) return null;
+    const executeStep = async (task:Task, step:PlanStep, fromProjectRun = false): Promise<{ result:string; executedAt:string } | null> => {
+    if (taskExecutionLockRef.current || (projectRunLockRef.current && !fromProjectRun)) return null;
     if (!authUser) { setExecutionError(isAr ? 'سجّل الدخول أولاً لتنفيذ المرحلة.' : 'Sign in before executing this stage.'); return null; }
     if (step.state !== 'approved') { setExecutionError(isAr ? 'يجب اعتماد هذه المرحلة أولاً.' : 'Approve this stage before execution.'); return null; }
     if (step.result) { setExecutionError(isAr ? 'هذه المرحلة لها مخرج محفوظ بالفعل.' : 'This stage already has a saved result.'); return null; }
+    taskExecutionLockRef.current = true;
     setExecutingStepId(step.id);
     setExecutionError('');
     try {
@@ -782,7 +788,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         const workspace = await getWorkspace(apiRequestOptions);
         if (authUser) applyWorkspace(workspace, authUser.email);
       } catch { /* Keep the execution error visible if refresh is unavailable. */ }
-    } finally { setExecutingStepId(null); }
+    } finally { taskExecutionLockRef.current = false; setExecutingStepId(null); }
     return null;
   };
 
@@ -790,39 +796,46 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (!authUser) { setWorkspaceError(isAr ? 'سجّل الدخول أولاً لتشغيل المشروع.' : 'Sign in before running the project.'); return; }
     if (task.demo) { setWorkspaceError(isAr ? 'هذه مهمة عرض تجريبية ولا يمكن تنفيذها.' : 'This is a demo task and cannot be executed.'); return; }
     if (task.status === 'paused' || task.status === 'stopped') { setWorkspaceError(isAr ? 'استأنف المشروع قبل التنفيذ.' : 'Resume the project before execution.'); return; }
-    if (executingStepId) return;
+    if (projectRunLockRef.current || taskExecutionLockRef.current || executingStepId) return;
+    projectRunLockRef.current = true;
+    setWorkspaceError('');
+    setExecutionError('');
     let workingTask = task;
     let ranAny = false;
-    for (let index = 0; index < workingTask.steps.length; index += 1) {
-      let currentStep = workingTask.steps[index];
-      if (currentStep.result) continue;
-      if (workingTask.steps.slice(0, index).some((step) => !step.result)) {
-        setWorkspaceError(isAr ? 'توقّف التنفيذ: المرحلة السابقة لم تُنتج مخرجًا محفوظًا بعد.' : 'Execution stopped: a previous stage has no saved deliverable.');
-        return;
-      }
-      if (currentStep.state !== 'approved') {
-        const approvedSteps = workingTask.steps.map((step, stepIndex) => stepIndex === index ? { ...step, state:'approved' as StepState, executionError:undefined } : step);
-        const approvedTask:Task = { ...workingTask, steps:approvedSteps, status:approvedSteps.every((step) => step.state === 'approved') ? 'approved' : 'review' };
-        try {
-          await saveRemoteTask(approvedTask);
-          workingTask = approvedTask;
-          setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? approvedTask : item) }));
-        } catch (error) {
-          setWorkspaceError(readApiError(error, t('saveTaskFailed')));
-          try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* Preserve the last confirmed state. */ }
+    try {
+      for (let index = 0; index < workingTask.steps.length; index += 1) {
+        let currentStep = workingTask.steps[index];
+        if (currentStep.result) continue;
+        if (workingTask.steps.slice(0, index).some((step) => !step.result)) {
+          setWorkspaceError(isAr ? 'توقّف التنفيذ: المرحلة السابقة لم تُنتج مخرجًا محفوظًا بعد.' : 'Execution stopped: a previous stage has no saved deliverable.');
           return;
         }
-        currentStep = workingTask.steps[index];
+        if (currentStep.state !== 'approved') {
+          const approvedSteps = workingTask.steps.map((step, stepIndex) => stepIndex === index ? { ...step, state:'approved' as StepState, executionError:undefined } : step);
+          const approvedTask:Task = { ...workingTask, steps:approvedSteps, status:approvedSteps.every((step) => step.state === 'approved') ? 'approved' : 'review' };
+          try {
+            await saveRemoteTask(approvedTask);
+            workingTask = approvedTask;
+            setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? approvedTask : item) }));
+          } catch (error) {
+            setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+            try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* Preserve the last confirmed state. */ }
+            return;
+          }
+          currentStep = workingTask.steps[index];
+        }
+        const execution = await executeStep(workingTask, currentStep, true);
+        if (!execution) return;
+        ranAny = true;
+        const nextTask:Task = { ...workingTask, steps:workingTask.steps.map((step, stepIndex) => stepIndex === index ? { ...step, result:execution.result, executedAt:execution.executedAt, executionStatus:'succeeded' as const, executionError:undefined } : step) };
+        workingTask = nextTask;
+        setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? nextTask : item) }));
       }
-      const execution = await executeStep(workingTask, currentStep);
-      if (!execution) return;
-      ranAny = true;
-      const nextTask:Task = { ...workingTask, steps:workingTask.steps.map((step, stepIndex) => stepIndex === index ? { ...step, result:execution.result, executedAt:execution.executedAt, executionStatus:'succeeded' as const, executionError:undefined } : step) };
-      workingTask = nextTask;
-      setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? nextTask : item) }));
-    }
-    if (!ranAny && workingTask.steps.every((step) => Boolean(step.result))) {
-      setWorkspaceError(isAr ? 'كل مراحل المشروع منفذة بالفعل ومخرجاتها محفوظة.' : 'Every project stage has already been executed and saved.');
+      if (!ranAny && workingTask.steps.every((step) => Boolean(step.result))) {
+        setWorkspaceError(isAr ? 'كل مراحل المشروع منفذة بالفعل ومخرجاتها محفوظة.' : 'Every project stage has already been executed and saved.');
+      }
+    } finally {
+      projectRunLockRef.current = false;
     }
   };
 
@@ -926,28 +939,25 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const approveStep = async (task:Task, stepId:string) => {
     const stepIndex = task.steps.findIndex((step) => step.id === stepId);
-    if (stepIndex < 0 || task.status !== 'review' || executingStepId) return;
+    if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (stepIndex !== firstOpen) return;
+    approvalLockRef.current = true;
     const steps = task.steps.map((step) => step.id === stepId ? { ...step, state:'approved' as StepState } : step);
     const approvedStep = steps[stepIndex];
     const updatedTask = { ...task, steps, status:steps.every((step) => step.state === 'approved') ? 'approved' as TaskStatus : 'review' as TaskStatus };
     setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? updatedTask : item) }));
-    if (authUser && !task.demo) {
-      try {
-        await saveRemoteTask(updatedTask);
-        await executeStep(updatedTask, approvedStep);
-      } catch (error) {
-        // Revert the optimistic approval if the server did not confirm the save.
-        setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? task : item) }));
-        try {
-          const workspace = await getWorkspace(apiRequestOptions);
-          if (authUser) applyWorkspace(workspace, authUser.email);
-        } catch { /* Keep the local rollback if the workspace cannot be refreshed. */ }
-        setWorkspaceError(readApiError(error, t('saveTaskFailed')));
-      }
-    }
+    try {
+      if (!authUser || task.demo) throw new Error(isAr ? 'سجّل الدخول لتنفيذ المرحلة.' : 'Sign in to execute this stage.');
+      await saveRemoteTask(updatedTask);
+      await executeStep(updatedTask, approvedStep);
+    } catch (error) {
+      setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? task : item) }));
+      try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* Keep the local rollback. */ }
+      setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+    } finally { approvalLockRef.current = false; }
   };
+
   const requestStepRevision = async (task:Task, step:PlanStep) => {
     const note = (commentDrafts[step.id] ?? '').trim();
     if (!authUser || !step.result || !note || executingStepId) return;
@@ -966,13 +976,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const addStepComment = async (task:Task, stepId:string) => {
     const text = (commentDrafts[stepId] ?? '').trim();
-    if (!text || text.length > 2000 || !authUser || executingStepId) return;
+    if (!text || text.length > 2000 || !authUser || executingStepId || commentSubmissionLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current) return;
     const target = task.steps.find((step) => step.id === stepId);
     if (!target || (target.comments?.length ?? 0) >= 50) return;
+    commentSubmissionLockRef.current = true;
     const note:PlanStepNote = { id:crypto.randomUUID(), author:'user', text, createdAt:new Date().toISOString() };
     const updatedTask:Task = { ...task, steps:task.steps.map((step) => step.id === stepId ? { ...step, comments:[...(step.comments ?? []), note] } : step) };
     setExecutingStepId(stepId);
     setWorkspaceError('');
+    setStepCommentErrors((prev) => ({ ...prev, [stepId]:'' }));
     setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? updatedTask : item) }));
     try {
       await saveRemoteTask(updatedTask);
@@ -980,13 +992,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const response = await fetch('/api/ai/respond-to-step-comment', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify({ taskId:task.id, stepId, commentId:note.id, language }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تم حفظ التعليق لكن تعذر على العمدة الرد.' : 'The comment was saved, but AL OMDA could not reply.'));
-      const workspace = await getWorkspace(apiRequestOptions);
-      applyWorkspace(workspace, authUser.email);
+      if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error(isAr ? 'تم حفظ التعليق لكن العمدة لم يُرجع ردًا.' : 'The comment was saved, but AL OMDA returned no reply.');
+      const assistantNote:PlanStepNote = { id:'assistant-' + note.id, author:'assistant', text:data.reply.trim(), createdAt:new Date().toISOString() };
+      setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? { ...item, steps:item.steps.map((step) => step.id === stepId ? { ...step, comments:[...(step.comments ?? []), assistantNote].filter((item,index,array)=>array.findIndex((candidate)=>candidate.id===item.id)===index).slice(-50) } : step) } : item) }));
+      try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* The confirmed assistant reply is already visible locally. */ }
     } catch (error) {
-      setWorkspaceError(readApiError(error, isAr ? 'تم حفظ التعليق إن أمكن، لكن تعذر إكمال الرد من العمدة: ' + (error instanceof Error ? error.message : '') : 'Could not complete the comment response: ' + (error instanceof Error ? error.message : '')));
-      try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* Keep the saved comment visible. */ }
-    } finally { setExecutingStepId(null); }
+      const message = readApiError(error, isAr ? 'تعذر على العمدة الرد على التعليق.' : 'AL OMDA could not reply to the comment.');
+      setStepCommentErrors((prev) => ({ ...prev, [stepId]:message }));
+      setWorkspaceError(message);
+      try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* Keep the saved comment and visible error. */ }
+    } finally {
+      commentSubmissionLockRef.current = false;
+      setExecutingStepId(null);
+    }
   };
+
   const rejectStep = (task:Task, stepId:string) => {
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (task.status !== 'review' || task.steps[firstOpen]?.id !== stepId) return;
@@ -1063,6 +1083,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
              </div>}
              {step.comments && step.comments.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل التعليقات والتعديلات':'Comments & change log'}</strong>{step.comments.map((note)=><div key={note.id} style={{padding:'9px 11px',borderRadius:8,border:'1px solid var(--border,#59616c)',background:'var(--surface,#10151b)'}}><div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:5}}><small style={{fontWeight:700}}>{note.author==='user'?(isAr?'أنت':'You'):note.author==='system'?(isAr?'تقرير النظام':'System report'):(isAr?'العمدة':'AL OMDA')}</small><small style={{opacity:.65}}>{dateLabel(note.createdAt,language)}</small></div><div style={{fontSize:12,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{note.text}</div></div>)}</div>}
              <div style={{display:'grid',gap:7,marginTop:12}}><label className="form-label">{isAr?'تعليق أو تحديث على المرحلة':'Comment or progress update'}</label><textarea className="step-edit" rows={2} maxLength={2000} value={commentDrafts[step.id] ?? ''} onChange={(event)=>setCommentDrafts((prev)=>({...prev,[step.id]:event.target.value}))} placeholder={isAr?'مثال: أنجزت الجزء الأول، وهذه البيانات تحتاج تعديل...':'Example: I completed the first part; please revise these details...'} aria-label={isAr?'تعليق على المرحلة':'Step comment'}/><div className="step-actions"><button type="button" className="button button-quiet button-small" disabled={!(commentDrafts[step.id] ?? '').trim() || !authUser || (step.comments?.length ?? 0) >= 50} onClick={()=>void addStepComment(task,step.id)}><MessageSquareText size={13}/>{isAr?'إضافة التعليق':'Add comment'}</button></div></div>
+             {stepCommentErrors[step.id] && <div className="notice-bar notice-error" role="alert" style={{marginTop:8}}>{stepCommentErrors[step.id]}</div>}
              {step.revisionHistory && step.revisionHistory.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل النسخ السابقة':'Previous versions'}</strong>{step.revisionHistory.map((revision,revisionIndex)=><details key={revision.revisionRequestedAt+revisionIndex} style={{padding:9,border:'1px solid var(--border,#59616c)',borderRadius:8}}><summary style={{cursor:'pointer',fontSize:12}}>{isAr?'النسخة السابقة':'Previous version'} · {dateLabel(revision.executedAt ?? revision.revisionRequestedAt,language)}</summary><p style={{fontSize:12,whiteSpace:'pre-wrap',lineHeight:1.7}}>{revision.note}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,maxHeight:260,overflow:'auto'}}>{revision.result}</pre></details>)}</div>}
              {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" className="button button-danger button-small" disabled={!!executingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun'}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
