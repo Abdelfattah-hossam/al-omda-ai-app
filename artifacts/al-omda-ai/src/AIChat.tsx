@@ -308,12 +308,16 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
   };
 
-  const loadConversation = async (id: string) => {
+  const loadConversation = async (id: string, preloadedData?: any) => {
     setHistoryLoading(true);
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin" });
-      const data = await response.json();
-      if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
+      let data = preloadedData;
+      if (!data) {
+        const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin", cache: "no-store" });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
+      }
+      if (!data?.conversation) throw new Error(data?.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       setActiveConversationId(id);
       lastSyncedConversationUpdatedAtRef.current = typeof data.conversation.updated_at === "string" ? data.conversation.updated_at : "";
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
@@ -513,7 +517,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         lastSyncedConversationUpdatedAtRef.current = remoteUpdatedAt;
         if (getChatMessageSyncSignature(remote) !== getChatMessageSyncSignature(local)) {
           shouldAutoScrollRef.current = false;
-          await loadConversation(activeConversationId);
+          await loadConversation(activeConversationId, conversationData);
         }
       } catch {
         // A temporary sync failure must not interrupt the current conversation.
