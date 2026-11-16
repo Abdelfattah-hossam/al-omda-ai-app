@@ -2,7 +2,7 @@ export type HostedModelPurpose = "precision" | "research" | "general";
 
 export function inferHostedModelPurpose(request: string): HostedModelPurpose {
   const text = request.normalize("NFKC").toLocaleLowerCase();
-  if (/\b(legal|law|contract|compliance|engineering|structural|calculation|medical|clinical|diagnosis|finance|financial|investment|accounting|valuation|cash flow|roi|budget|forecast|code|coding|software|security|audit|production)\b|قانون|قانوني|عقد|امتثال|هندسة|هندسي|حسابات|معادلات|طب|طبي|تشخيص|مالي|استثمار|محاسبة|برمجة|كود|تطوير|أمني|امني|ثغرات|تدقيق/u.test(text)) return "precision";
+  if (/\b(legal|law|contract|compliance|engineering|structural|calculation|medical|clinical|diagnosis|finance|financial|investment|accounting|valuation|cash flow|roi|budget|forecast|code|coding|software|security|audit|production|typescript|javascript|python|api|database|developer|programmer)\b|قانون|قانوني|عقد|امتثال|هندسة|هندسي|حسابات|معادلات|طب|طبي|تشخيص|مالي|استثمار|محاسبة|برمجة|كود|تطوير|أمني|امني|ثغرات|تدقيق/u.test(text)) return "precision";
   if (/\b(research|study|investigate|compare|analysis|analyze|business|marketing|strategy|roi)\b|بحث|دراسة|استقصاء|قارن|تحليل|أعمال|اعمال|تسويق|استراتيجية|عائد الاستثمار/u.test(text)) return "research";
   return "general";
 }
