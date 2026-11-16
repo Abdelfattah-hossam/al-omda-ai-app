@@ -53,6 +53,8 @@ describe("chat artifact intent", () => {
     for (const message of [
       "جهزلي شيت Excel للميزانية",
       "اعمل ملف Excel",
+      "اعملي جدول Excel للمبيعات",
+      "عايز جدول اكسل للميزانية",
       "تعمل لي ملف Excel للمبيعات",
       "Create an Excel spreadsheet",
       "Generate an XLSX workbook",

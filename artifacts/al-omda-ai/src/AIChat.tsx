@@ -6,6 +6,7 @@ import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, M
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
+import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -541,7 +542,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     catch {
       try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
       catch {
-        throw new Error("تعذر إنشاء ملف Word حقيقي الآن. تعذر تحميل مكتبة DOCX من المصدرين المجانيين؛ تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+        const blob = createDocxBlob(documentData, ar);
+        const url = URL.createObjectURL(blob);
+        const safeName = (documentData.title || "AL-OMDA-document").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-document";
+        return { name: safeName + ".docx", url };
       }
     }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, Header, Footer, PageNumber } = lib as any;
@@ -615,7 +619,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     catch {
       try { lib = await import(/* @vite-ignore */ fallbackModuleUrl); }
       catch {
-        throw new Error("تعذر إنشاء ملف Excel حقيقي الآن. تعذر تحميل مكتبة XLSX من المصدرين المجانيين؛ تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+        const blob = createXlsxBlob(data);
+        const url = URL.createObjectURL(blob);
+        const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
+        return { name: safeName + ".xlsx", url };
       }
     }
     const XLSX = (lib as any).default ?? lib;

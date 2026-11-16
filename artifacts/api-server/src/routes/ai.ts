@@ -846,6 +846,87 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
   }
 });
 
+router.post("/ai/respond-to-step-comment", requireSameOrigin, async (req, res): Promise<void> => {
+  try {
+    const session = await resolveSession(req, res);
+    if (!session) { res.status(401).json({ error: "Sign in to receive a project comment response." }); return; }
+    const taskId = typeof req.body?.taskId === "string" ? req.body.taskId : "";
+    const stepId = typeof req.body?.stepId === "string" ? req.body.stepId : "";
+    const commentId = typeof req.body?.commentId === "string" ? req.body.commentId : "";
+    const language = req.body?.language === "en" ? "en" : "ar";
+    if (!/^[0-9a-f-]{36}$/i.test(taskId) || !/^[a-zA-Z0-9_-]{1,80}$/.test(stepId) || !/^[0-9a-f-]{36}$/i.test(commentId)) {
+      res.status(400).json({ error: "A valid task, step, and comment are required." }); return;
+    }
+    const taskQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id, select: "id,title,request,specialty,steps,status", limit: "1" });
+    const taskResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
+    type CommentNote = { id: string; author: "user" | "assistant" | "system"; text: string; createdAt: string };
+    type CommentTask = { id: string; title: string; request: string; specialty: string; status: string; steps: Array<{ id: string; text: string; output?: string; complete?: string; state: string; result?: string; comments?: CommentNote[] }> };
+    const rows = await readSupabaseJson<CommentTask[]>(taskResponse);
+    const task = rows[0];
+    if (!task) { res.status(404).json({ error: "Project not found in your account." }); return; }
+    const stepIndex = task.steps.findIndex((step) => step.id === stepId);
+    if (stepIndex < 0) { res.status(404).json({ error: "Project step not found." }); return; }
+    const step = task.steps[stepIndex];
+    const comment = (step.comments ?? []).find((note) => note.id === commentId && note.author === "user");
+    if (!comment) { res.status(404).json({ error: "The user comment was not found. Refresh the project and try again." }); return; }
+    const replyId = "assistant-" + commentId;
+    const existingReply = (step.comments ?? []).find((note) => note.id === replyId);
+    if (existingReply) { res.json({ reply: existingReply.text, alreadyAnswered: true }); return; }
+    const usage = await currentUsage(session.accessToken);
+    if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
+    const memory = await loadUserMemory(session.accessToken, session.user.id);
+    const prompt = [
+      "You are AL OMDA, the project executor replying to the project owner's comment on a specific stage.",
+      "Reply in " + (language === "ar" ? "Arabic" : "English") + ".",
+      "Acknowledge the exact comment, explain what it changes or confirms for this stage, and state the concrete next action.",
+      "If the comment is only a progress update, acknowledge it and say how it will affect the remaining work. If it requests a change, summarize the requested change and explain whether it can be applied safely.",
+      "Do not claim that any work has been changed or executed by this reply. Do not fabricate facts or files. If a critical detail is missing or the request conflicts with an approved requirement, identify the precise issue and ask one concise clarification.",
+      "Project: " + task.title,
+      "Original request: " + task.request,
+      "Stage " + (stepIndex + 1) + ": " + step.text,
+      "Expected output: " + (step.output || ""),
+      "Completion check: " + (step.complete || ""),
+      "Current saved result: " + (step.result || "Not executed yet"),
+      "Earlier completed stages: " + task.steps.slice(0, stepIndex).map((item, index) => "Stage " + (index + 1) + ": " + item.text + "\nResult: " + (item.result || "Not available")).join("\n\n").slice(0, 9000),
+      "Owner's new comment: " + comment.text,
+      "Return a useful direct response in no more than 1800 characters."
+    ].join("\n");
+    const providers = chooseProviders([{ role: "user", content: prompt }]);
+    if (!providers.length) { res.status(503).json({ error: "No AI provider is configured. Your comment is saved; AL OMDA could not generate a reply." }); return; }
+    let answer: { text: string; model: string } | null = null;
+    let provider = "";
+    const failures: string[] = [];
+    for (const candidate of providers) {
+      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", [{ role: "user", content: prompt }], memory); provider = candidate; break; }
+      catch (error) { failures.push(error instanceof Error ? error.message : "Provider unavailable"); }
+    }
+    const reply = answer?.text.trim().slice(0, 1800);
+    if (!reply) { res.status(503).json({ error: "AL OMDA could not respond to this comment. Your comment is saved; try again.", details: failures.slice(0, 2) }); return; }
+    const charged = await reserveUnits(session.accessToken, 1);
+    if (!charged.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. Your comment is saved; no AI reply was generated.", usage: charged }); return; }
+    const latestResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
+    const latestRows = await readSupabaseJson<CommentTask[]>(latestResponse);
+    const latest = latestRows[0];
+    const latestStep = latest?.steps.find((item) => item.id === stepId);
+    if (!latest || !latestStep) { res.status(409).json({ error: "The project changed while the reply was being generated. Refresh and retry." }); return; }
+    const duplicate = (latestStep.comments ?? []).find((note) => note.id === replyId);
+    if (duplicate) { res.json({ reply: duplicate.text, alreadyAnswered: true }); return; }
+    const latestComment = (latestStep.comments ?? []).find((note) => note.id === commentId && note.author === "user");
+    if (!latestComment) { res.status(409).json({ error: "The comment changed before AL OMDA could save its reply." }); return; }
+    const assistantNote: CommentNote = { id: replyId, author: "assistant", text: reply, createdAt: new Date().toISOString() };
+    const updatedSteps = latest.steps.map((item) => item.id === stepId ? { ...item, comments: [...(item.comments ?? []), assistantNote].slice(-50) } : item);
+    const saveQuery = new URLSearchParams({ id: "eq." + taskId, user_id: "eq." + session.user.id });
+    await supabaseFetch("/rest/v1/tasks?" + saveQuery.toString(), {
+      method: "PATCH",
+      headers: { "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify({ steps: updatedSteps }),
+    }, session.accessToken);
+    res.json({ reply, provider, model: answer?.model, usage: charged });
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not respond to the project comment.");
+  }
+});
+
 router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);

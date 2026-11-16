@@ -27,7 +27,7 @@ export function isExcelFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text)) return false;
   const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل/i.test(text);
-  const namesFileDeliverable = /(?:ملف|شيت|مصنف|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(text);
+  const namesFileDeliverable = /(?:ملف|شيت|مصنف|جدول|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(text);
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(text);
   const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|شيت|مصنف)/i.test(text);
   return mentionsExcelFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
