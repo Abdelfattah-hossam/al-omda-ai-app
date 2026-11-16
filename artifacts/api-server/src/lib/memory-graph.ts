@@ -142,7 +142,7 @@ export function extractExplicitMemoryNode(request: string): Record<string, unkno
 
 
 export function extractUserCorrectionNode(request: string): Record<string, unknown> | null {
-  const text = request.normalize("NFKC").trim();
+  const text = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
   const patterns = [
     /^(?:correction|that's incorrect|that is incorrect|you got that wrong|i said)\s*[:,—-]?\s*(.+)$/i,
     /^(?:التصحيح(?:\s+هو)?|الصح(?:\s+إن|\s+ان)?|انا\s+قلتلك(?:\s+ان|\s+إن)?|أنا\s+قلت\s+لك(?:\s+أن|\s+ان)?|لا[،,\s]+(?:ده|دا)?\s*(?:غلط|مش\s+صح))\s*[:,—-]?\s*(.+)$/i,
