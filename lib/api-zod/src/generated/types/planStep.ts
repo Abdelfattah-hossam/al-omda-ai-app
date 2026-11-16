@@ -14,6 +14,8 @@ export interface PlanStepNote {
   createdAt: string;
 }
 
+export interface PlanStepRevision { result:string; executedAt?:string; revisionRequestedAt:string; note:string; }
+
 export interface PlanStep {
   /**
      * @minLength 1
@@ -32,5 +34,6 @@ export interface PlanStep {
   executionStatus?: "succeeded" | "failed";
   executionError?: string;
   comments?: PlanStepNote[];
+  revisionHistory?: PlanStepRevision[];
   state: PlanStepState;
 }

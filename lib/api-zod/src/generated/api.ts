@@ -131,6 +131,12 @@ export const GetWorkspaceResponse = zod.object({
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
   "executionError": zod.string().max(500).optional(),
+  "revisionHistory": zod.array(zod.object({
+  "result": zod.string().max(12000),
+  "executedAt": zod.string().datetime().optional(),
+  "revisionRequestedAt": zod.string().datetime(),
+  "note": zod.string().max(2000)
+})).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string().min(1).max(80),
   "author": zod.enum(['user', 'assistant', 'system']),

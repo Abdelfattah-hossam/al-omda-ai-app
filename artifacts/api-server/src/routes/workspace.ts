@@ -383,6 +383,45 @@ router.put("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> => {
 });
 
 
+
+router.post("/tasks/:id/revise-step", requireSameOrigin, async (req, res): Promise<void> => {
+  const params = UpdateTaskParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "Task ID is invalid." }); return; }
+  const session = await sessionOrReport(req, res);
+  if (session === false) return;
+  if (!session) { res.status(401).json({ error: "Sign in to request a revision." }); return; }
+  const stepId = typeof req.body?.stepId === "string" ? req.body.stepId : "";
+  const noteText = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 2000) : "";
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(stepId) || !noteText) { res.status(400).json({ error: "A step and a revision note are required." }); return; }
+  try {
+    const previous = await getTaskById(params.data.id, session);
+    if (!previous) { res.status(404).json({ error: "Task not found." }); return; }
+    if (previous.status === "paused" || previous.status === "stopped") { res.status(409).json({ error: "Resume the task before requesting a revision." }); return; }
+    const index = previous.steps.findIndex((step) => step.id === stepId);
+    if (index < 0 || !previous.steps[index].result || previous.steps[index].state !== "approved") { res.status(409).json({ error: "Only a completed step can be revised." }); return; }
+    const now = new Date().toISOString();
+    const updatedSteps = previous.steps.map((step, stepIndex) => {
+      if (stepIndex < index) return step;
+      if (stepIndex === index) return {
+        ...step, state: "pending" as const,
+        revisionHistory: [...(step.revisionHistory ?? []), { result: step.result!, ...(step.executedAt ? { executedAt: step.executedAt } : {}), revisionRequestedAt: now, note: noteText }].slice(-20),
+        comments: [...(step.comments ?? []), { id: crypto.randomUUID(), author: "user" as const, text: "طلب مراجعة وإعادة تنفيذ: " + noteText, createdAt: now }].slice(-50),
+        result: undefined, executedAt: undefined, executionStatus: undefined, executionError: undefined,
+      };
+      return {
+        ...step, state: "pending" as const,
+        comments: [...(step.comments ?? []), { id: crypto.randomUUID(), author: "system" as const, text: "أُعيدت هذه المرحلة إلى الانتظار لأن مخرج مرحلة سابقة تغيّر، ويلزم تنفيذها وفحصها مجددًا.", createdAt: now }].slice(-50),
+        result: undefined, executedAt: undefined, executionStatus: undefined, executionError: undefined,
+      };
+    });
+    const query = new URLSearchParams({ id: "eq." + params.data.id, user_id: "eq." + session.user.id, select: "id,title,request,specialty,steps,status,created_at" });
+    const response = await supabaseFetch("/rest/v1/tasks?" + query.toString(), { method: "PATCH", headers: { "content-type": "application/json", prefer: "return=representation" }, body: JSON.stringify({ steps: updatedSteps, status: "review" }) }, session.accessToken);
+    const rows = await readSupabaseJson<DbTask[]>(response);
+    if (!rows[0]) { res.status(409).json({ error: "The task changed while the revision was being saved. Refresh and try again." }); return; }
+    res.json(UpdateTaskResponse.parse(mapTask(rows[0])));
+  } catch (error) { reportSupabaseError(req, res, error, "Could not request a task revision."); }
+});
+
 router.delete("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> => {
   const params = UpdateTaskParams.safeParse(req.params);
   if (!params.success) {

@@ -360,6 +360,14 @@ components:
           type: string
           format: date-time
       required: [id, author, text, createdAt]
+    PlanStepRevision:
+      type: object
+      properties:
+        result: { type: string, maxLength: 12000 }
+        executedAt: { type: string, format: date-time }
+        revisionRequestedAt: { type: string, format: date-time }
+        note: { type: string, maxLength: 2000 }
+      required: [result, revisionRequestedAt, note]
     PlanStep:
       type: object
       properties:
@@ -389,6 +397,11 @@ components:
         executionError:
           type: string
           maxLength: 500
+        revisionHistory:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PlanStepRevision"
         comments:
           type: array
           maxItems: 50

@@ -920,6 +920,22 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }
     }
   };
+  const requestStepRevision = async (task:Task, step:PlanStep) => {
+    const note = (commentDrafts[step.id] ?? '').trim();
+    if (!authUser || !step.result || !note || executingStepId) return;
+    setExecutingStepId(step.id);
+    setWorkspaceError('');
+    try {
+      const response = await fetch('/api/tasks/' + encodeURIComponent(task.id) + '/revise-step', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify({stepId:step.id,note}) });
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تسجيل طلب التعديل.' : 'Could not save the revision request.'));
+      const workspace = await getWorkspace(apiRequestOptions);
+      applyWorkspace(workspace, authUser.email);
+      setCommentDrafts((prev)=>({...prev,[step.id]:''}));
+    } catch(error) {
+      setWorkspaceError(readApiError(error, isAr ? 'تعذر تسجيل طلب التعديل.' : 'Could not save the revision request.'));
+    } finally { setExecutingStepId(null); }
+  };
   const addStepComment = async (task:Task, stepId:string) => {
     const text = (commentDrafts[stepId] ?? '').trim();
     if (!text || text.length > 2000 || !authUser) return;
@@ -1012,6 +1028,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
              </div>}
              {step.comments && step.comments.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل التعليقات والتعديلات':'Comments & change log'}</strong>{step.comments.map((note)=><div key={note.id} style={{padding:'9px 11px',borderRadius:8,border:'1px solid var(--border,#59616c)',background:'var(--surface,#10151b)'}}><div style={{display:'flex',justifyContent:'space-between',gap:8,marginBottom:5}}><small style={{fontWeight:700}}>{note.author==='user'?(isAr?'أنت':'You'):note.author==='system'?(isAr?'تقرير النظام':'System report'):(isAr?'العمدة':'AL OMDA')}</small><small style={{opacity:.65}}>{dateLabel(note.createdAt,language)}</small></div><div style={{fontSize:12,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{note.text}</div></div>)}</div>}
              <div style={{display:'grid',gap:7,marginTop:12}}><label className="form-label">{isAr?'تعليق أو تحديث على المرحلة':'Comment or progress update'}</label><textarea className="step-edit" rows={2} maxLength={2000} value={commentDrafts[step.id] ?? ''} onChange={(event)=>setCommentDrafts((prev)=>({...prev,[step.id]:event.target.value}))} placeholder={isAr?'مثال: أنجزت الجزء الأول، وهذه البيانات تحتاج تعديل...':'Example: I completed the first part; please revise these details...'} aria-label={isAr?'تعليق على المرحلة':'Step comment'}/><div className="step-actions"><button type="button" className="button button-quiet button-small" disabled={!(commentDrafts[step.id] ?? '').trim() || !authUser || (step.comments?.length ?? 0) >= 50} onClick={()=>void addStepComment(task,step.id)}><MessageSquareText size={13}/>{isAr?'إضافة التعليق':'Add comment'}</button></div></div>
+             {step.revisionHistory && step.revisionHistory.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل النسخ السابقة':'Previous versions'}</strong>{step.revisionHistory.map((revision,revisionIndex)=><details key={revision.revisionRequestedAt+revisionIndex} style={{padding:9,border:'1px solid var(--border,#59616c)',borderRadius:8}}><summary style={{cursor:'pointer',fontSize:12}}>{isAr?'النسخة السابقة':'Previous version'} · {dateLabel(revision.executedAt ?? revision.revisionRequestedAt,language)}</summary><p style={{fontSize:12,whiteSpace:'pre-wrap',lineHeight:1.7}}>{revision.note}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,maxHeight:260,overflow:'auto'}}>{revision.result}</pre></details>)}</div>}
+             {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" className="button button-danger button-small" disabled={!!executingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun'}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
                <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
