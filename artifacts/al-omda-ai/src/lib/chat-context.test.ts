@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildBoundedChatContext, truncateTextAtCodePointBoundary } from "./chat-context";
+import { buildBoundedChatContext, truncateTextAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
 
 test("keeps the newest messages within the message-count limit", () => {
   const result = buildBoundedChatContext([
@@ -35,6 +35,13 @@ test("returns an empty context for empty input and clamps invalid limits", () =>
 test("truncates without splitting a surrogate pair", () => {
   assert.equal(truncateTextAtCodePointBoundary("abc😀tail", 4), "abc");
   assert.equal(truncateTextAtCodePointBoundary("abc😀tail", 5), "abc😀");
+});
+
+test("adds an ellipsis only when text exceeds the available budget", () => {
+  assert.equal(truncateTextWithEllipsis("abc", 3), "abc");
+  assert.equal(truncateTextWithEllipsis("abc😀tail", 5), "abc…");
+  assert.equal(truncateTextWithEllipsis("abc😀tail", 6), "abc😀…");
+  assert.equal(truncateTextWithEllipsis("abc", 0), "");
 });
 
 test("skips whitespace-only fragments at the aggregate context boundary", () => {
