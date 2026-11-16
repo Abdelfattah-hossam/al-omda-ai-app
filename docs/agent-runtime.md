@@ -8,6 +8,13 @@ The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating
 - pnpm 9
 - A local project folder to use as the agent workspace
 
+## Cancel and resume an Agent session
+
+The authenticated runtime exposes `POST /v1/agent/cancel` with a JSON body containing the `sessionId`. If the session is actively waiting on a model response, the runtime aborts that request, saves the current checkpoint, and returns `status: "cancelling"`; the original run then completes with `status: "cancelled"`. The saved session can be resumed with the normal `/v1/agent/resume` flow.
+
+If the session is paused for tool approval, cancellation clears the pending approval list and records denial results without executing those actions. A later attempt to approve the cancelled call IDs is rejected. Cancellation does not roll back a side effect that has already completed, and it does not forcibly interrupt a terminal or MCP action that has already begun; the runtime only guarantees that pending, not-yet-executed approvals are cancelled.
+
+
 ## Start on macOS/Linux
 
 ```sh
