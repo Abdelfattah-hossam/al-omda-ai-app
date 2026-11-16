@@ -261,7 +261,7 @@ describe("source-code artifact intent", () => {
       { role: "assistant", content: "I can do that." },
       { role: "user", content: "Can you explain what app.py does?" },
     ]);
-    assert.equal(intent.kind, "conversation");
+    assert.equal(intent.kind, "how_to");
     assert.equal(classifyLatestChatIntent([{ role: "user", content: "Create a file named app.ts" }]).kind, "source_code_file");
   });
 });
