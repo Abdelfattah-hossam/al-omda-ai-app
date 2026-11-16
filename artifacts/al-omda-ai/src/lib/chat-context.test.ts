@@ -63,3 +63,22 @@ test("skips whitespace-only fragments at the aggregate context boundary", () => 
   assert.deepEqual(result, [{ role: "user", content: "newer" }]);
   assert.ok(result.every((message) => message.content.trim().length > 0));
 });
+
+test("chat sync detects changed deliverables but ignores per-device blob URLs", async () => {
+  const { getChatMessageSyncSignature } = await import("./chat-context");
+  const local = [{
+    role: "assistant" as const,
+    content: "The workbook is ready.",
+    attachment: { name: "report.xlsx", url: "blob:local-device-url" },
+    spreadsheetData: { title: "Report", columns: ["Amount"], rows: [[10]] },
+  }];
+  const remote = [{
+    role: "assistant" as const,
+    content: "The workbook is ready.",
+    attachment: { name: "report.xlsx", url: "blob:other-device-url" },
+    spreadsheetData: { title: "Report", columns: ["Amount"], rows: [[10]] },
+  }];
+  const signature = (items: typeof local) => getChatMessageSyncSignature(items);
+  assert.equal(signature(local), signature(remote));
+  assert.notEqual(signature(local), signature([{ ...remote[0], spreadsheetData: { ...remote[0].spreadsheetData, rows: [[20]] } }]));
+});

@@ -7,7 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
-import { buildBoundedChatContext, truncateTextWithEllipsis } from "./lib/chat-context";
+import { buildBoundedChatContext, getChatMessageSyncSignature, truncateTextWithEllipsis } from "./lib/chat-context";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -493,10 +493,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           ? conversationData.conversation.messages
               .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
               .slice(-100)
-              .map((item: any) => ({ role: item.role, content: item.content }))
           : [];
-        const local = messagesRef.current.map(({ role, content }) => ({ role, content }));
-        if (JSON.stringify(remote) !== JSON.stringify(local) && !loadingRef.current && !historyLoadingRef.current) {
+        const local = messagesRef.current;
+        // Include persisted deliverable data in the sync comparison, but exclude
+        // attachment URLs because each device rebuilds its own local Blob URL.
+        if (getChatMessageSyncSignature(remote) !== getChatMessageSyncSignature(local) && !loadingRef.current && !historyLoadingRef.current) {
           shouldAutoScrollRef.current = false;
           await loadConversation(activeConversationId);
         }

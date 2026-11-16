@@ -53,3 +53,34 @@ export function truncateTextWithEllipsis(value: string, maxChars: number): strin
   if (text.length <= limit) return text;
   return truncateTextAtCodePointBoundary(text, limit - 1).trimEnd() + "…";
 }
+
+export type SyncableChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  provider?: string;
+  agentPending?: unknown;
+  documentData?: unknown;
+  spreadsheetData?: unknown;
+  presentationData?: unknown;
+  sourceData?: unknown;
+  appData?: unknown;
+  taskId?: string;
+  taskTitle?: string;
+};
+
+/** Compare persisted message content and deliverables while ignoring per-device blob URLs. */
+export function getChatMessageSyncSignature(messages: readonly SyncableChatMessage[]): string {
+  return JSON.stringify(messages.map((message) => ({
+    role: message.role,
+    content: message.content,
+    ...(message.provider ? { provider: message.provider } : {}),
+    ...(message.agentPending ? { agentPending: message.agentPending } : {}),
+    ...(message.documentData ? { documentData: message.documentData } : {}),
+    ...(message.spreadsheetData ? { spreadsheetData: message.spreadsheetData } : {}),
+    ...(message.presentationData ? { presentationData: message.presentationData } : {}),
+    ...(message.sourceData ? { sourceData: message.sourceData } : {}),
+    ...(message.appData ? { appData: message.appData } : {}),
+    ...(message.taskId ? { taskId: message.taskId } : {}),
+    ...(message.taskTitle ? { taskTitle: message.taskTitle } : {}),
+  })));
+}
