@@ -9,6 +9,11 @@ import type { PlanStep } from './planStep';
 import type { Specialty } from './specialty';
 import type { TaskStatus } from './taskStatus';
 
+export type TaskCreateStep = Omit<PlanStep, 'output' | 'complete'> & {
+  output: string;
+  complete: string;
+};
+
 export interface TaskCreate {
   /**
      * @minLength 1
@@ -25,6 +30,6 @@ export interface TaskCreate {
      * @minItems 3
      * @maxItems 8
      */
-  steps: PlanStep[];
+  steps: TaskCreateStep[];
   status: TaskStatus;
 }
