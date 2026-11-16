@@ -12,7 +12,7 @@ import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web
 import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
-import { isBlockedNetworkAddress } from "./network-safety.js";
+import { isBlockedNetworkAddress, isLocalLabTargetOverrideEnabled } from "./network-safety.js";
 import { requestPinnedHttp, type PinnedAddress } from "./pinned-http.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
@@ -39,7 +39,7 @@ const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split
 const SEARCH_BASE_URL = process.env.OMDA_AGENT_SEARCH_BASE_URL?.trim() || "";
 const SEARCH_API_KEY = process.env.OMDA_AGENT_SEARCH_API_KEY?.trim() || "";
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.OMDA_AGENT_APP_ORIGINS);
-const ALLOW_LOCAL_LAB_TARGETS = process.env.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true";
+const ALLOW_LOCAL_LAB_TARGETS = isLocalLabTargetOverrideEnabled(process.env);
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
 
 let workspaceRoot = "";
