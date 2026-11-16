@@ -278,7 +278,7 @@ describe("local Agent runtime HTTP integration", () => {
 
 type MockModelHandle = { server: HttpServer; baseUrl: string; requests: number };
 async function startMockModel(
-  responder: (requestNumber: number, body: Record<string, unknown>) => { status?: number; payload?: unknown },
+  responder: (requestNumber: number, body: Record<string, unknown>) => { status?: number; payload?: unknown; delayMs?: number },
 ): Promise<MockModelHandle> {
   const server = createHttpServer(async (req, res) => {
     const chunks: Buffer[] = [];
@@ -286,6 +286,8 @@ async function startMockModel(
     const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as Record<string, unknown>;
     mock.requests++;
     const response = responder(mock.requests, body);
+    if (response.delayMs) await new Promise((resolve) => setTimeout(resolve, response.delayMs));
+    if (res.destroyed) return;
     res.statusCode = response.status || 200;
     if (response.status && response.status >= 400) {
       res.setHeader("content-type", "application/json");
@@ -409,6 +411,69 @@ test("does not replay an approved side effect when the follow-up model request f
   } finally {
     await stopRuntime(isolated);
     await stopMockModel(mock);
+  }
+});
+
+test("cancels an active agent model request and preserves a resumable checkpoint", async () => {
+  const model = await startMockModel(() => ({
+    delayMs: 5000,
+    payload: { choices: [{ delta: { content: "This response must not be delivered after cancellation." }, finish_reason: "stop" }] },
+  }));
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "cancel-test-model",
+  });
+  try {
+    const running = postTo(isolated, "/v1/agent/run", { sessionId: "cancel-active-session", goal: "Wait for the model response." });
+    const deadline = Date.now() + 3000;
+    while (model.requests === 0 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(model.requests, 1, "The mock model request should be active before cancellation.");
+    const cancelled = await postTo(isolated, "/v1/agent/cancel", { sessionId: "cancel-active-session" });
+    const cancelBody = await cancelled.json() as { status: string };
+    assert.equal(cancelled.status, 200);
+    assert.equal(cancelBody.status, "cancelling");
+    const runResponse = await running;
+    const runBody = await runResponse.text();
+    assert.equal(runResponse.status, 200, runBody + " " + isolated.stderr);
+    const result = JSON.parse(runBody) as { status: string; message: string; sessionId: string };
+    assert.equal(result.status, "cancelled");
+    assert.equal(result.sessionId, "cancel-active-session");
+    assert.match(result.message, /checkpoint.*resume/i);
+    assert.equal(model.requests, 1);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(model);
+  }
+});
+
+test("cancels a saved pending approval without executing its side effect", async () => {
+  const model = await startMockModel(() => ({
+    payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "cancel-pending-write", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "must-not-exist.txt", content: "cancelled" }) } }] }, finish_reason: "tool_calls" }] },
+  }));
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "cancel-pending-test-model",
+  });
+  try {
+    const started = await postTo(isolated, "/v1/agent/run", { goal: "Create must-not-exist.txt", sessionId: "cancel-pending-session" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + " " + isolated.stderr);
+    assert.equal((JSON.parse(startedBody) as { status: string }).status, "approval_required");
+    await assert.rejects(readFile(join(isolated.workspace, "must-not-exist.txt"), "utf8"));
+
+    const cancelled = await postTo(isolated, "/v1/agent/cancel", { sessionId: "cancel-pending-session" });
+    const result = await cancelled.json() as { status: string; message: string };
+    assert.equal(cancelled.status, 200);
+    assert.equal(result.status, "cancelled");
+    assert.match(result.message, /No pending action was executed/i);
+    const replay = await postTo(isolated, "/v1/agent/continue", { sessionId: "cancel-pending-session", approvedCallIds: ["cancel-pending-write"] });
+    assert.equal(replay.status, 400);
+    assert.match(await replay.text(), /no pending approval request/i);
+    await assert.rejects(readFile(join(isolated.workspace, "must-not-exist.txt"), "utf8"));
+    assert.equal(model.requests, 1);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(model);
   }
 });
 
