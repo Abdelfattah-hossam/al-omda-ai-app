@@ -6,7 +6,7 @@ import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { getHostedModelTemperature, parseHostedAuditIssues, shouldAuditChatRequest } from "../lib/ai-model-policy.js";
-import { extractExplicitMemoryNode, parseMemoryNode } from "../lib/memory-graph.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode } from "../lib/memory-graph.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -1482,7 +1482,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
     }
-    const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest);
+    const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
     if (explicitMemory) {
       try {
         const memoryNode = { ...parseMemoryNode(explicitMemory, session.user.id), updated_at: new Date().toISOString() };
