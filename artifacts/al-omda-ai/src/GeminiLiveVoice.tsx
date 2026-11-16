@@ -304,7 +304,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
               if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0) {
                 assistantResponseActiveRef.current = false;
-                if (mountedRef.current) setSpeaking(false);
+                if (mountedRef.current) {
+                  setSpeaking(false);
+                  setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+                }
               }
             };
             player.start(startAt);
@@ -335,14 +338,20 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
                 if (fallbackUtteranceRef.current === utterance) {
                   fallbackUtteranceRef.current = null;
                   assistantResponseActiveRef.current = false;
-                  if (mountedRef.current) setSpeaking(false);
+                  if (mountedRef.current) {
+                    setSpeaking(false);
+                    setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+                  }
                 }
               };
               utterance.onerror = () => {
                 if (fallbackUtteranceRef.current === utterance) {
                   fallbackUtteranceRef.current = null;
                   assistantResponseActiveRef.current = false;
-                  if (mountedRef.current) setSpeaking(false);
+                  if (mountedRef.current) {
+                    setSpeaking(false);
+                    setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+                  }
                 }
               };
               window.speechSynthesis.speak(utterance);
@@ -352,7 +361,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               }
             } else if (mountedRef.current) {
               assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
-              setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
+              setStatus(pendingPcmPlaybackRef.current > 0
+                ? (ar ? "استنى لحد ما العمدة يخلص كلامه..." : "Please wait until AL OMDA finishes speaking...")
+                : (ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready..."));
             }
           } else if (mountedRef.current) {
             assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
