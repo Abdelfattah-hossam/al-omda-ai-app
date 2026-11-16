@@ -125,7 +125,12 @@ function authenticated(req: IncomingMessage): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address: PinnedAddress }> {
-  const url = new URL(rawUrl);
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Provide a valid absolute HTTP(S) URL.");
+  }
   if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
   const rawHostname = url.hostname.toLowerCase();
   const hostname = rawHostname.startsWith("[") && rawHostname.endsWith("]") ? rawHostname.slice(1, -1) : rawHostname;
