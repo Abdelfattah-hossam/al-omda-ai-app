@@ -6,6 +6,7 @@ import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { getHostedModelTemperature, parseHostedAuditIssues, shouldAuditChatRequest } from "../lib/ai-model-policy.js";
+import { extractExplicitMemoryNode, parseMemoryNode } from "../lib/memory-graph.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -1479,6 +1480,20 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         }
       } catch (error) {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
+    const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest);
+    if (explicitMemory) {
+      try {
+        const memoryNode = parseMemoryNode(explicitMemory, session.user.id);
+        const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?on_conflict=user_id,node_type,normalized_label", {
+          method: "POST",
+          headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(memoryNode),
+        }, accessToken);
+        await readSupabaseJson<unknown>(memoryResponse);
+      } catch (error) {
+        console.warn("[Explicit AI memory save failed]", error instanceof Error ? error.message : "Unknown error");
       }
     }
     res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
