@@ -1196,6 +1196,9 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
     }
     delete state.pendingMcpTools;
     appendMcpImageObservations(state.messages, imageQueue);
+    // Persist completed side effects and their tool results before asking the model
+    // for the next turn, so provider failures cannot lose the execution checkpoint.
+    await saveAgentState(id, state);
     if (!state.purpose) {
       const originalGoal = state.messages.find((message) => message.role === "user")?.content;
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
