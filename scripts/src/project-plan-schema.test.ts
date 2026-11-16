@@ -10,12 +10,11 @@ const openapiUrl = new URL("../../lib/api-spec/openapi.yaml", import.meta.url);
 const generatedApiUrl = new URL("../../lib/api-zod/src/generated/api.ts", import.meta.url);
 
 test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
-  const [setup, migration, sequenceMigration, openapi, generatedApi] = await Promise.all([
+  const [setup, migration, sequenceMigration, openapi] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
     readFile(sequenceMigrationUrl, "utf8"),
     readFile(openapiUrl, "utf8"),
-    readFile(generatedApiUrl, "utf8"),
   ]);
   for (const [label, sql] of [["setup.sql", setup], ["migration", migration]] as const) {
     assert.match(sql, /jsonb_array_length\(p_steps\)\s+not between 3 and 8/i, label + " must allow 3 to 8 project steps");
@@ -42,13 +41,13 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
   const create = api.slice(createStart, createEnd);
   const update = api.slice(updateStart, updateEnd);
   for (const [label, schema] of [["create", create], ["update", update]] as const) {
-    assert.match(schema, /"text": zod\\.string\\(\\)\\.min\\(1\\)\\.max\\([^)]*StepsItemTextMax\\)/, label + " step text must be bounded and non-empty");
-    assert.match(schema, /"output": zod\\.string\\(\\)\\.min\\(1\\)\\.max\\(1200\\)/, label + " step output must be required and non-empty");
-    assert.match(schema, /"complete": zod\\.string\\(\\)\\.min\\(1\\)\\.max\\(1200\\)/, label + " step completion criteria must be required and non-empty");
-    assert.match(schema, /\\)\\)\\.min\\(3\\)\\.max\\([^)]*StepsMax\\)/, label + " must enforce 3 to 8 steps");
+    assert.match(schema, /"text": zod\.string\(\)\.min\(1\)\.max\([^)]*StepsItemTextMax\)/, label + " step text must be bounded and non-empty");
+    assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)/, label + " step output must be required and non-empty");
+    assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)/, label + " step completion criteria must be required and non-empty");
+    assert.match(schema, /\)\)\.min\(3\)\.max\([^)]*StepsMax\)/, label + " must enforce 3 to 8 steps");
   }
-  assert.match(create, /"state": zod\\.literal\\('pending'\\)/, "new task steps must start pending");
-  assert.match(create, /"status": zod\\.literal\\('review'\\)/, "new tasks must start in review");
-  assert.match(update, /"state": zod\\.enum\\(\\['pending', 'approved', 'rejected'\\]\\)/, "updates must preserve supported step states");
-  assert.match(update, /"status": zod\\.enum\\(\\['review', 'paused', 'approved', 'stopped'\\]\\)/, "updates must preserve supported task statuses");
+  assert.match(create, /"state": zod\.literal\('pending'\)/, "new task steps must start pending");
+  assert.match(create, /"status": zod\.literal\('review'\)/, "new tasks must start in review");
+  assert.match(update, /"state": zod\.enum\(\['pending', 'approved', 'rejected'\]\)/, "updates must preserve supported step states");
+  assert.match(update, /"status": zod\.enum\(\['review', 'paused', 'approved', 'stopped'\]\)/, "updates must preserve supported task statuses");
 });
