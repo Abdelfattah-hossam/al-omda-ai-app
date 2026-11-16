@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
