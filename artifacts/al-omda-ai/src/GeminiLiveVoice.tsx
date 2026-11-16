@@ -335,6 +335,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               utterance.onerror = () => {
                 if (fallbackUtteranceRef.current === utterance) {
                   fallbackUtteranceRef.current = null;
+                  assistantResponseActiveRef.current = false;
                   if (mountedRef.current) setSpeaking(false);
                 }
               };
@@ -348,7 +349,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               setStatus(ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready...");
             }
           } else if (mountedRef.current) {
-            assistantResponseActiveRef.current = false;
+            assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
             setStatus(ar ? "Gemini استقبل دور الكلام لكنه لم يرسل ردًا. جرّب جملة أقصر." : "Gemini received the turn but sent no reply.");
           }
           userTranscriptRef.current = "";
