@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
@@ -207,5 +207,44 @@ describe("PowerPoint artifact intent", () => {
     assert.equal(intent.kind, "conversation");
     const presentation = classifyLatestChatIntent([{ role: "user", content: "جهزلي عرض تقديمي عن السلامة" }]);
     assert.equal(presentation.kind, "powerpoint_file");
+  });
+});
+
+
+describe("source-code artifact intent", () => {
+  test("does not create files from casual extension mentions or explanation/debug requests", () => {
+    for (const request of [
+      "I use a file called server.ts at work",
+      "Can you explain what app.py does?",
+      "Review the code in main.ts",
+      "Fix the bug in dashboard.jsx",
+      "What is the difference between JSON and YAML?",
+      "مش عايز تعمل ملف app.ts",
+      "لا تنشئ ملف Python",
+    ]) {
+      assert.equal(isExplicitSourceCodeFileRequest(request), false, "unexpected source file intent: " + request);
+    }
+  });
+
+  test("creates a source file only when an explicit create or export action is requested", () => {
+    for (const request of [
+      "Create a file named app.ts",
+      "Write a Python script file for download",
+      "جهزلي ملف HTML للتحميل",
+      "اكتبلي ملف JavaScript واحفظه",
+      "Export the source code as main.py",
+    ]) {
+      assert.equal(isExplicitSourceCodeFileRequest(request), true, "missed source file intent: " + request);
+    }
+  });
+
+  test("routes source-code file intent using only the latest user turn", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "Create a file named app.ts" },
+      { role: "assistant", content: "I can do that." },
+      { role: "user", content: "Can you explain what app.py does?" },
+    ]);
+    assert.equal(intent.kind, "conversation");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "Create a file named app.ts" }]).kind, "source_code_file");
   });
 });
