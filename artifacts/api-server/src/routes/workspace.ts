@@ -275,7 +275,7 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
           p_request: plan.request,
           p_specialty: plan.specialty,
           p_steps: plan.steps,
-          p_daily_limit: 1000,
+          p_daily_limit: 1000, // Reserved DB compatibility argument; the enforced limit is fixed in the function.
         }),
       },
       session.accessToken,
