@@ -22,6 +22,7 @@ test("normalizes a user-confirmed memory node and binds it to the authenticated 
 test("rejects invalid node types, empty labels, oversized details, and sensitive credential fields", () => {
   assert.throws(() => parseMemoryNode({ nodeType: "medical", label: "x" }, userId), /Unsupported/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: " " }, userId), /label/);
+  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "???" }, userId), /searchable text/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { apiKey: "do-not-store" } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { metadata: { medicalNotes: "private" } } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My medical diagnosis is private" }, userId), /Sensitive personal information/);
