@@ -11,6 +11,29 @@ export type PinnedHttpResponse = {
   body: ReadableStream<Uint8Array> | null;
 };
 
+export async function requestPinnedHttpWithFallback(
+  url: URL,
+  addresses: readonly PinnedAddress[],
+  method: string,
+  headers: Headers,
+  timeoutMs = 12000,
+): Promise<PinnedHttpResponse> {
+  if (!addresses.length) throw new Error("The target has no validated network addresses.");
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  for (const address of addresses) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    try {
+      return await requestPinnedHttp(url, address, method, headers, remainingMs);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError instanceof Error) throw lastError;
+  throw new Error("No validated network address could be reached before the request deadline.");
+}
+
 export function requestPinnedHttp(
   url: URL,
   address: PinnedAddress,
