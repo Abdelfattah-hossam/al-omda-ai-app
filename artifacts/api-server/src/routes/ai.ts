@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
@@ -112,10 +112,7 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
   return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
 }
 function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(request);
-  return hasSourceExtension || (isCodingRequest(messages) && /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request));
+  return isExplicitSourceCodeFileRequest(getLatestUserRequest(messages));
 }
 
 
@@ -1091,7 +1088,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const excelRequest = latestIntent.kind === "excel_file";
     const wordDocumentRequest = !excelRequest && latestIntent.kind === "word_file" && isWordDocumentRequest(messages);
     const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
-    const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isSourceCodeFileRequest(messages);
+    const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && latestIntent.kind === "source_code_file";
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
