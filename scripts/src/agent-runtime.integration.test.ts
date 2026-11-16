@@ -191,6 +191,7 @@ describe("local Agent runtime HTTP integration", () => {
     const historyRuntime = await startRuntime({
       OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
       OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+      OMDA_AGENT_ENVIRONMENT: "development",
       OMDA_TEST_ADMIN_ROLE: "admin-secret-value",
     });
     try {
