@@ -564,3 +564,8 @@ $$;
 
 revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public;
 grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
+
+-- Keep future public sequences private unless an application migration grants access explicitly.
+alter default privileges for role postgres in schema public
+  revoke all on sequences from anon, authenticated, service_role;
+
