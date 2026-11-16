@@ -258,7 +258,7 @@ create or replace function public.complete_ai_task_step(
   p_result text,
   p_executed_at timestamptz,
   p_units integer default 2,
-  p_daily_limit integer default 1000
+  p_daily_limit integer default 1000 -- Reserved compatibility parameter; the supported daily limit is fixed at 1000
 )
 returns jsonb
 language plpgsql
