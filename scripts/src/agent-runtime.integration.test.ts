@@ -415,9 +415,11 @@ test("does not replay an approved side effect when the follow-up model request f
 });
 
 test("cancels an active agent model request and preserves a resumable checkpoint", async () => {
-  const model = await startMockModel(() => ({
+  const model = await startMockModel((requestNumber) => requestNumber === 1 ? ({
     delayMs: 5000,
     payload: { choices: [{ delta: { content: "This response must not be delivered after cancellation." }, finish_reason: "stop" }] },
+  }) : ({
+    payload: { choices: [{ delta: { content: "The saved Agent session resumed successfully." }, finish_reason: "stop" }] },
   }));
   const isolated = await startRuntime({
     OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
@@ -439,7 +441,14 @@ test("cancels an active agent model request and preserves a resumable checkpoint
     assert.equal(result.status, "cancelled");
     assert.equal(result.sessionId, "cancel-active-session");
     assert.match(result.message, /checkpoint.*resume/i);
-    assert.equal(model.requests, 1);
+
+    const resumed = await postTo(isolated, "/v1/agent/resume", { sessionId: "cancel-active-session" });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 200, resumedBody + " " + isolated.stderr);
+    const resumedResult = JSON.parse(resumedBody) as { status: string; message: string };
+    assert.equal(resumedResult.status, "completed");
+    assert.equal(resumedResult.message, "The saved Agent session resumed successfully.");
+    assert.equal(model.requests, 2);
   } finally {
     await stopRuntime(isolated);
     await stopMockModel(model);
