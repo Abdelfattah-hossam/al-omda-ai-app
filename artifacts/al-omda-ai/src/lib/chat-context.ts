@@ -19,3 +19,14 @@ export function buildBoundedChatContext(
   }
   return selected;
 }
+
+/** Truncate UTF-16 text without leaving an unmatched high surrogate at the boundary. */
+export function truncateTextAtCodePointBoundary(value: string, maxChars: number): string {
+  const text = String(value ?? "");
+  const limit = Math.max(0, Math.floor(maxChars));
+  if (text.length <= limit) return text;
+  let end = limit;
+  const last = text.charCodeAt(end - 1);
+  if (last >= 0xd800 && last <= 0xdbff) end -= 1;
+  return text.slice(0, end);
+}
