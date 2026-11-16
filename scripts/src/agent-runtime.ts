@@ -1193,7 +1193,7 @@ async function cancelAgent(body: Json): Promise<Json> {
   const active = activeAgentControllers.get(id);
   if (active) {
     active.abort();
-    return { status: "cancelling", sessionId: id, message: "Cancellation requested. The active model request is being stopped." };
+    return { status: "cancelling", sessionId: id, message: "Cancellation requested. The current model request will be interrupted; a tool action already in progress may finish before the checkpoint is saved." };
   }
   return await withAgentSessionLock(id, "This agent session is already changing state. Retry cancellation shortly.", async () => {
     const state = await loadAgentState(id);
