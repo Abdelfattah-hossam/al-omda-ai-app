@@ -2,7 +2,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { requestPinnedHttp } from "./pinned-http.js";
+import { requestPinnedHttp, requestPinnedHttpWithFallback } from "./pinned-http.js";
 
 test("connects to the validated IP while preserving the requested hostname", async () => {
   const server = createServer((request, response) => {
@@ -51,6 +51,30 @@ test("rejects protocol upgrades instead of leaving the request pending", async (
       requestPinnedHttp(target, { address: "127.0.0.1", family: 4 }, "GET", new Headers({ connection: "Upgrade", upgrade: "test" })),
       /Protocol upgrades are not supported/
     );
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+
+test("falls back to the next validated address within one overall deadline", async () => {
+  const server = createServer((request, response) => {
+    response.writeHead(200, { "content-type": "text/plain" });
+    response.end(request.headers.host || "missing-host");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  try {
+    const target = new URL("http://fallback-test.invalid:" + address.port + "/");
+    const response = await requestPinnedHttpWithFallback(
+      target,
+      [{ address: "127.0.0.2", family: 4 }, { address: "127.0.0.1", family: 4 }],
+      "GET",
+      new Headers(),
+      3000,
+    );
+    assert.equal(response.status, 200);
+    assert.equal(await new Response(response.body).text(), "fallback-test.invalid:" + address.port);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
