@@ -314,9 +314,10 @@ async function stopMockModel(mock: MockModelHandle): Promise<void> {
 
 test("revalidates redirect hostnames before following an allowlisted HTTP request", async () => {
   let redirectedRequests = 0;
+  let targetPort = 0;
   const target = createHttpServer((request, response) => {
     if (request.url === "/start") {
-      response.writeHead(302, { location: "http://localhost:" + (target.address() as AddressInfo).port + "/blocked" });
+      response.writeHead(302, { location: "http://localhost:" + targetPort + "/blocked" });
       response.end();
       return;
     }
@@ -328,6 +329,7 @@ test("revalidates redirect hostnames before following an allowlisted HTTP reques
     target.listen(0, "127.0.0.1", resolve);
   });
   const port = (target.address() as AddressInfo).port;
+  targetPort = port;
   const mock = await startMockModel((requestNumber) => requestNumber === 1
     ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "redirect-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/start", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
     : { payload: { choices: [{ delta: { content: "The redirect target was rejected." }, finish_reason: "stop" }] } });
@@ -341,7 +343,7 @@ test("revalidates redirect hostnames before following an allowlisted HTTP reques
   try {
     const response = await postTo(isolated, "/v1/agent/run", { goal: "Fetch the allowlisted endpoint and safely handle its redirect." });
     const body = await response.text();
-    assert.equal(response.status, 200, body + "\\n" + isolated.stderr);
+    assert.equal(response.status, 200, body + "\n" + isolated.stderr);
     assert.equal((JSON.parse(body) as { status: string }).status, "completed");
     assert.equal(mock.requests, 2);
     assert.equal(redirectedRequests, 0, "a redirect to a hostname outside the allowlist must not be contacted");
