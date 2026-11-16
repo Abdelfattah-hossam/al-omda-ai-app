@@ -55,6 +55,17 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 
 Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add only that endpoint hostname to `OMDA_AGENT_ALLOWED_HOSTS`. If the provider uses the standard Bing Web Search authentication header, set `OMDA_AGENT_SEARCH_API_KEY`; the key is read only by the local runtime and is never included in model prompts or tool output.
 
+### Hosted chat API configuration
+
+The Cloudflare-hosted chat API now selects temperature from the latest user request:
+- Legal, engineering, medical, finance, software, and security work: **0.2** by default.
+- Research and business analysis: **0.3**.
+- General conversation: **0.4**.
+
+Set the Worker environment variable OMDA_PRECISE_TEMPERATURE to a value from 0.1 to 0.3 to override the hosted precision-task default. Invalid values fall back to 0.2. This setting changes sampling behavior only; it does not guarantee factual accuracy.
+
+Hosted chat currently uses provider text-generation APIs and does not expose terminal execution or arbitrary local file access. Function Calling with actual tools is enabled in the separate local Agent Runtime described below. It advertises built-in search, workspace file tools, terminal execution, and MCP functions when available; writes, terminal commands, and MCP actions still require explicit approval. Keep the local runtime connected for computer/file execution. Do not interpret hosted-chat availability as permission to run commands on the Cloudflare Worker.
+
 ### Model temperature and function calling
 
 The runtime explicitly enables OpenAI-compatible Function Calling on model requests whenever tools are available (tools plus tool_choice auto). This includes built-in web search, workspace file access, approved terminal execution, configured MCP tools, and delegated specialists. Write operations, terminal commands, and MCP actions remain behind their existing approval gates. When no tools are supplied (for example, the internal quality auditor), tool calling is omitted.
