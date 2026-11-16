@@ -142,7 +142,7 @@ async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; address
   }
   // Keep every validated candidate so an unreachable IPv6/IPv4 route does
   // not prevent trying another already-validated address for the same host.
-  const validatedAddresses: PinnedAddress[] = addresses.slice(0, 8).map((entry) => ({
+  const validatedAddresses: PinnedAddress[] = addresses.map((entry) => ({
     address: entry.address,
     family: entry.family as 4 | 6,
   }));
