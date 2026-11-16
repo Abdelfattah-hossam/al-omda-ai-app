@@ -41,8 +41,8 @@ test("skips whitespace-only fragments at the aggregate context boundary", () => 
   const result = buildBoundedChatContext([
     { role: "user", content: "a".repeat(10) },
     { role: "assistant", content: "b".repeat(9) + "\n" },
-    { role: "user", content: "latest" },
+    { role: "user", content: "newer" },
   ], { maxTotalChars: 6 });
-  assert.deepEqual(result, [{ role: "user", content: "latest" }]);
+  assert.deepEqual(result, [{ role: "user", content: "newer" }]);
   assert.ok(result.every((message) => message.content.trim().length > 0));
 });
