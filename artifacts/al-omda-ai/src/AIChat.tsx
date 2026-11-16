@@ -7,7 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
-import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature } from "./lib/chat-context";
+import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged } from "./lib/chat-context";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -496,7 +496,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const listedUpdatedAt = typeof activeSummary?.updated_at === "string" ? activeSummary.updated_at : "";
         // Conversation messages can contain large Office artifacts. Fetch and compare
         // those payloads only after the server's updated_at changes, not on every poll.
-        if (listedUpdatedAt && listedUpdatedAt === lastSyncedConversationUpdatedAtRef.current) return;
+        if (!hasConversationUpdatedAtChanged(listedUpdatedAt, lastSyncedConversationUpdatedAtRef.current)) return;
         const conversationResponse = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin", cache: "no-store" });
         if (!conversationResponse.ok) return;
         const conversationData = await conversationResponse.json();
