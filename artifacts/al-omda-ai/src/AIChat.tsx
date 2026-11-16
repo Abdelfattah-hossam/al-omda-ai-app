@@ -7,7 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
-import { buildBoundedChatContext, truncateTextAtCodePointBoundary } from "./lib/chat-context";
+import { buildBoundedChatContext, truncateTextWithEllipsis } from "./lib/chat-context";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -932,7 +932,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           });
           const taskData = await taskResponse.json().catch(() => ({}));
           if (!taskResponse.ok || !taskData.id) throw new Error(taskData.error || "تعذر حفظ المشروع في سجل المهام.");
-          const planSummary = plan.steps.map((step: any, index: number) => [
+          const planSummary = plan.steps.map((step: { text?: unknown; output?: unknown; complete?: unknown }, index: number) => [
             (index + 1) + ". " + String(step.text || "").slice(0, 240),
             (ar ? "   المخرج: " : "   Deliverable: ") + String(step.output || "").slice(0, 160),
             (ar ? "   معيار الإنجاز: " : "   Acceptance: ") + String(step.complete || "").slice(0, 160),
@@ -944,15 +944,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             planSummary +
             (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**.");
           const maxVisibleChars = 7800;
-          const visiblePlan = planContent.length >= maxVisibleChars
-            ? truncateTextAtCodePointBoundary(planContent, maxVisibleChars - 1).trimEnd() + "…"
-            : planContent;
+          const visiblePlan = truncateTextWithEllipsis(planContent, maxVisibleChars);
           const replyBudget = Math.max(0, maxVisibleChars - visiblePlan.length);
-          const visibleReply = replyBudget <= 0
-            ? ""
-            : assistantMessage.content.length > replyBudget
-              ? truncateTextAtCodePointBoundary(assistantMessage.content, replyBudget - 1).trimEnd() + "…"
-              : assistantMessage.content;
+          const visibleReply = truncateTextWithEllipsis(assistantMessage.content, replyBudget);
           const combinedContent = visibleReply + visiblePlan;
           assistantMessage = {
             ...assistantMessage,
