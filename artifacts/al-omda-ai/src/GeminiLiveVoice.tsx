@@ -233,6 +233,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         void context.close();
         return;
       }
+      if (socket.readyState !== WebSocket.OPEN) {
+        throw new Error(ar ? "انقطع اتصال Gemini أثناء تجهيز الصوت." : "Gemini disconnected while preparing audio.");
+      }
 
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
