@@ -30,7 +30,7 @@ export function detectProjectSpecialty(request: string): ProjectSpecialty | null
   if (isInformationRequest(value) && !explicitBuildQuestion) return null;
 
   // Include common Egyptian/colloquial action verbs without treating a noun mention as a build order.
-  const buildVerb = /(?:اعمل|اعملي|اعمللي|تعمل|تعملي|تعمللي|اعملوا|انشئ|انشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|صمملي|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|جهز|جهزلي|جهز\s+لي|سوي|سويلي|سوي\s+لي|build|create|develop|make|implement|start|design)/i.test(value);
+  const buildVerb = /(?:اعمل|اعملي|اعمللي|تعمل|تعملي|تعمللي|اعملوا|انشئ|انشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|صمملي|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|جهز|جهزلي|جهز\s+لي|سوي|سويلي|سوي\s+لي|build|create|develop|make|implement|start|design|prepare|generate|write|export)/i.test(value);
   const directRequest = /(?:عايز|عاوز|محتاج|اريد)\s+(?:(?:اعمل|اعمللي|انشئ|انشاء|ابني|بناء|نفذ|صمم|طور|جهز|سوي)\s+)?(?:مشروع(?:\s+جديد)?|تطبيق|ابلكيشن|موقع(?:\s+الكتروني)?|برنامج|متجر(?:\s+الكتروني)?|نظام|منصة|لعبة|ملف|مستند|وثيقة|جدول|مصنف|عرض(?:\s+تقديمي)?|تقرير|website|web app|mobile app|application|software|project|store|platform|system|file|document|spreadsheet|workbook|presentation|report)/i.test(value) ||
     /\b(?:i want|i need)\s+(?:to\s+)?(?:a\s+)?(?:website|web app|mobile app|application|software|project|store|platform|system|file|document|spreadsheet|workbook|presentation|report)\b/i.test(value);
   const fromScratch = /(?:من الصفر للنهاية|من البداية للنهاية|من الصفر|from scratch|end.to.end)/i.test(value);
