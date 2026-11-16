@@ -13,7 +13,7 @@ export function buildBoundedChatContext(
   for (let index = messages.length - 1; index >= 0 && selected.length < maxMessages && remaining > 0; index -= 1) {
     const message = messages[index];
     const content = String(message.content ?? "").slice(-Math.min(maxMessageChars, remaining));
-    if (!content) continue;
+    if (!content.trim()) continue;
     selected.unshift({ role: message.role, content });
     remaining -= content.length;
   }
