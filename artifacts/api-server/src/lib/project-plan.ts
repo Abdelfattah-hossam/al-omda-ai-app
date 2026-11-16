@@ -21,7 +21,7 @@ export function parseProjectPlan(raw: string): ProjectPlan | null {
   try {
     let jsonText = raw.trim();
     if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
     }
     const value = JSON.parse(jsonText) as unknown;
     if (!value || typeof value !== "object") return null;
