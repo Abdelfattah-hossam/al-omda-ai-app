@@ -11,6 +11,12 @@ export type PinnedHttpResponse = {
   body: ReadableStream<Uint8Array> | null;
 };
 
+export function getConnectAttemptBudget(remainingMs: number, remainingAddresses: number): number {
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+  if (!Number.isInteger(remainingAddresses) || remainingAddresses <= 0) return 0;
+  return Math.max(1, Math.floor(remainingMs / remainingAddresses));
+}
+
 export async function requestPinnedHttpWithFallback(
   url: URL,
   addresses: readonly PinnedAddress[],
@@ -27,10 +33,7 @@ export async function requestPinnedHttpWithFallback(
     // Reserve part of the overall budget for each remaining validated address.
     // A stalled first route must not consume the time needed to try the next one.
     const remainingAddresses = addresses.length - index;
-    const connectBudgetMs = Math.min(
-      remainingMs,
-      Math.max(1000, Math.floor(remainingMs / remainingAddresses)),
-    );
+    const connectBudgetMs = getConnectAttemptBudget(remainingMs, remainingAddresses);
     try {
       return await requestPinnedHttp(url, address, method, headers, remainingMs, connectBudgetMs);
     } catch (error) {
