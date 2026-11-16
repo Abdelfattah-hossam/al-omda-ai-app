@@ -853,9 +853,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\n\n");
         const action = agentSessionId ? "resume" : "run";
         const requestSessionId = agentSessionId || crypto.randomUUID().replace(/-/g, "");
-        setAgentSessionId(requestSessionId);
         setAgentRunSessionId(requestSessionId);
-        try { window.localStorage.setItem("omda-agent-session", requestSessionId); } catch {}
         let streamedText = "";
         const startedAt = Date.now();
         const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action, sessionId: requestSessionId, goal }) });
