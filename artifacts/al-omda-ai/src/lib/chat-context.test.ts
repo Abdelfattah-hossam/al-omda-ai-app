@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildBoundedChatContext, truncateTextAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
+import { buildBoundedChatContext, combineReplyAndPlan, truncateTextAtCodePointBoundary, truncateTextFromStartAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
 
 test("keeps the newest messages within the message-count limit", () => {
   const result = buildBoundedChatContext([
@@ -80,5 +80,26 @@ test("chat sync detects changed deliverables but ignores per-device blob URLs", 
   }];
   const signature = (items: typeof local) => getChatMessageSyncSignature(items);
   assert.equal(signature(local), signature(remote));
+  assert.equal(signature(local), signature([{ ...remote[0], provider: "different model", agentPending: { pending: true }, spreadsheetData: { rows: [[10]], columns: ["Amount"], title: "Report" } }]));
   assert.notEqual(signature(local), signature([{ ...remote[0], spreadsheetData: { ...remote[0].spreadsheetData, rows: [[20]] } }]));
+});
+
+test("truncates from the start without beginning inside an emoji surrogate pair", () => {
+  assert.equal(truncateTextFromStartAtCodePointBoundary("abc😀d", 2), "d");
+  assert.equal(truncateTextFromStartAtCodePointBoundary("abc😀d", 3), "😀d");
+});
+
+test("trims trailing whitespace before deciding whether an ellipsis is needed", () => {
+  assert.equal(truncateTextWithEllipsis("abc   ", 4), "abc");
+});
+
+test("reserves visible space for the assistant reply when a plan is long", () => {
+  const combined = combineReplyAndPlan("Here is the key result.", "P".repeat(9000), 100);
+  assert.ok(combined.startsWith("Here is the key result."));
+  assert.ok(combined.length <= 100);
+  assert.ok(combined.includes("P"));
+});
+
+test("uses available space efficiently when the plan is short", () => {
+  assert.equal(combineReplyAndPlan("A concise answer.", "A short plan.", 100), "A concise answer.A short plan.");
 });
