@@ -108,7 +108,7 @@ export function extractExplicitMemoryNode(request: string): Record<string, unkno
   if (!text || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
   const patterns = [
     /^(?:please\s+)?(?:remember|save|store|keep in memory)\s+(?:that\s+)?(.+)$/i,
-    /^(?:افتكر|افتكر\s+ان|افتكر\s+أن|احفظ|احفظ\s+ان|احفظ\s+أن|سجل\s+في\s+الذاكرة|سجل\s+عندك|ثبت\s+عندك|متنساش|ما\s+تنساش)\s*(.+)$/i,
+    /^(?:افتكر|افتكر\s+ان|افتكر\s+أن|افتكر\s+إن|احفظ|احفظ\s+ان|احفظ\s+أن|احفظ\s+إن|سجل\s+في\s+الذاكرة|سجل\s+عندك|ثبت\s+عندك|متنساش|ما\s+تنساش)\s*(.+)$/i,
   ];
   let fact = "";
   for (const pattern of patterns) {
@@ -122,7 +122,7 @@ export function extractExplicitMemoryNode(request: string): Record<string, unkno
   if (/password|passcode|secret|api.?key|access.?token|bank.?account|credit.?card|passport|national.?id|diagnos|health condition|religion|political party|sexual orientation|race|ethnic|كلمة المرور|كلمة السر|رمز سري|مفتاح api|رقم بطاقة|حساب بنكي|جواز سفر|تشخيص|مرض|ديانة|انتماء سياسي|ميول جنسية|عرق|أصل عرقي/i.test(fact)) return null;
   const nodeType = /project|مشروع|تطبيق|موقع|منصة/i.test(fact) ? "project"
     : /decision|decided|قرار|قررت|اتفقنا/i.test(fact) ? "decision"
-    : /constraint|must|never|don't change|لا تغير|لا تعدل|ممنوع|شرط/i.test(fact) ? "constraint"
+    : /constraint|must|never|don't change|لا تغير|لا تعدل|مايتغيرش|ما يتغيرش|مايتعدلش|ما يتعدلش|ممنوع|شرط/i.test(fact) ? "constraint"
     : /correct|correction|wrong|غلط|تصحيح|صحح/i.test(fact) ? "correction"
     : /prefer|preference|أفضل|افضل|بحب|أفضلية|عايز|عاوز|اريد|أريد/i.test(fact) ? "preference"
     : "other";
