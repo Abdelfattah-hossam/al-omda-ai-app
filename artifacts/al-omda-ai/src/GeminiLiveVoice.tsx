@@ -206,6 +206,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           if (!speechActiveRef.current) {
             // A new user utterance opens exactly one new assistant response cycle.
             assistantTurnCompleteRef.current = false;
+            userTranscriptRef.current = "";
+            assistantTranscriptRef.current = "";
+            receivedAudioChunks = 0;
             socket.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
             speechActiveRef.current = true;
             setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
@@ -302,6 +305,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
           const assistantText = assistantTranscriptRef.current.trim();
+          // Clear the completed turn immediately so later turns cannot append stale transcripts.
+          userTranscriptRef.current = "";
+          assistantTranscriptRef.current = "";
           if (userText) onTranscript("user", userText);
           if (assistantText) {
             onTranscript("assistant", assistantText);
