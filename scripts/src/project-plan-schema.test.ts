@@ -27,6 +27,9 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   }
   assert.match(setup, /alter default privileges for role postgres in schema public\s+revoke all on sequences from anon, authenticated, service_role/i);
   assert.match(sequenceMigration, /revoke all on sequences from anon, authenticated, service_role/i);
+  const earlierSequenceMigration = await readFile(new URL("../../supabase/migrations/20261116174710_restrict_public_sequence_defaults.sql", import.meta.url), "utf8");
+  assert.match(earlierSequenceMigration, /preserved because this migration was already applied/i);
+  assert.match(migration, /reserved compatibility parameter/i);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
@@ -66,10 +69,14 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     const response = api.slice(start, end < 0 ? api.length : end);
     assert.ok(response.includes('"output": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing output guidance");
     assert.ok(response.includes('"complete": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing completion guidance");
+    const stepsStart = response.indexOf('"steps": zod.array(');
+    const stepsEnd = response.indexOf('"status":', stepsStart);
+    assert.ok(stepsStart >= 0 && stepsEnd > stepsStart, name + " must expose its response step array");
+    assert.doesNotMatch(response.slice(stepsStart, stepsEnd), /\\)\\.(?:min|max)\\(/, name + " must not impose new plan-count limits on persisted response data");
   }
   assert.ok(route.includes("isValidNewTaskPlan(plan)"));
   assert.ok(validation.includes("plan.steps.length >= 3"));
   assert.ok(validation.includes("plan.steps.length <= 8"));
   assert.ok(validation.includes("new Set(plan.steps.map((step) => step.id)).size === plan.steps.length"));
-  assert.ok(validation.includes("!step.result && !step.executedAt && !step.executionStatus && !step.executionError"));
+  assert.ok(validation.includes('!("result" in step) && !("executedAt" in step) && !("executionStatus" in step) && !("executionError" in step)'));
 });
