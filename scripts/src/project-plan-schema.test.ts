@@ -33,7 +33,7 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
-  assert.match(taskUpdateSpec, /minItems: 3[\s\S]*maxItems: 8/);
+  assert.match(taskUpdateSpec, /minItems: 1[\s\S]*maxItems: 20/);
   const taskResponseSpec = openapi.slice(openapi.indexOf("    Task:"), openapi.indexOf("    Workspace:"));
   assert.ok(taskResponseSpec.includes('$ref: "#/components/schemas/PlanStep"'), "task responses must retain legacy-compatible optional step guidance");
   assert.ok(!taskResponseSpec.includes("minItems:"), "task responses must not reject persisted legacy step counts");
@@ -55,9 +55,15 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
   const update = api.slice(updateStart, updateEnd);
   for (const [label, schema] of [["create", create], ["update", update]] as const) {
     assert.match(schema, /"text": zod\.string\(\)\.min\(1\)\.max\([^)]*StepsItemTextMax\)/, label + " step text must be bounded and non-empty");
-    assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)/, label + " step output must be required and non-empty");
-    assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)/, label + " step completion criteria must be required and non-empty");
-    assert.match(schema, /\)\)\.min\(3\)\.max\([^)]*StepsMax\)/, label + " must enforce 3 to 8 steps");
+    if (label === "create") {
+      assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)/, "new step output must be required and non-empty");
+      assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)/, "new step completion criteria must be required and non-empty");
+      assert.match(schema, /\)\)\.min\(3\)\.max\([^)]*StepsMax\)/, "new tasks must enforce 3 to 8 steps");
+    } else {
+      assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)\.optional\(\)/, "legacy output guidance must be optional on update");
+      assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)\.optional\(\)/, "legacy completion guidance must be optional on update");
+      assert.match(schema, /\)\)\.min\(1\)\.max\(updateTaskBodyOneStepsMax\)/, "updates must accept the legacy 1-to-20 step range");
+    }
   }
   assert.match(create, /"state": zod\.literal\('pending'\)/, "new task steps must start pending");
   assert.match(create, /"status": zod\.literal\('review'\)/, "new tasks must start in review");
