@@ -30,7 +30,10 @@ function zipBlob(entries: Array<{ name: string; content: string }>, mime: string
   const centralSize = central.reduce((sum, part) => sum + part.length, 0), end = new Uint8Array(22), ev = new DataView(end.buffer);
   ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true); ev.setUint16(8, entries.length, true);
   ev.setUint16(10, entries.length, true); ev.setUint32(12, centralSize, true); ev.setUint32(16, offset, true); ev.setUint16(20, 0, true);
-  return new Blob([...local, ...central, end], { type: mime });
+  const archive = new Uint8Array(offset + centralSize + end.length);
+  let cursor = 0;
+  for (const part of [...local, ...central, end]) { archive.set(part, cursor); cursor += part.length; }
+  return new Blob([archive.buffer], { type: mime });
 }
 function excelColumn(index: number): string {
   let n = index + 1, result = "";
