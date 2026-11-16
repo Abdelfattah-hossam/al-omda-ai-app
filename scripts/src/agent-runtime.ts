@@ -1191,8 +1191,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
-        recordAgentToolFailure(state, call, error);
-      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
     delete state.pendingMcpTools;
