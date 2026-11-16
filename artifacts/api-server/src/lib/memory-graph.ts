@@ -109,7 +109,7 @@ export function parseMemoryEdge(input: unknown, userId: string): MemoryEdgeInput
 
 
 export function extractExplicitMemoryNode(request: string): Record<string, unknown> | null {
-  const text = request.normalize("NFKC").trim();
+  const text = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
   if (!text || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
   const patterns = [
     /^(?:please\s+)?(?:remember|save|store|keep in memory)\s+(?:that\s+)?(.+)$/i,
