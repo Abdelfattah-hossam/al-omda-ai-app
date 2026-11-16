@@ -58,3 +58,29 @@ test("does not create project tasks for negated build requests", () => {
     assert.equal(detectProjectSpecialty(request), null, "misclassified negated request: " + request);
   }
 });
+
+test("logs explicit Office and file-creation requests as project tasks", () => {
+  for (const request of [
+    "اعمللي ملف Excel لمتابعة المصروفات",
+    "جهز لي مستند Word بعقد عمل",
+    "اعمل عرض PowerPoint للمشروع",
+    "I need an Excel spreadsheet for inventory",
+    "Create a Word document with a seven-column table",
+    "Prepare a PowerPoint presentation for the launch",
+    "Create a source code file for the app",
+  ]) {
+    assert.ok(detectProjectSpecialty(request), "missed file deliverable request: " + request);
+  }
+});
+
+test("does not create file tasks for questions that only mention Office formats", () => {
+  for (const request of [
+    "إزاي أعمل ملف Excel؟",
+    "ممكن تشرحلي Word؟",
+    "What is an Excel spreadsheet?",
+    "How do I create a Word document?",
+    "Can you explain PowerPoint?",
+  ]) {
+    assert.equal(detectProjectSpecialty(request), null, "misclassified Office question: " + request);
+  }
+});
