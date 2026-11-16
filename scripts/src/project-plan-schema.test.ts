@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { CreateTaskBody } from "../../lib/api-zod/src/generated/api";
+import { CreateTaskBody, UpdateTaskBody } from "../../lib/api-zod/src/generated/api";
 
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
 const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
@@ -34,4 +34,7 @@ test("API task schema accepts only complete plans with 3 to 8 bounded steps", ()
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: Array.from({ length: 9 }, (_, i) => step(i + 1)) }).success, false);
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), output: "" }, step(2), step(3)] }).success, false);
   assert.equal(CreateTaskBody.safeParse({ ...base, steps: [{ ...step(1), text: "x".repeat(1201) }, step(2), step(3)] }).success, false);
+  const editable = { ...base, id: "00000000-0000-4000-8000-000000000001", steps: [step(1), step(2), step(3)] };
+  assert.equal(UpdateTaskBody.safeParse(editable).success, true);
+  assert.equal(UpdateTaskBody.safeParse({ ...editable, steps: [{ ...step(1), complete: undefined }, step(2), step(3)] }).success, false);
 });

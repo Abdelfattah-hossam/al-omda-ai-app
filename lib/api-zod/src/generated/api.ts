@@ -285,8 +285,8 @@ export const UpdateTaskBody = zod.object({
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(updateTaskBodyOneStepsItemIdMax),
   "text": zod.string().min(1).max(updateTaskBodyOneStepsItemTextMax),
-  "output": zod.string().min(1).max(1200).optional(),
-  "complete": zod.string().min(1).max(1200).optional(),
+  "output": zod.string().min(1).max(1200),
+  "complete": zod.string().min(1).max(1200),
   "result": zod.string().max(12000).optional(),
   "executedAt": zod.string().datetime().optional(),
   "executionStatus": zod.enum(['succeeded', 'failed']).optional(),
