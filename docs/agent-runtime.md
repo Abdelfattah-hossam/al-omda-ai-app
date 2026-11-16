@@ -55,6 +55,20 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 
 Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add only that endpoint hostname to `OMDA_AGENT_ALLOWED_HOSTS`. If the provider uses the standard Bing Web Search authentication header, set `OMDA_AGENT_SEARCH_API_KEY`; the key is read only by the local runtime and is never included in model prompts or tool output.
 
+### Model temperature and function calling
+
+The runtime explicitly enables OpenAI-compatible Function Calling on model requests whenever tools are available (tools plus tool_choice auto). This includes built-in web search, workspace file access, approved terminal execution, configured MCP tools, and delegated specialists. Write operations, terminal commands, and MCP actions remain behind their existing approval gates. When no tools are supplied (for example, the internal quality auditor), tool calling is omitted.
+
+Temperature is selected by task purpose instead of being hardcoded:
+- Legal, engineering, medical, finance, software/coding, review, and proposal tasks use a low default of **0.2**.
+- Research and business analysis use **0.3**.
+- General conversation uses **0.4**.
+- Set OMDA_AGENT_PRECISE_TEMPERATURE to a value from **0.1 to 0.3** to override the default for precision tasks. Invalid or out-of-range values are ignored and fall back to 0.2.
+
+Provider purpose routing now recognizes legal, engineering, medical, finance, business, research, coding, proposal, and review work. Add those purpose names to a provider's purposes list in .omda/models.json when you want it selected for a profession-specific task.
+
+High-impact legal, engineering, medical, finance, software, security, and strategic deliverables receive an internal critic/fixer pass. The auditor checks for concrete defects and the fixer is called only when actionable issues are identified. This is an additional model review, not a substitute for source verification, professional review, or deterministic test execution; if the auditor provider is unavailable, the original draft is preserved and the runtime reports the review limitation.
+
 The agent exposes `web.search` to the lead agent and read-only specialists. It accepts `query`, optional `count` (clamped to 1–10), optional locale `market` (for example `en-US`), and `safeSearch` (`Strict` by default). Results are normalized to title, URL, snippet, and optional publication date.
 
 Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
