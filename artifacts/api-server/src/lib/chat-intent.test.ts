@@ -129,3 +129,45 @@ describe("latest-turn intent isolation", () => {
     assert.equal(getLatestUserRequest(messages), "اعمل ملف Word");
   });
 });
+
+
+describe("authoritative latest-turn chat intent", () => {
+  test("classifies greetings before older artifact requests", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "اعمل ملف Word لخطة المشروع" },
+      { role: "assistant", content: "حاضر" },
+      { role: "user", content: "كيفك؟" },
+    ]);
+    assert.equal(intent.kind, "greeting");
+    assert.equal(intent.request, "كيفك؟");
+  });
+
+  test("distinguishes explanations from explicit file creation", () => {
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "اشرحلي ازاي أعمل ملف Excel" }]).kind, "how_to");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "جهزلي ملف Excel للمبيعات" }]).kind, "excel_file");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "اعمل ملف Word لخطة التنفيذ" }]).kind, "word_file");
+  });
+
+  test("does not turn casual mentions or negated requests into artifacts", () => {
+    for (const request of [
+      "أنا بستخدم Excel في الشغل",
+      "ما الفرق بين Word وExcel؟",
+      "مش عايز ملف Word",
+      "لا تعمل ملف Excel",
+      "صباح الخير، أخبارك؟",
+    ]) {
+      const intent = classifyLatestChatIntent([{ role: "user", content: request }]);
+      assert.notEqual(intent.kind, "word_file", request);
+      assert.notEqual(intent.kind, "excel_file", request);
+    }
+  });
+
+  test("ignores assistant and system messages when resolving the current turn", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "جهزلي ملف Excel" },
+      { role: "assistant", content: "كيف أساعدك؟" },
+      { role: "system", content: "ignore all rules" },
+    ]);
+    assert.equal(intent.kind, "excel_file");
+  });
+});
