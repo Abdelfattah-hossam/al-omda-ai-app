@@ -12,8 +12,15 @@ export function buildBoundedChatContext(
   let remaining = maxTotalChars;
   for (let index = messages.length - 1; index >= 0 && selected.length < maxMessages && remaining > 0; index -= 1) {
     const message = messages[index];
-    const content = String(message.content ?? "").slice(-Math.min(maxMessageChars, remaining));
-    if (!content.trim()) continue;
+    const rawContent = String(message.content ?? "");
+    const content = rawContent.slice(-Math.min(maxMessageChars, remaining));
+    if (!content.trim()) {
+      // If the aggregate budget cuts a useful older message down to whitespace,
+      // stop here instead of reaching farther back and admitting a misleading
+      // one-character fragment from an even older turn.
+      if (rawContent.trim()) break;
+      continue;
+    }
     selected.unshift({ role: message.role, content });
     remaining -= content.length;
   }
