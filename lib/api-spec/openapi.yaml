@@ -446,7 +446,8 @@ components:
           items:
             $ref: "#/components/schemas/TaskCreateStep"
         status:
-          $ref: "#/components/schemas/TaskStatus"
+          type: string
+          enum: [review]
       required: [title, request, specialty, steps, status]
     TaskUpdateStep:
       allOf:

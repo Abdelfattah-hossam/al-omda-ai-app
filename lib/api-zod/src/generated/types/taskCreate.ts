@@ -32,5 +32,5 @@ export interface TaskCreate {
      * @maxItems 8
      */
   steps: TaskCreateStep[];
-  status: TaskStatus;
+  status: "review";
 }

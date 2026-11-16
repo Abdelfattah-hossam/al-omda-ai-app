@@ -216,7 +216,7 @@ export const CreateTaskBody = zod.object({
 })).max(50).optional(),
   "state": zod.literal('pending')
 })).min(3).max(createTaskBodyStepsMax),
-  "status": zod.enum(['review', 'paused', 'approved', 'stopped'])
+  "status": zod.literal('review')
 })
 
 export const createTaskResponseOneTitleMax = 160;

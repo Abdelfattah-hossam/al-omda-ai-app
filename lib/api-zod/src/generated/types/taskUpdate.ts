@@ -7,12 +7,14 @@
  */
 import type { PlanStep } from './planStep';
 import type { TaskCreate } from './taskCreate';
+import type { TaskStatus } from './taskStatus';
 
 export type TaskUpdateStep = Omit<PlanStep, 'output' | 'complete'> & {
   output: string;
   complete: string;
 };
 
-export type TaskUpdate = Omit<TaskCreate, 'steps'> & {
+export type TaskUpdate = Omit<TaskCreate, 'steps' | 'status'> & {
   steps: TaskUpdateStep[];
+  status: TaskStatus;
 };
