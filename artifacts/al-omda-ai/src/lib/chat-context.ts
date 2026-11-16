@@ -15,6 +15,13 @@ export function buildBoundedChatContext(
     const rawContent = String(message.content ?? "");
     const content = rawContent.slice(-Math.min(maxMessageChars, remaining));
     if (!content.trim()) {
+      // Keep the newest message even when it contains only an image attachment.
+      // The caller attaches image data to the final bounded message, so dropping
+      // this entry would either lose the image or associate it with an older turn.
+      if (index === messages.length - 1) {
+        selected.unshift({ role: message.role, content });
+        continue;
+      }
       // If the aggregate budget cuts a useful older message down to whitespace,
       // stop here instead of reaching farther back and admitting a misleading
       // one-character fragment from an even older turn.

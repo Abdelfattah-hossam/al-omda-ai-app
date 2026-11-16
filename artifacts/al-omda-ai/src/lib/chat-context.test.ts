@@ -44,6 +44,16 @@ test("adds an ellipsis only when text exceeds the available budget", () => {
   assert.equal(truncateTextWithEllipsis("abc", 0), "");
 });
 
+test("retains a newest image-only user message so its attachment stays on the correct turn", () => {
+  const result = buildBoundedChatContext([
+    { role: "user", content: "earlier question" },
+    { role: "assistant", content: "earlier answer" },
+    { role: "user", content: "" },
+  ]);
+  assert.deepEqual(result.at(-1), { role: "user", content: "" });
+  assert.equal(result.length, 3);
+});
+
 test("skips whitespace-only fragments at the aggregate context boundary", () => {
   const result = buildBoundedChatContext([
     { role: "user", content: "a".repeat(10) },
