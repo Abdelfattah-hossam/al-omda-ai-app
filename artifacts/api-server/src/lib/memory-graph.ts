@@ -145,7 +145,7 @@ export function extractUserCorrectionNode(request: string): Record<string, unkno
   const text = request.normalize("NFKC").trim();
   const patterns = [
     /^(?:correction|that's incorrect|that is incorrect|you got that wrong|i said)\s*[:,—-]?\s*(.+)$/i,
-    /^(?:التصحيح(?:\s+هو)?|الصح(?:\s+إن|\s+ان)?|انا\s+قلتلك(?:\s+ان|\s+إن)?|أنا\s+قلت\s+لك(?:\s+أن|\s+ان)?)\s*(.+)$/i,
+    /^(?:التصحيح(?:\s+هو)?|الصح(?:\s+إن|\s+ان)?|انا\s+قلتلك(?:\s+ان|\s+إن)?|أنا\s+قلت\s+لك(?:\s+أن|\s+ان)?|لا[،,\s]+(?:ده|دا)?\s*(?:غلط|مش\s+صح))\s*[:,—-]?\s*(.+)$/i,
   ];
   let correction = "";
   for (const pattern of patterns) {
