@@ -204,6 +204,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
 
         if (hasSpeech) {
           if (!speechActiveRef.current) {
+            // A new user utterance opens exactly one new assistant response cycle.
+            assistantTurnCompleteRef.current = false;
             socket.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
             speechActiveRef.current = true;
             setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
@@ -294,7 +296,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             if (mountedRef.current) { setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
           }
         }
-        if (serverContent.turnComplete) {
+        if (serverContent.turnComplete && !assistantTurnCompleteRef.current) {
+          // Gemini may deliver repeated turnComplete frames. Process each voice turn once.
           assistantTurnCompleteRef.current = true;
           if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
