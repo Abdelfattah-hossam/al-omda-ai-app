@@ -79,3 +79,29 @@ test("falls back to the next validated address within one overall deadline", asy
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+
+test("tries another validated address when the first route stalls", async () => {
+  const server = createServer((request, response) => {
+    response.writeHead(200, { "content-type": "text/plain" });
+    response.end(request.headers.host || "missing-host");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  try {
+    const target = new URL("http://stalled-fallback-test.invalid:" + address.port + "/");
+    const startedAt = Date.now();
+    const response = await requestPinnedHttpWithFallback(
+      target,
+      [{ address: "203.0.113.1", family: 4 }, { address: "127.0.0.1", family: 4 }],
+      "GET",
+      new Headers(),
+      3000,
+    );
+    assert.ok(Date.now() - startedAt < 2500, "the first route must not consume the complete request deadline");
+    assert.equal(response.status, 200);
+    assert.equal(await new Response(response.body).text(), "stalled-fallback-test.invalid:" + address.port);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
