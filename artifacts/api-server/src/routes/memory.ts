@@ -114,7 +114,13 @@ router.post("/ai/memory/graph/nodes", requireSameOrigin, async (req, res): Promi
       res.status(400).json({ error: "Send between 1 and 25 memory nodes." });
       return;
     }
-    const nodes = input.map((item: unknown) => parseMemoryNode(item, session.user.id));
+    let nodes;
+    try {
+      nodes = input.map((item: unknown) => parseMemoryNode(item, session.user.id));
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory node." });
+      return;
+    }
     const response = await supabaseFetch("/rest/v1/ai_memory_nodes?on_conflict=user_id,node_type,normalized_label", {
       method: "POST",
       headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
@@ -139,7 +145,13 @@ router.post("/ai/memory/graph/edges", requireSameOrigin, async (req, res): Promi
       res.status(400).json({ error: "Send between 1 and 50 memory relationships." });
       return;
     }
-    const edges = input.map((item: unknown) => parseMemoryEdge(item, session.user.id));
+    let edges;
+    try {
+      edges = input.map((item: unknown) => parseMemoryEdge(item, session.user.id));
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory relationship." });
+      return;
+    }
     const response = await supabaseFetch("/rest/v1/ai_memory_edges?on_conflict=user_id,source_node_id,target_node_id,relation", {
       method: "POST",
       headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
