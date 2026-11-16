@@ -694,7 +694,21 @@ async function callMcpTool(serverName: string, toolName: string, args: Record<st
 
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type PendingMcpTool = { serverName: string; toolName: string };
-type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; createdAt: string; purpose?: ModelPurpose };
+type AgentToolFailure = { callId: string; tool: string; message: string };
+type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; toolFailures?: AgentToolFailure[]; createdAt: string; purpose?: ModelPurpose };
+function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: unknown): void {
+  const message = error instanceof Error ? error.message : "Tool failed.";
+  const failure: AgentToolFailure = {
+    callId: String(call.id || "unknown").slice(0, 120),
+    tool: String(call.function?.name || "unknown").slice(0, 120),
+    message: message.slice(0, 500),
+  };
+  state.toolFailures = [...(state.toolFailures || []).filter((item) => item.callId !== failure.callId), failure].slice(-20);
+}
+function agentExecutionWarnings(state: AgentState): { executionStatus: string; toolFailures: AgentToolFailure[] } {
+  const toolFailures = state.toolFailures || [];
+  return { executionStatus: toolFailures.length ? "completed_with_warnings" : "completed", toolFailures };
+}
 const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
 const MODEL_NAME = process.env.OMDA_AGENT_MODEL_NAME?.trim() || "";
@@ -902,7 +916,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       if (!signal?.aborted) throw error;
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
-      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; the latest checkpoint is available to resume.", turns: turn, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; the latest checkpoint is available to resume.", ...agentExecutionWarnings(state), turns: turn, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     totalDurationMs += completion.durationMs;
     lastProvider = completion.provider;
@@ -912,7 +926,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) {
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", ...agentExecutionWarnings(state), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
@@ -925,7 +939,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
           const result = await runTool(call, onProgress);
           appendMcpToolResult(state.messages, call, result, imageQueue);
         } catch (error) {
-          state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+          recordAgentToolFailure(state, call, error);
+        recordAgentToolFailure(state, call, error);
+      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
         }
       }
       appendMcpImageObservations(state.messages, imageQueue);
@@ -938,21 +954,23 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       else delete state.pendingMcpTools;
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", ...agentExecutionWarnings(state), pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (const call of calls) {
       try {
         const result = await runTool(call, onProgress);
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
-        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        recordAgentToolFailure(state, call, error);
+        recordAgentToolFailure(state, call, error);
+      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
     appendMcpImageObservations(state.messages, imageQueue);
     await saveAgentState(id, state);
   }
   await saveAgentState(id, state);
-  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", ...agentExecutionWarnings(state), turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
 }
 const AGENT_OPERATING_RULES = `
 
@@ -1174,7 +1192,9 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
         const result = await runTool(call, onProgress, state.pendingMcpTools);
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
-        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        recordAgentToolFailure(state, call, error);
+        recordAgentToolFailure(state, call, error);
+      state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
       }
     }
     delete state.pendingMcpTools;
