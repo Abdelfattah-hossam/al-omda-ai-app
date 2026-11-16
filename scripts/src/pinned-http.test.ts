@@ -2,7 +2,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { requestPinnedHttp, requestPinnedHttpWithFallback } from "./pinned-http.js";
+import { getConnectAttemptBudget, requestPinnedHttp, requestPinnedHttpWithFallback } from "./pinned-http.js";
 
 test("connects to the validated IP while preserving the requested hostname", async () => {
   const server = createServer((request, response) => {
@@ -104,4 +104,12 @@ test("tries another validated address when the first route stalls", async () => 
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
+});
+
+test("reserves time for later addresses even when the remaining deadline is short", () => {
+  assert.equal(getConnectAttemptBudget(500, 2), 250);
+  assert.equal(getConnectAttemptBudget(1000, 4), 250);
+  assert.equal(getConnectAttemptBudget(500, 1), 500);
+  assert.equal(getConnectAttemptBudget(0, 2), 0);
+  assert.equal(getConnectAttemptBudget(500, 0), 0);
 });
