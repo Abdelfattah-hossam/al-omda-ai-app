@@ -7,7 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
-import { buildBoundedChatContext } from "./lib/chat-context";
+import { buildBoundedChatContext, truncateTextAtCodePointBoundary } from "./lib/chat-context";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -945,11 +945,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**.");
           const maxVisibleChars = 7800;
           const visiblePlan = planContent.length >= maxVisibleChars
-            ? planContent.slice(0, maxVisibleChars - 1).trimEnd() + "…"
+            ? truncateTextAtCodePointBoundary(planContent, maxVisibleChars - 1).trimEnd() + "…"
             : planContent;
           const replyBudget = Math.max(0, maxVisibleChars - visiblePlan.length);
           const visibleReply = assistantMessage.content.length > replyBudget
-            ? assistantMessage.content.slice(0, Math.max(0, replyBudget - 1)).trimEnd() + "…"
+            ? truncateTextAtCodePointBoundary(assistantMessage.content, Math.max(0, replyBudget - 1)).trimEnd() + "…"
             : assistantMessage.content;
           const combinedContent = visibleReply + visiblePlan;
           assistantMessage = {
