@@ -674,14 +674,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
         setAuthStatus('configured');
         const session = await getAuthSession(apiRequestOptions);
         if (cancelled || !session.user) return;
+        const accountUser = session.user;
         hasAccountSession = true;
-        setAuthUser(session.user);
-        setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(session.user.id), name:language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user', org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
+        setAuthUser(accountUser);
+        setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(accountUser.id), name:language === 'ar' ? 'مستخدم العمدة' : 'AL OMDA user', org:language === 'ar' ? 'مساحة العمل' : 'Workspace' }));
         setProfileName('');
         setProfileOrg(language === 'ar' ? 'مساحة العمل' : 'Workspace');
         try {
           const workspace = await getWorkspace(apiRequestOptions);
-          if (!cancelled) applyWorkspace(workspace, session.user.email);
+          if (!cancelled) applyWorkspace(workspace, accountUser.email);
         } catch (error) {
           if (!cancelled) {
             setWorkspaceLoadError(readApiError(error, t('saveTaskFailed')));
@@ -881,13 +882,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
         return;
       }
       if (!result.user) throw new Error(t('apiUnavailable'));
-      setAuthUser(result.user);
+      const accountUser = result.user;
+      setAuthUser(accountUser);
       setWorkspaceLoaded(false);
-      setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(result.user.id), name:defaultDisplayName, org:isAr ? 'مساحة العمل' : 'Workspace' }));
+      setSaved((prev) => ({ ...prev, tasks:readWorkspaceTaskCache(accountUser.id), name:defaultDisplayName, org:isAr ? 'مساحة العمل' : 'Workspace' }));
       setProfileName('');
       setProfileOrg(isAr ? 'مساحة العمل' : 'Workspace');
       const workspace = await getWorkspace(apiRequestOptions);
-      applyWorkspace(workspace, result.user.email);
+      applyWorkspace(workspace, accountUser.email);
       setAuthPassword('');
     } catch (error) {
       setWorkspaceLoadError(readApiError(error, t('apiUnavailable')));
