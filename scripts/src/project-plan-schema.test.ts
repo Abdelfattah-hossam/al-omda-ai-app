@@ -10,6 +10,7 @@ const anonMigrationUrl = new URL("../../supabase/migrations/20261116183805_revok
 const openapiUrl = new URL("../../lib/api-spec/openapi.yaml", import.meta.url);
 const generatedApiUrl = new URL("../../lib/api-zod/src/generated/api.ts", import.meta.url);
 const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
+const taskValidationUrl = new URL("../../artifacts/api-server/src/lib/task-plan-validation.ts", import.meta.url);
 
 test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
   const [setup, migration, sequenceMigration, openapi] = await Promise.all([
@@ -40,7 +41,7 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
 });
 
 test("generated API validators enforce complete 3-to-8-step task plans", async () => {
-  const [api, route] = await Promise.all([readFile(generatedApiUrl, "utf8"), readFile(workspaceRouteUrl, "utf8")]);
+  const [api, route, validation] = await Promise.all([readFile(generatedApiUrl, "utf8"), readFile(workspaceRouteUrl, "utf8"), readFile(taskValidationUrl, "utf8")]);
   const createStart = api.indexOf("export const CreateTaskBody = zod.object({");
   const createEnd = api.indexOf("export const createTaskResponseOneTitleMax", createStart);
   const updateStart = api.indexOf("export const UpdateTaskBody = zod.object({");
@@ -66,8 +67,9 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     assert.ok(response.includes('"output": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing output guidance");
     assert.ok(response.includes('"complete": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing completion guidance");
   }
-  assert.ok(route.includes("plan.steps.length < 3"));
-  assert.ok(route.includes("plan.steps.length > 8"));
-  assert.ok(route.includes("new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length"));
-  assert.ok(route.includes("Boolean(step.result || step.executedAt || step.executionStatus || step.executionError)"));
+  assert.ok(route.includes("isValidNewTaskPlan(plan)"));
+  assert.ok(validation.includes("plan.steps.length >= 3"));
+  assert.ok(validation.includes("plan.steps.length <= 8"));
+  assert.ok(validation.includes("new Set(plan.steps.map((step) => step.id)).size === plan.steps.length"));
+  assert.ok(validation.includes("!step.result && !step.executedAt && !step.executionStatus && !step.executionError"));
 });
