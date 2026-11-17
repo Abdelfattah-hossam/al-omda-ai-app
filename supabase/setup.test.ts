@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 
-const sql = readFileSync(new URL("./setup.sql", import.meta.url), "utf8");
-const migration = readFileSync(new URL("./migrations/20261117123000_require_previous_project_stage_results.sql", import.meta.url), "utf8");
-const legacyQuota = readFileSync(new URL("./ai_quota.sql", import.meta.url), "utf8");
+const sql = readFileSync(resolve(process.cwd(), "../supabase/setup.sql"), "utf8");
+const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117123000_require_previous_project_stage_results.sql"), "utf8");
+const legacyQuota = readFileSync(resolve(process.cwd(), "../supabase/ai_quota.sql"), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
   const start = sql.indexOf("create or replace function " + schema + "." + name + "(");
