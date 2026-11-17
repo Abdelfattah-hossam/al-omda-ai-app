@@ -35,6 +35,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const [previewText, setPreviewText] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const projectOptions = useMemo(() => projects.filter(project => project.id && project.title), [projects]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   useEffect(() => {
     if (!projectId && projectOptions.length) setProjectId(projectOptions[0].id);
@@ -161,7 +162,8 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     }
   };
 
-  return <div className="page-enter" id="assets-list">
+  return <>
+  <div className="page-enter" id="assets-list">
     <div className="page-heading">
       <div><div className="eyebrow">{ar ? "مساحة العمل" : "WORKSPACE ASSETS"}</div><h1 className="page-title">{ar ? "الأصول والملفات" : "Assets & files"}</h1><p className="page-subtitle">{ar ? "ملفاتك الخاصة محفوظة بأمان ويمكن تنزيلها أو حذفها من هنا." : "Your private files are securely stored and can be downloaded or deleted here."}</p></div>
       <label className="button button-primary" style={{cursor:uploading?"wait":"pointer",opacity:uploading ? 0.65 : 1}}>
@@ -190,7 +192,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml")&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
-  </div>;
+  </div>
     {previewAsset&&<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closePreview();}} style={{position:"fixed",inset:0,zIndex:110,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)"}}>
       <section role="dialog" aria-modal="true" aria-label={ar?"معاينة الملف":"File preview"} className="panel" style={{width:"min(900px,100%)",maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",padding:14}}>
         <header className="section-head"><strong>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
@@ -199,4 +201,5 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         </div>
       </section>
     </div>}
+  </>;
 }
