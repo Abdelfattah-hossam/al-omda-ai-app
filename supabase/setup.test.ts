@@ -35,21 +35,26 @@ test("privileged quota implementations are isolated in the non-exposed schema", 
 
 test("pending database migration secures every quota RPC without changing public RPC names", () => {
   for (const name of ["get_ai_daily_usage", "consume_ai_units", "complete_ai_task_step", "create_ai_task_with_quota"]) {
-    assert.match(migration, new RegExp("create or replace function omda_private\\\\." + name));
+    assert.ok(migration.includes("create or replace function omda_private." + name + "("), name + " private implementation");
     const publicStart = migration.indexOf("create or replace function public." + name + "(");
     assert.notEqual(publicStart, -1, name + " public wrapper");
-    const publicEnd = migration.indexOf("\\n$;", publicStart);
+    const publicEnd = migration.indexOf("\n$$;", publicStart);
+    assert.notEqual(publicEnd, -1, name + " public wrapper terminator");
     const publicDefinition = migration.slice(publicStart, publicEnd + 4);
     assert.match(publicDefinition, /security invoker/i, name);
     assert.doesNotMatch(publicDefinition, /security definer/i, name);
-    assert.match(migration, new RegExp("revoke all on function public\\\\." + name + "[\\\\s\\\\S]*?from public, anon", "i"));
-    assert.match(migration, new RegExp("grant execute on function public\\\\." + name + "[\\\\s\\\\S]*?to authenticated", "i"));
+    const revokeStart = migration.indexOf("revoke all on function public." + name, publicEnd);
+    assert.notEqual(revokeStart, -1, name + " public revoke");
+    assert.ok(migration.indexOf("from public, anon", revokeStart) > revokeStart, name + " revoke roles");
+    const grantStart = migration.indexOf("grant execute on function public." + name, revokeStart);
+    assert.notEqual(grantStart, -1, name + " public grant");
+    assert.ok(migration.indexOf("to authenticated", grantStart) > grantStart, name + " grant role");
   }
   const completionStart = migration.indexOf("create or replace function omda_private.complete_ai_task_step(");
-  const completionEnd = migration.indexOf("\\n$;", completionStart);
+  const completionEnd = migration.indexOf("\n$$;", completionStart);
   const completion = migration.slice(completionStart, completionEnd + 4);
-  assert.match(completion, /octet_length\\(p_result\\) > 500000/i);
-  assert.match(completion, /nullif\\(btrim\\(item\.value ->> 'result'\\), ''\\) is null/i);
+  assert.match(completion, /octet_length\(p_result\) > 500000/i);
+  assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
 });
 
 test("private user tables and storage buckets retain ownership RLS", () => {
