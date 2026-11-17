@@ -33,15 +33,21 @@ export function createZipBlob(files: ZipSourceFile[]): Blob {
   let totalSize = 0;
 
   for (const file of files) {
-    if (!file || typeof file.path !== "string" || typeof file.content !== "string" ||
-      !file.path || file.path.startsWith("/") || file.path.includes("\\") ||
-      file.path.split("/").some((part) => !part || part === "." || part === ".." ||
+    if (!file || typeof file.path !== "string" || typeof file.content !== "string") {
+      throw new Error("ZIP contains an unsafe file path.");
+    }
+    // Normalize before checking: compatibility characters can become traversal
+    // segments or separators (for example, fullwidth dots and slashes).
+    const path = file.path.normalize("NFKC");
+    if (!path || path.length > 180 || path.startsWith("/") || path.startsWith("~") ||
+      path.includes("\\") || path.includes("\0") ||
+      !/^[\p{L}\p{N}._@+/-]+$/u.test(path) ||
+      path.split("/").some((part) => !part || part === "." || part === ".." ||
         ["node_modules", ".git", "dist", "build", ".env"].includes(part.toLocaleLowerCase()) ||
         (part.toLocaleLowerCase().startsWith(".env.") && part.toLocaleLowerCase() !== ".env.example"))) {
       throw new Error("ZIP contains an unsafe file path.");
     }
-    if (/\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(file.path)) throw new Error("ZIP contains a private-key file.");
-    const path = file.path.normalize("NFKC");
+    if (/\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(path)) throw new Error("ZIP contains a private-key file.");
     const key = path.toLocaleLowerCase();
     if (seen.has(key)) throw new Error("ZIP contains duplicate file paths.");
     seen.add(key);
@@ -99,5 +105,12 @@ export function createZipBlob(files: ZipSourceFile[]): Blob {
   endView.setUint32(12, centralSize, true);
   endView.setUint32(16, localOffset, true);
   endView.setUint16(20, 0, true);
-  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+  // Copy into fresh ArrayBuffers so BlobPart remains compatible with
+  // TypeScript's ArrayBuffer-backed DOM types.
+  const blobParts: BlobPart[] = [...localParts, ...centralParts, end].map((part) => {
+    const copy = new Uint8Array(part.byteLength);
+    copy.set(part);
+    return copy.buffer;
+  });
+  return new Blob(blobParts, { type: "application/zip" });
 }
