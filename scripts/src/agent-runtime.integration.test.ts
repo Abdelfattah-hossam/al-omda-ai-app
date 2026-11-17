@@ -477,6 +477,38 @@ test("does not replay an approved side effect when the follow-up model request f
   }
 });
 
+test("reports failed tool execution even when the model later claims success", async () => {
+  const model = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "read-missing-file", type: "function", function: { name: "files.read", arguments: JSON.stringify({ path: "does-not-exist.txt" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The requested file was read successfully." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "tool-warning-test-model",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Read does-not-exist.txt and summarize it." });
+    const responseBody = await response.text();
+    assert.equal(response.status, 200, responseBody + " " + isolated.stderr);
+    const result = JSON.parse(responseBody) as {
+      status: string;
+      toolExecutionStatus: string;
+      toolFailures: Array<{ callId: string; tool: string; message: string }>;
+      message: string;
+    };
+    assert.equal(result.status, "completed");
+    assert.equal(result.toolExecutionStatus, "with_warnings");
+    assert.equal(result.toolFailures.length, 1);
+    assert.equal(result.toolFailures[0].callId, "read-missing-file");
+    assert.equal(result.toolFailures[0].tool, "files.read");
+    assert.match(result.toolFailures[0].message, /ENOENT|no such file/i);
+    assert.equal(result.message, "The requested file was read successfully.");
+    assert.equal(model.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(model);
+  }
+});
+
 test("model runtime fails over to the configured fallback without exposing credentials", async () => {
   const primary = await startMockModel(() => ({ status: 503, payload: { error: { message: "primary unavailable" } } }));
   const fallback = await startMockModel((_requestNumber, body) => {
