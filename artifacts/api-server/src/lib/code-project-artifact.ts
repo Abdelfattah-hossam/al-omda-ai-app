@@ -71,8 +71,8 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
   if (!packageJson || !packageJson.scripts || typeof packageJson.scripts !== "object" || Array.isArray(packageJson.scripts)) return null;
   const scripts = packageJson.scripts as Record<string, unknown>;
   if (typeof scripts.build !== "string" || !scripts.build.trim()) return null;
-  if (["preinstall", "install", "postinstall"].some((name) => typeof scripts[name] === "string")) return null;
-  if (scripts.build.length > 300 || /\b(?:curl|wget|powershell|rm\s+-rf|child_process|node\s+-e)\b/i.test(scripts.build)) return null;
+  if (["preinstall", "install", "postinstall", "prepare", "prepack", "postpack", "prepublish", "prepublishOnly"].some((name) => typeof scripts[name] === "string")) return null;
+  if (scripts.build.length > 300 || /\b(?:curl|wget|powershell|bash\s+-c|sh\s+-c|eval|rm\s+-rf|child_process|node\s+-e|python\s+-c)\b/i.test(scripts.build)) return null;
 
   const isEntryPoint = (candidate: string) => /^(?:index\\.html|src\\/(?:main|index)\\.[cm]?[jt]sx?|src\\/app\\/page\\.[jt]sx?|app\\/page\\.[jt]sx?|pages\\/index\\.[jt]sx?)$/i.test(candidate);
   const detectedEntry = files.find((file) => isEntryPoint(file.path))?.path;
