@@ -695,7 +695,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
     document.documentElement.classList.add('dark');
   }, [language]);
   useEffect(() => {
-    if (!commandPaletteOpen || !authUser) return;
+    if (!commandPaletteOpen) return;
+    if (!authUser) { setCommandAssets([]); return; }
+    setCommandAssets([]);
     let cancelled = false;
     const loadCommandAssets = async () => {
       const projectIds = tasks.filter(task=>!task.demo).slice(0,15).map(task=>task.id);
