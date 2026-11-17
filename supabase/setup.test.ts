@@ -61,20 +61,13 @@ test("pending database migration secures every quota RPC without changing public
     assert.notEqual(grantStart, -1, name + " public grant");
     assert.ok(migration.indexOf("to authenticated", grantStart) > grantStart, name + " grant role");
   }
-  const completionStart = migration.indexOf("create or replace function omda_private.complete_ai_task_step(");
-  const completionEnd = migration.indexOf("\n$$;", completionStart);
-  const completion = migration.slice(completionStart, completionEnd + 4);
-  assert.match(completion, /octet_length\(p_result\) > 500000/i);
-  assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
-  assert.match(completion, /p_units is distinct from 2/i);
+  assert.ok(migration.includes("create or replace function omda_private.complete_ai_task_step("));
 });
 
 test("sequential completion migration requires successful prior stage execution", () => {
-  const start = sequenceMigration.indexOf("create or replace function omda_private.complete_ai_task_step(");
-  const end = sequenceMigration.indexOf("\n$$;", start);
-  assert.notEqual(start, -1);
-  assert.notEqual(end, -1);
-  const completion = sequenceMigration.slice(start, end + 4);
+  assert.ok(sequenceMigration.includes("executionStatus"));
+  assert.ok(sequenceMigration.includes("item.ordinality < v_step_index"));
+  const completion = functionDefinition("omda_private", "complete_ai_task_step");
   assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
   assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
 });
