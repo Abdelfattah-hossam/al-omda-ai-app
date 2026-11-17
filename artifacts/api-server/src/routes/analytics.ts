@@ -21,8 +21,10 @@ router.get("/analytics/active-users", async (req, res): Promise<void> => {
       growth_percent: number | null;
       measured_at: string;
     }>(response);
-    if (!analytics || !Number.isInteger(analytics.active_users_30d) ||
-        !Number.isInteger(analytics.active_users_previous_30d)) {
+    if (!analytics || !Number.isInteger(analytics.active_users_30d) || analytics.active_users_30d < 0 ||
+        !Number.isInteger(analytics.active_users_previous_30d) || analytics.active_users_previous_30d < 0 ||
+        !(analytics.growth_percent === null || (typeof analytics.growth_percent === "number" && Number.isFinite(analytics.growth_percent))) ||
+        typeof analytics.measured_at !== "string") {
       res.status(502).json({ error: "The analytics source returned invalid data." });
       return;
     }
