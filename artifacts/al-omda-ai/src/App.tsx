@@ -57,7 +57,7 @@ async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
   pptx.layout = "LAYOUT_WIDE";
   pptx.author = "AL OMDA AI";
   pptx.title = data.title;
-  pptx.lang = /[\\u0590-\\u08ff]/.test(data.title + data.slides.map((slide) => slide.title + slide.bullets.join(" ")).join(" ")) ? "ar-SA" : "en-US";
+  pptx.lang = /[\u0590-\u08ff]/.test(data.title + data.slides.map((slide) => slide.title + slide.bullets.join(" ")).join(" ")) ? "ar-SA" : "en-US";
   pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: pptx.lang };
   for (const item of data.slides) {
     const slide = pptx.addSlide();
@@ -1159,7 +1159,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
                {getTaskPresentation(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskPresentation(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!)}><FileText size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر إنشاء ملف PowerPoint.":"Could not generate the PowerPoint file.")))}><FileText size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
                  <div style={{display:'grid',gap:8}}>
                    {getTaskPresentation(step.result)!.slides.map((slide,index)=><article key={index} style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
                      <strong style={{display:'block',marginBottom:8}}>{index+1}. {slide.title}</strong>
