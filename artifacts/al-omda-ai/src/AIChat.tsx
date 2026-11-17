@@ -1,3 +1,4 @@
+import { buildAgentToolWarning } from "./lib/agent-tool-warning";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
 import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
@@ -14,16 +15,6 @@ type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<str
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
-function buildAgentToolWarning(failures: unknown, ar: boolean): string {
-  const items = Array.isArray(failures) ? failures.slice(0, 5) as Array<{ tool?: unknown; message?: unknown }> : [];
-  if (!items.length) return "";
-  const heading = ar
-    ? "تنبيه تنفيذ: فشلت بعض الأدوات، لذلك لا يُعد التنفيذ مكتملًا بالكامل:"
-    : "Execution warning: some tools failed, so the run is not fully verified:";
-  return "\n\n" + heading + items.map((failure) =>
-    "\n- " + String(failure.tool || "tool") + ": " + String(failure.message || "failed").slice(0, 240)
-  ).join("");
-}
 
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
