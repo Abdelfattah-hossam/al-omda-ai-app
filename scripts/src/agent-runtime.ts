@@ -14,6 +14,7 @@ import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js"
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
 import { fetchPinned } from "./pinned-http.js";
+import { terminateChildProcess } from "./supervisor-process.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -432,6 +433,7 @@ async function executeCommand(body: Json): Promise<Json> {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
       shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
       env: commandEnv,
     });
     let stdout = "";
@@ -441,10 +443,12 @@ async function executeCommand(body: Json): Promise<Json> {
     let capped = false;
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let killTimer: NodeJS.Timeout | null = null;
     const finish = (result: Json) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
       resolveResult({ ...result, durationMs: Date.now() - started });
     };
     const collect = (target: "stdout" | "stderr") => (chunk: Buffer) => {
@@ -452,11 +456,17 @@ async function executeCommand(body: Json): Promise<Json> {
       const remaining = Math.max(0, OUTPUT_LIMIT - Buffer.byteLength(stdout) - Buffer.byteLength(stderr));
       const text = chunk.toString("utf8").slice(0, remaining);
       if (target === "stdout") stdout += text; else stderr += text;
-      if (outputBytes > OUTPUT_LIMIT && !capped) { capped = true; child.kill("SIGTERM"); }
+      if (outputBytes > OUTPUT_LIMIT && !capped) {
+        capped = true;
+        killTimer = terminateChildProcess(child, 2000, process.platform !== "win32");
+      }
     };
     child.stdout.on("data", collect("stdout"));
     child.stderr.on("data", collect("stderr"));
-    timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, COMMAND_TIMEOUT_MS);
+    timer = setTimeout(() => {
+      timedOut = true;
+      killTimer = terminateChildProcess(child, 2000, process.platform !== "win32");
+    }, COMMAND_TIMEOUT_MS);
     child.on("error", (error) => finish({ ok: false, error: useContainer ? "Docker execution could not start: " + error.message : error.message, stdout, stderr }));
     child.on("close", (code, signal) => finish({
       ok: code === 0 && !timedOut && !capped,
