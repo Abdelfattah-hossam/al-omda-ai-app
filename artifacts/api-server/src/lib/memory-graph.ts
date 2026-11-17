@@ -115,7 +115,7 @@ function hasMemoryOptOut(value: string): boolean {
 }
 
 export function isExplicitMemoryIntent(request: string): boolean {
-  return /^(?:please\s+)?(?:remember|save|store|keep in memory)\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك|متنساش|ما\\s+تنساش)/i.test(request.normalize("NFKC").trim());
+  return /^(?:please\s+)?(?:remember|save|store|keep in memory)\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك|متنساش|ما\s+تنساش)/i.test(request.normalize("NFKC").trim());
 }
 
 export function shouldWarnExplicitMemoryNotSaved(request: string, extractedNode: Record<string, unknown> | null): boolean {
