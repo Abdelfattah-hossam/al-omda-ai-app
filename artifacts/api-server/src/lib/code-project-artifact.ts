@@ -51,7 +51,7 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
   for (const item of value.files) {
     if (!item || typeof item !== "object") return null;
     const file = item as Record<string, unknown>;
-    if (typeof file.path !== "string" || !isSafeProjectPath(file.path) ||
+    if (typeof file.path !== "string" || !isSafeProjectPath(file.path) || new TextEncoder().encode(file.path).length > 180 ||
       typeof file.content !== "string" || file.content.length > MAX_FILE_BYTES) return null;
     const normalizedPath = file.path.normalize("NFKC");
     const key = normalizedPath.toLocaleLowerCase();
