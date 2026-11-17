@@ -5,7 +5,7 @@
     "model": "provider/model",
     "apiKeyEnv": "OPENROUTER_API_KEY",
     "priority": 10,
-    "purposes": ["general", "research", "review"]
+    "purposes": ["general", "research", "review", "legal", "engineering", "medical", "finance", "business"]
   },
   {
     "name": "lm-studio",
