@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildBoundedChatContext, combineReplyAndPlan, hasConversationUpdatedAtChanged, truncateTextAtCodePointBoundary, truncateTextFromStartAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
+import { buildBoundedChatContext, combineReplyAndPlan, hasConversationUpdatedAtChanged, hasConversationListChanged, truncateTextAtCodePointBoundary, truncateTextFromStartAtCodePointBoundary, truncateTextWithEllipsis } from "./chat-context";
 
 test("keeps the newest messages within the message-count limit", () => {
   const result = buildBoundedChatContext([
