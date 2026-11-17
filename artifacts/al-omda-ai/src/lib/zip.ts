@@ -45,7 +45,7 @@ export function createZipBlob(files: ZipSourceFile[]): Blob {
     const name = encoder.encode(path);
     const data = encoder.encode(file.content);
     totalSize += data.length;
-    if (name.length > 180 || data.length > 60000 || totalSize > 350000) throw new Error("ZIP project exceeds safe size limits.");
+    if (name.length > 180 || data.length > 60000 || totalSize > 200000) throw new Error("ZIP project exceeds safe size limits.");
     const crc = crc32(data);
 
     const local = header(30 + name.length, 0x04034b50);
