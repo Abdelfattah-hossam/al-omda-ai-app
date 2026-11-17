@@ -83,7 +83,9 @@ async function readZipEntries(file: Blob): Promise<Map<string, string>> {
     }
     const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     const wanted = name === "word/document.xml" || name === "xl/workbook.xml" ||
-      name === "xl/sharedStrings.xml" || /^xl\/worksheets\/sheet\d+\.xml$/.test(name) ||
+      name === "xl/_rels/workbook.xml.rels" || name === "xl/sharedStrings.xml" ||
+      name === "ppt/presentation.xml" || name === "ppt/_rels/presentation.xml.rels" ||
+      /^xl\/worksheets\/sheet\d+\.xml$/.test(name) ||
       /^ppt\/slides\/slide\d+\.xml$/.test(name);
     if (wanted) {
       expandedTotal += uncompressedSize;
@@ -108,6 +110,33 @@ function textOf(node: Element): string {
   return Array.from(node.getElementsByTagNameNS("*", "t")).map(item => item.textContent ?? "").join("");
 }
 
+function resolvePackageTarget(baseDirectory: string, target: string): string | null {
+  if (!target || target.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(target)) return null;
+  const segments = baseDirectory.split("/").filter(Boolean);
+  for (const part of target.replace(/\\/g, "/").split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (!segments.length) return null;
+      segments.pop();
+    } else {
+      segments.push(part);
+    }
+  }
+  return segments.join("/");
+}
+
+function relationshipMap(source: string, baseDirectory: string): Map<string, string> {
+  const document = xmlDocument(source);
+  const relationships = new Map<string, string>();
+  for (const relation of Array.from(document.getElementsByTagNameNS("*", "Relationship"))) {
+    if (relation.getAttribute("TargetMode") === "External") continue;
+    const id = relation.getAttribute("Id");
+    const target = resolvePackageTarget(baseDirectory, relation.getAttribute("Target") ?? "");
+    if (id && target) relationships.set(id, target);
+  }
+  return relationships;
+}
+
 export async function previewOfficeDocument(file: Blob, extension: string): Promise<string> {
   const entries = await readZipEntries(file);
   if (extension === "docx") {
@@ -124,14 +153,20 @@ export async function previewOfficeDocument(file: Blob, extension: string): Prom
     const sharedXml = entries.get("xl/sharedStrings.xml");
     const shared = sharedXml ? Array.from(xmlDocument(sharedXml).getElementsByTagNameNS("*", "si")).map(textOf) : [];
     const workbookDoc = xmlDocument(workbook);
-    const sheetNames = Array.from(workbookDoc.getElementsByTagNameNS("*", "sheet"))
-      .map((sheet, index) => sheet.getAttribute("name") || "Sheet " + (index + 1));
-    const sheets = Array.from(entries.keys())
-      .filter(name => /^xl\/worksheets\/sheet\d+\.xml$/.test(name))
-      .sort((a, b) => Number(a.match(/sheet(\d+)/)?.[1]) - Number(b.match(/sheet(\d+)/)?.[1]));
+    const relationsXml = entries.get("xl/_rels/workbook.xml.rels");
+    if (!relationsXml) throw new Error("Excel worksheet relationships were not found.");
+    const relations = relationshipMap(relationsXml, "xl");
+    const sheets = Array.from(workbookDoc.getElementsByTagNameNS("*", "sheet")).map((sheet, index) => {
+      const relationId = sheet.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || sheet.getAttribute("r:id");
+      const path = relationId ? relations.get(relationId) : undefined;
+      if (!path || !/^xl\/worksheets\/[^/]+\.xml$/.test(path) || !entries.has(path)) {
+        throw new Error("An Excel worksheet could not be resolved safely.");
+      }
+      return { name: sheet.getAttribute("name") || "Sheet " + (index + 1), path };
+    });
     if (!sheets.length) throw new Error("No readable worksheets were found.");
-    return sheets.map((name, index) => {
-      const doc = xmlDocument(entries.get(name)!);
+    return sheets.map(sheet => {
+      const doc = xmlDocument(entries.get(sheet.path)!);
       const rows = Array.from(doc.getElementsByTagNameNS("*", "row")).map(row =>
         Array.from(row.getElementsByTagNameNS("*", "c")).map(cell => {
           const value = cell.getElementsByTagNameNS("*", "v")[0]?.textContent ?? textOf(cell);
@@ -139,13 +174,23 @@ export async function previewOfficeDocument(file: Blob, extension: string): Prom
             cell.getAttribute("t") === "inlineStr" ? textOf(cell) : value;
         }).join(" | ")
       );
-      return (sheetNames[index] ?? "Sheet " + (index + 1)) + "\n" + rows.join("\n");
+      return sheet.name + "\n" + rows.join("\n");
     }).join("\n\n");
   }
   if (extension === "pptx") {
-    const slides = Array.from(entries.keys())
-      .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
-      .sort((a, b) => Number(a.match(/slide(\d+)/)?.[1]) - Number(b.match(/slide(\d+)/)?.[1]));
+    const presentation = entries.get("ppt/presentation.xml");
+    const relationsXml = entries.get("ppt/_rels/presentation.xml.rels");
+    if (!presentation || !relationsXml) throw new Error("Presentation slide relationships were not found.");
+    const relations = relationshipMap(relationsXml, "ppt");
+    const presentationDoc = xmlDocument(presentation);
+    const slides = Array.from(presentationDoc.getElementsByTagNameNS("*", "sldId")).map((slide, index) => {
+      const relationId = slide.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || slide.getAttribute("r:id");
+      const path = relationId ? relations.get(relationId) : undefined;
+      if (!path || !/^ppt\/slides\/[^/]+\.xml$/.test(path) || !entries.has(path)) {
+        throw new Error("A presentation slide could not be resolved safely.");
+      }
+      return path;
+    });
     if (!slides.length) throw new Error("No readable presentation slides were found.");
     return slides.map((name, index) => {
       const doc = xmlDocument(entries.get(name)!);
