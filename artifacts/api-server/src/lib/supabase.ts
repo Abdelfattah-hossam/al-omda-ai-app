@@ -207,7 +207,7 @@ export function requireSameOriginRead(req: Request, res: Response, next: NextFun
     requireSameOrigin(req, res, next);
     return;
   }
-  const host = req.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.get("host") ?? "";
+  const host = req.get("host") ?? "";
   if (!host) {
     res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
     return;
