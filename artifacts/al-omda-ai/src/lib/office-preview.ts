@@ -1,4 +1,20 @@
-type ZipEntry = { name: string; method: number; compressedSize: number; uncompressedSize: number; localOffset: number };
+type ZipEntry = { name: string; method: number; compressedSize: number; uncompressedSize: number; localOffset: number; crc32: number };
+
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let value = n;
+    for (let bit = 0; bit < 8; bit++) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+    table[n] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes: Uint8Array): number {
+  let value = 0xffffffff;
+  for (const byte of bytes) value = CRC32_TABLE[(value ^ byte) & 0xff] ^ (value >>> 8);
+  return (value ^ 0xffffffff) >>> 0;
+}
 
 async function readZipEntry(bytes: Uint8Array, entry: ZipEntry): Promise<string> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -6,8 +22,14 @@ async function readZipEntry(bytes: Uint8Array, entry: ZipEntry): Promise<string>
   if (offset < 0 || offset + 30 > bytes.length || view.getUint32(offset, true) !== 0x04034b50) {
     throw new Error("Invalid Office archive entry.");
   }
+  const flags = view.getUint16(offset + 6, true);
+  const method = view.getUint16(offset + 8, true);
   const nameLength = view.getUint16(offset + 26, true);
   const extraLength = view.getUint16(offset + 28, true);
+  const localName = new TextDecoder().decode(bytes.slice(offset + 30, offset + 30 + nameLength));
+  if (localName !== entry.name || method !== entry.method || (flags & 1) !== 0) {
+    throw new Error("Office archive entry metadata is inconsistent or encrypted.");
+  }
   const start = offset + 30 + nameLength + extraLength;
   const end = start + entry.compressedSize;
   if (end > bytes.length) throw new Error("Office archive entry is truncated.");
@@ -45,6 +67,7 @@ async function readZipEntry(bytes: Uint8Array, entry: ZipEntry): Promise<string>
     }
   } else throw new Error("Unsupported Office compression method.");
   if (output.byteLength !== entry.uncompressedSize) throw new Error("Office archive entry is incomplete.");
+  if (crc32(output) !== entry.crc32) throw new Error("Office archive entry failed its integrity check.");
   return new TextDecoder("utf-8").decode(output);
 }
 
@@ -70,7 +93,9 @@ async function readZipEntries(file: Blob): Promise<Map<string, string>> {
     if (cursor + 46 > bytes.length || view.getUint32(cursor, true) !== 0x02014b50) {
       throw new Error("Invalid Office directory.");
     }
+    const flags = view.getUint16(cursor + 8, true);
     const method = view.getUint16(cursor + 10, true);
+    const crc = view.getUint32(cursor + 16, true);
     const compressedSize = view.getUint32(cursor + 20, true);
     const uncompressedSize = view.getUint32(cursor + 24, true);
     const nameLength = view.getUint16(cursor + 28, true);
@@ -92,7 +117,8 @@ async function readZipEntries(file: Blob): Promise<Map<string, string>> {
       if (uncompressedSize > 8 * 1024 * 1024 || expandedTotal > 32 * 1024 * 1024) {
         throw new Error("Office preview content exceeds the safe size limit.");
       }
-      const entry = { name, method, compressedSize, uncompressedSize, localOffset };
+      if ((flags & 1) !== 0) throw new Error("Encrypted Office archives cannot be previewed.");
+      const entry = { name, method, compressedSize, uncompressedSize, localOffset, crc32: crc };
       entries.set(name, await readZipEntry(bytes, entry));
     }
     cursor = recordEnd;
