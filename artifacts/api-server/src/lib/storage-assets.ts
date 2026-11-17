@@ -23,11 +23,11 @@ export const WORKSPACE_ASSET_MIME_TYPES: Readonly<Record<string, string>> = {
 export function sanitizeWorkspaceAssetName(input: string): string {
   const leaf = input.replace(/\\/g, "/").split("/").pop() ?? "";
   const normalized = leaf.normalize("NFKC")
-    .replace(/[\\u0000-\\u001f\\u007f]/g, "")
-    .replace(/[^\\p{L}\\p{N}._ -]/gu, "-")
-    .replace(/\\s+/g, "-")
-    .replace(/\\.{2,}/g, ".")
-    .replace(/^\\.+/, "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/[^\p{L}\p{N}._ -]/gu, "-")
+    .replace(/\s+/g, "-")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^\.+/, "")
     .replace(/-+/g, "-")
     .trim()
     .slice(0, 120);
@@ -40,11 +40,11 @@ export function getWorkspaceAssetMimeType(filename: string): string | null {
 }
 
 export function isValidWorkspaceAssetPath(path: string, userId: string): boolean {
-  if (!path || path.length > 600 || path.includes("\\\\") || /%(?:2f|5c)/i.test(path)) return false;
+  if (!path || path.length > 600 || path.includes("\\") || /%(?:2f|5c)/i.test(path)) return false;
   const parts = path.split("/");
   return parts.length === 3 &&
     parts[0] === userId &&
-    parts.every((part) => part.length > 0 && part !== "." && part !== ".." && !/[\\u0000-\\u001f\\u007f]/.test(part));
+    parts.every((part) => part.length > 0 && part !== "." && part !== ".." && !/[\u0000-\u001f\u007f]/.test(part));
 }
 
 export function isValidProjectFolderId(value: string): boolean {
