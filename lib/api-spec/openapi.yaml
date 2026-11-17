@@ -416,6 +416,10 @@ components:
         - $ref: "#/components/schemas/PlanStep"
         - type: object
           properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 1200
             output:
               type: string
               minLength: 1
@@ -462,6 +466,10 @@ components:
         - $ref: "#/components/schemas/PlanStep"
         - type: object
           properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 1200
             output:
               type: string
               minLength: 1
