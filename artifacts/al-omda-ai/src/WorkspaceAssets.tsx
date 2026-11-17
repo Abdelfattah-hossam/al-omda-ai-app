@@ -6,15 +6,7 @@ type Language = "ar" | "en";
 type ProjectOption = { id: string; title: string };
 type WorkspaceAsset = { path: string; name: string; createdAt: string | null; size: number | null; mimeType: string | null };
 
-const MIME_BY_EXTENSION: Record<string, string> = {
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  txt: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json",
-  html: "text/html", xml: "application/xml", zip: "application/zip",
-  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif",
-};
+import { resolveWorkspaceUploadMime } from "./lib/asset-upload";
 
 function fileSize(bytes: number | null, ar: boolean): string {
   if (bytes === null) return ar ? "الحجم غير متاح" : "Size unavailable";
@@ -73,9 +65,8 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     try {
       for (const file of selected) {
         if (file.size <= 0 || file.size > 25 * 1024 * 1024) throw new Error(ar ? "كل ملف يجب أن يكون أقل من 25 ميجابايت." : "Each file must be under 25 MB.");
-        const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-        const mime = file.type || MIME_BY_EXTENSION[extension] || "";
-        if (!mime || MIME_BY_EXTENSION[extension] !== mime) throw new Error((ar ? "صيغة الملف غير مدعومة: " : "Unsupported file type: ") + file.name);
+        const mime = resolveWorkspaceUploadMime(file.name, file.type);
+        if (!mime) throw new Error((ar ? "صيغة الملف غير مدعومة أو نوع الملف لا يطابق امتداده: " : "Unsupported file type or mismatched extension: ") + file.name);
         const params = new URLSearchParams({ filename: file.name });
         if (projectId) params.set("projectId", projectId);
         const response = await fetch("/api/storage/assets?" + params.toString(), {
