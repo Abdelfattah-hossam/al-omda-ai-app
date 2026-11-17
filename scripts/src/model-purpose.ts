@@ -12,6 +12,6 @@ export function inferModelPurpose(goal: string): ModelPurpose {
   if (domain === "software") return "coding";
   if (domain === "business") return "business";
   if (/\b(review|audit|inspect|code review|security review|vulnerability)\b|مراجعة|راجع|تدقيق|افحص|فحص|تقييم أمني|تقييم امني/u.test(text)) return "review";
-  if (domain === "research") return "research";
+  if (domain === "research" || /\b(explain|summarize|summarise|find|search|investigate)\b|ابحث|لخص|لخّص|اشرح|استكشف|معلومات|حلل|حلّل/u.test(text)) return "research";
   return "general";
 }
