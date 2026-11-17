@@ -39,6 +39,18 @@ test("requires authentication before renaming a saved conversation", async () =>
   assert.equal(response.status, 401);
 });
 
+test("workspace asset storage routes require an authenticated user", async () => {
+  const upload = await fetch(`${baseUrl}/api/storage/assets?filename=report.pdf`, {
+    method: "PUT",
+    headers: { origin: baseUrl, "content-type": "application/pdf" },
+    body: "%PDF-1.7",
+  });
+  assert.equal(upload.status, 401);
+
+  const list = await fetch(`${baseUrl}/api/storage/assets`);
+  assert.equal(list.status, 401);
+});
+
 test("returns exact CORS origins only for configured app and development origins", async () => {
   for (const origin of allowedOrigins) {
     const response = await fetch(`${baseUrl}/api/healthz`, { headers: { origin } });
