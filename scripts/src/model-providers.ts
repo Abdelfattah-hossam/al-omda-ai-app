@@ -1,4 +1,4 @@
-export const MODEL_PURPOSES = ["general", "research", "proposal", "coding", "review"] as const;
+export const MODEL_PURPOSES = ["general", "research", "proposal", "coding", "review", "legal", "engineering", "medical", "finance", "business"] as const;
 export type ModelPurpose = typeof MODEL_PURPOSES[number];
 export type ModelProviderConfig = { name: string; base: string; model: string; key: string; purposes: Array<ModelPurpose | "all">; priority: number };
 
