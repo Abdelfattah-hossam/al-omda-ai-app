@@ -34,6 +34,17 @@ test("creates a real XLSX workbook with multiple sheets and formulas", async () 
   assert.match(text, /منتج أ/);
 });
 
+test("rejects dangerous Excel formula functions and external workbook references", () => {
+  for (const formula of ['=WEBSERVICE("https://example.com")', '=HYPERLINK("https://example.com","open")', "=DDE(\\\"cmd\\\",\\\"/c calc\\\",\\\"\\\")", "='[other.xlsx]Sheet1'!A1"]) {
+    assert.throws(() => createXlsxBlob({
+      title: "Unsafe",
+      columns: ["Value"],
+      rows: [[1]],
+      formulas: { A2: formula },
+    }), /Unsafe Excel formula rejected/);
+  }
+});
+
 test("creates an editable PowerPoint with the requested slide count and RTL text", async () => {
   const blob = createPptxBlob({
     title: "خطة العمل",
