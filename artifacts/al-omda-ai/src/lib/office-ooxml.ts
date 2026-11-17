@@ -55,7 +55,6 @@ export function createXlsxBlob(data: XlsxData): Blob {
   sheets.forEach((sheet, sheetIndex) => {
     for (const [address, rawFormula] of Object.entries(sheet.formulas ?? {})) {
       const formula = String(rawFormula).trim().replace(/^=/, "");
-      if (!formula || /\\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\\s*\\(/i.test(formula) || /[\\[\\]]/.test(formula)) {
       if (!formula || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
       }
     }
