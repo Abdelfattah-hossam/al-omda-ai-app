@@ -2590,7 +2590,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/history',
     isAr ? 'العودة إلى سجل المهام' : 'Back to task history',
   );
-  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} view="usage" />;
+  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
@@ -2607,7 +2607,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/',
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
-  const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitleKey = path === '/ai/usage' ? 'aiChat' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
   const pageTitle = platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
@@ -2660,7 +2660,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
           <nav className="nav-stack">
-            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass},{path:'/ai/usage',label:isAr?'الاستخدام والحصص':'Usage & Quota',icon:Activity}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
