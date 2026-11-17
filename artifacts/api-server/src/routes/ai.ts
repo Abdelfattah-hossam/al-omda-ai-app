@@ -1481,6 +1481,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       });
       return;
     }
+    if (!answer) throw new Error("No AI answer was generated.");
+    let finalAnswer: ProviderAnswer = answer;
     let qualityReviewUsage: ModelTokenUsage = {};
     if (shouldAuditChatRequest(latestCustomerRequest)) {
       try {
@@ -1497,18 +1499,18 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
               "You are AL OMDA's independent final quality auditor. Check the draft against the complete conversation and all supplied evidence, including images, for unsupported facts, fabricated citations, arithmetic/unit errors, professional risk, contradictions, security issues, and missing requirements.",
               "Do not reveal private reasoning. Do not invent sources or facts. Reply exactly PASS if there is no concrete material defect. Otherwise return only concise actionable lines beginning ISSUE:.",
               "Latest user request: " + latestCustomerRequest,
-              "Draft answer: " + answer.text
+              "Draft answer: " + finalAnswer.text
             ].join("\n") }
           ];
           const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory);
           const issues = parseHostedAuditIssues(reviewAnswer.text);
-          if (!issues.length) return { answer, provider: usedProvider, usage: reviewAnswer.usage || {} };
+          if (!issues.length) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {} };
           const refinementMessages: ChatMessage[] = [
             ...modelConversation,
             { role: "user", content: [
               "Correct only the concrete defects listed below. Preserve all supported facts and the user's exact requirements and supplied evidence, including earlier conversation details and images. Do not invent sources, legal authorities, standards, calculations, or test results. If a fact cannot be verified, state the limitation. Return only the complete corrected answer.",
               "Latest user request: " + latestCustomerRequest,
-              "Draft answer: " + answer.text,
+              "Draft answer: " + finalAnswer.text,
               "Required corrections: " + issues.join("; ")
             ].join("\n") }
           ];
@@ -1521,9 +1523,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
               completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
               totalTokens: (reviewAnswer.usage?.totalTokens || 0) + (refined.usage?.totalTokens || 0),
             },
-          } : { answer, provider: usedProvider, usage: reviewAnswer.usage || {} };
+          } : { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {} };
         });
-        answer = auditResult.answer;
+        finalAnswer = auditResult.answer;
         usedProvider = auditResult.provider;
         qualityReviewUsage = auditResult.usage;
       } catch (error) {
