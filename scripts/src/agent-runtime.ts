@@ -924,6 +924,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose, signal);
     } catch (error) {
       if (!signal?.aborted) throw error;
+      state.status = "cancelled";
       const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
@@ -1240,15 +1241,18 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
       }
       if (!approved.has(call.id)) {
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
+        await saveAgentState(id, state);
         continue;
       }
       try {
         const result = await runTool(call, onProgress, state.pendingMcpTools);
         recordAgentToolResultFailure(state, call, result);
         appendMcpToolResult(state.messages, call, result, imageQueue);
+        await saveAgentState(id, state);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
+        await saveAgentState(id, state);
       }
     }
     delete state.pendingMcpTools;
@@ -1281,6 +1285,7 @@ async function cancelAgent(body: Json): Promise<Json> {
     if (!pending.length) return { status: "not_running", sessionId: id, message: "No active run or pending approval exists for this session." };
     delete state.pendingToolCalls;
     delete state.pendingMcpTools;
+    state.status = "cancelled";
     for (const call of pending) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user cancelled this pending action. Do not retry it." }) });
     }
