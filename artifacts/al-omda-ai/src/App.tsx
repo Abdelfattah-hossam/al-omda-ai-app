@@ -481,7 +481,6 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
   { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
     {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
     {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
-    {path:'/ai/usage',ar:'الاستخدام والحصص',en:'Usage & Quota',subtitleAr:'الاستهلاك والذاكرة',subtitleEn:'Usage and memory',icon:Activity},
   ]},
   { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
     {path:'/agents',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
@@ -494,7 +493,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
 ];
 const launcherSubtitleKeys: Record<string, TranslationKey> = {
   '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
-  '/history':'launcherSubtitleHistory', '/ai/usage':'launcherSubtitleUsage', '/profile':'launcherSubtitleProfile',
+  '/history':'launcherSubtitleHistory', '/profile':'launcherSubtitleProfile',
 };
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
@@ -710,7 +709,6 @@ function App() {
       : pathname === '/agents' ? 'agent-marketplace-grid'
       : pathname === '/history' ? 'history-list'
       : pathname.startsWith('/history/') ? 'task-plan'
-      : pathname === '/ai/usage' ? 'ai-usage-page'
       : pathname === '/profile' ? 'profile-account-card'
       : 'dashboard-overview';
     return focusedHref(href, target);
@@ -1296,7 +1294,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
       { path:'/history', ar:'سجل المهام', en:'Task history' },
       { path:'/ai', ar:'المحادثات', en:'Chats' },
       { path:'/agents', ar:'شبكة الوكلاء', en:'Agent network' },
-      { path:'/ai/usage', ar:'الاستخدام والحصص', en:'Usage and quota' },
       { path:'/profile', ar:'الإعدادات', en:'Settings' },
       ...Object.entries(platformStatusPages).map(([path, info])=>({path,ar:info.ar,en:info.en})),
     ];
@@ -2556,7 +2553,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <Link href={focusedHref("/agents","agent-marketplace-grid")} className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/workbench","request-input")} className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/history","history-list")} className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href={focusedHref("/ai/usage","ai-usage-page")} className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
+            
           </div>
         </section>
 
@@ -2590,7 +2587,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/history',
     isAr ? 'العودة إلى سجل المهام' : 'Back to task history',
   );
-  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} view="usage" />;
+  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
@@ -2607,7 +2604,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/',
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
-  const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitleKey = path === '/ai/usage' ? 'aiChat' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
   const pageTitle = platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
@@ -2660,7 +2657,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
           <nav className="nav-stack">
-            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass},{path:'/ai/usage',label:isAr?'الاستخدام والحصص':'Usage & Quota',icon:Activity}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
