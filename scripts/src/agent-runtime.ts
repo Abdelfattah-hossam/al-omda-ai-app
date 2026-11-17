@@ -1,3 +1,4 @@
+import { isAgentToolResultFailure, redactAgentToolFailureMessage } from "./agent-tool-failure.js";
 import { summarizeAgentToolFailures } from "./agent-execution-warnings.js";
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -697,15 +698,6 @@ type AgentToolCall = { id: string; type: "function"; function: { name: string; a
 type PendingMcpTool = { serverName: string; toolName: string };
 type AgentToolFailure = { callId: string; tool: string; message: string };
 type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; toolFailures?: AgentToolFailure[]; createdAt: string; purpose?: ModelPurpose };
-function redactAgentToolFailureMessage(value: unknown): string {
-  return String(value || "Tool failed.")
-    .slice(0, 1000)
-    .replace(/(authorization\s*[:=]\s*bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
-    .replace(/\b(?:sk-[A-Za-z0-9_-]{16,}|sk-or-v1-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g, "[REDACTED_TOKEN]")
-    .replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret)\s*[:=]\s*["']?[^"'\s,;]+/gi, "$1=[REDACTED]")
-    .replace(/https?:\/\/[^/@\s]+:[^/@\s]+@/gi, "https://[REDACTED]@");
-}
-
 function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: unknown): void {
   const message = redactAgentToolFailureMessage(error instanceof Error ? error.message : error);
   const failure: AgentToolFailure = {
@@ -718,8 +710,7 @@ function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: u
 function recordAgentToolResultFailure(state: AgentState, call: AgentToolCall, result: unknown): void {
   if (!result || typeof result !== "object") return;
   const details = result as Record<string, unknown>;
-  const isHttpProbe = call.function.name === "http.request";
-  if (details.isError !== true && (details.ok !== false || isHttpProbe)) return;
+  if (!isAgentToolResultFailure(call.function.name, result)) return;
   const message = details.stderr || details.error || details.message || "Tool returned an unsuccessful result.";
   recordAgentToolFailure(state, call, new Error(String(message)));
 }
