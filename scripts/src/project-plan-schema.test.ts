@@ -31,9 +31,6 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   const earlierSequenceMigration = await readFile(new URL("../../supabase/migrations/20261116174710_restrict_public_sequence_defaults.sql", import.meta.url), "utf8");
   assert.match(earlierSequenceMigration, /preserved because this migration was already applied/i);
   assert.match(migration, /reserved compatibility parameter/i);
-  assert.match(api, /getWorkspaceResponseTasksItemOneStepsMax = 20/);
-  assert.match(api, /createTaskResponseOneStepsMax = 20/);
-  assert.match(api, /updateTaskResponseOneStepsMax = 20/);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
@@ -82,7 +79,9 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     const stepsStart = response.indexOf('"steps": zod.array(');
     const stepsEnd = response.indexOf('"status":', stepsStart);
     assert.ok(stepsStart >= 0 && stepsEnd > stepsStart, name + " must expose its response step array");
-    assert.ok(!response.slice(stepsStart, stepsEnd).includes("})).min("), name + " must not impose new plan-count limits on persisted response data");
+    const responseSteps = response.slice(stepsStart, stepsEnd);
+    assert.ok(!responseSteps.includes("})).min("), name + " must not impose a minimum count on persisted response data");
+    assert.ok(!responseSteps.includes("})).max("), name + " must not impose a new maximum count on persisted response data");
   }
   assert.ok(route.includes("isValidNewTaskPlan(plan)"));
   assert.ok(validation.includes("plan.steps.length >= 3"));
