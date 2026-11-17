@@ -144,7 +144,7 @@ async function downloadTaskHtml(data: { title: string; html: string }, projectId
   await saveAndDownloadTaskArtifact(blob, filename, "text/html", projectId);
 }
 async function downloadTaskWord(data: TaskWordDocument, projectId?: string): Promise<void> {
-  const rtl = /[\\u0590-\\u08ff]/.test(data.title + data.paragraphs.join(" ") + data.columns.join(" ") + data.rows.flat().join(" "));
+  const rtl = /[\u0590-\u08ff]/.test(data.title + data.paragraphs.join(" ") + data.columns.join(" ") + data.rows.flat().join(" "));
   const blob = createDocxBlob(data, rtl);
   await saveAndDownloadTaskArtifact(
     blob,
