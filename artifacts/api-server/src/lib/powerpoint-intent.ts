@@ -1,3 +1,5 @@
+import { isHowToRequest } from "./chat-intent.js";
+
 export function isPowerPointRequestText(request: string): boolean {
   const text = request.trim();
   if (!text || /^(?:how to|how do i|how can i|how should i|show me how to|teach me how to|explain how to|what is|what are|why does|why is|explain|ما هو|ما هي|ازاي|إزاي|كيف|طريقة استخدام)/i.test(text) || /\b(?:show|teach|explain)\s+(?:me\s+)?how\s+to\b/i.test(text)) return false;
