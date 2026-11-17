@@ -1,5 +1,5 @@
 import { request as httpRequest, type RequestOptions } from "node:http";
-import { request as httpsRequest } from "node:https";
+import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from "node:https";
 import { lookup as dnsLookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { isBlockedNetworkAddress } from "./network-safety.js";
