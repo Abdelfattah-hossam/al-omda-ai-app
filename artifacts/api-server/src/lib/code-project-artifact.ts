@@ -12,7 +12,7 @@ export type CodeProjectArtifact = {
 
 const MAX_FILES = 60;
 const MAX_FILE_BYTES = 60000;
-const MAX_TOTAL_BYTES = 350000;
+const MAX_TOTAL_BYTES = 200000;
 const SECRET_PATTERN = /(?:sk-[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._-]{20,}|\b(?:api[_-]?key|client[_-]?secret|password)\s*[:=]\s*["'][^"']{12,}["'])/i;
 
 function isSafeProjectPath(path: string): boolean {
