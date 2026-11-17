@@ -70,15 +70,14 @@ test("pending database migration secures every quota RPC without changing public
 });
 
 test("sequential completion migration requires successful prior stage execution", () => {
-  const end = sequenceMigration.indexOf("\n$$;", start);
-  const end = sequenceMigration.indexOf("\n$;", start);
+  const start = sequenceMigration.indexOf("create or replace function omda_private.complete_ai_task_step(");
+  const end = sequenceMigration.indexOf("\\n$$;", start);
   assert.notEqual(start, -1);
   assert.notEqual(end, -1);
   const completion = sequenceMigration.slice(start, end + 4);
-  assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
-  assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
+  assert.match(completion, /item\\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
+  assert.match(completion, /nullif\\(btrim\\(item\\.value ->> 'result'\\), ''\\) is null/i);
 });
-
 test("private user tables and storage buckets retain ownership RLS", () => {
   for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_memory_nodes", "ai_memory_edges", "ai_conversations"]) {
     assert.match(sql, new RegExp("alter table public\\." + table + " enable row level security", "i"), table);
