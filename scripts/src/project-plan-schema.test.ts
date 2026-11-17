@@ -13,11 +13,12 @@ const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspa
 const taskValidationUrl = new URL("../../artifacts/api-server/src/lib/task-plan-validation.ts", import.meta.url);
 
 test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
-  const [setup, migration, sequenceMigration, openapi] = await Promise.all([
+  const [setup, migration, sequenceMigration, openapi, api] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
     readFile(sequenceMigrationUrl, "utf8"),
     readFile(openapiUrl, "utf8"),
+    readFile(generatedApiUrl, "utf8"),
   ]);
   for (const [label, sql] of [["setup.sql", setup], ["migration", migration]] as const) {
     assert.match(sql, /jsonb_array_length\(p_steps\)\s+not between 3 and 8/i, label + " must allow 3 to 8 project steps");
