@@ -190,6 +190,9 @@ describe("comparison intent remains conversational", () => {
     assert.equal(isWordFileRequest("جهزلي ملف Word يحتوي على مقارنة بين النظامين"), true);
     assert.equal(isExcelFileRequest("Create an Excel workbook with a comparison table"), true);
     assert.equal(isExcelFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), false);
+    assert.equal(isExcelFileRequest("Create an Excel workbook and export it as an Excel document"), true);
+    assert.equal(isExcelFileRequest("Create a Word document and export it as an Excel workbook"), true);
+    assert.equal(isWordFileRequest("Create a Word document and export it as an Excel workbook"), false);
     assert.equal(isWordFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), true);
   });
 });
