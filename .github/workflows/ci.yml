@@ -80,6 +80,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/ooxml-validation.test.ts
       - name: Test project intent classification
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/project-intent.test.ts
+      - name: Test bounded chat context and cross-device sync
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/chat-context.test.ts
       - name: Test chat Agent stream parser
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
       - name: Test API CORS policy
