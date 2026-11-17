@@ -1542,7 +1542,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <span>{isAr?group.subtitleAr:group.subtitleEn}</span>
           </div>
           <div className="app-launcher-grid">
-            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} className="app-launcher-tile">
+            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}}} className="app-launcher-tile">
               <span className="app-launcher-icon"><Icon size={20} strokeWidth={1.8}/></span>
               <span className="app-launcher-copy"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?item.subtitleAr:item.subtitleEn}</small></span>
               <ArrowUpLeft size={14} className="app-launcher-arrow"/>
@@ -2698,23 +2698,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
             <div className="curtain-caption">{isAr?group.titleAr:group.titleEn}</div>
             <nav className="curtain-launcher-grid" aria-label={isAr?group.titleAr:group.titleEn}>
-              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
+              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}setCurtainOpen(false);}} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
             </nav>
           </section>)}
-          <section className="curtain-launcher-group">
-            <div className="curtain-caption">{isAr?'أقسام المنصة':'Platform areas'}</div>
-            <nav className="curtain-launcher-grid" aria-label={isAr?'أقسام المنصة':'Platform areas'}>
-              {[
-                {path:'/projects',ar:'المشاريع',en:'Projects'},
-                {path:'/pipeline',ar:'مسار العمل',en:'Pipeline'},
-                {path:'/assets',ar:'الأصول والملفات',en:'Assets'},
-                {path:'/ai',ar:'المحادثات',en:'Chats'},
-                ...Object.entries(platformStatusPages).map(([pagePath,info])=>({path:pagePath,ar:info.ar,en:info.en})),
-              ].map(item=><Link key={item.path} href={item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}>
-                <span className="curtain-launcher-icon"><Globe size={19}/></span><strong>{isAr?item.ar:item.en}</strong>
-              </Link>)}
-            </nav>
-          </section>
         </div>
       </aside>
     </div>}
