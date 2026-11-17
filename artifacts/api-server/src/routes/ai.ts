@@ -591,6 +591,10 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
     const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
+    const requestedSlideCountMatch = customerRequest.normalize("NFKC").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).match(/(?:^|\\D)(\\d{1,2})\\s*(?:slides?|شرائح|شريحة)/i);
+    const requestedSlideCount = requestedSlideCountMatch ? Number(requestedSlideCountMatch[1]) : null;
+    const isRequestedSlideCountValid = (presentation: ReturnType<typeof parsePowerPointPresentation>) =>
+      Boolean(presentation && (!requestedSlideCount || presentation.slides.length === requestedSlideCount));
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
     const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
     const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
@@ -674,6 +678,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
     let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
     let validatedPowerPoint = powerPointStep ? parsePowerPointPresentation(answer.text) : null;
+    if (powerPointStep && !isRequestedSlideCountValid(validatedPowerPoint)) validatedPowerPoint = null;
     if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
@@ -795,6 +800,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
       catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedPowerPoint = parsePowerPointPresentation(answer.text);
+      if (!isRequestedSlideCountValid(validatedPowerPoint)) validatedPowerPoint = null;
       if (!validatedPowerPoint) {
         const alternateProvider = providers.find((candidate) => candidate !== provider);
         if (alternateProvider) {
@@ -809,7 +815,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
               ].join("\n")
             }], memory);
             const alternatePresentation = parsePowerPointPresentation(alternateAnswer.text);
-            if (alternatePresentation) { answer = alternateAnswer; validatedPowerPoint = alternatePresentation; provider = alternateProvider; }
+            if (isRequestedSlideCountValid(alternatePresentation) && alternatePresentation) { answer = alternateAnswer; validatedPowerPoint = alternatePresentation; provider = alternateProvider; }
           } catch (error) { console.warn("[Alternate PowerPoint task engine failed]", error instanceof Error ? error.message : "Unknown error"); }
         }
       }
