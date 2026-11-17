@@ -1,3 +1,4 @@
+import { ensureAssistantToolCallMessage } from "./agent-history.js";
 import { isAgentToolResultFailure, redactAgentToolFailureMessage } from "./agent-tool-failure.js";
 import { summarizeAgentToolFailures } from "./agent-execution-warnings.js";
 import { timingSafeEqual, randomUUID } from "node:crypto";
@@ -1286,6 +1287,7 @@ async function cancelAgent(body: Json): Promise<Json> {
     delete state.pendingToolCalls;
     delete state.pendingMcpTools;
     state.status = "cancelled";
+    ensureAssistantToolCallMessage(state.messages as unknown as Array<Record<string, unknown>>, pending);
     for (const call of pending) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user cancelled this pending action. Do not retry it." }) });
     }
