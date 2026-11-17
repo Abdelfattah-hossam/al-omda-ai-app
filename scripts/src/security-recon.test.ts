@@ -90,3 +90,26 @@ test("uses the last recognized Referrer-Policy token", () => {
   assert.ok(unsafeLast.findings.some((item) => item.header === "referrer-policy"));
   assert.ok(!unknownLast.findings.some((item) => item.header === "referrer-policy"));
 });
+
+test("keeps the first duplicate CSP directive as required by CSP", () => {
+  const permissiveFirst = analyzeSecurityHeaders({ "content-security-policy": "script-src 'unsafe-inline'; script-src 'none'" });
+  const restrictiveFirst = analyzeSecurityHeaders({ "content-security-policy": "script-src 'none'; script-src 'unsafe-inline'" });
+  assert.ok(permissiveFirst.findings.some((item) => item.issue.includes("unsafe-inline")));
+  assert.ok(!restrictiveFirst.findings.some((item) => item.issue.includes("unsafe-inline")));
+});
+
+test("rejects malformed nonce and hash payloads as unsafe-inline suppressors", () => {
+  const nonce = analyzeSecurityHeaders({ "content-security-policy": "script-src 'nonce-!!!' 'unsafe-inline'" });
+  const hash = analyzeSecurityHeaders({ "content-security-policy": "script-src 'sha256-!!!' 'unsafe-inline'" });
+  assert.ok(nonce.findings.some((item) => item.issue.includes("unsafe-inline")));
+  assert.ok(hash.findings.some((item) => item.issue.includes("unsafe-inline")));
+});
+
+test("evaluates element and attribute specific inline policy overrides", () => {
+  const elementOverride = analyzeSecurityHeaders({ "content-security-policy": "script-src 'none'; script-src-elem 'unsafe-inline'" });
+  const attributeOverride = analyzeSecurityHeaders({ "content-security-policy": "script-src 'unsafe-inline'; script-src-attr 'none'" });
+  const restrictiveElementOverride = analyzeSecurityHeaders({ "content-security-policy": "script-src 'unsafe-inline'; script-src-elem 'none'; script-src-attr 'none'" });
+  assert.ok(elementOverride.findings.some((item) => item.issue.includes("unsafe-inline")));
+  assert.ok(attributeOverride.findings.some((item) => item.issue.includes("unsafe-inline")));
+  assert.ok(!restrictiveElementOverride.findings.some((item) => item.issue.includes("unsafe-inline")));
+});
