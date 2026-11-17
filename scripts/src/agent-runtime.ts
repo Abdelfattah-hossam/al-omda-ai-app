@@ -466,7 +466,7 @@ async function executeCommand(body: Json): Promise<Json> {
     child.stderr.on("data", collect("stderr"));
     timer = setTimeout(() => {
       timedOut = true;
-      killTimer = terminateChildProcess(child, 2000, process.platform !== "win32");
+      killTimer = killTimer ?? terminateChildProcess(child, 2000, processGroup);
     }, COMMAND_TIMEOUT_MS);
     child.on("error", (error) => finish({ ok: false, error: useContainer ? "Docker execution could not start: " + error.message : error.message, stdout, stderr }));
     child.on("close", (code, signal) => finish({
