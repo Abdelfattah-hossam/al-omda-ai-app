@@ -1353,7 +1353,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       {isGlobalMap && <section className="panel panel-pad global-users-dashboard" style={{marginTop:16}}>
         <div className="global-users-header">
           <div><span className="eyebrow">USER ANALYTICS</span><h2 className="section-title" style={{marginTop:8}}>{isAr?'المستخدمون النشطون':'Active User'}</h2><p className="page-subtitle">{isAr?'نظرة عامة على نشاط المستخدمين حول العالم':'Global overview of user activity'}</p></div>
-          <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
+          <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers} disabled={authLoading}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
         </div>
         <div className="global-user-metrics">
           <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authLoading || authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…')))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
