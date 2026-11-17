@@ -34,5 +34,8 @@ test("creates a valid uncompressed UTF-8 ZIP with local and central directory en
 
 test("rejects unsafe and duplicate ZIP paths", () => {
   assert.throws(() => createZipBlob([{ path: "../escape.txt", content: "x" }]), /unsafe file path/);
+  assert.throws(() => createZipBlob([{ path: "src/.env.local", content: "x" }]), /unsafe file path/);
+  assert.throws(() => createZipBlob([{ path: "src/node_modules/pkg/index.js", content: "x" }]), /unsafe file path/);
+  assert.throws(() => createZipBlob([{ path: "keys/private.pem", content: "x" }]), /private-key/);
   assert.throws(() => createZipBlob([{ path: "src/a.ts", content: "x" }, { path: "SRC/A.ts", content: "y" }]), /duplicate/);
 });
