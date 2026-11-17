@@ -1,7 +1,9 @@
 export type StreamedCompletion = {
   message: Record<string, unknown>;
   usage: Record<string, unknown> | null;
+  /** Span between the first and last content/tool delta; excludes time-to-first-token and post-stream overhead. */
   generationDurationMs: number;
+  /** Completion tokens divided by generationDurationMs; null when usage or a positive interval is unavailable. */
   tokensPerSecond: number | null;
 };
 
@@ -34,19 +36,19 @@ export async function consumeOpenAIChatStream(
     if (!choice) return;
     if (choice.finish_reason) finishReason = choice.finish_reason;
     const delta = choice.delta && typeof choice.delta === "object" ? choice.delta : {};
-    if (typeof delta.content === "string" && delta.content) {
-      content += delta.content;
+    const hasContentDelta = typeof delta.content === "string" && Boolean(delta.content);
+    const hasToolDelta = Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0;
+    if (hasContentDelta || hasToolDelta) {
+      // One timestamp per SSE event keeps callback work from inflating throughput.
       const deltaAt = performance.now();
       if (firstGenerationDeltaAt === null) firstGenerationDeltaAt = deltaAt;
       lastGenerationDeltaAt = deltaAt;
+    }
+    if (hasContentDelta) {
+      content += delta.content;
       onToken?.(delta.content);
     }
     if (Array.isArray(delta.tool_calls)) {
-      if (delta.tool_calls.length) {
-        const deltaAt = performance.now();
-        if (firstGenerationDeltaAt === null) firstGenerationDeltaAt = deltaAt;
-        lastGenerationDeltaAt = deltaAt;
-      }
       for (const part of delta.tool_calls) {
         const index = Number.isInteger(part?.index) ? part.index : 0;
         const current = toolCalls.get(index) || { id: "", type: "function" as const, function: { name: "", arguments: "" } };
