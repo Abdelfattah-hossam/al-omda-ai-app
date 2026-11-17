@@ -10,7 +10,7 @@ const original: RevisionHistoryEntry[] = [{
 }];
 
 test("accepts unchanged revision history", () => {
-  assert.equal(isRevisionHistoryUnchanged(original, structuredClone(original)), true);
+  assert.equal(isRevisionHistoryUnchanged(original, original.map((entry) => ({ ...entry }))), true);
   assert.equal(isRevisionHistoryUnchanged(undefined, []), true);
 });
 
