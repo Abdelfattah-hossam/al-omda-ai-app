@@ -503,9 +503,11 @@ test("cancelling during a running read-only tool prevents later tools in the sam
   }
 });
 
-test("cancels a saved pending approval without executing its side effect", async () => {
-  const model = await startMockModel(() => ({
+test("cancels a saved pending approval and resumes with valid tool-call history", async () => {
+  const model = await startMockModel((requestNumber) => requestNumber === 1 ? ({
     payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "cancel-pending-write", type: "function", function: { name: "files.write", arguments: JSON.stringify({ path: "must-not-exist.txt", content: "cancelled" }) } }] }, finish_reason: "tool_calls" }] },
+  }) : ({
+    payload: { choices: [{ delta: { content: "The cancelled approval history resumed cleanly." }, finish_reason: "stop" }] },
   }));
   const isolated = await startRuntime({
     OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
@@ -523,11 +525,17 @@ test("cancels a saved pending approval without executing its side effect", async
     assert.equal(cancelled.status, 200);
     assert.equal(result.status, "cancelled");
     assert.match(result.message, /No pending action was executed/i);
+    const resumed = await postTo(isolated, "/v1/agent/resume", { sessionId: "cancel-pending-session" });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 200, resumedBody + " " + isolated.stderr);
+    const resumedResult = JSON.parse(resumedBody) as { status: string; message: string };
+    assert.equal(resumedResult.status, "completed");
+    assert.equal(resumedResult.message, "The cancelled approval history resumed cleanly.");
     const replay = await postTo(isolated, "/v1/agent/continue", { sessionId: "cancel-pending-session", approvedCallIds: ["cancel-pending-write"] });
     assert.equal(replay.status, 400);
     assert.match(await replay.text(), /no pending approval request/i);
     await assert.rejects(readFile(join(isolated.workspace, "must-not-exist.txt"), "utf8"));
-    assert.equal(model.requests, 1);
+    assert.equal(model.requests, 2);
   } finally {
     await stopRuntime(isolated);
     await stopMockModel(model);
