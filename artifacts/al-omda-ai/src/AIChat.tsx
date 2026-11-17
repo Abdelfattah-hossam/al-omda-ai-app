@@ -16,7 +16,7 @@ function getLocalAgentOrigin(value: string, errorMessage: string): string {
   let base: URL;
   try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
   if (!["http:", "https:"].includes(base.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
-  return base.origin;
+  return base.origin + base.pathname.replace(/\\/+$/, "");
 }
 
 type Usage = {
@@ -537,6 +537,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (!isCurrent()) return;
         const modelData = await modelResponse.json().catch(() => ({}));
         if (!isCurrent()) return;
+        if (modelResponse.status === 401 || modelResponse.status === 403) {
+          setAgentConnectionStatus(runtimeLabel + (ar ? " · رمز اتصال Runtime مرفوض أو منتهي الصلاحية." : " · Runtime access token was rejected or has expired."));
+          return;
+        }
         if (!modelResponse.ok || !Array.isArray(modelData.providers)) {
           setAgentConnectionStatus(runtimeLabel + (ar ? " · Runtime متصل لكن تشخيص النماذج غير متاح." : " · Runtime is connected, but model diagnostics are unavailable."));
           return;
