@@ -507,7 +507,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current || !conversationData.conversation) return;
         const remote: ChatMessage[] = Array.isArray(conversationData.conversation.messages)
           ? conversationData.conversation.messages
-              .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+              .filter((item: unknown): item is ChatMessage => item !== null && typeof item === "object" && ((item as ChatMessage).role === "user" || (item as ChatMessage).role === "assistant") && typeof (item as ChatMessage).content === "string")
               .slice(-100)
           : [];
         const local = messagesRef.current;
