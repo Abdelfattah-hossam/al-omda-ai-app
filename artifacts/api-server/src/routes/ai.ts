@@ -133,13 +133,17 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
   return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
 }
 
+function hasLatestUserImage(messages: ChatMessage[]): boolean {
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+  return Boolean(latestUserMessage?.image);
+}
 function requestTemperature(messages: ChatMessage[]): number {
-  return getHostedModelTemperature(getLatestUserRequest(messages), messages.some((message) => Boolean(message.image)));
+  return getHostedModelTemperature(getLatestUserRequest(messages), hasLatestUserImage(messages));
 }
 
 function chooseProviders(messages: ChatMessage[]) {
   const coding = isCodingRequest(messages);
-  const hasImage = messages.some((message) => Boolean(message.image));
+  const hasImage = hasLatestUserImage(messages);
   const purpose = inferHostedModelPurpose(getLatestUserRequest(messages));
   const configured = getProviders();
   // Choose the strongest configured free provider pool for the latest request purpose.
