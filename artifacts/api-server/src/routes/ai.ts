@@ -861,6 +861,11 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(502).json({ error: "The AI returned an empty deliverable." });
       return;
     }
+    if (Buffer.byteLength(result, "utf8") > 500000) {
+      await saveExecutionFailure("The generated deliverable exceeded the 500 KB task-result safety limit.");
+      res.status(413).json({ error: "المخرج أكبر من الحد الآمن للحفظ (500 كيلوبايت). قسّم المحتوى إلى مراحل أصغر وأعد التنفيذ." });
+      return;
+    }
     const verifyResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
     const verifyRows = await readSupabaseJson<typeof taskRows>(verifyResponse);
     const latest = verifyRows[0];
