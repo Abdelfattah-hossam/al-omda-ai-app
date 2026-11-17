@@ -76,6 +76,7 @@ export type SyncableChatMessage = {
   appData?: unknown;
   taskId?: string;
   taskTitle?: string;
+  agentPending?: unknown;
   toolExecutionStatus?: string;
   toolFailures?: Array<{ callId?: string; tool?: string; message?: string }>;
 };
@@ -101,6 +102,7 @@ export function getChatMessageSyncSignature(messages: readonly SyncableChatMessa
     ...(message.appData ? { appData: stableJsonValue(message.appData) } : {}),
     ...(message.taskId ? { taskId: message.taskId } : {}),
     ...(message.taskTitle ? { taskTitle: message.taskTitle } : {}),
+    ...(message.agentPending ? { agentPending: stableJsonValue(message.agentPending) } : {}),
     ...(message.toolExecutionStatus ? { toolExecutionStatus: message.toolExecutionStatus } : {}),
     ...(message.toolFailures ? { toolFailures: stableJsonValue(message.toolFailures) } : {}),
   })));
