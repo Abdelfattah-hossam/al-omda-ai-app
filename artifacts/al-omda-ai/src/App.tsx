@@ -21,12 +21,12 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Monitor, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Globe2, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
+  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -454,12 +454,43 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
-const appLauncherGroups: { id:'core'|'secondary'; items:typeof navItems }[] = [
-  { id:'core', items:navItems.filter(item=>item.path!=='/') },
-  { id:'secondary', items:[
-    { path:'/ai/usage', key:'usage', icon:Activity },
-    { path:'/profile', key:'profile', icon:Settings2 },
-  ] },
+type DashboardShortcut = { path:string; ar:string; en:string; subtitleAr:string; subtitleEn:string; icon:LucideIcon };
+const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr:string; subtitleEn:string; items:DashboardShortcut[] }[] = [
+  { id:'core', titleAr:'مساحة العمل', titleEn:'WORKSPACE', subtitleAr:'إنشاء المشاريع ومتابعة تنفيذها', subtitleEn:'Create projects and track execution', items:[
+    {path:'/projects',ar:'المشاريع',en:'Projects',subtitleAr:'كل مشاريعك المحفوظة',subtitleEn:'All saved projects',icon:BriefcaseBusiness},
+    {path:'/pipeline',ar:'مسار العمل',en:'Pipeline',subtitleAr:'مراحل التنفيذ والموافقات',subtitleEn:'Execution stages and approvals',icon:Activity},
+    {path:'/assets',ar:'الأصول والملفات',en:'Assets',subtitleAr:'ملفات ومخرجات المشاريع',subtitleEn:'Project files and deliverables',icon:FileText},
+    {path:'/workbench',ar:'مشروع جديد',en:'New Project',subtitleAr:'ابدأ مشروعًا أو مهمة',subtitleEn:'Start a project or task',icon:Plus},
+    {path:'/history',ar:'سجل المهام',en:'Task History',subtitleAr:'النتائج وسجل التنفيذ',subtitleEn:'Results and execution history',icon:History},
+    {path:'/ai',ar:'الشات الذكي',en:'AI Chat',subtitleAr:'محادثة مباشرة مع العمدة',subtitleEn:'Chat with AL OMDA',icon:Bot},
+    {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
+  ]},
+  { id:'analytics', titleAr:'المالية والتحليلات', titleEn:'FINANCE & ANALYTICS', subtitleAr:'لوحات المتابعة والبيانات المتصلة', subtitleEn:'Dashboards and connected data', items:[
+    {path:'/finance/sales-overview',ar:'نظرة عامة على المبيعات',en:'Sales Overview',subtitleAr:'مؤشرات المبيعات',subtitleEn:'Sales metrics',icon:TrendingUp},
+    {path:'/finance/sales-distribution',ar:'توزيع المبيعات',en:'Sales Distribution',subtitleAr:'توزيع القنوات والمصادر',subtitleEn:'Channel and source distribution',icon:Globe},
+    {path:'/finance/payment-gateways',ar:'بوابات الدفع',en:'Payment Gateways',subtitleAr:'حالة تكاملات الدفع',subtitleEn:'Payment integrations',icon:CreditCard},
+    {path:'/finance/active-users',ar:'المستخدمون النشطون والخريطة العالمية',en:'Active Users & Global Map',subtitleAr:'خريطة عالمية وتحليلات المستخدمين',subtitleEn:'Global map and user analytics',icon:Globe2},
+  ]},
+  { id:'collaboration', titleAr:'التعاون والتطبيقات', titleEn:'COLLABORATION & APPS', subtitleAr:'أدوات التواصل وإدارة العمل', subtitleEn:'Communication and work tools', items:[
+    {path:'/collaboration/contacts',ar:'جهات الاتصال',en:'Contacts',subtitleAr:'دفتر جهات الاتصال',subtitleEn:'Contact directory',icon:Contact},
+    {path:'/ai',ar:'المحادثات',en:'Chats',subtitleAr:'محادثاتك مع العمدة',subtitleEn:'Your conversations',icon:MessageSquareText},
+    {path:'/collaboration/calendar',ar:'التقويم',en:'Calendar',subtitleAr:'المواعيد والجدولة',subtitleEn:'Events and scheduling',icon:CalendarDays},
+    {path:'/collaboration/email',ar:'البريد الإلكتروني',en:'Email',subtitleAr:'إدارة البريد بعد الربط',subtitleEn:'Email after connection',icon:Mail},
+    {path:'/collaboration/tickets',ar:'التذاكر والدعم',en:'Tickets & Support',subtitleAr:'طلبات الدعم والمتابعة',subtitleEn:'Support requests and tracking',icon:Ticket},
+  ]},
+  { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
+    {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
+    {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
+    {path:'/ai/usage',ar:'الاستخدام والحصص',en:'Usage & Quota',subtitleAr:'الاستهلاك والذاكرة',subtitleEn:'Usage and memory',icon:Activity},
+  ]},
+  { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
+    {path:'/agents',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
+    {path:'/agents',ar:'المهندس والتصميم الهندسي',en:'Engineer & Engineering',subtitleAr:'الهندسة والتصميم والمواصفات',subtitleEn:'Engineering, design, and specifications',icon:HardHat},
+    {path:'/agents',ar:'الطب والرعاية الصحية',en:'Medicine & Healthcare',subtitleAr:'المعلومات الصحية والبحث الطبي',subtitleEn:'Health information and medical research',icon:Stethoscope},
+    {path:'/agents',ar:'المحاسبة والمالية',en:'Accounting & Finance',subtitleAr:'الحسابات والتحليل المالي',subtitleEn:'Accounting and financial analysis',icon:Calculator},
+    {path:'/agents',ar:'الصيانة والتشغيل',en:'Maintenance & Operations',subtitleAr:'التشغيل والفحص والصيانة',subtitleEn:'Operations, inspection, and maintenance',icon:Wrench},
+    {path:'/agents',ar:'التعليم والتدريب',en:'Education & Training',subtitleAr:'التعليم وإعداد المحتوى التدريبي',subtitleEn:'Learning and training content',icon:GraduationCap},
+  ]},
 ];
 const launcherSubtitleKeys: Record<string, TranslationKey> = {
   '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
@@ -535,6 +566,9 @@ const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang =
 
 function App() {
   const [location, setLocation] = useLocation();
+  const [globalMapZoom,setGlobalMapZoom] = useState(1);
+  const [globalMapPan,setGlobalMapPan] = useState({x:0,y:0});
+  const globalMapDragRef = useRef<{x:number;y:number;panX:number;panY:number}|null>(null);
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -1274,16 +1308,87 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const platformStatusPage = (route:string) => {
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
+    const isGlobalMap = route === '/finance/active-users';
+    const resetGlobalMap = () => { setGlobalMapZoom(1); setGlobalMapPan({x:0,y:0}); };
+    const exportActiveUsers = () => {
+      const rows = [
+        ['Metric','Value','Data status'],
+        ['Active User','23,214','Sample design value — not live analytics'],
+        ['Growth vs previous month','8.06%','Sample design value — not live analytics'],
+        ['Approximate user location','Al Ain, Abu Dhabi, UAE','Approximate city only; precise location unavailable'],
+      ];
+      const csv = '\\uFEFF' + rows.map(row=>row.map(value=>'"'+value.replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
+      const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users-sample.csv'; anchor.click(); URL.revokeObjectURL(url);
+    };
     return <div className="page-enter">
-      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'قسم جاهز للربط بمصدر بيانات حقيقي.':'A workspace area awaiting a real data connection.')}
-      <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'لوحة المستخدمين النشطين والخريطة العالمية التفاعلية.':'Active users dashboard with an interactive global map.')}
+      {isGlobalMap && <section className="panel panel-pad global-users-dashboard" style={{marginTop:16}}>
+        <div className="global-users-header">
+          <div><span className="eyebrow">USER ANALYTICS</span><h2 className="section-title" style={{marginTop:8}}>{isAr?'المستخدمون النشطون':'Active User'}</h2><p className="page-subtitle">{isAr?'نظرة عامة على نشاط المستخدمين حول العالم':'Global overview of user activity'}</p></div>
+          <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
+        </div>
+        <div className="global-user-metrics">
+          <div className="global-user-metric"><span>{isAr?'إجمالي المستخدمين النشطين':'Total Active User'}</span><strong>23,214</strong><small>{isAr?'قيمة تصميم تجريبية':'Sample design value'}</small></div>
+          <div className="global-user-growth"><span>{isAr?'النمو مقارنة بالشهر السابق':'Vs. previous month'}</span><strong><TrendingUp size={18}/> 8.06%</strong><small>{isAr?'قيمة تصميم تجريبية وليست من تحليلات مباشرة':'Sample value — not live analytics'}</small></div>
+        </div>
+        <div className="global-map-toolbar">
+          <div><span className="global-map-live-dot"/><strong>{isAr?'الخريطة العالمية':'Global map'}</strong><small>{isAr?'اسحب الخريطة للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
+          <div className="global-map-controls">
+            <button type="button" className="icon-button" aria-label={isAr?'تكبير':'Zoom in'} onClick={()=>setGlobalMapZoom(value=>Math.min(2.4,value+.2))}><Plus size={16}/></button>
+            <button type="button" className="icon-button" aria-label={isAr?'تصغير':'Zoom out'} onClick={()=>setGlobalMapZoom(value=>Math.max(.8,value-.2))}><Minus size={16}/></button>
+            <button type="button" className="icon-button" aria-label={isAr?'إعادة ضبط الخريطة':'Reset map'} onClick={resetGlobalMap}><RotateCcw size={15}/></button>
+          </div>
+        </div>
+        <div className="global-map-viewport" onPointerDown={event=>{if(event.button!==0)return;globalMapDragRef.current={x:event.clientX,y:event.clientY,panX:globalMapPan.x,panY:globalMapPan.y};event.currentTarget.setPointerCapture(event.pointerId);}} onPointerMove={event=>{const drag=globalMapDragRef.current;if(!drag)return;setGlobalMapPan({x:drag.panX+event.clientX-drag.x,y:drag.panY+event.clientY-drag.y});}} onPointerUp={()=>{globalMapDragRef.current=null;}} onPointerCancel={()=>{globalMapDragRef.current=null;}} role="region" aria-label={isAr?'خريطة عالمية تفاعلية قابلة للتحريك':'Draggable interactive world map'}>
+          <svg viewBox="0 0 1200 560" width="100%" height="100%" aria-label={isAr?'خريطة العالم مع نقاط نشاط توضيحية وموقع تقريبي في العين':'World map with illustrative activity dots and approximate Al Ain location'} style={{display:'block',minWidth:780,touchAction:'none',userSelect:'none'}}>
+            <defs>
+              <pattern id="global-map-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="rgba(150,170,185,.12)" strokeWidth="1"/></pattern>
+              <filter id="global-map-glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="global-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d5dce0"/><stop offset="1" stopColor="#8998a1"/></linearGradient>
+            </defs>
+            <rect width="1200" height="560" fill="#111a25"/>
+            <g transform={`translate(${globalMapPan.x} ${globalMapPan.y}) translate(600 280) scale(${globalMapZoom}) translate(-600 -280)`}>
+              <rect width="1200" height="560" fill="url(#global-map-grid)"/>
+              <g fill="url(#global-land)" stroke="#edf2f4" strokeOpacity=".68" strokeWidth="2.2" strokeLinejoin="round" opacity=".88">
+                <path d="M110 130l45-40 56-10 34 16 30-7 45 25 17 38-23 28-5 36-29 28-13 45-31 25-17 51-28 22-19-18-7-42-26-34-8-49-29-35-12-48-27-31z"/>
+                <path d="M285 350l36 18 25 44-8 48-22 49-16 47-24-12-11-56-25-48 10-48z"/>
+                <path d="M520 130l45-25 61 6 37 26 47-3 31 28 45 6 35 31-8 32-38 13-24 38-33 7-25 34-29-10-25-42-37-7-25-34-42-12-27-39-35-14z"/>
+                <path d="M575 310l43-14 48 17 34 42-11 52-26 47-22 57-29 22-25-33-9-56-31-42 3-52z"/>
+                <path d="M745 135l58-30 79 6 54 29 52 6 55 39-17 37-47 10-27 34-41-7-29-34-47 5-31-30-45-3-31-32z"/>
+                <path d="M955 350l46-20 57 16 28 34-14 35-44 16-49-14-32-29z"/>
+                <path d="M435 142l-23-31 8-37 26-16 26 20-7 32z"/>
+                <path d="M1090 245l30-12 23 24-12 35-28 5-20-25z"/>
+              </g>
+              <g fill="none" stroke="#46a9ff" strokeOpacity=".26" strokeWidth="2" strokeDasharray="7 9">
+                <path d="M195 205Q595 5 970 210"/><path d="M340 375Q625 520 870 210"/><path d="M620 160Q820 330 1030 360"/><path d="M195 205Q440 80 650 330"/>
+              </g>
+              <g fill="#31a9ff" filter="url(#global-map-glow)">
+                <circle cx="190" cy="210" r="6"/><circle cx="265" cy="230" r="5"/><circle cx="330" cy="185" r="6"/>
+                <circle cx="560" cy="190" r="6"/><circle cx="650" cy="230" r="5"/><circle cx="730" cy="190" r="6"/>
+                <circle cx="850" cy="210" r="6"/><circle cx="940" cy="245" r="5"/><circle cx="1020" cy="365" r="6"/>
+                <circle cx="610" cy="350" r="5"/><circle cx="680" cy="315" r="5"/>
+              </g>
+              <g transform="translate(680 315)" filter="url(#global-map-glow)">
+                <circle r="24" fill="#20a5ff" opacity=".16"><animate attributeName="r" values="17;31;17" dur="2.4s" repeatCount="indefinite"/></circle>
+                <circle r="12" fill="#168cff" stroke="#eaf7ff" strokeWidth="3"/>
+                <circle r="4" fill="#fff"/>
+              </g>
+              <g transform="translate(710 292)"><rect x="0" y="0" width="145" height="34" rx="8" fill="#0c1724" stroke="#3b9fe8"/><text x="72" y="22" textAnchor="middle" fill="#e9f6ff" fontSize="14" fontWeight="600">{isAr?'العين · موقع تقريبي':'Al Ain · Approx.'}</text></g>
+            </g>
+            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{isAr?'نقاط النشاط توضيحية وليست مواقع مستخدمين مباشرة':'Activity dots are illustrative, not live user locations'}</text>
+          </svg>
+        </div>
+        <div className="global-map-legend"><span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span><span><i className="global-legend-user"/>{isAr?'موقعك التقريبي: العين، الإمارات':'Your approximate location: Al Ain, UAE'}</span></div>
+        <p className="global-map-disclaimer">{isAr?'تنبيه: رقم المستخدمين ونسبة النمو ونقاط النشاط قيم تجريبية لتصميم اللوحة وليست بيانات حية. موقع العين تقريبي على مستوى المدينة فقط؛ لا نستخدم موقع GPS دقيق.':'Note: user count, growth, and activity dots are sample dashboard values, not live analytics. Al Ain is shown as an approximate city-level location only; no precise GPS is used.'}</p>
+      </section>}
+      {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
         <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض العمدة أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: AL OMDA will not display invented figures, records, or locations without a connected source.'}</span></div>
-      </section>
+      </section>}
     </div>;
   };
-
   const taskIcon = (id:Specialty, size=17) => {
     const Icon = specialties.find((item) => item.id === id)?.icon ?? Bot;
     return <Icon size={size} strokeWidth={1.7}/>;
@@ -1431,15 +1536,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>
           <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أدوات'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
         </div>
-        {appLauncherGroups.map(group=><div key={group.id} className={'app-launcher-group '+(group.id==='secondary'?'app-launcher-secondary-group':'')}>
+        {appLauncherGroups.map(group=><div key={group.id} className="app-launcher-group">
           <div className="app-launcher-group-title">
-            <strong>{group.id==='core'?t('launcherCoreTitle'):t('launcherInsightsAccount')}</strong>
-            <span>{group.id==='core'?t('launcherCoreDesc'):t('launcherSecondaryDesc')}</span>
+            <strong>{isAr?group.titleAr:group.titleEn}</strong>
+            <span>{isAr?group.subtitleAr:group.subtitleEn}</span>
           </div>
-          <div className={'app-launcher-grid '+(group.id==='secondary'?'app-launcher-grid-secondary':'')}>
-            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} className="app-launcher-tile">
-              <span className="app-launcher-icon"><Icon size={group.id==='core'?21:19}/></span>
-              <span className="app-launcher-copy"><strong>{t(item.key)}</strong><small>{t(launcherSubtitleKeys[item.path] || 'launcherSubtitleProfile')}</small></span>
+          <div className="app-launcher-grid">
+            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}}} className="app-launcher-tile">
+              <span className="app-launcher-icon"><Icon size={20} strokeWidth={1.8}/></span>
+              <span className="app-launcher-copy"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?item.subtitleAr:item.subtitleEn}</small></span>
               <ArrowUpLeft size={14} className="app-launcher-arrow"/>
             </Link>})}
           </div>
@@ -2500,7 +2605,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
               {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
               {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
-              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة':'Active Users & Global Map',icon:UserRound},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة العالمية':'Active Users & Global Map',icon:Globe2},
             ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
@@ -2591,25 +2696,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
         <div className="curtain-launcher-groups">
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
-            <div className="curtain-caption">{group.id==='core'?t('workspace'):t('launcherInsightsAccount')}</div>
-            <nav className="curtain-launcher-grid" aria-label={group.id==='core'?(isAr?'أدوات العمل الأساسية':'Core workspace tools'):(isAr?'المتابعة وإعدادات الحساب':'Analytics and account')}>
-              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
+            <div className="curtain-caption">{isAr?group.titleAr:group.titleEn}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?group.titleAr:group.titleEn}>
+              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}setCurtainOpen(false);}} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
             </nav>
           </section>)}
-          <section className="curtain-launcher-group">
-            <div className="curtain-caption">{isAr?'أقسام المنصة':'Platform areas'}</div>
-            <nav className="curtain-launcher-grid" aria-label={isAr?'أقسام المنصة':'Platform areas'}>
-              {[
-                {path:'/projects',ar:'المشاريع',en:'Projects'},
-                {path:'/pipeline',ar:'مسار العمل',en:'Pipeline'},
-                {path:'/assets',ar:'الأصول والملفات',en:'Assets'},
-                {path:'/ai',ar:'المحادثات',en:'Chats'},
-                ...Object.entries(platformStatusPages).map(([pagePath,info])=>({path:pagePath,ar:info.ar,en:info.en})),
-              ].map(item=><Link key={item.path} href={item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}>
-                <span className="curtain-launcher-icon"><Globe size={19}/></span><strong>{isAr?item.ar:item.en}</strong>
-              </Link>)}
-            </nav>
-          </section>
         </div>
       </aside>
     </div>}
