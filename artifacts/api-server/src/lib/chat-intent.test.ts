@@ -189,6 +189,8 @@ describe("comparison intent remains conversational", () => {
     }
     assert.equal(isWordFileRequest("جهزلي ملف Word يحتوي على مقارنة بين النظامين"), true);
     assert.equal(isExcelFileRequest("Create an Excel workbook with a comparison table"), true);
+    assert.equal(isExcelFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), false);
+    assert.equal(isWordFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), true);
   });
 });
 
@@ -214,6 +216,7 @@ describe("PowerPoint artifact intent", () => {
       "Create a PowerPoint presentation",
       "Generate a PPTX slide deck",
       "Create a comparison slide deck and export it as a PowerPoint presentation",
+      "اعمل عرض تقديمي فيه مقارنة بين الخطط",
     ]) {
       assert.equal(isPowerPointFileRequest(request), true, "missed presentation intent: " + request);
     }
@@ -243,6 +246,7 @@ describe("source-code artifact intent", () => {
       "مش عايز تعمل ملف app.ts",
       "لا تنشئ ملف Python",
       "Write Python code inline, not as a file",
+      "Explain python async",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), false, "unexpected source file intent: " + request);
     }
@@ -255,6 +259,8 @@ describe("source-code artifact intent", () => {
       "جهزلي ملف HTML للتحميل",
       "اكتبلي ملف JavaScript واحفظه",
       "Export the source code as main.py",
+      "Create a comparison of sorting algorithms and export Python code as compare.py",
+      "Create a file named inline.css",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), true, "missed source file intent: " + request);
     }
