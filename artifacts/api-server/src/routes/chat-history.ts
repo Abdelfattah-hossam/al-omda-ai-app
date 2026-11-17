@@ -9,9 +9,12 @@ import {
 
 const router: IRouter = Router();
 type SavedWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
-type SavedSpreadsheet = { title: string; columns: string[]; rows: string[][] };
+type SavedSpreadsheet = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string>; sheets?: Array<{ name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string, string> }> };
+type SavedPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
+type SavedSourceData = { title: string; name: string; language: string; code: string };
 type SavedAppData = { title: string; html: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; appData?: SavedAppData; taskId?: string; taskTitle?: string };
+type SavedToolFailure = { callId: string; tool: string; message: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -102,7 +105,7 @@ function validConversationId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function validateMessages(raw: unknown): ChatMessage[] | null {
+export function validateMessages(raw: unknown): ChatMessage[] | null {
   if (!Array.isArray(raw) || raw.length > 100) return null;
   const messages: ChatMessage[] = [];
   let total = 0;
@@ -111,6 +114,22 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
     total += item.content.length;
     if (total > 200000) return null;
     const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };
+    if (item.toolExecutionStatus !== undefined) {
+      if (item.toolExecutionStatus !== "with_warnings" && item.toolExecutionStatus !== "no_tool_errors") return null;
+      saved.toolExecutionStatus = item.toolExecutionStatus;
+    }
+    if (item.toolFailures !== undefined) {
+      if (!Array.isArray(item.toolFailures) || item.toolFailures.length > 20) return null;
+      const failures: SavedToolFailure[] = [];
+      for (const failure of item.toolFailures) {
+        if (!failure || typeof failure.callId !== "string" || !failure.callId.trim() || failure.callId.length > 120 ||
+          typeof failure.tool !== "string" || !failure.tool.trim() || failure.tool.length > 120 ||
+          typeof failure.message !== "string" || failure.message.length > 1000) return null;
+        failures.push({ callId: failure.callId, tool: failure.tool, message: failure.message });
+      }
+      if (JSON.stringify(failures).length > 30000) return null;
+      saved.toolFailures = failures;
+    }
     if (item.taskId !== undefined) {
       if (typeof item.taskId !== "string" || !validConversationId(item.taskId)) return null;
       saved.taskId = item.taskId;
@@ -129,6 +148,26 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
       if (JSON.stringify(doc).length > 70000) return null;
       saved.documentData = { title: doc.title, paragraphs: doc.paragraphs, columns: doc.columns, rows: doc.rows };
     }
+    if (item.presentationData !== undefined) {
+      const presentation = item.presentationData;
+      if (!presentation || typeof presentation !== "object" || typeof presentation.title !== "string" || presentation.title.length > 180 ||
+        !Array.isArray(presentation.slides) || presentation.slides.length < 1 || presentation.slides.length > 30 ||
+        presentation.slides.some((slide: unknown) => !slide || typeof slide !== "object" ||
+          typeof (slide as any).title !== "string" || (slide as any).title.length > 180 ||
+          !Array.isArray((slide as any).bullets) || (slide as any).bullets.length > 12 ||
+          (slide as any).bullets.some((bullet: unknown) => typeof bullet !== "string" || bullet.length > 1000) ||
+          ((slide as any).notes !== undefined && (typeof (slide as any).notes !== "string" || (slide as any).notes.length > 2000)))) return null;
+      if (JSON.stringify(presentation).length > 70000) return null;
+      saved.presentationData = presentation;
+    }
+    if (item.sourceData !== undefined) {
+      const source = item.sourceData;
+      if (!source || typeof source !== "object" || typeof source.title !== "string" || source.title.length > 180 ||
+        typeof source.name !== "string" || !/^[A-Za-z0-9._-]{1,120}$/.test(source.name) ||
+        typeof source.language !== "string" || source.language.length > 40 ||
+        typeof source.code !== "string" || source.code.length > 50000 || JSON.stringify(source).length > 55000) return null;
+      saved.sourceData = source;
+    }
     if (item.appData !== undefined) {
       const app = item.appData;
       if (!app || typeof app !== "object" || typeof app.title !== "string" || app.title.length > 180 ||
@@ -137,10 +176,26 @@ function validateMessages(raw: unknown): ChatMessage[] | null {
     }
     if (item.spreadsheetData !== undefined) {
       const sheet = item.spreadsheetData;
+      const validRows = (columns: unknown, rows: unknown): columns is string[] => Array.isArray(columns) && columns.length >= 1 && columns.length <= 30 &&
+        columns.every((value: unknown) => typeof value === "string" && value.length <= 180) &&
+        Array.isArray(rows) && rows.length <= 500 &&
+        rows.every((row: unknown) => Array.isArray(row) && row.length === columns.length && row.every((value: unknown) =>
+          typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value)) || (typeof value === "string" && value.length <= 2000)));
+      const validFormulas = (formulas: unknown): formulas is Record<string, string> => formulas === undefined ||
+        (Boolean(formulas) && typeof formulas === "object" && !Array.isArray(formulas) &&
+          Object.entries(formulas as Record<string, unknown>).length <= 500 &&
+          Object.entries(formulas as Record<string, unknown>).every(([cell, formula]) => /^[A-Z]{1,3}[1-9][0-9]{0,5}$/i.test(cell) && typeof formula === "string" && formula.length <= 1000));
       if (!sheet || typeof sheet !== "object" || typeof sheet.title !== "string" || sheet.title.length > 180 ||
-        !Array.isArray(sheet.columns) || sheet.columns.length < 1 || sheet.columns.length > 30 || sheet.columns.some((value: unknown) => typeof value !== "string" || value.length > 180) ||
-        !Array.isArray(sheet.rows) || sheet.rows.length > 500 || sheet.rows.some((row: unknown) => !Array.isArray(row) || row.length !== sheet.columns.length || row.some((value: unknown) => typeof value !== "string" || value.length > 2000))) return null;
-      saved.spreadsheetData = { title: sheet.title, columns: sheet.columns, rows: sheet.rows };
+        !validRows(sheet.columns, sheet.rows) || !validFormulas(sheet.formulas)) return null;
+      const savedSheet: SavedSpreadsheet = { title: sheet.title, columns: sheet.columns, rows: sheet.rows, ...(sheet.formulas ? { formulas: sheet.formulas } : {}) };
+      if (sheet.sheets !== undefined) {
+        if (!Array.isArray(sheet.sheets) || sheet.sheets.length < 1 || sheet.sheets.length > 12 ||
+          sheet.sheets.some((entry: any) => !entry || typeof entry.name !== "string" || !entry.name.trim() || entry.name.length > 31 ||
+            !validRows(entry.columns, entry.rows) || !validFormulas(entry.formulas))) return null;
+        savedSheet.sheets = sheet.sheets.map((entry: any) => ({ name: entry.name, columns: entry.columns, rows: entry.rows, ...(entry.formulas ? { formulas: entry.formulas } : {}) }));
+      }
+      if (JSON.stringify(savedSheet).length > 100000) return null;
+      saved.spreadsheetData = savedSheet;
     }
     messages.push(saved);
   }
