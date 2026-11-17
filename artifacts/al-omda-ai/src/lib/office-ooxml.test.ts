@@ -55,8 +55,15 @@ test("creates a real XLSX workbook with multiple sheets and formulas", async () 
   assert.match(entries["xl/worksheets/sheet1.xml"], /<f>SUM\(B3:B4\)<\/f>/);
 });
 
+test("removes XML 1.0 control characters from Office text", async () => {
+  const blob = createDocxBlob({ title: "Report\\u0000", paragraphs: ["Safe\\u0001text"], columns: [], rows: [] });
+  const entries = await readStoredZip(blob);
+  assert.doesNotMatch(entries["word/document.xml"], /[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/);
+  assert.match(entries["word/document.xml"], /Report/);
+});
+
 test("rejects dangerous Excel formula functions and external workbook references", () => {
-  for (const formula of ['=WEBSERVICE("https://example.com")', '=HYPERLINK("https://example.com","open")', "=DDE(\\\"cmd\\\",\\\"/c calc\\\",\\\"\\\")", "='[other.xlsx]Sheet1'!A1"]) {
+  for (const formula of ['=WEBSERVICE("https://example.com")', '=HYPERLINK("https://example.com","open")', "=DDE(\\\"cmd\\\",\\\"/c calc\\\",\\\"\\\")", "='[other.xlsx]Sheet1'!A1", "=cmd|' /C calc'!A0"]) {
     assert.throws(() => createXlsxBlob({
       title: "Unsafe",
       columns: ["Value"],
