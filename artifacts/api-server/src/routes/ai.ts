@@ -566,7 +566,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         console.warn("[AI step failure status could not be saved]", failure instanceof Error ? failure.message : "Unknown error");
       }
     };
-    if (step.state !== "approved" || task.steps.slice(0, stepIndex).some((item) => item.state !== "approved")) {
+    if (step.state !== "approved" || task.steps.slice(0, stepIndex).some((item) => item.state !== "approved" || item.executionStatus !== "succeeded" || typeof item.result !== "string" || !item.result.trim())) {
       res.status(409).json({ error: "Approve this step and all earlier steps before execution." }); return;
     }
     if (step.result) { res.status(409).json({ error: "This step already has a saved result." }); return; }
