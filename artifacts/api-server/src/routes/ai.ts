@@ -7,6 +7,7 @@ import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from ".
 import { parseHtmlAppArtifact } from "../lib/html-app-artifact.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
+import { getHostedModelTemperature } from "../lib/ai-model-policy.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -132,6 +133,10 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
   return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
 }
 
+function requestTemperature(messages: ChatMessage[]): number {
+  return getHostedModelTemperature(getLatestUserRequest(messages), messages.some((message) => Boolean(message.image)));
+}
+
 function chooseProviders(messages: ChatMessage[]) {
   const coding = isCodingRequest(messages);
   const configured = getProviders();
@@ -169,7 +174,7 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
       model,
       messages: groqMessages,
       max_completion_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800,
-      ...(hasImage ? { temperature: 0.7 } : {}),
+      temperature: requestTemperature(messages),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -216,7 +221,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
           contents,
-          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
+          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: requestTemperature(messages) },
         }),
       });
       const payload = await response.json().catch(() => null) as any;
@@ -333,7 +338,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
             { type: "text", text: message.content },
             { type: "image_url", image_url: { url: `data:${message.image.mimeType};base64,${message.image.data}` } },
           ],
-        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: requestTemperature(messages) }),
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
@@ -377,7 +382,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
         ...messages.map((message) => ({ role: message.role, content: message.content })),
       ],
       max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
-      temperature: 0.4,
+      temperature: requestTemperature(messages),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
