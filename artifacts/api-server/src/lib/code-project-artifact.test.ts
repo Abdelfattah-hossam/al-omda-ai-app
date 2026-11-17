@@ -68,7 +68,7 @@ test("rejects compatibility-normalized protected paths and enforces UTF-8 per-fi
   protectedPath.files.push({ path: ".ｇｉｔ/config", content: "x" });
   assert.equal(parseCodeProjectArtifact(JSON.stringify(protectedPath)), null);
   const multibyte = validProject();
-  multibyte.files[3].content = "ع".repeat(20001);
+  multibyte.files[3].content = "ع".repeat(30001);
   assert.equal(parseCodeProjectArtifact(JSON.stringify(multibyte)), null);
 });
 
