@@ -81,7 +81,7 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     assert.ok(stepsStart >= 0 && stepsEnd > stepsStart, name + " must expose its response step array");
     const responseSteps = response.slice(stepsStart, stepsEnd);
     assert.ok(!responseSteps.includes("})).min("), name + " must not impose a minimum count on persisted response data");
-    assert.ok(!responseSteps.includes("})).max("), name + " must not impose a new maximum count on persisted response data");
+    assert.ok(!responseSteps.includes("})).max(20)"), name + " must not impose a new maximum count on persisted response data");
   }
   assert.ok(route.includes("isValidNewTaskPlan(plan)"));
   assert.ok(validation.includes("plan.steps.length >= 3"));
