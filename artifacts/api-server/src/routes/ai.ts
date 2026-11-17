@@ -1239,7 +1239,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
 
-    let answer: { text: string; model: string } | null = null;
+    let answer: ProviderAnswer | null = null;
     let usedProvider = "";
     const failures: string[] = [];
     for (const provider of providers) {
