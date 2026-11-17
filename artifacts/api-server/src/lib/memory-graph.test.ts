@@ -131,3 +131,14 @@ test("rejects personal contact details and precise location from memory", () => 
   ]) assert.throws(() => parseMemoryNode({ nodeType: "other", label }, userId), /contact details|precise location/i, label);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "Work preference", details: { email: "abd@example.com" } }, userId), /credentials or sensitive/i);
 });
+
+
+test("rejects personal salary and financial account details from memory", () => {
+  for (const label of [
+    "My salary is 1400 AED",
+    "My income is 3000 AED",
+    "My bank account number is 123456789",
+    "بطاقتي البنكية هي 123456789",
+    "راتبي 1400 درهم",
+  ]) assert.throws(() => parseMemoryNode({ nodeType: "other", label }, userId), /financial information/i, label);
+});
