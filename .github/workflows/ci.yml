@@ -66,6 +66,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/app.cors.test.ts
       - name: Test workspace asset validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/storage-assets.test.ts
+      - name: Test sequential project stage prerequisites
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-stage-sequence.test.ts
 
       - name: Set up reviewdog
         if: github.event_name == 'pull_request'
