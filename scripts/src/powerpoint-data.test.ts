@@ -51,3 +51,20 @@ test("PPTX font sizing responds to text length and the actual slide box dimensio
   assert.ok(longTitle >= 16);
   assert.ok(narrowBody >= 11);
 });
+
+test("client and server parsers normalize bullet lists and speaker notes identically", () => {
+  const value = {
+    title: "Consistent",
+    slides: [{
+      title: "One",
+      body: "",
+      bullets: [...Array.from({ length: 10 }, () => "   "), "Keep this bullet"],
+      speakerNotes: "  Presenter notes  ",
+    }],
+  };
+  const server = parsePowerPointPresentation(JSON.stringify(value));
+  const client = parsePowerPointData(value);
+  assert.deepEqual(client, server);
+  assert.equal(client?.slides[0].bullets.length, 1);
+  assert.equal(client?.slides[0].speakerNotes, "Presenter notes");
+});
