@@ -3,7 +3,7 @@ export type XlsxData = { title: string; columns: string[]; rows: Array<Array<str
 export type DocxData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 
 const encoder = new TextEncoder();
-const xmlEscape = (value: unknown) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const xmlEscape = (value: unknown) => String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1)); }
@@ -55,7 +55,7 @@ export function createXlsxBlob(data: XlsxData): Blob {
   sheets.forEach((sheet, sheetIndex) => {
     for (const [address, rawFormula] of Object.entries(sheet.formulas ?? {})) {
       const formula = String(rawFormula).trim().replace(/^=/, "");
-      if (!formula || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
+      if (!formula || formula.includes("|") || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
         throw new Error("Unsafe Excel formula rejected at " + address + ".");
       }
     }
