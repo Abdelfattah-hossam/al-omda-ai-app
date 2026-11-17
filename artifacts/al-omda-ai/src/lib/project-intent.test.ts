@@ -97,3 +97,11 @@ test("does not create file tasks for questions that only mention Office formats"
     assert.equal(detectProjectSpecialty(request), null, "misclassified Office question: " + request);
   }
 });
+
+test("does not turn vague bare report nouns into full projects", () => {
+  assert.equal(detectProjectSpecialty("report"), null);
+  assert.equal(detectProjectSpecialty("عايز تقرير"), null);
+  assert.equal(detectProjectSpecialty("I need a report"), null);
+  assert.notEqual(detectProjectSpecialty("Please write a report"), null);
+  assert.notEqual(detectProjectSpecialty("عايز تقرير عن التسويق"), null);
+});
