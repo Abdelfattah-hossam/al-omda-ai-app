@@ -628,7 +628,7 @@ function App() {
       .then(data => { if (!cancelled) setLiveUserAnalytics(data); })
       .catch(error => { if (!cancelled) setLiveUserAnalyticsError(error instanceof Error ? error.message : 'Could not load live analytics.'); });
     return () => { cancelled = true; };
-  }, [authUser?.id, path]);
+  }, [authUser?.id]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
