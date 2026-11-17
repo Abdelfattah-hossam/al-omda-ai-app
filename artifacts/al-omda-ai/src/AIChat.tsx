@@ -804,8 +804,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const submittedDraft = draftOverride ?? input;
     const text = submittedDraft.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : fileForRequest ? (ar ? "اقرأ الملف المرفق وافهم محتواه وساعدني في طلبي." : "Read the attached file and help me with it.") : "");
     const visibleText = fileForRequest ? text + "\n\n📎 " + fileForRequest.name : text;
-    const attachmentText = fileForRequest ? fileForRequest.text.slice(0, Math.max(0, 7600 - text.length - 100)) : "";
-    const requestText = fileForRequest ? text + "\n\n[Attached file: " + fileForRequest.name + "]\n" + attachmentText : text;
+    const attachmentPrompt = fileForRequest ? text.slice(0, 6000) : text;
+    const attachmentText = fileForRequest ? fileForRequest.text.slice(0, Math.max(0, 7800 - attachmentPrompt.length - 100)) : "";
+    const requestText = fileForRequest ? attachmentPrompt + "\n\n[Attached file: " + fileForRequest.name + "]\n" + attachmentText : text;
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
