@@ -50,6 +50,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/excel-workbook.test.ts
       - name: Test PowerPoint presentation validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/powerpoint-presentation.test.ts
+      - name: Test generated HTML app artifact policy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/html-app-artifact.test.ts
       - name: Test Word document validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/word-document.test.ts
       - name: Test professional legal and engineering standards
