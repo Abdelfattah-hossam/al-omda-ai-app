@@ -33,6 +33,7 @@ export type MemoryEdgeInput = {
 const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race|email|phone|mobile|home.?address|street.?address|date.?of.?birth|\bdob\b|gps|coordinates|latitude|longitude/i;
 const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Bearer\s+[A-Za-z0-9._~-]{20,})/i;
 const BLOCKED_CONTACT_TEXT = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:my|our|i live at|my home is|my home address is|my street address is|my phone(?: number)? is|my mobile is|my email is|my address is|my exact location is|my precise location is|my location is)\s*[:=]?\s*[^,;.!?]{3,120}|(?:عنواني|رقم هاتفي|تليفوني|موبايلي|بريدي الإلكتروني|بريدي الالكتروني|إيميلي|ايميلي|موقعي الدقيق)\s*[:=]?\s*[^،,؛;.!؟?]{3,120}/iu;
+const BLOCKED_FINANCIAL_TEXT = /(?:my|our|i earn|my salary|my income|salary is|income is|bank account|account number|credit card|debit card|tax id|financial account|wallet|راتبي|دخلي|حسابي البنكي|رقم حسابي|بطاقتي البنكية|بطاقة ائتمان)\s*[:=]?\s*[^,;.!?]{2,120}/iu;
 const BLOCKED_SENSITIVE_TEXT = /\b(?:my|our|i have|i am|i'm|i follow|i practice|i identify as|i belong to|i support|i vote for|member of)\b.{0,80}\b(?:medical|health|diagnos|illness|disease|diabetes|cancer|asthma|epilepsy|hiv|disability|christian|muslim|jewish|hindu|buddhist|sikh|atheist|agnostic|religion|political party|political affiliation|political views|ethnic|ethnicity|race|sexual orientation|gay|lesbian|bisexual|transgender)\b|\b(?:christian|muslim|jewish|hindu|buddhist|sikh|atheist|agnostic|gay|lesbian|bisexual|transgender)\b|\b(?:political party|party membership|political affiliation|sexual orientation|ethnic identity)\b|(?:انا|أنا|أني|اني|ديانتي|معتقدي|انتمي|أنتمي|أؤيد|اؤيد|عضو في|من اصول|من أصول|ميولي|الجنسية|جنسية|عرقي|صحتي|مرضي|تشخيصي).{0,80}(?:مسلم|مسيحي|يهودي|هندوسي|بوذي|ملحد|لا ديني|حزب|سياسي|عرقي|أصل|اصول|أصول|مثلي|مثلية|ثنائي الميول|متحول|مرض|سكري|سرطان|إعاقة|اعاقة)/iu;
 
 function containsBlockedDetailKey(value: unknown, depth = 0): boolean {
@@ -53,6 +54,7 @@ function normalizeDetails(value: unknown, maxBytes: number): Record<string, unkn
   if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("Memory details exceed the allowed size.");
   if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token."); throw new Error("Personal contact details or precise location must not be stored in AI memory.");
   if (BLOCKED_CONTACT_TEXT.test(serialized)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
+  if (BLOCKED_FINANCIAL_TEXT.test(serialized)) throw new Error("Personal financial information must not be stored in AI memory.");
   if (BLOCKED_SENSITIVE_TEXT.test(serialized)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   return details;
 }
@@ -80,6 +82,7 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   if (label.length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
   if (BLOCKED_SECRET_VALUE.test(label)) throw new Error("Memory node label appears to contain a credential or access token.");
   if (BLOCKED_CONTACT_TEXT.test(label)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
+  if (BLOCKED_FINANCIAL_TEXT.test(label)) throw new Error("Personal financial information must not be stored in AI memory.");
   if (BLOCKED_SENSITIVE_TEXT.test(label)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   const normalizedLabel = label.toLocaleLowerCase().replace(/[؟?!.,،؛;:]+/g, "").replace(/\s+/g, " ");
   if (!normalizedLabel) throw new Error("Memory node label must contain searchable text.");
