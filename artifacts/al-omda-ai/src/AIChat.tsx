@@ -804,7 +804,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const submittedDraft = draftOverride ?? input;
     const text = submittedDraft.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : fileForRequest ? (ar ? "اقرأ الملف المرفق وافهم محتواه وساعدني في طلبي." : "Read the attached file and help me with it.") : "");
     const visibleText = fileForRequest ? text + "\n\n📎 " + fileForRequest.name : text;
-    const requestText = fileForRequest ? text + "\n\n[Attached file: " + fileForRequest.name + "]\n" + fileForRequest.text : text;
+    const attachmentText = fileForRequest ? fileForRequest.text.slice(0, Math.max(0, 7600 - text.length - 100)) : "";
+    const requestText = fileForRequest ? text + "\n\n[Attached file: " + fileForRequest.name + "]\n" + attachmentText : text;
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
@@ -862,9 +863,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-12).map((message, index, list) => ({
+        body: JSON.stringify({ messages: next.slice(fileForRequest ? -8 : -12).map((message, index, list) => ({
           role: message.role,
-          content: index === list.length - 1 ? requestText : message.content,
+          content: index === list.length - 1 ? requestText : fileForRequest ? message.content.slice(-2500) : message.content,
           ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
         })) }),
       });
