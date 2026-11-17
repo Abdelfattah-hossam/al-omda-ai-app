@@ -131,10 +131,35 @@ function triggerArtifactDownload(blob: Blob, filename: string): void {
   document.body.appendChild(link); link.click(); link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
-async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
-  // Trigger the browser download synchronously within the user's click, before awaiting network I/O.
-  // This preserves iOS Safari's user-activation requirement while the private asset upload continues.
+async function deliverTaskArtifact(blob: Blob, filename: string, mimeType: string): Promise<void> {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    const file = new File([blob], filename, { type: mimeType });
+    if (typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // If the iOS share sheet is unavailable, fall back to opening the file.
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
   triggerArtifactDownload(blob, filename);
+}
+async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+  // Invoke the browser's native file/share UI directly from the user's click before awaiting upload I/O.
+  await deliverTaskArtifact(blob, filename, mimeType);
   await persistTaskArtifact(blob, filename, mimeType, projectId);
 }
 
