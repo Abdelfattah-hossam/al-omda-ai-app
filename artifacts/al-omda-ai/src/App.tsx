@@ -26,7 +26,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, type LucideIcon,
+  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, LocateFixed, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
@@ -566,6 +566,9 @@ const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang =
 
 function App() {
   const [location, setLocation] = useLocation();
+  const [globalMapZoom,setGlobalMapZoom] = useState(1);
+  const [globalMapPan,setGlobalMapPan] = useState({x:0,y:0});
+  const globalMapDragRef = useRef<{x:number;y:number;panX:number;panY:number}|null>(null);
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -1306,34 +1309,84 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
     const isGlobalMap = route === '/finance/active-users';
+    const resetGlobalMap = () => { setGlobalMapZoom(1); setGlobalMapPan({x:0,y:0}); };
+    const exportActiveUsers = () => {
+      const rows = [
+        ['Metric','Value','Data status'],
+        ['Active User','23,214','Sample design value — not live analytics'],
+        ['Growth vs previous month','8.06%','Sample design value — not live analytics'],
+        ['Approximate user location','Al Ain, Abu Dhabi, UAE','Approximate city only; precise location unavailable'],
+      ];
+      const csv = '\\uFEFF' + rows.map(row=>row.map(value=>'"'+value.replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
+      const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users-sample.csv'; anchor.click(); URL.revokeObjectURL(url);
+    };
     return <div className="page-enter">
-      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'قسم جاهز للربط بمصدر بيانات حقيقي.':'A workspace area awaiting a real data connection.')}
-      {isGlobalMap && <section className="panel panel-pad" style={{marginTop:16}}>
-        <div className="section-head"><div><span className="eyebrow">{isAr?'GLOBAL OVERVIEW':'GLOBAL OVERVIEW'}</span><h2 className="section-title">{isAr?'الخريطة العالمية':'Global map'}</h2><p className="page-subtitle">{isAr?'عرض جغرافي عام؛ لن تظهر نقاط أو أعداد مستخدمين قبل ربط تحليلات موثوقة.':'Geographic overview. No user markers or counts appear until a trusted analytics source is connected.'}</p></div><Globe2 size={22}/></div>
-        <div role="img" aria-label={isAr?'رسم توضيحي للخريطة العالمية دون بيانات مستخدمين':'Illustrative world map without user data'} style={{marginTop:16,border:'1px solid var(--border,#303744)',borderRadius:14,overflow:'hidden',background:'radial-gradient(ellipse at 50% 45%,rgba(70,130,150,.16),rgba(15,22,32,.92) 72%)',padding:'clamp(8px,2vw,22px)'}}>
-          <svg viewBox="0 0 960 430" width="100%" role="presentation" style={{display:'block',maxHeight:430}}>
-            <defs><pattern id="map-grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="rgba(150,180,195,.10)" strokeWidth="1"/></pattern></defs>
-            <rect width="960" height="430" fill="url(#map-grid)"/>
-            <g fill="rgba(92,157,171,.42)" stroke="rgba(139,198,205,.72)" strokeWidth="2" strokeLinejoin="round">
-              <path d="M92 93l35-25 42-7 27 13 18-4 30 18 9 27-18 18-4 26-20 20-9 35-22 20-11 40-19 18-14-12-5-34-18-26-5-36-20-25-8-39-18-27z"/>
-              <path d="M230 258l25 13 17 32-5 35-15 37-11 37-17-9-8-42-18-36 7-37z"/>
-              <path d="M414 94l35-17 49 4 29 19 36-2 23 20 35 4 26 23-5 24-30 9-18 29-25 5-19 25-21-7-19-31-29-5-19-25-33-9-21-29-27-10z"/>
-              <path d="M457 226l32-10 37 12 26 31-8 39-20 35-17 43-22 16-19-24-7-42-23-31 2-39z"/>
-              <path d="M585 95l45-23 62 4 42 22 41 4 43 30-13 29-37 7-21 27-32-5-23-26-37 4-24-23-35-2-24-24z"/>
-              <path d="M750 270l36-15 45 12 22 26-11 26-34 12-38-10-25-22z"/>
-              <path d="M350 105l-18-24 6-29 20-12 20 15-5 25z"/>
-              <path d="M856 194l24-9 18 18-9 27-22 4-15-19z"/>
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'لوحة المستخدمين النشطين والخريطة العالمية التفاعلية.':'Active users dashboard with an interactive global map.')}
+      {isGlobalMap && <section className="panel panel-pad global-users-dashboard" style={{marginTop:16}}>
+        <div className="global-users-header">
+          <div><span className="eyebrow">USER ANALYTICS</span><h2 className="section-title" style={{marginTop:8}}>{isAr?'المستخدمون النشطون':'Active User'}</h2><p className="page-subtitle">{isAr?'نظرة عامة على نشاط المستخدمين حول العالم':'Global overview of user activity'}</p></div>
+          <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
+        </div>
+        <div className="global-user-metrics">
+          <div className="global-user-metric"><span>{isAr?'إجمالي المستخدمين النشطين':'Total Active User'}</span><strong>23,214</strong><small>{isAr?'قيمة تصميم تجريبية':'Sample design value'}</small></div>
+          <div className="global-user-growth"><span>{isAr?'النمو مقارنة بالشهر السابق':'Vs. previous month'}</span><strong><TrendingUp size={18}/> 8.06%</strong><small>{isAr?'قيمة تصميم تجريبية وليست من تحليلات مباشرة':'Sample value — not live analytics'}</small></div>
+        </div>
+        <div className="global-map-toolbar">
+          <div><span className="global-map-live-dot"/><strong>{isAr?'الخريطة العالمية':'Global map'}</strong><small>{isAr?'اسحب الخريطة للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
+          <div className="global-map-controls">
+            <button type="button" className="icon-button" aria-label={isAr?'تكبير':'Zoom in'} onClick={()=>setGlobalMapZoom(value=>Math.min(2.4,value+.2))}><Plus size={16}/></button>
+            <button type="button" className="icon-button" aria-label={isAr?'تصغير':'Zoom out'} onClick={()=>setGlobalMapZoom(value=>Math.max(.8,value-.2))}><Minus size={16}/></button>
+            <button type="button" className="icon-button" aria-label={isAr?'إعادة ضبط الخريطة':'Reset map'} onClick={resetGlobalMap}><RotateCcw size={15}/></button>
+          </div>
+        </div>
+        <div className="global-map-viewport" onPointerDown={event=>{if(event.button!==0)return;globalMapDragRef.current={x:event.clientX,y:event.clientY,panX:globalMapPan.x,panY:globalMapPan.y};event.currentTarget.setPointerCapture(event.pointerId);}} onPointerMove={event=>{const drag=globalMapDragRef.current;if(!drag)return;setGlobalMapPan({x:drag.panX+event.clientX-drag.x,y:drag.panY+event.clientY-drag.y});}} onPointerUp={()=>{globalMapDragRef.current=null;}} onPointerCancel={()=>{globalMapDragRef.current=null;}} role="region" aria-label={isAr?'خريطة عالمية تفاعلية قابلة للتحريك':'Draggable interactive world map'}>
+          <svg viewBox="0 0 1200 560" width="100%" height="100%" aria-label={isAr?'خريطة العالم مع نقاط نشاط توضيحية وموقع تقريبي في العين':'World map with illustrative activity dots and approximate Al Ain location'} style={{display:'block',minWidth:780,touchAction:'none',userSelect:'none'}}>
+            <defs>
+              <pattern id="global-map-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="rgba(150,170,185,.12)" strokeWidth="1"/></pattern>
+              <filter id="global-map-glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="global-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d5dce0"/><stop offset="1" stopColor="#8998a1"/></linearGradient>
+            </defs>
+            <rect width="1200" height="560" fill="#111a25"/>
+            <g transform={`translate(${globalMapPan.x} ${globalMapPan.y}) translate(600 280) scale(${globalMapZoom}) translate(-600 -280)`}>
+              <rect width="1200" height="560" fill="url(#global-map-grid)"/>
+              <g fill="url(#global-land)" stroke="#edf2f4" strokeOpacity=".68" strokeWidth="2.2" strokeLinejoin="round" opacity=".88">
+                <path d="M110 130l45-40 56-10 34 16 30-7 45 25 17 38-23 28-5 36-29 28-13 45-31 25-17 51-28 22-19-18-7-42-26-34-8-49-29-35-12-48-27-31z"/>
+                <path d="M285 350l36 18 25 44-8 48-22 49-16 47-24-12-11-56-25-48 10-48z"/>
+                <path d="M520 130l45-25 61 6 37 26 47-3 31 28 45 6 35 31-8 32-38 13-24 38-33 7-25 34-29-10-25-42-37-7-25-34-42-12-27-39-35-14z"/>
+                <path d="M575 310l43-14 48 17 34 42-11 52-26 47-22 57-29 22-25-33-9-56-31-42 3-52z"/>
+                <path d="M745 135l58-30 79 6 54 29 52 6 55 39-17 37-47 10-27 34-41-7-29-34-47 5-31-30-45-3-31-32z"/>
+                <path d="M955 350l46-20 57 16 28 34-14 35-44 16-49-14-32-29z"/>
+                <path d="M435 142l-23-31 8-37 26-16 26 20-7 32z"/>
+                <path d="M1090 245l30-12 23 24-12 35-28 5-20-25z"/>
+              </g>
+              <g fill="none" stroke="#46a9ff" strokeOpacity=".26" strokeWidth="2" strokeDasharray="7 9">
+                <path d="M195 205Q595 5 970 210"/><path d="M340 375Q625 520 870 210"/><path d="M620 160Q820 330 1030 360"/><path d="M195 205Q440 80 650 330"/>
+              </g>
+              <g fill="#31a9ff" filter="url(#global-map-glow)">
+                <circle cx="190" cy="210" r="6"/><circle cx="265" cy="230" r="5"/><circle cx="330" cy="185" r="6"/>
+                <circle cx="560" cy="190" r="6"/><circle cx="650" cy="230" r="5"/><circle cx="730" cy="190" r="6"/>
+                <circle cx="850" cy="210" r="6"/><circle cx="940" cy="245" r="5"/><circle cx="1020" cy="365" r="6"/>
+                <circle cx="610" cy="350" r="5"/><circle cx="680" cy="315" r="5"/>
+              </g>
+              <g transform="translate(680 315)" filter="url(#global-map-glow)">
+                <circle r="24" fill="#20a5ff" opacity=".16"><animate attributeName="r" values="17;31;17" dur="2.4s" repeatCount="indefinite"/></circle>
+                <circle r="12" fill="#168cff" stroke="#eaf7ff" strokeWidth="3"/>
+                <circle r="4" fill="#fff"/>
+              </g>
+              <g transform="translate(710 292)"><rect x="0" y="0" width="145" height="34" rx="8" fill="#0c1724" stroke="#3b9fe8"/><text x="72" y="22" textAnchor="middle" fill="#e9f6ff" fontSize="14" fontWeight="600">{isAr?'العين · موقع تقريبي':'Al Ain · Approx.'}</text></g>
             </g>
-            <g fill="none" stroke="rgba(94,190,198,.38)" strokeWidth="1.5" strokeDasharray="5 7"><path d="M150 150Q480 10 810 150"/><path d="M245 285Q480 390 720 170"/><path d="M480 110Q670 240 820 285"/></g>
-            <text x="480" y="405" textAnchor="middle" fill="rgba(210,225,230,.68)" fontSize="13">{isAr?'الخريطة التوضيحية — لا توجد بيانات مواقع متصلة':'Illustrative map — no location data connected'}</text>
+            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{isAr?'نقاط النشاط توضيحية وليست مواقع مستخدمين مباشرة':'Activity dots are illustrative, not live user locations'}</text>
           </svg>
         </div>
+        <div className="global-map-legend"><span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span><span><i className="global-legend-user"/>{isAr?'موقعك التقريبي: العين، الإمارات':'Your approximate location: Al Ain, UAE'}</span></div>
+        <p className="global-map-disclaimer">{isAr?'تنبيه: رقم المستخدمين ونسبة النمو ونقاط النشاط قيم تجريبية لتصميم اللوحة وليست بيانات حية. موقع العين تقريبي على مستوى المدينة فقط؛ لا نستخدم موقع GPS دقيق.':'Note: user count, growth, and activity dots are sample dashboard values, not live analytics. Al Ain is shown as an approximate city-level location only; no precise GPS is used.'}</p>
       </section>}
-      <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+      {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
         <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض العمدة أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: AL OMDA will not display invented figures, records, or locations without a connected source.'}</span></div>
-      </section>
+      </section>}
     </div>;
   };
   const taskIcon = (id:Specialty, size=17) => {
