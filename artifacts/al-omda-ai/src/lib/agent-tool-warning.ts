@@ -2,8 +2,10 @@ export type AgentToolWarningItem = { tool?: unknown; message?: unknown };
 
 /** Render a bounded, localized warning without changing the assistant's underlying prose. */
 export function buildAgentToolWarning(failures: unknown, ar: boolean): string {
-  const items = Array.isArray(failures) ? failures.slice(0, 5) as AgentToolWarningItem[] : [];
+  const allItems = Array.isArray(failures) ? failures as AgentToolWarningItem[] : [];
+  const items = allItems.slice(0, 5);
   if (!items.length) return "";
+  const omitted = Math.max(0, allItems.length - items.length);
   const heading = ar
     ? "تنبيه تنفيذ: فشلت بعض الأدوات، لذلك لا يُعد التنفيذ مكتملًا بالكامل:"
     : "Execution warning: some tools failed, so the run is not fully verified:";
