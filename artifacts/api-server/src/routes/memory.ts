@@ -69,7 +69,7 @@ router.delete("/ai/memory", requireSameOrigin, async (req, res): Promise<void> =
 });
 
 
-router.get("/ai/memory/graph", async (req, res): Promise<void> => {
+router.get("/ai/memory/graph", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
     if (!session) {
@@ -88,14 +88,13 @@ router.get("/ai/memory/graph", async (req, res): Promise<void> => {
       order: "created_at.desc",
       limit: "500",
     });
-    const [nodesResponse, edgesResponse] = await Promise.all([
-      supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, session.accessToken),
-      supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, session.accessToken),
-    ]);
-    const [nodes, edges] = await Promise.all([
-      readSupabaseJson<Array<Record<string, unknown>>>(nodesResponse),
-      readSupabaseJson<Array<Record<string, unknown>>>(edgesResponse),
-    ]);
+    const nodesResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, session.accessToken);
+    const nodes = await readSupabaseJson<Array<Record<string, unknown>>>(nodesResponse);
+    let edges: Array<Record<string, unknown>> = [];
+    if (nodes.length > 0) {
+      const edgesResponse = await supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, session.accessToken);
+      edges = await readSupabaseJson<Array<Record<string, unknown>>>(edgesResponse);
+    }
     res.json({ nodes, edges });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not load the private knowledge graph.");
