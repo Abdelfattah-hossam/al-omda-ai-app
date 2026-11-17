@@ -39,9 +39,11 @@ test("escalates termination for a detached command process group", async (t) => 
     child.once("close", (code, signal) => resolve({ code, signal }));
   });
   const escalation = terminateChildProcess(child, 100, true);
-  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Process group did not terminate.")), 3000));
+  let timeoutHandle: NodeJS.Timeout;
+  const timeout = new Promise<never>((_, reject) => { timeoutHandle = setTimeout(() => reject(new Error("Process group did not terminate.")), 3000); });
   const result = await Promise.race([closed, timeout]);
   clearTimeout(escalation);
+  clearTimeout(timeoutHandle!);
   assert.equal(result.signal, "SIGKILL");
 });
 
