@@ -472,7 +472,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       ].join("\n") }];
       try {
         answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory);
-        parsed = parsePlan(answer.text);
+        parsed = parseProjectPlan(answer.text);
       } catch (error) {
         console.warn("[AI project plan repair failed]", error instanceof Error ? error.message : "Unknown error");
       }
@@ -492,7 +492,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
               "Previous invalid output: " + answer.text.slice(0, 10000)
             ].join("\n")
           }], memory);
-          const alternatePlan = parsePlan(alternateAnswer.text);
+          const alternatePlan = parseProjectPlan(alternateAnswer.text);
           if (alternatePlan) {
             answer = alternateAnswer;
             parsed = alternatePlan;
