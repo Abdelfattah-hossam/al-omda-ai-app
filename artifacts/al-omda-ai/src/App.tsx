@@ -615,20 +615,29 @@ function App() {
   const [liveUserAnalytics, setLiveUserAnalytics] = useState<{active_users_30d:number;active_users_previous_30d:number;growth_percent:number|null;measured_at:string}|null>(null);
   const [liveUserAnalyticsError, setLiveUserAnalyticsError] = useState('');
   useEffect(() => {
+    if (authLoading) return;
     if (!authUser) { setLiveUserAnalytics(null); setLiveUserAnalyticsError(''); return; }
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
     setLiveUserAnalytics(null);
     setLiveUserAnalyticsError('');
-    fetch('/api/analytics/active-users', { credentials: 'same-origin', headers: { accept: 'application/json' } })
+    fetch('/api/analytics/active-users', { credentials: 'same-origin', headers: { accept: 'application/json' }, signal: controller.signal })
       .then(async response => {
-        const data = await response.json().catch(() => ({}));
+        const data = await response.json().catch(() => null);
         if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Could not load live analytics.');
+        const valid = data && Number.isInteger(data.active_users_30d) && data.active_users_30d >= 0 &&
+          Number.isInteger(data.active_users_previous_30d) && data.active_users_previous_30d >= 0 &&
+          (data.growth_percent === null || (typeof data.growth_percent === 'number' && Number.isFinite(data.growth_percent))) &&
+          typeof data.measured_at === 'string';
+        if (!valid) throw new Error('The analytics source returned invalid data.');
         return data as {active_users_30d:number;active_users_previous_30d:number;growth_percent:number|null;measured_at:string};
       })
       .then(data => { if (!cancelled) setLiveUserAnalytics(data); })
-      .catch(error => { if (!cancelled) setLiveUserAnalyticsError(error instanceof Error ? error.message : 'Could not load live analytics.'); });
-    return () => { cancelled = true; };
-  }, [authUser?.id]);
+      .catch(error => { if (!cancelled) setLiveUserAnalyticsError(error instanceof Error ? error.message : 'Could not load live analytics.'); })
+      .finally(() => window.clearTimeout(timeout));
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout); };
+  }, [authLoading, authUser?.id]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
@@ -1328,11 +1337,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const isGlobalMap = route === '/finance/active-users';
     const resetGlobalMap = () => { setGlobalMapZoom(1); setGlobalMapPan({x:0,y:0}); };
     const exportActiveUsers = () => {
-      const isLive = Boolean(authUser && liveUserAnalytics);
+      const isLive = Boolean(!authLoading && authUser && liveUserAnalytics);
       const rows = [
         ['Metric','Value','Data status'],
-        ['Active users (last 30 days)', isLive ? String(liveUserAnalytics!.active_users_30d) : authUser ? 'Unavailable' : '23,214', isLive ? 'Live Supabase auth analytics' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
-        ['Growth vs previous 30 days', isLive && liveUserAnalytics!.growth_percent !== null ? liveUserAnalytics!.growth_percent + '%' : authUser ? 'Unavailable' : '8.06%', isLive ? 'Calculated from sign-in activity' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
+        ['Active users (last 30 days)', isLive ? String(liveUserAnalytics!.active_users_30d) : authLoading || authUser ? 'Unavailable' : '23,214', isLive ? 'Live Supabase auth analytics' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
+        ['Growth vs previous 30 days', isLive && liveUserAnalytics!.growth_percent !== null ? liveUserAnalytics!.growth_percent + '%' : authLoading || authUser ? 'Unavailable' : '8.06%', isLive ? 'Calculated from sign-in activity' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
         ['Location data', 'Not collected', 'No user coordinates are stored or exported'],
       ];
       const csv = '\\uFEFF' + rows.map(row=>row.map(value=>'"'+value.replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
@@ -1347,8 +1356,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
         </div>
         <div className="global-user-metrics">
-          <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…'))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
-          <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics?.growth_percent !== null && liveUserAnalytics ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
+          <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authLoading || authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…')))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
+          <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authLoading && !authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics && liveUserAnalytics.growth_percent !== null ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
         </div>
         <div className="global-map-toolbar">
           <div><span className="global-map-live-dot"/><strong>{isAr?'الخريطة العالمية':'Global map'}</strong><small>{isAr?'اسحب الخريطة للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
