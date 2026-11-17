@@ -5,6 +5,8 @@ import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseHtmlAppArtifact } from "../lib/html-app-artifact.js";
+import { parseCodeProjectArtifact } from "../lib/code-project-artifact.js";
+import { isMultiFileProjectRequest } from "../lib/project-code-intent.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
@@ -582,8 +584,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
-    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
-    const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
+    const codeProjectStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest) && isMultiFileProjectRequest(customerRequest);
+    const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && !codeProjectStep && isDesktopAppRequest(customerRequest);
+    const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !codeProjectStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
     const requestedSlideCount = getRequestedPowerPointSlideCount(customerRequest);
     if (powerPointStep && requestedSlideCount !== null && (requestedSlideCount < 3 || requestedSlideCount > 30)) {
       res.status(422).json({ error: "PowerPoint projects support an explicitly requested slide count from 3 to 30." });
@@ -620,7 +623,19 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Original request: " + customerRequest,
       "Approved step: " + step.text,
       "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
-    ].join("\n") : htmlAppStep ? [
+    ].join("\n") : codeProjectStep ? [
+      "You are AL OMDA, generating a complete multi-file software project, not a Word document and not a single HTML mockup. Return ONLY valid JSON with exactly title, framework, entryPoint, and files.",
+      "The files array must contain 3–60 objects, each exactly {path, content}. Include package.json with a safe build script, README.md with setup/build/test instructions, index.html, and a real application entry point such as src/main.tsx plus src/App.tsx. Add all required styles, components, routes, and configuration files so the project forms one coherent application.",
+      "For an e-commerce or marketplace request, build distinct pages/components for the storefront, product detail, cart, checkout demo, account UI, and admin dashboard as requested. Use original branding, never copy another company's logo/trade dress, and label demo data and simulated checkout clearly. Do not claim real payment, inventory, account, or server persistence without a configured backend.",
+      "Use a suitable free/open-source stack such as Vite + React + TypeScript. If a backend is requested, include its source, API routes, data schema/migrations, and a .env.example containing placeholders only. Never include real API keys, passwords, tokens, private keys, .env files, node_modules, build output, or install lifecycle scripts.",
+      "All file paths must be relative and safe. Keep the complete project within 60 files and 350 KB of text. Include working code, not TODO-only placeholders. Use only the original customer request and approved prior step outputs; do not invent real products, prices, stock, statistics, or business data. Clearly label any illustrative demo data.",
+      "Set entryPoint to an existing main entry file. package.json must contain a safe scripts.build command; include scripts.test when meaningful. The hosted pipeline does not execute npm install, build, or tests, so never claim they passed: the result will explicitly show buildStatus and testStatus as not_run.",
+      "Original customer request: " + customerRequest,
+      "Approved step: " + step.text,
+      "Expected output: " + (step.output || ""),
+      "Acceptance criteria: " + (step.complete || ""),
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+    ] : htmlAppStep ? [
       "You are AL OMDA, building the requested small browser-based app as a deliverable. Return ONLY one complete, self-contained HTML document, with inline CSS and JavaScript. No Markdown fences and no instructions.",
       "The app must work immediately when opened as an .html file and inside a sandboxed preview iframe. Do not use external libraries, network requests, or external assets. Build a genuinely interactive, responsive app with working navigation, forms, search, filters, and local state wherever the request needs them; do not return a static mockup or a generic landing page.",
       "When the request describes an online store or marketplace, build a complete front-end shopping experience: category navigation, product cards, search and filters, product details, cart with quantity changes and totals, and a clearly labeled demo checkout. Never claim that real accounts, payments, inventory, orders, email, or server persistence work when no backend integration exists; do not simulate successful payments or real order placement.",
@@ -675,6 +690,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
     let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
     let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
+    let validatedCodeProject = codeProjectStep ? parseCodeProjectArtifact(answer.text) : null;
     let validatedPowerPoint = powerPointStep ? parsePowerPointPresentation(answer.text) : null;
     if (powerPointStep && !isRequestedSlideCountValid(validatedPowerPoint)) validatedPowerPoint = null;
     if (wordStep && !validatedWordDocument) {
@@ -772,6 +788,24 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
+    if (codeProjectStep && !validatedCodeProject) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the multi-file software project. Return ONLY valid JSON with title, framework, entryPoint, and files [{path,content}].",
+        "Include package.json with a safe build script, README.md, index.html, and a real app entry point. Use 3–60 safe relative file paths, no .env or secrets, no install lifecycle scripts, and keep total text under 350 KB.",
+        "Do not return a single HTML document, Word content, Markdown fences, or an explanation. Build/test have not been run; do not claim otherwise.",
+        "Original customer request: " + customerRequest,
+        "Approved step: " + step.text,
+        "Invalid output: " + answer.text.slice(0, 16000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
+      catch (error) { console.warn("[Code project repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedCodeProject = parseCodeProjectArtifact(answer.text);
+      if (!validatedCodeProject) {
+        await saveExecutionFailure("Multi-file code project failed structural validation after repair.");
+        res.status(502).json({ error: "تعذر اعتماد ملفات المشروع البرمجي بعد مراجعتها. لم يتم خصم وحدات؛ أعد تنفيذ المرحلة." });
+        return;
+      }
+    }
     if (htmlAppStep && !validatedHtmlApp) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the requested application. Return ONLY a complete self-contained HTML document with all requested functions.",
@@ -825,7 +859,14 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }
     let spreadsheet: ReturnType<typeof parseExcelWorkbook> = null;
     let result = answer.text.trim().slice(0, 12000);
-    if (htmlAppStep) {
+    if (codeProjectStep) {
+      if (!validatedCodeProject) {
+        await saveExecutionFailure("The AI did not return a valid multi-file code project.");
+        res.status(502).json({ error: "تعذر إنشاء حزمة المشروع البرمجي. أعد تنفيذ المرحلة." });
+        return;
+      }
+      result = "ALOMDA_CODE_PROJECT_JSON:" + JSON.stringify(validatedCodeProject);
+    } else if (htmlAppStep) {
       const html = validatedHtmlApp;
       if (!html) {
         await saveExecutionFailure("The AI did not return a complete HTML application.");
