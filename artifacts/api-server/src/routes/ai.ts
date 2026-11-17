@@ -1544,7 +1544,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         finalAnswer = auditResult.answer;
         usedProvider = auditResult.provider;
         qualityReviewUsage = auditResult.usage;
-        if (auditResult.incomplete) qualityReviewWarning = "لم تكتمل مراجعة الجودة؛ احتفظت بالإجابة الكاملة بدل استبدالها بتصحيح ناقص.";
+        if (auditResult.incomplete) qualityReviewWarning = language === "ar"
+          ? "لم تكتمل مراجعة الجودة؛ احتفظت بالإجابة الكاملة بدل استبدالها بتصحيح ناقص."
+          : "The quality review did not finish; the complete original answer was retained.";
       } catch (error) {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
