@@ -831,6 +831,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
+  const requestStarted = Date.now();
   for (const provider of providers) {
     const providerKey = provider.name + "|" + provider.base + "|" + provider.model;
     const cooldownRemaining = getProviderCooldownRemainingMs(providerKey, providerCooldowns);
@@ -865,7 +866,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       });
       if (!streamed.message || typeof streamed.message !== "object") throw new Error("Model returned an invalid streaming completion.");
       clearProviderCooldown(providerKey, providerCooldowns);
-      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, generationDurationMs: streamed.generationDurationMs, tokensPerSecond: streamed.tokensPerSecond, provider: provider.name };
+      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - requestStarted, generationDurationMs: streamed.generationDurationMs, tokensPerSecond: streamed.tokensPerSecond, provider: provider.name };
     } catch (error) {
       const message = error instanceof Error ? error.message : "request failed";
       const cooldownMs = recordProviderFailure(providerKey, responseStatus, retryAfter, providerCooldowns);
