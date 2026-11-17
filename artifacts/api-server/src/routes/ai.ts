@@ -1089,10 +1089,11 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
+    const latestUserMessages = messages.filter((message) => message.role === "user").slice(-1);
     const excelRequest = latestIntent.kind === "excel_file";
-    const wordDocumentRequest = !excelRequest && latestIntent.kind === "word_file" && isWordDocumentRequest(messages);
-    const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
-    const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && latestIntent.kind === "source_code_file";
+    const wordDocumentRequest = latestIntent.kind === "word_file" && isWordDocumentRequest(latestUserMessages);
+    const powerPointRequest = latestIntent.kind === "powerpoint_file" && isPowerPointRequest(latestUserMessages);
+    const sourceCodeFileRequest = latestIntent.kind === "source_code_file";
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
