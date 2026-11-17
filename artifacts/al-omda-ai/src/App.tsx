@@ -86,37 +86,14 @@ function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
   } catch { return null; }
 }
 async function downloadTaskExcel(data: TaskSpreadsheet, projectId?: string): Promise<void> {
-  const primary = "https://esm.sh/xlsx@0.18.5";
-  const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
-  let module: any;
-  try { module = await import(/* @vite-ignore */ primary); }
-  catch {
-    try { module = await import(/* @vite-ignore */ fallback); }
-    catch {
-      const blob = createXlsxBlob(data);
-      await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", projectId);
-      return;
-    }
-  }
-  const XLSX = module.default ?? module;
-  const workbook = XLSX.utils.book_new();
-  const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
-  for (const item of sheets) {
-    const sheet = XLSX.utils.aoa_to_sheet([item.columns, ...item.rows]);
-    sheet["!cols"] = item.columns.map(() => ({ wch: 20 }));
-    for (const [address, formula] of Object.entries(item.formulas ?? {})) {
-      const normalized = String(formula).trim().replace(/^=/, "");
-      if (!normalized || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(normalized) || /[\[\]]/.test(normalized)) throw new Error("Unsafe Excel formula rejected.");
-      sheet[address] = { f: normalized };
-    }
-    XLSX.utils.book_append_sheet(workbook, sheet, item.name.slice(0,31));
-  }
-  const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const safeName = safeArtifactName(data.title, "AL-OMDA-workbook");
-  await saveAndDownloadTaskArtifact(blob, safeName + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", projectId);
+  const blob = createXlsxBlob(data);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    projectId,
+  );
 }
-
 
 type TaskWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 function getTaskWordDocument(result?: string): TaskWordDocument | null {
@@ -167,41 +144,16 @@ async function downloadTaskHtml(data: { title: string; html: string }, projectId
   await saveAndDownloadTaskArtifact(blob, filename, "text/html", projectId);
 }
 async function downloadTaskWord(data: TaskWordDocument, projectId?: string): Promise<void> {
-  const primary = "https://esm.sh/docx@9.5.1";
-  const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
-  let lib: any;
-  try { lib = await import(/* @vite-ignore */ primary); }
-  catch {
-    try { lib = await import(/* @vite-ignore */ fallback); }
-    catch {
-      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
-      const rtl = /[\u0590-\u08ff]/.test([data.title, ...data.paragraphs].join(" "));
-      const paragraphs = data.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\n/g, "<br>") + "</p>").join("");
-      const table = data.columns.length ? "<table><thead><tr>" + data.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + data.rows.map((row) => "<tr>" + data.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
-      const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (rtl ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
-      const blob = createDocxBlob(data, rtl);
-      await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
-      return;
-    }
-  }
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
-  const border = { style: "single", size: 1, color: "B8C2D2" };
-  const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
-  const para = (value: string, bold = false) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })], spacing: { after: 120 } });
-  const children: any[] = [
-    new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: data.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
-    ...data.paragraphs.map((p) => para(p)),
-  ];
-  if (data.columns.length > 0) {
-    const rows = [
-      new TableRow({ tableHeader: true, children: data.columns.map((column) => new TableCell({ shading: { fill: "E8EDF5" }, children: [para(column, true)] })) }),
-      ...data.rows.map((row) => new TableRow({ children: data.columns.map((_, index) => new TableCell({ children: [para(String(row[index] ?? ""))] })) })),
-    ];
-    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows }));
-  }
-  const blob = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
-  await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
+  const rtl = /[\\u0590-\\u08ff]/.test(data.title + data.paragraphs.join(" ") + data.columns.join(" ") + data.rows.flat().join(" "));
+  const blob = createDocxBlob(data, rtl);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-document") + ".docx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    projectId,
+  );
 }
+
 
 const translations = {
   ar: {
