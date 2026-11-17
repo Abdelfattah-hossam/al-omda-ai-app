@@ -41,7 +41,7 @@ export function parseProjectPlan(raw: string): ProjectPlan | null {
       if (!item || typeof item !== "object") return null;
       const step = item as Record<string, unknown>;
       if (
-        typeof step.text !== "string" || !step.text.trim() || step.text.length > MAX_STEP_FIELD_LENGTH ||
+        typeof step.text !== "string" || !step.text.trim() || step.text.trim().length > MAX_STEP_FIELD_LENGTH ||
         typeof step.output !== "string" || !step.output.trim() || step.output.length > MAX_STEP_FIELD_LENGTH ||
         typeof step.complete !== "string" || !step.complete.trim() || step.complete.length > MAX_STEP_FIELD_LENGTH
       ) return null;
