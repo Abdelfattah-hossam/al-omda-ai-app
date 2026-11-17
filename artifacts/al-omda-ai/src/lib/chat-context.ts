@@ -122,3 +122,17 @@ export function hasConversationUpdatedAtChanged(remoteUpdatedAt: string, lastSyn
   if (!remoteUpdatedAt) return lastSyncedUpdatedAt !== "";
   return remoteUpdatedAt !== lastSyncedUpdatedAt;
 }
+
+export type ConversationSyncSummary = { id: string; title: string; updated_at?: string | null };
+
+/** Compare only fields that drive the conversation list; avoid serializing large message payloads on every poll. */
+export function hasConversationListChanged(
+  current: readonly ConversationSyncSummary[],
+  remote: readonly ConversationSyncSummary[],
+): boolean {
+  if (current.length !== remote.length) return true;
+  return remote.some((item, index) => {
+    const existing = current[index];
+    return !existing || existing.id !== item.id || existing.title !== item.title || (existing.updated_at || "") !== (item.updated_at || "");
+  });
+}
