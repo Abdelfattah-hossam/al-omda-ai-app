@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { Download, FileText, FolderOpen, LoaderCircle, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 type Language = "ar" | "en";
 type ProjectOption = { id: string; title: string };
@@ -30,6 +30,10 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [previewAsset, setPreviewAsset] = useState<WorkspaceAsset | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewText, setPreviewText] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const projectOptions = useMemo(() => projects.filter(project => project.id && project.title), [projects]);
 
   useEffect(() => {
@@ -112,6 +116,38 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     }
   };
 
+  const openPreview = async (asset: WorkspaceAsset) => {
+    setPreviewAsset(asset);
+    setPreviewUrl("");
+    setPreviewText("");
+    setPreviewLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/storage/assets/download?path=" + encodeURIComponent(asset.path), { credentials: "same-origin" });
+      if (!response.ok) throw new Error(ar ? "تعذر تحميل المعاينة." : "Could not load preview.");
+      const blob = await response.blob();
+      const mime = asset.mimeType ?? blob.type;
+      if (mime.startsWith("image/") || mime === "application/pdf") {
+        setPreviewUrl(URL.createObjectURL(blob));
+      } else if (mime.startsWith("text/") || ["application/json","application/xml"].includes(mime)) {
+        setPreviewText(await blob.text());
+      } else {
+        throw new Error(ar ? "المعاينة المباشرة لهذا النوع غير متاحة حاليًا؛ يمكنك تنزيل الملف وفتحه ببرنامجه." : "Inline preview is not available for this file type yet. Download it to open it in its native app.");
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (ar ? "تعذر تحميل المعاينة." : "Could not load preview."));
+      setPreviewAsset(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
+    setPreviewText("");
+    setPreviewAsset(null);
+  };
+
   const deleteAsset = async (asset: WorkspaceAsset) => {
     if (!window.confirm(ar ? "هل تريد حذف هذا الملف نهائيًا؟" : "Delete this file permanently?")) return;
     setError("");
@@ -151,8 +187,16 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       :assets.length===0?<div className="plan-empty" style={{padding:28}}><span className="empty-mark"><FolderOpen size={21}/></span><h3>{ar?"لا توجد ملفات في هذا المكان":"No files here yet"}</h3><p>{ar?"ارفع مستنداتك أو جداولك أو عروضك أو صورك لتظهر هنا.":"Upload documents, spreadsheets, presentations, or images to see them here."}</p></div>
       :<div className="history-layout">{assets.map(asset=><article className="panel history-item" key={asset.path}>
         <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.mimeType ?? "File"}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
-        <div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
+        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml")&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
   </div>;
+    {previewAsset&&<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closePreview();}} style={{position:"fixed",inset:0,zIndex:110,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)"}}>
+      <section role="dialog" aria-modal="true" aria-label={ar?"معاينة الملف":"File preview"} className="panel" style={{width:"min(900px,100%)",maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",padding:14}}>
+        <header className="section-head"><strong>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
+        <div style={{minHeight:180,overflow:"auto",display:"grid",placeItems:"center",padding:8}}>
+          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
+        </div>
+      </section>
+    </div>}
 }
