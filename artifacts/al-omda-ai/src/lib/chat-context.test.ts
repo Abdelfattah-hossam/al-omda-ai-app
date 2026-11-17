@@ -123,3 +123,12 @@ test("conversation payloads are fetched only when the persisted revision changes
   assert.equal(hasConversationUpdatedAtChanged("", ""), false);
   assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:00Z", ""), true);
 });
+
+test("conversation list comparison ignores unrelated large message payloads", () => {
+  const current = [{ id: "a", title: "Chat", updated_at: "2026-11-17T10:00:00Z" }];
+  const unchanged = [{ id: "a", title: "Chat", updated_at: "2026-11-17T10:00:00Z" }];
+  const changed = [{ id: "a", title: "Renamed", updated_at: "2026-11-17T10:00:00Z" }];
+  assert.equal(hasConversationListChanged(current, unchanged), false);
+  assert.equal(hasConversationListChanged(current, changed), true);
+  assert.equal(hasConversationListChanged(current, []), true);
+});
