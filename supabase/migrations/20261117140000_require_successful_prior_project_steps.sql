@@ -54,9 +54,9 @@ begin
        select 1
        from jsonb_array_elements(v_steps) with ordinality as item(value, ordinality)
        where item.ordinality < v_step_index
-         and item.value ->> 'state' is distinct from 'approved'
          and (
-           item.value ->> 'executionStatus' is distinct from 'succeeded'
+           item.value ->> 'state' is distinct from 'approved'
+           or item.value ->> 'executionStatus' is distinct from 'succeeded'
            or nullif(btrim(item.value ->> 'result'), '') is null
          )
      ) then
