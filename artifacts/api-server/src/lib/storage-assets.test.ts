@@ -17,6 +17,7 @@ test("allows only the supported workspace file extensions", () => {
   assert.equal(getWorkspaceAssetMimeType("report.docx"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   assert.equal(getWorkspaceAssetMimeType("table.xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   assert.equal(getWorkspaceAssetMimeType("slides.pptx"), "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+  assert.equal(getWorkspaceAssetMimeType("project.zip"), "application/zip");
   assert.equal(getWorkspaceAssetMimeType("archive.exe"), null);
 });
 
