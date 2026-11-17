@@ -84,6 +84,8 @@ test("captures explicit corrections without storing sensitive personal data", ()
 test("warns when an explicit memory request could not be extracted, but not for opt-outs", () => {
   assert.equal(shouldWarnExplicitMemoryNotSaved("Remember this fact", null), true);
   assert.equal(shouldWarnExplicitMemoryNotSaved("احفظ هذه المعلومة", null), true);
+  assert.equal(shouldWarnExplicitMemoryNotSaved("متنساش " + "أ".repeat(401), null), true);
+  assert.equal(shouldWarnExplicitMemoryNotSaved("ما تنساش " + "أ".repeat(401), null), true);
   assert.equal(shouldWarnExplicitMemoryNotSaved("Remember this fact", extractExplicitMemoryNode("Remember this fact")), false);
   assert.equal(shouldWarnExplicitMemoryNotSaved("Remember, do not save this", null), false);
 });
