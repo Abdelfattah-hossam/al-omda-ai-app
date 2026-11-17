@@ -10,6 +10,7 @@ import { isMultiFileProjectRequest } from "../lib/project-code-intent.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { parseProjectPlan } from "../lib/project-plan.js";
 import { professionalStandards } from "../lib/professional-standards.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
 import {
   readSupabaseJson,
@@ -134,7 +135,47 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
   const query = new URLSearchParams({ select: "memory_text", user_id: "eq." + userId, limit: "1" });
   const response = await supabaseFetch("/rest/v1/ai_user_memory?" + query.toString(), {}, accessToken);
   const rows = await readSupabaseJson<Array<{ memory_text?: string }>>(response);
-  return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  const memoryText = typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  try {
+    const nodesQuery = new URLSearchParams({
+      select: "id,node_type,label,normalized_label,details,source,confidence",
+      user_id: "eq." + userId,
+      order: "updated_at.desc",
+      limit: "80",
+    });
+    const edgesQuery = new URLSearchParams({
+      select: "source_node_id,target_node_id,relation",
+      user_id: "eq." + userId,
+      order: "created_at.desc",
+      limit: "120",
+    });
+    const nodesResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, accessToken);
+    const rawNodes = await readSupabaseJson<Array<{ id: string; node_type: string; label: string; details?: Record<string, unknown>; source?: string; confidence?: number }>>(nodesResponse);
+    const nodes = rawNodes.filter((node) => {
+      try { parseMemoryNode({ nodeType: node.node_type, label: node.label, details: node.details, source: node.source, confidence: node.confidence }, userId); return true; }
+      catch { return false; }
+    });
+    let edges: Array<{ source_node_id: string; target_node_id: string; relation: string }> = [];
+    if (nodes.length > 0) {
+      const edgesResponse = await supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, accessToken);
+      edges = await readSupabaseJson<Array<{ source_node_id: string; target_node_id: string; relation: string }>>(edgesResponse);
+    }
+    const labels = new Map(nodes.map((node) => [node.id, node.label]));
+    const facts = nodes.map((node) => {
+      const detail = node.details && Object.keys(node.details).length ? " — " + JSON.stringify(node.details).slice(0, 500) : "";
+      return "- [" + node.node_type + "] " + node.label + detail;
+    });
+    const relationships = edges.flatMap((edge) => {
+      const from = labels.get(edge.source_node_id);
+      const to = labels.get(edge.target_node_id);
+      return from && to ? ["- " + from + " --" + edge.relation + "--> " + to] : [];
+    });
+    const graph = [...facts, ...relationships].join("\n").slice(0, 6000);
+    return [memoryText, graph ? "CONFIRMED PRIVATE USER KNOWLEDGE GRAPH:\n" + graph : ""].filter(Boolean).join("\n\n").slice(0, 12000);
+  } catch (error) {
+    console.warn("[AI memory graph unavailable] Using saved text memory only.", error instanceof Error ? error.message : "Unknown error");
+    return memoryText;
+  }
 }
 
 function hasLatestUserImage(messages: ChatMessage[]): boolean {
@@ -1517,7 +1558,30 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       });
       return;
     }
-    res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
+    const memoryCandidate = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
+    let memorySaveWarning = "";
+    if (memoryCandidate) {
+      try {
+        const memoryNode = parseMemoryNode(memoryCandidate, session.user.id);
+        const memoryQuery = new URLSearchParams({ on_conflict: "user_id,node_type,normalized_label" });
+        const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + memoryQuery.toString(), {
+          method: "POST",
+          headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify([memoryNode]),
+        }, accessToken);
+        await readSupabaseJson(memoryResponse);
+      } catch (error) {
+        console.warn("[AI memory save failed]", error instanceof Error ? error.message : "Unknown error");
+        memorySaveWarning = /[\u0600-\u06FF]/.test(latestCustomerRequest)
+          ? "لم أتمكن من حفظ هذه المعلومة في الذاكرة الخاصة. لم يتم حفظ بيانات الاتصال أو المعلومات الشخصية الحساسة."
+          : "I couldn't save this item to private memory. Contact details and sensitive personal information are not stored.";
+      }
+    } else if (shouldWarnExplicitMemoryNotSaved(latestCustomerRequest, memoryCandidate)) {
+      memorySaveWarning = /[\u0600-\u06FF]/.test(latestCustomerRequest)
+        ? "تعذر حفظ المعلومة المطلوبة في الذاكرة الخاصة. لا يتم حفظ بيانات الاتصال أو المعلومات الشخصية الحساسة."
+        : "The requested item couldn't be saved to private memory. Contact details and sensitive personal information are not stored.";
+    }
+    res.json({ reply: [answer.text, memorySaveWarning].filter(Boolean).join("\n\n"), provider: usedProvider, model: answer.model, usage: latestUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
