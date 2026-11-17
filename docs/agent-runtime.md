@@ -79,6 +79,7 @@ The runtime explicitly enables OpenAI-compatible Function Calling on model reque
 Temperature is selected by task purpose instead of being hardcoded:
 - Legal, engineering, medical, finance, software/coding, review, and proposal tasks use a low default of **0.2**.
 - Research and business analysis use **0.3**.
+- Finance, cash-flow, ROI, and other precision financial calculations use **0.2**, even when phrased as business analysis.
 - General conversation uses **0.4**.
 - Set OMDA_AGENT_PRECISE_TEMPERATURE to a value from **0.1 to 0.3** to override the default for precision tasks. Invalid or out-of-range values are ignored and fall back to 0.2.
 
