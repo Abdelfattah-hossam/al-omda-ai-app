@@ -115,7 +115,8 @@ router.post("/ai/memory/graph/nodes", requireSameOrigin, async (req, res): Promi
     }
     let nodes: MemoryNodeInput[];
     try {
-      nodes = input.map((item: unknown) => ({ ...parseMemoryNode(item, session.user.id), updated_at: new Date().toISOString() }));
+      const parsed = input.map((item: unknown) => ({ ...parseMemoryNode(item, session.user.id), updated_at: new Date().toISOString() }));
+      nodes = [...new Map(parsed.map((node) => [node.node_type + ":" + node.normalized_label, node])).values()];
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory node." });
       return;
@@ -146,7 +147,11 @@ router.post("/ai/memory/graph/edges", requireSameOrigin, async (req, res): Promi
     }
     let edges: MemoryEdgeInput[];
     try {
-      edges = input.map((item: unknown) => parseMemoryEdge(item, session.user.id));
+      const parsed = input.map((item: unknown) => parseMemoryEdge(item, session.user.id));
+      edges = [...new Map(parsed.map((edge) => [
+        [edge.source_node_id, edge.target_node_id, edge.relation].join(":"),
+        edge,
+      ])).values()];
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory relationship." });
       return;
