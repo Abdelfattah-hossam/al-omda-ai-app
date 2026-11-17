@@ -4,7 +4,7 @@ The Cloudflare-hosted AL OMDA AI web app cannot safely spawn arbitrary operating
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 22+ (the cancellation implementation uses `AbortSignal.any`, available since Node 20.3+; Node 22 is the supported minimum)
 - pnpm 9
 - A local project folder to use as the agent workspace
 
