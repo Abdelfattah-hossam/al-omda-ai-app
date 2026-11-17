@@ -108,7 +108,7 @@ export const getWorkspaceResponseTasksItemOneStepsItemIdMax = 80;
 
 export const getWorkspaceResponseTasksItemOneStepsItemTextMax = 1200;
 
-export const getWorkspaceResponseTasksItemOneStepsMax = 8;
+export const getWorkspaceResponseTasksItemOneStepsMax = 20;
 
 
 
@@ -227,7 +227,7 @@ export const createTaskResponseOneStepsItemIdMax = 80;
 
 export const createTaskResponseOneStepsItemTextMax = 1200;
 
-export const createTaskResponseOneStepsMax = 8;
+export const createTaskResponseOneStepsMax = 20;
 
 
 
@@ -310,7 +310,7 @@ export const updateTaskResponseOneStepsItemIdMax = 80;
 
 export const updateTaskResponseOneStepsItemTextMax = 1200;
 
-export const updateTaskResponseOneStepsMax = 8;
+export const updateTaskResponseOneStepsMax = 20;
 
 
 
