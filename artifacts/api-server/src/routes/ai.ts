@@ -1576,7 +1576,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       ...(initialAnswerUsage ? { modelTokens: initialAnswerUsage } : {}),
       ...(Object.keys(qualityReviewUsage).length ? { qualityReviewTokens: qualityReviewUsage } : {}),
     };
-    res.json({ reply: memorySaveWarning ? finalAnswer.text + "\n\n" + memorySaveWarning : finalAnswer.text, provider: usedProvider, model: finalAnswer.model, usage: responseUsage });
+    const notices = [memorySaveWarning, qualityReviewWarning].filter(Boolean);
+    res.json({ reply: [finalAnswer.text, ...notices].join("\n\n"), provider: usedProvider, model: finalAnswer.model, usage: responseUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
