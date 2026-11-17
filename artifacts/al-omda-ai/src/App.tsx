@@ -114,10 +114,25 @@ function getTaskCodeProject(result?: string): TaskCodeProject | null {
     const value = JSON.parse(result.slice("ALOMDA_CODE_PROJECT_JSON:".length));
     if (typeof value.title !== "string" || typeof value.framework !== "string" ||
       typeof value.entryPoint !== "string" || !Array.isArray(value.files) ||
-      value.files.length < 3 || value.files.length > 60 ||
-      !value.files.some((file: any) => file?.path === value.entryPoint)) return null;
-    if (value.files.some((file: any) => !file || typeof file.path !== "string" || typeof file.content !== "string" ||
-      file.path.startsWith("/") || file.path.includes("..") || file.path.includes("\\\\"))) return null;
+      value.files.length < 3 || value.files.length > 60) return null;
+    const normalizedPaths = new Set<string>();
+    for (const file of value.files) {
+      if (!file || typeof file.path !== "string" || typeof file.content !== "string" || file.content.length > 60000) return null;
+      const path = file.path.normalize("NFKC");
+      if (!path || path.length > 180 || path.startsWith("/") || path.startsWith("~") ||
+        path.includes("\\\\") || path.includes("\\0") ||
+        !/^[\\p{L}\\p{N}._@+/-]+$/u.test(path) ||
+        path.split("/").some((part: string) => !part || part === "." || part === ".." ||
+          ["node_modules", ".git", "dist", "build", ".env"].includes(part.toLocaleLowerCase()) ||
+          (part.toLocaleLowerCase().startsWith(".env.") && part.toLocaleLowerCase() !== ".env.example")) ||
+        /\\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(path)) return null;
+      const key = path.toLocaleLowerCase();
+      if (normalizedPaths.has(key)) return null;
+      normalizedPaths.add(key);
+    }
+    const normalizedEntryPoint = value.entryPoint.normalize("NFKC");
+    if (!normalizedPaths.has(normalizedEntryPoint.toLocaleLowerCase()) ||
+      !value.files.some((file: any) => file.path.normalize("NFKC") === normalizedEntryPoint)) return null;
     if (value.buildStatus !== "not_run" || value.testStatus !== "not_run" || typeof value.buildCommand !== "string") return null;
     return value as TaskCodeProject;
   } catch { return null; }
