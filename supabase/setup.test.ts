@@ -5,7 +5,7 @@ import test from "node:test";
 
 const sql = readFileSync(resolve(process.cwd(), "../supabase/setup.sql"), "utf8");
 const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117123000_require_previous_project_stage_results.sql"), "utf8");
-const sequenceMigration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117150000_require_successful_prior_project_stages.sql"), "utf8");
+const sequenceMigration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117132206_require_successful_prior_project_stages.sql"), "utf8");
 const legacyQuota = readFileSync(resolve(process.cwd(), "../supabase/ai_quota.sql"), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
