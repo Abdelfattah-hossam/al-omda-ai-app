@@ -338,7 +338,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
             { type: "text", text: message.content },
             { type: "image_url", image_url: { url: `data:${message.image.mimeType};base64,${message.image.data}` } },
           ],
-        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: requestTemperature(messages) }),
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
@@ -382,7 +382,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
         ...messages.map((message) => ({ role: message.role, content: message.content })),
       ],
       max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
-      temperature: 0.4,
+      temperature: requestTemperature(messages),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
