@@ -429,6 +429,7 @@ async function executeCommand(body: Json): Promise<Json> {
     image, command, ...(args as string[]),
   ] : args as string[];
   const commandEnv = buildCommandEnvironment(process.env);
+  const processGroup = process.platform !== "win32";
   return await new Promise((resolveResult) => {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
@@ -444,7 +445,6 @@ async function executeCommand(body: Json): Promise<Json> {
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
     let killTimer: NodeJS.Timeout | null = null;
-    const processGroup = process.platform !== "win32";
     const finish = (result: Json) => {
       if (settled) return;
       settled = true;
