@@ -8,9 +8,11 @@ test("blocks private, loopback, link-local, carrier-grade NAT and reserved IPv4"
   }
 });
 
-test("allows ordinary public IPv4", () => {
-  assert.equal(isBlockedNetworkAddress("1.1.1.1"), false);
-  assert.equal(isBlockedNetworkAddress("8.8.8.8"), false);
+test("allows ordinary public IPv4 and does not overblock adjacent prefixes", () => {
+  for (const address of ["1.1.1.1", "8.8.8.8", "192.0.1.1", "192.1.1.1", "198.51.99.1"]) {
+    assert.equal(isBlockedNetworkAddress(address), false, address);
+  }
+  assert.equal(isBlockedNetworkAddress("198.51.100.1"), true);
 });
 
 test("blocks IPv6 unspecified, loopback, ULA, link-local, multicast and mapped private IPv4", () => {
