@@ -2643,9 +2643,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
         <div className="curtain-launcher-groups">
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
-            <div className="curtain-caption">{group.id==='core'?t('workspace'):t('launcherInsightsAccount')}</div>
-            <nav className="curtain-launcher-grid" aria-label={group.id==='core'?(isAr?'أدوات العمل الأساسية':'Core workspace tools'):(isAr?'المتابعة وإعدادات الحساب':'Analytics and account')}>
-              {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
+            <div className="curtain-caption">{isAr?group.titleAr:group.titleEn}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?group.titleAr:group.titleEn}>
+              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
             </nav>
           </section>)}
           <section className="curtain-launcher-group">
