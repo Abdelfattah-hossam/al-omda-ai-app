@@ -925,7 +925,6 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose, signal);
     } catch (error) {
       if (!signal?.aborted) throw error;
-      state.status = "cancelled";
       const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
@@ -1234,8 +1233,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
         }
         delete state.pendingMcpTools;
         appendMcpImageObservations(state.messages, imageQueue);
-        state.status = "cancelled";
-        const executionWarnings = agentExecutionWarnings(state);
+          const executionWarnings = agentExecutionWarnings(state);
         await saveAgentState(id, state);
         onProgress?.({ type: "status", status: "cancelled" });
         return { status: "cancelled", sessionId: id, message: "The approval batch was cancelled. The current tool was allowed to finish; remaining approved tools were not started.", ...executionWarnings };
@@ -1286,7 +1284,6 @@ async function cancelAgent(body: Json): Promise<Json> {
     if (!pending.length) return { status: "not_running", sessionId: id, message: "No active run or pending approval exists for this session." };
     delete state.pendingToolCalls;
     delete state.pendingMcpTools;
-    state.status = "cancelled";
     ensureAssistantToolCallMessage(state.messages as unknown as Array<Record<string, unknown>>, pending);
     for (const call of pending) {
       state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user cancelled this pending action. Do not retry it." }) });
