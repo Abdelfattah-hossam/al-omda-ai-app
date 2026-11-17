@@ -79,7 +79,7 @@ test("sequential completion migration requires successful prior stage execution"
   assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
 });
 test("legacy approved project results are backfilled without overriding explicit execution states", () => {
-  const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117160000_backfill_legacy_project_stage_status.sql"), "utf8");
+  const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117141335_backfill_legacy_project_stage_status.sql"), "utf8");
   assert.match(migration, /item\.value ->> 'state' = 'approved'/i);
   assert.match(migration, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is not null/i);
   assert.match(migration, /nullif\(btrim\(item\.value ->> 'executionStatus'\), ''\) is null/i);
