@@ -32,6 +32,13 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   assert.match(earlierSequenceMigration, /preserved because this migration was already applied/i);
   assert.match(migration, /reserved compatibility parameter/i);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
+  const planStepSpec = openapi.slice(openapi.indexOf("    PlanStep:"), openapi.indexOf("    TaskCreateStep:"));
+  assert.match(planStepSpec, /text:[\s\S]*maxLength: 2000/, "legacy task responses must tolerate longer step text");
+  assert.match(taskCreateSpec, /text:[\s\S]*maxLength: 1200/, "new task steps must cap text at 1,200 characters");
+  assert.match(taskUpdateSpec, /text:[\s\S]*maxLength: 1200/, "edited step text must cap at 1,200 characters");
+  assert.match(api, /getWorkspaceResponseTasksItemOneStepsItemTextMax = 2000/);
+  assert.match(api, /createTaskResponseOneStepsItemTextMax = 2000/);
+  assert.match(api, /updateTaskResponseOneStepsItemTextMax = 2000/);
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
   assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
   assert.match(taskUpdateSpec, /minItems: 1[\s\S]*maxItems: 20/);
