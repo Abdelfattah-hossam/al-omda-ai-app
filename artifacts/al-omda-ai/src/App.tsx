@@ -145,8 +145,13 @@ async function deliverTaskArtifact(blob: Blob, filename: string, mimeType: strin
       }
     }
     const url = URL.createObjectURL(blob);
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) window.location.href = url;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     return;
   }
