@@ -4,7 +4,12 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 const sql = readFileSync(resolve(process.cwd(), "../supabase/setup.sql"), "utf8");
-const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117123000_require_previous_project_stage_results.sql"), "utf8");
+const migration = [
+  "20261117120226_move_task_completion_rpc_to_private_schema.sql",
+  "20261117120403_move_quota_and_task_rpcs_to_private_schema.sql",
+  "20261117120435_move_project_creation_rpc_to_private_schema.sql",
+  "20261117120540_allow_eight_steps_in_private_project_creation_rpc.sql",
+].map((file) => readFileSync(resolve(process.cwd(), "../supabase/migrations/" + file), "utf8")).join("\n");
 const sequenceMigration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117132206_require_successful_prior_project_stages.sql"), "utf8");
 const legacyQuota = readFileSync(resolve(process.cwd(), "../supabase/ai_quota.sql"), "utf8");
 
