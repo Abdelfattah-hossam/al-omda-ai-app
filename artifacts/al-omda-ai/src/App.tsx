@@ -612,6 +612,23 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [authUser, setAuthUser] = useState<ApiAuthUser | null>(null);
+  const [liveUserAnalytics, setLiveUserAnalytics] = useState<{active_users_30d:number;active_users_previous_30d:number;growth_percent:number|null;measured_at:string}|null>(null);
+  const [liveUserAnalyticsError, setLiveUserAnalyticsError] = useState('');
+  useEffect(() => {
+    if (!authUser) { setLiveUserAnalytics(null); setLiveUserAnalyticsError(''); return; }
+    let cancelled = false;
+    setLiveUserAnalytics(null);
+    setLiveUserAnalyticsError('');
+    fetch('/api/analytics/active-users', { credentials: 'same-origin', headers: { accept: 'application/json' } })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Could not load live analytics.');
+        return data as {active_users_30d:number;active_users_previous_30d:number;growth_percent:number|null;measured_at:string};
+      })
+      .then(data => { if (!cancelled) setLiveUserAnalytics(data); })
+      .catch(error => { if (!cancelled) setLiveUserAnalyticsError(error instanceof Error ? error.message : 'Could not load live analytics.'); });
+    return () => { cancelled = true; };
+  }, [authUser?.id, path]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
@@ -1311,15 +1328,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const isGlobalMap = route === '/finance/active-users';
     const resetGlobalMap = () => { setGlobalMapZoom(1); setGlobalMapPan({x:0,y:0}); };
     const exportActiveUsers = () => {
+      const isLive = Boolean(authUser && liveUserAnalytics);
       const rows = [
         ['Metric','Value','Data status'],
-        ['Active User','23,214','Sample design value — not live analytics'],
-        ['Growth vs previous month','8.06%','Sample design value — not live analytics'],
-        ['Approximate user location','Al Ain, Abu Dhabi, UAE','Approximate city only; precise location unavailable'],
+        ['Active users (last 30 days)', isLive ? String(liveUserAnalytics!.active_users_30d) : authUser ? 'Unavailable' : '23,214', isLive ? 'Live Supabase auth analytics' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
+        ['Growth vs previous 30 days', isLive && liveUserAnalytics!.growth_percent !== null ? liveUserAnalytics!.growth_percent + '%' : authUser ? 'Unavailable' : '8.06%', isLive ? 'Calculated from sign-in activity' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
+        ['Location data', 'Not collected', 'No user coordinates are stored or exported'],
       ];
       const csv = '\\uFEFF' + rows.map(row=>row.map(value=>'"'+value.replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
       const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-      const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users-sample.csv'; anchor.click(); URL.revokeObjectURL(url);
+      const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users.csv'; anchor.click(); URL.revokeObjectURL(url);
     };
     return <div className="page-enter">
       {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'لوحة المستخدمين النشطين والخريطة العالمية التفاعلية.':'Active users dashboard with an interactive global map.')}
@@ -1329,8 +1347,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
         </div>
         <div className="global-user-metrics">
-          <div className="global-user-metric"><span>{isAr?'إجمالي المستخدمين النشطين':'Total Active User'}</span><strong>23,214</strong><small>{isAr?'قيمة تصميم تجريبية':'Sample design value'}</small></div>
-          <div className="global-user-growth"><span>{isAr?'النمو مقارنة بالشهر السابق':'Vs. previous month'}</span><strong><TrendingUp size={18}/> 8.06%</strong><small>{isAr?'قيمة تصميم تجريبية وليست من تحليلات مباشرة':'Sample value — not live analytics'}</small></div>
+          <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…'))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
+          <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics?.growth_percent !== null && liveUserAnalytics ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
         </div>
         <div className="global-map-toolbar">
           <div><span className="global-map-live-dot"/><strong>{isAr?'الخريطة العالمية':'Global map'}</strong><small>{isAr?'اسحب الخريطة للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
@@ -1380,7 +1398,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </svg>
         </div>
         <div className="global-map-legend"><span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span><span><i className="global-legend-user"/>{isAr?'موقعك التقريبي: العين، الإمارات':'Your approximate location: Al Ain, UAE'}</span></div>
-        <p className="global-map-disclaimer">{isAr?'تنبيه: رقم المستخدمين ونسبة النمو ونقاط النشاط قيم تجريبية لتصميم اللوحة وليست بيانات حية. موقع العين تقريبي على مستوى المدينة فقط؛ لا نستخدم موقع GPS دقيق.':'Note: user count, growth, and activity dots are sample dashboard values, not live analytics. Al Ain is shown as an approximate city-level location only; no precise GPS is used.'}</p>
+        <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
       {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
