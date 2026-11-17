@@ -831,7 +831,11 @@ async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Pro
       if (normalized.some((existing) => existing.base === base && existing.model === provider.model)) continue;
       normalized.push({ ...provider, base });
     } catch (error) {
-      console.warn("[model provider config] Skipping invalid provider", provider.name, error instanceof Error ? error.message : "Invalid endpoint");
+      const reason = error instanceof Error ? error.message : "Invalid endpoint";
+      if (provider.name === "primary" || provider.name === "fallback") {
+        throw new Error("Invalid environment model provider " + provider.name + ": " + reason);
+      }
+      console.warn("[model provider config] Skipping invalid provider", provider.name, reason);
     }
   }
   return orderModelProvidersByPurpose(normalized, purpose);
