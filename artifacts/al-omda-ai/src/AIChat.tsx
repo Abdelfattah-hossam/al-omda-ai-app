@@ -1191,7 +1191,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       <div className="ai-chat-topbar-actions">
       {agentMode && <span className="ai-chat-agent-badge" title={ar ? "وكيل محلي" : "Local Agent"} aria-label={ar ? "وكيل محلي" : "Local Agent"}><Code2 size={12}/>{ar ? "وكيل محلي" : "Local Agent"}</span>}
       <button type="button" className="ai-chat-header-icon" onClick={openCodeCanvas} title={ar ? "محرر الأكواد" : "Code Canvas"}><Code2 size={16}/></button>
-      <button type="button" className="ai-chat-header-icon" onClick={openSettings} title={ar ? "الإعدادات والحد اليومي" : "Settings and daily usage"}><Settings2 size={16}/></button>
+      <button type="button" className="ai-chat-header-icon" onClick={openUsagePage} title={ar ? "الاستخدام والذاكرة" : "Usage & memory"}><Settings2 size={16}/></button>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
       {showChatMenu && <div className="ai-chat-top-menu" role="menu">
         <button type="button" onClick={()=>{setShowRoutingInfo(v=>!v);setShowChatMenu(false)}}><Bot size={16}/>{ar ? "التوجيه التلقائي" : "Auto routing"}</button>
