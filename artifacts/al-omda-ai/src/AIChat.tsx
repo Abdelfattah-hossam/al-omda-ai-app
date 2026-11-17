@@ -160,6 +160,8 @@ type Usage = {
   resetAt: string;
   providers?: { gemini: boolean; openrouter: boolean };
 };
+type MemoryGraphNode = { id: string; node_type: string; label: string; source?: string; confidence?: number };
+type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
 
 function MessageContent({ content }: { content: string }) {
   const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
@@ -215,6 +217,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [memory, setMemory] = useState("");
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [memorySaving, setMemorySaving] = useState(false);
+  const [memoryGraphNodes, setMemoryGraphNodes] = useState<MemoryGraphNode[]>([]);
+  const [memoryGraphEdges, setMemoryGraphEdges] = useState<MemoryGraphEdge[]>([]);
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
@@ -403,10 +407,21 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     if (!signedIn) return;
     setMemoryLoading(true);
     try {
-      const response = await fetch("/api/ai/memory", { credentials: "same-origin" });
+      const [response, graphResponse] = await Promise.all([
+        fetch("/api/ai/memory", { credentials: "same-origin", cache: "no-store" }),
+        fetch("/api/ai/memory/graph", { credentials: "same-origin", cache: "no-store" }),
+      ]);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل ذاكرة العمدة." : "Could not load AI memory."));
       setMemory(typeof data.memory === "string" ? data.memory : "");
+      if (graphResponse.ok) {
+        const graphData = await graphResponse.json();
+        setMemoryGraphNodes(Array.isArray(graphData.nodes) ? graphData.nodes : []);
+        setMemoryGraphEdges(Array.isArray(graphData.edges) ? graphData.edges : []);
+      } else {
+        setMemoryGraphNodes([]);
+        setMemoryGraphEdges([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الذاكرة." : "Could not load memory."));
     } finally {
@@ -436,16 +451,25 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   };
 
   const clearMemory = async () => {
-    if (memorySaving || memoryLoading || !signedIn || !memory.trim()) return;
-    if (!window.confirm(ar ? "هل تريد حذف ذاكرة العمدة الخاصة بحسابك؟" : "Delete your private AL OMDA memory?")) return;
+    if (memorySaving || memoryLoading || !signedIn || (!memory.trim() && memoryGraphNodes.length === 0)) return;
+    if (!window.confirm(ar ? "هل تريد حذف ذاكرة العمدة والنقاط المؤكدة الخاصة بحسابك؟" : "Delete your private memory and confirmed memory graph?")) return;
     setMemorySaving(true);
     setError("");
     try {
-      const response = await fetch("/api/ai/memory", { method: "DELETE", credentials: "same-origin" });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف الذاكرة." : "Could not delete memory."));
+      const [response, graphResponse] = await Promise.all([
+        fetch("/api/ai/memory", { method: "DELETE", credentials: "same-origin" }),
+        fetch("/api/ai/memory/graph", { method: "DELETE", credentials: "same-origin" }),
+      ]);
+      const [data, graphData] = await Promise.all([
+        response.json().catch(() => ({})),
+        graphResponse.json().catch(() => ({})),
+      ]);
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حذف الذاكرة النصية." : "Could not delete text memory."));
+      if (!graphResponse.ok) throw new Error(graphData.error || (ar ? "حُذفت الذاكرة النصية، لكن تعذر حذف سجل الحقائق." : "Text memory was deleted, but the confirmed memory graph could not be cleared."));
       setMemory("");
-      setError(ar ? "تم حذف الذاكرة الخاصة بحسابك." : "Your private memory was deleted.");
+      setMemoryGraphNodes([]);
+      setMemoryGraphEdges([]);
+      setError(ar ? "تم حذف الذاكرة النصية وسجل الحقائق الخاصة بحسابك." : "Your private text memory and confirmed memory graph were deleted.");
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر حذف الذاكرة." : "Could not delete memory."));
     } finally {
