@@ -71,6 +71,18 @@ test("chat sync detects changed deliverables but ignores per-device blob URLs", 
     content: "The workbook is ready.",
     attachment: { name: "report.xlsx", url: "blob:local-device-url" },
     spreadsheetData: { title: "Report", columns: ["Amount"], rows: [[10]] },
+    documentData: { title: "Doc", paragraphs: ["A"], columns: [], rows: [] },
+    presentationData: { title: "Slides", slides: [{ title: "Intro", bullets: ["A"] }] },
+    sourceData: { title: "Source", name: "main.ts", language: "ts", code: "export {}" },
+    appData: { title: "App", html: "<main/>" },
+    taskId: "task-1",
+    taskTitle: "Build app",
+    documentData: { title: "Doc", paragraphs: ["A"], columns: [], rows: [] },
+    presentationData: { title: "Slides", slides: [{ title: "Intro", bullets: ["A"] }] },
+    sourceData: { title: "Source", name: "main.ts", language: "ts", code: "export {}" },
+    appData: { title: "App", html: "<main/>" },
+    taskId: "task-1",
+    taskTitle: "Build app",
   }];
   const remote = [{
     role: "assistant" as const,
@@ -119,4 +131,6 @@ test("conversation payloads are fetched only when the persisted revision changes
   assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:00Z", "2026-11-16T10:00:00Z"), false);
   assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:01Z", "2026-11-16T10:00:00Z"), true);
   assert.equal(hasConversationUpdatedAtChanged("", "2026-11-16T10:00:00Z"), true);
+  assert.equal(hasConversationUpdatedAtChanged("", ""), false);
+  assert.equal(hasConversationUpdatedAtChanged("2026-11-16T10:00:00Z", ""), true);
 });
