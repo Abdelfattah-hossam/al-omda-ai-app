@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getHostedModelTemperature, inferHostedModelPurpose } from "./ai-model-policy.js";
+import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "./ai-model-policy.js";
 
 test("classifies precision work in English and Arabic", () => {
   assert.equal(inferHostedModelPurpose("Review this legal contract"), "precision");
@@ -28,4 +28,12 @@ test("keeps research, general, and image requests within the low-temperature ran
   assert.equal(getHostedModelTemperature("Research and compare model providers"), 0.25);
   assert.equal(getHostedModelTemperature("Hello, how are you?"), 0.2);
   assert.equal(getHostedModelTemperature("Describe this image", true), 0.3);
+});
+
+test("prioritizes free hosted providers by request purpose and image capability", () => {
+  assert.deepEqual(getHostedProviderOrder("precision"), ["groq", "gemini", "openrouter", "cloudflare"]);
+  assert.deepEqual(getHostedProviderOrder("research"), ["openrouter", "groq", "cloudflare", "gemini"]);
+  assert.deepEqual(getHostedProviderOrder("general"), ["groq", "cloudflare", "openrouter", "gemini"]);
+  assert.deepEqual(getHostedProviderOrder("precision", true), ["groq", "cloudflare", "gemini", "openrouter"]);
+  assert.deepEqual(getHostedProviderOrder("precision", false, true), ["groq", "gemini", "openrouter"]);
 });
