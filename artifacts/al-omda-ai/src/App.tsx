@@ -108,7 +108,13 @@ function getTaskWordDocument(result?: string): TaskWordDocument | null {
     return value as TaskWordDocument;
   } catch { return null; }
 }
+let cachedCodeProjectResult: string | undefined;
+let cachedCodeProjectValue: TaskCodeProject | null = null;
+
 function getTaskCodeProject(result?: string): TaskCodeProject | null {
+  if (result === cachedCodeProjectResult) return cachedCodeProjectValue;
+  cachedCodeProjectResult = result;
+  cachedCodeProjectValue = null;
   if (!result?.startsWith("ALOMDA_CODE_PROJECT_JSON:")) return null;
   try {
     const value = JSON.parse(result.slice("ALOMDA_CODE_PROJECT_JSON:".length));
@@ -116,8 +122,14 @@ function getTaskCodeProject(result?: string): TaskCodeProject | null {
       typeof value.entryPoint !== "string" || !Array.isArray(value.files) ||
       value.files.length < 3 || value.files.length > 60) return null;
     const normalizedPaths = new Set<string>();
+    let totalBytes = 0;
+    const encoder = new TextEncoder();
     for (const file of value.files) {
-      if (!file || typeof file.path !== "string" || typeof file.content !== "string" || file.content.length > 60000) return null;
+      if (!file || typeof file.path !== "string" || typeof file.content !== "string") return null;
+      const contentBytes = encoder.encode(file.content).length;
+      if (contentBytes > 60000) return null;
+      totalBytes += contentBytes;
+      if (totalBytes > 200000) return null;
       const path = file.path.normalize("NFKC");
       if (!path || path.length > 180 || path.startsWith("/") || path.startsWith("~") ||
         path.includes("\\\\") || path.includes("\\0") ||
@@ -134,7 +146,8 @@ function getTaskCodeProject(result?: string): TaskCodeProject | null {
     if (!normalizedPaths.has(normalizedEntryPoint.toLocaleLowerCase()) ||
       !value.files.some((file: any) => file.path.normalize("NFKC") === normalizedEntryPoint)) return null;
     if (value.buildStatus !== "not_run" || value.testStatus !== "not_run" || typeof value.buildCommand !== "string") return null;
-    return value as TaskCodeProject;
+    cachedCodeProjectValue = value as TaskCodeProject;
+    return cachedCodeProjectValue;
   } catch { return null; }
 }
 function getTaskHtmlApp(result?: string): string | null {
