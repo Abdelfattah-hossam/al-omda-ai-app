@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 const sql = readFileSync(resolve(process.cwd(), "../supabase/setup.sql"), "utf8");
-const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117150000_require_successful_prior_project_stages.sql"), "utf8");
+const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117123000_require_previous_project_stage_results.sql"), "utf8");
+const sequenceMigration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117150000_require_successful_prior_project_stages.sql"), "utf8");
 const legacyQuota = readFileSync(resolve(process.cwd(), "../supabase/ai_quota.sql"), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
@@ -67,6 +68,16 @@ test("pending database migration secures every quota RPC without changing public
   assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
   assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
   assert.match(completion, /p_units is distinct from 2/i);
+});
+
+test("sequential completion migration requires successful prior stage execution", () => {
+  const start = sequenceMigration.indexOf("create or replace function omda_private.complete_ai_task_step(");
+  const end = sequenceMigration.indexOf("\n$;", start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const completion = sequenceMigration.slice(start, end + 4);
+  assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
+  assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
 });
 
 test("private user tables and storage buckets retain ownership RLS", () => {
