@@ -51,3 +51,18 @@ test("rejects an explicit cross-origin Origin header", () => {
   assert.equal(result.statusCode, 403);
   assert.equal(result.nextCalled, false);
 });
+
+test("does not trust a spoofed X-Forwarded-Host for origin or Referer validation", () => {
+  const spoofedOrigin = invoke({
+    host: "app.example.com",
+    "x-forwarded-host": "attacker.example",
+    origin: "https://attacker.example",
+  });
+  const spoofedReferer = invoke({
+    host: "app.example.com",
+    "x-forwarded-host": "attacker.example",
+    referer: "https://attacker.example/chat",
+  });
+  assert.equal(spoofedOrigin.statusCode, 403);
+  assert.equal(spoofedReferer.statusCode, 403);
+});
