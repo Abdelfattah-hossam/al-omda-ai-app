@@ -156,11 +156,10 @@ function triggerArtifactDownload(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
-  let saveError: unknown = null;
-  try { await persistTaskArtifact(blob, filename, mimeType, projectId); }
-  catch (error) { saveError = error; }
+  // Trigger the browser download synchronously within the user's click, before awaiting network I/O.
+  // This preserves iOS Safari's user-activation requirement while the private asset upload continues.
   triggerArtifactDownload(blob, filename);
-  if (saveError) throw saveError;
+  await persistTaskArtifact(blob, filename, mimeType, projectId);
 }
 async function downloadTaskHtml(data: { title: string; html: string }, projectId?: string): Promise<void> {
   const filename = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
