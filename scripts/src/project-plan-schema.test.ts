@@ -77,8 +77,8 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     const start = api.indexOf("export const " + name + " = zod.object({");
     const end = api.indexOf("\n\nexport const ", start + 1);
     const response = api.slice(start, end < 0 ? api.length : end);
-    assert.ok(response.includes('"output": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing output guidance");
-    assert.ok(response.includes('"complete": zod.string().min(1).max(1200).optional()'), name + " must tolerate legacy missing completion guidance");
+    assert.ok(response.includes('"output": zod.string().max(1200).optional()'), name + " must tolerate legacy empty or missing output guidance");
+    assert.ok(response.includes('"complete": zod.string().max(1200).optional()'), name + " must tolerate legacy empty or missing completion guidance");
     const stepsStart = response.indexOf('"steps": zod.array(');
     const stepsEnd = response.indexOf('"status":', stepsStart);
     assert.ok(stepsStart >= 0 && stepsEnd > stepsStart, name + " must expose its response step array");
