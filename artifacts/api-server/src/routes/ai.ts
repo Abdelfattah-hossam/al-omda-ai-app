@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, hasChatMessagePayload, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
@@ -1051,7 +1051,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const messages: ChatMessage[] = [];
     for (const item of rawMessages) {
-      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || item.content.length > 8000) {
+      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || item.content.length > 8000 || (!item.content.trim() && item.image === undefined)) {
         res.status(400).json({ error: "A chat message is invalid or too long." });
         return;
       }
@@ -1062,10 +1062,6 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
           return;
         }
         image = { mimeType: item.image.mimeType, data: item.image.data };
-      }
-      if (!hasChatMessagePayload(item.content, Boolean(image))) {
-        res.status(400).json({ error: "A chat message must contain text or a valid image." });
-        return;
       }
       messages.push({ role: item.role, content: item.content.trim(), ...(image ? { image } : {}) });
     }
