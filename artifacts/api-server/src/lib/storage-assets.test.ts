@@ -5,7 +5,7 @@ import {
   isValidProjectFolderId,
   isValidWorkspaceAssetPath,
   sanitizeWorkspaceAssetName,
-} from "./storage-assets";
+} from "./storage-assets.js";
 
 test("sanitizes filenames and strips path traversal components", () => {
   assert.equal(sanitizeWorkspaceAssetName("../../my report.pdf"), "my-report.pdf");
