@@ -424,6 +424,8 @@ function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
   const { language, tasks } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
@@ -618,6 +620,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return () => window.cancelAnimationFrame(frame);
   }, [location, focusTarget, saved.reduceMotion]);
 
+  useEffect(() => {
+    const onKeyDown = (event:KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      } else if (event.key === 'Escape') {
+        setCommandPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -1048,6 +1062,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
+  const commandMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    const realTasks = tasks.filter(task=>!task.demo);
+    const matches = realTasks.flatMap(task => {
+      const taskMatch = !needle || `${task.title} ${task.request}`.toLocaleLowerCase().includes(needle);
+      const outputMatches = task.steps.filter(step=>needle && `${step.text} ${step.output ?? ''} ${step.result ?? ''}`.toLocaleLowerCase().includes(needle));
+      if (taskMatch) return [{task,detail:isAr?'مشروع':'Project'}];
+      return outputMatches.map(step=>({task,detail:(isAr?'مخرج: ':'Output: ')+step.text}));
+    });
+    return matches.slice(0,12);
+  }, [tasks, commandQuery, isAr]);
   const label = (id:Specialty) => t(specialtyKey(id));
   const count = (task:Task) => task.steps.filter((step) => step.state === 'approved').length;
 
@@ -2247,6 +2272,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </span>
         </div>}
         <div className="top-actions">
+          <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>
           {showWorkspaceHeader && <div className="topbar-quick-actions">
             <Link href={navigationHref("/ai")} className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
             <Link href={focusedHref("/workbench","request-input")} className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
@@ -2256,6 +2282,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
+    {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
+      <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
+        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في المشاريع والمخرجات...':'Search projects and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
+        <div className="section-meta" style={{padding:'5px 3px 10px'}}>{isAr?'نتائج من البيانات المتاحة حاليًا':'Results from currently available workspace data'}</div>
+        <div style={{display:'grid',gap:6}}>
+          {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
+            <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
+          </Link>)}
+          {commandMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+        </div>
+        <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
+      </section>
+    </div>}
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
         <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg" alt={isAr ? "العمدة AL OMDA AI" : "AL OMDA AI"}/></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
