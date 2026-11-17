@@ -44,7 +44,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       try {
         const params = new URLSearchParams();
         if (projectId) params.set("projectId", projectId);
-        const response = await fetch("/api/storage/assets" + (params.size ? "?" + params.toString() : ""), { credentials: "same-origin" });
+        const response = await fetch("/api/storage/assets" + (params.toString() ? "?" + params.toString() : ""), { credentials: "same-origin" });
         const data = await response.json().catch(() => []);
         if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : (ar ? "تعذر تحميل الملفات." : "Could not load files."));
         if (!cancelled) setAssets(Array.isArray(data) ? data : []);
