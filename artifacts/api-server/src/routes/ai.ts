@@ -171,14 +171,10 @@ function systemPrompt(coding: boolean, memory = ""): string {
 
 const FINAL_AUDIT_DEADLINE_MS = 45_000;
 
-function withFinalAuditDeadline<T>(work: () => Promise<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error("Final audit deadline exceeded.")), FINAL_AUDIT_DEADLINE_MS);
-  });
-  return Promise.race([work(), deadline]).finally(() => {
-    if (timer !== undefined) clearTimeout(timer);
-  });
+function withFinalAuditDeadline<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("Final audit deadline exceeded.")), FINAL_AUDIT_DEADLINE_MS);
+  return work(controller.signal).finally(() => clearTimeout(timer));
 }
 
 async function loadUserMemory(accessToken: string, userId: string): Promise<string> {
@@ -234,7 +230,7 @@ function chooseProviders(messages: ChatMessage[]) {
   return order.filter((provider) => configured[provider as keyof typeof configured]);
 }
 
-async function callGroq(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
+async function callGroq(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) throw new Error("Groq is not configured.");
 
@@ -255,7 +251,7 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<ProviderA
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    signal: AbortSignal.timeout(12000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12000)]) : AbortSignal.timeout(12000),
     headers: { authorization: "Bearer " + key, "content-type": "application/json" },
     body: JSON.stringify({
       model,
@@ -275,7 +271,7 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<ProviderA
   return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
-async function callGemini(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
+async function callGemini(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("Gemini is not configured.");
   // Every entry below is listed on Google's Standard Free Tier. Try a different
@@ -303,7 +299,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<Provide
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
         method: "POST",
-        signal: AbortSignal.timeout(25000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25000)]) : AbortSignal.timeout(25000),
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
@@ -326,6 +322,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<Provide
       }
       return { text, model, usage: readModelTokenUsage(payload), finishReason: payload?.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "length" : typeof payload?.candidates?.[0]?.finishReason === "string" ? payload.candidates[0].finishReason : undefined };
     } catch (error) {
+      if (signal?.aborted) throw error;
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
   }
@@ -408,7 +405,7 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
   return [...selected, "openrouter/free"];
 }
 
-async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
+async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OpenRouter is not configured.");
   const candidates = await getOpenRouterModelOrder(messages, excludeModel);
@@ -417,7 +414,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        signal: AbortSignal.timeout(15000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
         headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
         body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages.map((message) => message.image ? {
           role: message.role,
@@ -444,13 +441,14 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
       }
       return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
     } catch (error) {
+      if (signal?.aborted) throw error;
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
   }
   throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
-async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
+async function callCloudflare(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
   const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
   if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
@@ -460,7 +458,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<Pro
   const model = "@cf/meta/llama-3.1-8b-instruct-fast";
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`, {
     method: "POST",
-    signal: AbortSignal.timeout(18000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(18000)]) : AbortSignal.timeout(18000),
     headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
     body: JSON.stringify({
       model,
@@ -483,18 +481,19 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<Pro
   return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
-async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
+async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
-  if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
-  if (provider === "groq") return callGroq(messages, memory);
-  if (provider === "cloudflare") return callCloudflare(messages, memory);
+  if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel, signal);
+  if (provider === "groq") return callGroq(messages, memory, signal);
+  if (provider === "cloudflare") return callCloudflare(messages, memory, signal);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await callGemini(messages, memory);
+      return await callGemini(messages, memory, signal);
     } catch (error) {
       lastError = error;
+      if (signal?.aborted) throw error;
       const message = error instanceof Error ? error.message : String(error);
       // A 429 quota/rate-limit response is not helped by immediately repeating
       // the same request; let the next configured provider handle the fallback.
@@ -1505,7 +1504,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         if (!reviewProvider || (containsImages && reviewProvider === "cloudflare")) {
           throw new Error("No image-capable provider is available for evidence-aware final review.");
         }
-        const auditResult = await withFinalAuditDeadline(async () => {
+        const auditResult = await withFinalAuditDeadline(async (auditSignal) => {
           const reviewMessages: ChatMessage[] = [
             ...modelConversation,
             { role: "user", content: [
@@ -1515,7 +1514,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
               "Draft answer: " + finalAnswer.text
             ].join("\n") }
           ];
-          const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory);
+          const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory, "", auditSignal);
           if (isIncompleteProviderAnswer(reviewAnswer)) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: true };
           const issues = parseHostedAuditIssues(reviewAnswer.text);
           if (!issues.length) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: false };
@@ -1528,7 +1527,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
               "Required corrections: " + issues.join("; ")
             ].join("\n") }
           ];
-          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory);
+          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory, "", auditSignal);
           const reviewUsage = {
             promptTokens: (reviewAnswer.usage?.promptTokens || 0) + (refined.usage?.promptTokens || 0),
             completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
