@@ -31,6 +31,7 @@ async function readZipEntries(file: Blob): Promise<Map<string, string>> {
   const count = view.getUint16(end + 10, true);
   const directoryOffset = view.getUint32(end + 16, true);
   const entries = new Map<string, string>();
+  let expandedTotal = 0;
   let cursor = directoryOffset;
   for (let i = 0; i < count; i++) {
     if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error("Invalid Office directory.");
@@ -42,7 +43,10 @@ async function readZipEntries(file: Blob): Promise<Map<string, string>> {
     const commentLength = view.getUint16(cursor + 32, true);
     const localOffset = view.getUint32(cursor + 42, true);
     const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
-    if (!name.endsWith("/")) {
+    const wanted = name === "word/document.xml" || name === "xl/workbook.xml" || name === "xl/sharedStrings.xml" || /^xl\\/worksheets\\/sheet\\d+\\.xml$/.test(name) || /^ppt\\/slides\\/slide\\d+\\.xml$/.test(name);
+    if (wanted) {
+      expandedTotal += uncompressedSize;
+      if (uncompressedSize > 8 * 1024 * 1024 || expandedTotal > 32 * 1024 * 1024) throw new Error("Office preview content exceeds the safe size limit.");
       const entry = { name, method, compressedSize, uncompressedSize, localOffset };
       entries.set(name, await readZipEntry(bytes, entry));
     }
