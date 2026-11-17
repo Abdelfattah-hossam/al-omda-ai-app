@@ -182,6 +182,7 @@ describe("comparison intent remains conversational", () => {
       "اعمل مقارنة بين ملفات Word وExcel",
       "قارنلي بين مستندات Word",
       "Make a comparison of Excel workbooks",
+      "Please make a comparison of Excel workbooks",
       "Create a comparison between Word documents",
     ]) {
       assert.equal(isWordFileRequest(request), false, "unexpected Word artifact intent: " + request);
@@ -194,6 +195,10 @@ describe("comparison intent remains conversational", () => {
     assert.equal(isExcelFileRequest("Create a Word document and export it as an Excel workbook"), true);
     assert.equal(isWordFileRequest("Create a Word document and export it as an Excel workbook"), false);
     assert.equal(isWordFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), true);
+    assert.equal(isExcelFileRequest("Export the Word document as an Excel workbook"), true);
+    assert.equal(isWordFileRequest("Export the Word document as an Excel workbook"), false);
+    assert.equal(isWordFileRequest("Export the Excel workbook as a Word document"), true);
+    assert.equal(isExcelFileRequest("Export the Excel workbook as a Word document"), false);
   });
 });
 
