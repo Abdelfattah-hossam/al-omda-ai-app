@@ -51,23 +51,21 @@ function parseCspDirectives(value: string): Map<string, string[]> {
 }
 
 function isValidCspBase64Value(value: string): boolean {
-  if (!/^[a-z0-9+/_-]+={0,2}$/i.test(value)) return false;
-  const unpadded = value.replace(/=+$/, "");
-  const padding = value.length - unpadded.length;
-  if (unpadded.length % 4 === 1) return false;
-  if (padding > 0 && (value.length % 4 !== 0 || (padding === 1 && unpadded.length % 4 !== 3) || (padding === 2 && unpadded.length % 4 !== 2))) return false;
-  return true;
+  // CSP's base64-value grammar validates the alphabet and trailing padding,
+  // not decoded byte length; nonce values need not be a canonical digest.
+  return /^[a-z0-9+/_-]+=*$/i.test(value);
 }
 
-function hasEffectiveUnsafeInline(sources: string[]): boolean {
+function hasEffectiveUnsafeInline(sources: string[], inlineType: "script" | "style"): boolean {
   const hasUnsafeInline = sources.includes("'unsafe-inline'");
+  const hasStrictDynamic = inlineType === "script" && sources.includes("'strict-dynamic'");
   const hasNonceOrHash = sources.some((source) => {
     const nonce = /^'nonce-([^']+)'$/i.exec(source);
     if (nonce) return isValidCspBase64Value(nonce[1]);
     const hash = /^'sha(?:256|384|512)-([^']+)'$/i.exec(source);
     return Boolean(hash && isValidCspBase64Value(hash[1]));
   });
-  return hasUnsafeInline && !hasNonceOrHash;
+  return hasUnsafeInline && !hasNonceOrHash && !hasStrictDynamic;
 }
 
 function effectiveReferrerPolicy(value: string): string | null {
@@ -119,12 +117,12 @@ export function analyzeSecurityHeaders(headers: Record<string, string>): Securit
     const scriptSources = cspDirectives.get("script-src") ?? defaultSources;
     const styleSources = cspDirectives.get("style-src") ?? defaultSources;
     const inlinePolicies = [
-      cspDirectives.get("script-src-elem") ?? scriptSources,
-      cspDirectives.get("script-src-attr") ?? scriptSources,
-      cspDirectives.get("style-src-elem") ?? styleSources,
-      cspDirectives.get("style-src-attr") ?? styleSources,
+      { sources: cspDirectives.get("script-src-elem") ?? scriptSources, type: "script" as const },
+      { sources: cspDirectives.get("script-src-attr") ?? scriptSources, type: "script" as const },
+      { sources: cspDirectives.get("style-src-elem") ?? styleSources, type: "style" as const },
+      { sources: cspDirectives.get("style-src-attr") ?? styleSources, type: "style" as const },
     ];
-    if (inlinePolicies.some(hasEffectiveUnsafeInline)) findings.push({
+    if (inlinePolicies.some((policy) => hasEffectiveUnsafeInline(policy.sources, policy.type))) findings.push({
       header: "content-security-policy", severity: "medium",
       issue: "The effective script or style policy permits unsafe-inline without a nonce or hash source.",
       recommendation: "Prefer nonces or hashes instead of unsafe-inline, and validate the change against application behavior.",
