@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const sql = await readFile(new URL("./setup.sql", import.meta.url), "utf8");
-const migration = await readFile(new URL("./migrations/20261117123000_require_previous_project_stage_results.sql", import.meta.url), "utf8");
-const legacyQuota = await readFile(new URL("./ai_quota.sql", import.meta.url), "utf8");
+const sql = readFileSync(new URL("./setup.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("./migrations/20261117123000_require_previous_project_stage_results.sql", import.meta.url), "utf8");
+const legacyQuota = readFileSync(new URL("./ai_quota.sql", import.meta.url), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
   const start = sql.indexOf("create or replace function " + schema + "." + name + "(");
