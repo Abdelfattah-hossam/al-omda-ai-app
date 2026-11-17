@@ -122,16 +122,16 @@ async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeTyp
   await persistTaskArtifact(blob, filename, mimeType, projectId);
 }
 
-async function persistTaskDeliverable(result: string, projectId: string): Promise<boolean> {
+async function persistTaskDeliverable(result: string, projectId: string, fallbackTitle: string): Promise<boolean> {
   if (result.startsWith("ALOMDA_HTML_APP:")) {
     const html = result.slice("ALOMDA_HTML_APP:".length);
     if (!html.trim()) return false;
-    await persistTaskArtifact(new Blob([html], { type: "text/html;charset=utf-8" }), "الموقع-أو-التطبيق.html", "text/html", projectId);
+    await persistTaskArtifact(new Blob([html], { type: "text/html;charset=utf-8" }), safeArtifactName(fallbackTitle, "AL-OMDA-app") + ".html", "text/html", projectId);
     return true;
   }
   const word = getTaskWordDocument(result);
   if (word) {
-    const rtl = /[\\u0590-\\u08ff]/.test(word.title + word.paragraphs.join(" ") + word.columns.join(" ") + word.rows.flat().join(" "));
+    const rtl = /[\u0590-\u08ff]/.test(word.title + word.paragraphs.join(" ") + word.columns.join(" ") + word.rows.flat().join(" "));
     await persistTaskArtifact(createDocxBlob(word, rtl), safeArtifactName(word.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
     return true;
   }
@@ -872,7 +872,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       // A generated project file is saved to the private Assets workspace automatically.
       // Keep the successfully completed stage even if the separate file upload fails.
       try {
-        await persistTaskDeliverable(data.result, task.id);
+        await persistTaskDeliverable(data.result, task.id, task.title);
       } catch (artifactError) {
         const detail = artifactError instanceof Error ? artifactError.message : '';
         setWorkspaceError(isAr
