@@ -24,7 +24,7 @@ export interface PlanStep {
   id: string;
   /**
      * @minLength 1
-     * @maxLength 1200
+     * @maxLength 2000
      */
   text: string;
   /**
