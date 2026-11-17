@@ -31,7 +31,7 @@ function isComparisonOnlyRequest(text: string): boolean {
 type OfficeFormat = "word" | "excel" | "powerpoint";
 
 const OFFICE_EXPORT_TARGETS: Record<OfficeFormat, RegExp> = {
-  word: /\b(?:word|docx?|document)\b|وورد|مستند/i,
+  word: /\b(?:word|docx?)\b|وورد|مستند/i,
   excel: /\b(?:excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|شيت/i,
   powerpoint: /\b(?:powerpoint|power\s*point|pptx|presentation|slide\s*deck)\b|عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|شرائح/i,
 };
@@ -39,9 +39,11 @@ const OFFICE_EXPORT_TARGETS: Record<OfficeFormat, RegExp> = {
 /** Only treat an office format as an export target when it follows an explicit export verb in the same sentence. */
 function hasExplicitOfficeFileExport(text: string, format: OfficeFormat): boolean {
   return text.split(/[.!?؟;\n]+/).some((clause) => {
-    const exportVerb = /\b(?:export|download|save)\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.test(clause);
-    const targetPhrase = /\b(?:as|to|in)\s+(?:a\s+|an\s+)?/i.test(clause) || /(?:بصيغة|كملف|بامتداد)\s*/i.test(clause);
-    return exportVerb && targetPhrase && OFFICE_EXPORT_TARGETS[format].test(clause);
+    const exportMatch = /\b(?:export|download|save)\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.exec(clause);
+    if (!exportMatch || exportMatch.index === undefined) return false;
+    const targetText = clause.slice(exportMatch.index + exportMatch[0].length);
+    const targetPhrase = /\b(?:as|to|in)\s+(?:a\s+|an\s+)?/i.test(targetText) || /(?:بصيغة|كملف|بامتداد)\s*/i.test(targetText);
+    return targetPhrase && OFFICE_EXPORT_TARGETS[format].test(targetText);
   });
 }
 
