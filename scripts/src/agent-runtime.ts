@@ -1153,7 +1153,7 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  return await withAgentSessionAbort(
+  return await withAgentSessionAbort<Json, Array<{ name: string; instructions: string }>>(
     id,
     "This agent session is already being processed. Wait for that request to finish.",
     async (signal, skills = []) => {
