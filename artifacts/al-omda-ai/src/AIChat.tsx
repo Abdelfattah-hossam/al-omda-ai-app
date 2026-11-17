@@ -16,7 +16,7 @@ function getLocalAgentOrigin(value: string, errorMessage: string): string {
   let base: URL;
   try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
   if (!["http:", "https:"].includes(base.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
-  return base.origin + base.pathname.replace(/\\/+$/, "");
+  return base.origin + base.pathname.replace(/\/+$/, "");
 }
 
 type Usage = {
