@@ -878,6 +878,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         const action = agentSessionId ? "resume" : "run";
         const requestSessionId = agentSessionId || (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID().replace(/-/g, "") : Date.now().toString(36) + Math.random().toString(36).slice(2));
         setAgentRunSessionId(requestSessionId);
+        setAgentSessionId(requestSessionId);
+        try { window.localStorage.setItem("omda-agent-session", requestSessionId); } catch {}
         agentController = new AbortController();
         agentStreamControllerRef.current = agentController;
         let streamedText = "";
