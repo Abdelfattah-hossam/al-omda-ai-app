@@ -79,12 +79,16 @@ async function startRuntime(extraEnv: NodeJS.ProcessEnv = {}): Promise<RuntimeHa
 
 async function stopRuntime(handle: RuntimeHandle): Promise<void> {
   if (handle.child.exitCode === null) {
+    const exited = () => new Promise<void>((resolve) => {
+      if (handle.child.exitCode !== null) resolve();
+      else handle.child.once("exit", () => resolve());
+    });
     handle.child.kill("SIGTERM");
-    await Promise.race([
-      new Promise<void>((resolve) => handle.child.once("exit", () => resolve())),
-      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-    ]);
-    if (handle.child.exitCode === null) handle.child.kill("SIGKILL");
+    await Promise.race([exited(), new Promise<void>((resolve) => setTimeout(resolve, 3000))]);
+    if (handle.child.exitCode === null) {
+      handle.child.kill("SIGKILL");
+      await Promise.race([exited(), new Promise<void>((resolve) => setTimeout(resolve, 1000))]);
+    }
   }
   await rm(handle.workspace, { recursive: true, force: true });
 }
@@ -316,6 +320,7 @@ async function startMockModel(
 }
 
 async function stopMockModel(mock: MockModelHandle): Promise<void> {
+  mock.server.closeAllConnections();
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
 
@@ -606,6 +611,7 @@ async function postTo(handle: RuntimeHandle, path: string, body: unknown): Promi
     method: "POST",
     headers: { "content-type": "application/json", authorization: "Bearer " + token },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
   });
 }
 
