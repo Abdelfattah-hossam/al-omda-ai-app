@@ -592,6 +592,10 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
     const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
     const requestedSlideCount = getRequestedPowerPointSlideCount(customerRequest);
+    if (powerPointStep && requestedSlideCount !== null && (requestedSlideCount < 3 || requestedSlideCount > 30)) {
+      res.status(422).json({ error: "PowerPoint projects support an explicitly requested slide count from 3 to 30." });
+      return;
+    }
     const isRequestedSlideCountValid = (presentation: ReturnType<typeof parsePowerPointPresentation>) =>
       Boolean(presentation && (!requestedSlideCount || presentation.slides.length === requestedSlideCount));
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
