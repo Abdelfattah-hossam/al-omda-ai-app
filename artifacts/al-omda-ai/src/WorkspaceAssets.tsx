@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { previewOfficeDocument } from "./lib/office-preview";
 import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 type Language = "ar" | "en";
@@ -132,6 +133,8 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith("text/") || ["application/json","application/xml"].includes(mime)) {
         setPreviewText(await blob.text());
+      } else if (["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? "")) {
+        setPreviewText(await previewOfficeDocument(blob, asset.name.split(".").pop()!.toLowerCase()));
       } else {
         throw new Error(ar ? "المعاينة المباشرة لهذا النوع غير متاحة حاليًا؛ يمكنك تنزيل الملف وفتحه ببرنامجه." : "Inline preview is not available for this file type yet. Download it to open it in its native app.");
       }
@@ -189,7 +192,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       :assets.length===0?<div className="plan-empty" style={{padding:28}}><span className="empty-mark"><FolderOpen size={21}/></span><h3>{ar?"لا توجد ملفات في هذا المكان":"No files here yet"}</h3><p>{ar?"ارفع مستنداتك أو جداولك أو عروضك أو صورك لتظهر هنا.":"Upload documents, spreadsheets, presentations, or images to see them here."}</p></div>
       :<div className="history-layout">{assets.map(asset=><article className="panel history-item" key={asset.path}>
         <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.mimeType ?? "File"}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
-        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml")&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
+        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
   </div>
