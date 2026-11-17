@@ -481,7 +481,6 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
   { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
     {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
     {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
-    {path:'/ai/usage',ar:'الاستخدام والحصص',en:'Usage & Quota',subtitleAr:'الاستهلاك والذاكرة',subtitleEn:'Usage and memory',icon:Activity},
   ]},
   { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
     {path:'/agents',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
@@ -494,7 +493,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
 ];
 const launcherSubtitleKeys: Record<string, TranslationKey> = {
   '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
-  '/history':'launcherSubtitleHistory', '/ai/usage':'launcherSubtitleUsage', '/profile':'launcherSubtitleProfile',
+  '/history':'launcherSubtitleHistory', '/profile':'launcherSubtitleProfile',
 };
 const mobileNavItems: typeof navItems = [
   { path:'/', key:'overview', icon:LayoutDashboard },
@@ -710,7 +709,6 @@ function App() {
       : pathname === '/agents' ? 'agent-marketplace-grid'
       : pathname === '/history' ? 'history-list'
       : pathname.startsWith('/history/') ? 'task-plan'
-      : pathname === '/ai/usage' ? 'ai-usage-page'
       : pathname === '/profile' ? 'profile-account-card'
       : 'dashboard-overview';
     return focusedHref(href, target);
@@ -1296,7 +1294,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
       { path:'/history', ar:'سجل المهام', en:'Task history' },
       { path:'/ai', ar:'المحادثات', en:'Chats' },
       { path:'/agents', ar:'شبكة الوكلاء', en:'Agent network' },
-      { path:'/ai/usage', ar:'الاستخدام والحصص', en:'Usage and quota' },
       { path:'/profile', ar:'الإعدادات', en:'Settings' },
       ...Object.entries(platformStatusPages).map(([path, info])=>({path,ar:info.ar,en:info.en})),
     ];
@@ -2556,7 +2553,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <Link href={focusedHref("/agents","agent-marketplace-grid")} className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/workbench","request-input")} className="profile-feature-link"><BriefcaseBusiness size={19}/><span><strong>{t('featureWorkbench')}</strong><small>{t('featureWorkbenchText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/history","history-list")} className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
-            <Link href={focusedHref("/ai/usage","ai-usage-page")} className="profile-feature-link"><Activity size={19}/><span><strong>{t('featureUsage')}</strong><small>{t('featureUsageText')}</small></span><ArrowUpLeft size={14}/></Link>
+            
           </div>
         </section>
 
