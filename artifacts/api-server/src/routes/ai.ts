@@ -1533,7 +1533,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       }
     }
     let memorySaveWarning = "";
-    const explicitMemoryIntent = /^(?:please\\s+)?(?:remember|save|store|keep in memory)\\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك)/i.test(latestCustomerRequest);
+    const explicitMemoryIntent = /^(?:please\s+)?(?:remember|save|store|keep in memory)\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك)/i.test(latestCustomerRequest);
     const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
     if (!explicitMemory && explicitMemoryIntent && latestCustomerRequest.length > 400) {
       memorySaveWarning = "لم يتم حفظ طلب الذاكرة لأنه تجاوز الحد المسموح لطول المعلومة.";
@@ -1554,10 +1554,10 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const responseUsage = {
       ...latestUsage,
-      ...(answer.usage ? { modelTokens: answer.usage } : {}),
+      ...(finalAnswer.usage ? { modelTokens: finalAnswer.usage } : {}),
       ...(Object.keys(qualityReviewUsage).length ? { qualityReviewTokens: qualityReviewUsage } : {}),
     };
-    res.json({ reply: memorySaveWarning ? answer.text + "\\n\\n" + memorySaveWarning : answer.text, provider: usedProvider, model: answer.model, usage: responseUsage });
+    res.json({ reply: memorySaveWarning ? finalAnswer.text + "\n\n" + memorySaveWarning : finalAnswer.text, provider: usedProvider, model: finalAnswer.model, usage: responseUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
