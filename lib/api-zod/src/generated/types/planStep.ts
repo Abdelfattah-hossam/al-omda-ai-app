@@ -27,7 +27,15 @@ export interface PlanStep {
      * @maxLength 1200
      */
   text: string;
+  /**
+     * @minLength 1
+     * @maxLength 1200
+     */
   output?: string;
+  /**
+     * @minLength 1
+     * @maxLength 1200
+     */
   complete?: string;
   result?: string;
   executedAt?: string;
