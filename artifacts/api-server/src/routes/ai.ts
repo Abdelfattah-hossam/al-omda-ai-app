@@ -469,7 +469,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<Pro
   const raw = payload?.choices?.[0]?.message?.content ?? payload?.result?.response;
   const text = (typeof raw === "string" ? raw : "").trim();
   if (!text) throw new Error("Cloudflare Workers AI returned an empty response.");
-  return { text, model: payload?.model || model };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
 }
 
 async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
