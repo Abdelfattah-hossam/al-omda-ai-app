@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
+import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
@@ -574,7 +575,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         console.warn("[AI step failure status could not be saved]", failure instanceof Error ? failure.message : "Unknown error");
       }
     };
-    if (step.state !== "approved" || task.steps.slice(0, stepIndex).some((item) => item.state !== "approved" || !item.result?.trim())) {
+    if (step.state !== "approved" || !hasCompletedPriorProjectStages(task.steps, stepIndex)) {
       res.status(409).json({ error: "Approve this step and all earlier steps before execution." }); return;
     }
     if (step.result) { res.status(409).json({ error: "This step already has a saved result." }); return; }
