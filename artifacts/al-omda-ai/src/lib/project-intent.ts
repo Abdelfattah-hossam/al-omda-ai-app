@@ -24,7 +24,7 @@ function isInformationRequest(value: string): boolean {
 const PROJECT_BUILD_VERB_PATTERN = /(?:اعمل|اعملي|اعمللي|تعمل|تعملي|تعمللي|اعملوا|انشئ|انشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|صمملي|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|جهز|جهزلي|جهز\s+لي|سوي|سويلي|سوي\s+لي|build|create|develop|make|implement|start|design|prepare|generate|write|export)/i;
 const DIRECT_PROJECT_REQUEST_PATTERN = /(?:عايز|عاوز|محتاج|اريد)\s+(?:(?:اعمل|اعمللي|انشئ|انشاء|ابني|بناء|نفذ|صمم|طور|جهز|سوي)\s+)?(?:مشروع(?:\s+جديد)?|تطبيق|ابلكيشن|موقع(?:\s+الكتروني)?|برنامج|متجر(?:\s+الكتروني)?|نظام|منصة|لعبة|(?:ملف|مستند|وثيقة)\s*(?:وورد|اكسل|اكسيل|بوربوينت|pdf|word|excel|powerpoint|docx|xlsx|pptx)|مصنف|جدول\s*(?:اكسل|اكسيل|excel)|عرض\s+تقديمي|تقرير|website|web app|mobile app|application|software|project|store|platform|system|excel\s+spreadsheet|word\s+document|powerpoint\s+presentation|spreadsheet|workbook|presentation|report)/i;
 const VAGUE_BARE_DELIVERABLE_PATTERN = /^(?:report|file|document|spreadsheet|workbook|presentation)$/i;
-const VAGUE_BARE_ARABIC_DELIVERABLE_PATTERN = /^(?:عايز|عاوز|محتاج|اريد)\s+(?:لي\s*)?(?:تقرير|ملف|مستند|وثيقة|عرض تقديمي|مصنف)$/i;
+const VAGUE_BARE_ARABIC_DELIVERABLE_PATTERN = /^(?:(?:عايز|عاوز|محتاج|اريد)\s+(?:لي\s*)?|(?:اعمل|اعملي|جهز|جهزلي|اكتب|اكتبلي)\s+(?:لي\s*)?)(?:تقرير|ملف|مستند|وثيقة|عرض تقديمي|مصنف)$/i;
 const STANDALONE_DOCUMENT_REQUEST_PATTERN = /^(?:(?:please|kindly)\s+)?(?:write|prepare|generate|create|make)\s+(?:a|an)\s+(?:report|file|document|spreadsheet|workbook|presentation)\b/i;
 const STANDALONE_ARABIC_DOCUMENT_REQUEST_PATTERN = /^(?:اكتب|اكتبلي|جهز|جهزلي|اعمل|اعملي)\s+(?:لي\s*)?(?:تقرير|ملف|مستند|وثيقة|عرض\s+تقديمي|مصنف|جدول)\b/i;
 export function detectProjectSpecialty(request: string): ProjectSpecialty | null {
@@ -41,7 +41,7 @@ export function detectProjectSpecialty(request: string): ProjectSpecialty | null
     /\b(?:i want|i need)\s+(?:to\s+)?(?:(?:a|an)\s+)?(?:excel\s+spreadsheet|word\s+document|powerpoint\s+presentation|website|web app|mobile app|application|software|project|store|platform|system|spreadsheet|workbook|presentation|report)\b/i.test(value);
   const vagueBareDeliverable = VAGUE_BARE_DELIVERABLE_PATTERN.test(value) ||
     VAGUE_BARE_ARABIC_DELIVERABLE_PATTERN.test(value) ||
-    /^(?:i want|i need)\s+(?:a|an\s+)?(?:report|file|document|spreadsheet|workbook|presentation)$/i.test(value);
+    /^(?:i want|i need)\s+(?:(?:a|an)\s+)?(?:report|file|document|spreadsheet|workbook|presentation)$/i.test(value);
   if (vagueBareDeliverable || STANDALONE_DOCUMENT_REQUEST_PATTERN.test(value) || STANDALONE_ARABIC_DOCUMENT_REQUEST_PATTERN.test(value)) return null;
   const fromScratch = /(?:من الصفر للنهاية|من البداية للنهاية|من الصفر|from scratch|end.to.end)/i.test(value);
   const hasProject = /(?:مشروع|تطبيق|ابلكيشن|موقع|برنامج|متجر|نظام|منصة|لعبة|شعار|لوجو|هوية|تصميم|واجهة|بوستر|حملة|بحث|دراسة|تحليل|تقرير|عرض تقديمي|ملف|مستند|وثيقة|مصنف|وورد|اكسل|بوربوينت|أتمتة|تكامل|قاعدة بيانات|بوت|وكيل|محتوى|خطة عمل|خطة تسويق|دراسة جدوى|website|web app|mobile app|application|software|project|store|platform|system|file|word|docx|excel|xlsx|spreadsheet|workbook|document|powerpoint|pptx|logo|brand identity|design project|campaign|research|study|analysis|report|presentation|automation|integration|database|bot|agent|content strategy|business plan|marketing plan|workflow)/i.test(value);
