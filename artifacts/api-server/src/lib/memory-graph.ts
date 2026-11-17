@@ -30,7 +30,7 @@ export type MemoryEdgeInput = {
   confidence: number;
 };
 
-const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race|email|phone|mobile|home.?address|street.?address|date.?of.?birth|\bdob\b|gps|coordinates|latitude|longitude/i;
+const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race|salary|income|bank.?account|account.?number|credit.?card|debit.?card|tax.?id|financial.?account|email|phone|mobile|home.?address|street.?address|date.?of.?birth|\bdob\b|gps|coordinates|latitude|longitude/i;
 const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Bearer\s+[A-Za-z0-9._~-]{20,})/i;
 const BLOCKED_CONTACT_TEXT = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:my|our|i live at|my home is|my home address is|my street address is|my phone(?: number)? is|my mobile is|my email is|my address is|my exact location is|my precise location is|my location is)\s*[:=]?\s*[^,;.!?]{3,120}|(?:عنواني|رقم هاتفي|تليفوني|موبايلي|بريدي الإلكتروني|بريدي الالكتروني|إيميلي|ايميلي|موقعي الدقيق)\s*[:=]?\s*[^،,؛;.!؟?]{3,120}/iu;
 const BLOCKED_FINANCIAL_TEXT = /(?:my|our|i earn|my salary|my income|salary is|income is|bank account|account number|credit card|debit card|tax id|financial account|wallet|راتبي|دخلي|حسابي البنكي|رقم حسابي|بطاقتي البنكية|بطاقة ائتمان)\s*[:=]?\s*[^,;.!?]{2,120}/iu;
