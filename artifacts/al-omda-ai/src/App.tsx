@@ -2467,6 +2467,20 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
             </nav>
           </section>)}
+          <section className="curtain-launcher-group">
+            <div className="curtain-caption">{isAr?'أقسام المنصة':'Platform areas'}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?'أقسام المنصة':'Platform areas'}>
+              {[
+                {path:'/projects',ar:'المشاريع',en:'Projects'},
+                {path:'/pipeline',ar:'مسار العمل',en:'Pipeline'},
+                {path:'/assets',ar:'الأصول والملفات',en:'Assets'},
+                {path:'/ai',ar:'المحادثات',en:'Chats'},
+                ...Object.entries(platformStatusPages).map(([pagePath,info])=>({path:pagePath,ar:info.ar,en:info.en})),
+              ].map(item=><Link key={item.path} href={item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}>
+                <span className="curtain-launcher-icon"><Globe size={19}/></span><strong>{isAr?item.ar:item.en}</strong>
+              </Link>)}
+            </nav>
+          </section>
         </div>
       </aside>
     </div>}
