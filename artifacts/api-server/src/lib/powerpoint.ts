@@ -15,7 +15,7 @@ export function parsePowerPointPresentation(text: string): PowerPointPresentatio
       if (!item || typeof item !== "object" || typeof item.title !== "string" || !item.title.trim() || item.title.length > 180) return null;
       const rawBullets = Array.isArray(item.bullets) ? item.bullets : [];
       if (rawBullets.some((bullet: unknown) => typeof bullet !== "string")) return null;
-      const bullets = rawBullets.slice(0, 10).map((bullet: string) => bullet.trim().slice(0, 150)).filter(Boolean);
+      const bullets = rawBullets.filter((bullet: string) => Boolean(bullet.trim())).slice(0, 10).map((bullet: string) => bullet.trim().slice(0, 150));
       const body = typeof item.body === "string" ? item.body.trim().slice(0, bullets.length ? 250 : 900) : "";
       const speakerNotes = typeof item.speakerNotes === "string" ? item.speakerNotes.trim().slice(0, 2000) : "";
       if (!body && bullets.length === 0 && !speakerNotes) return null;
