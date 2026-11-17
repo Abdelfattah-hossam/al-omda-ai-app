@@ -137,8 +137,9 @@ function textOf(node: Element): string {
 }
 
 function resolvePackageTarget(baseDirectory: string, target: string): string | null {
-  if (!target || target.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(target)) return null;
-  const segments = baseDirectory.split("/").filter(Boolean);
+  if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.includes("\\0")) return null;
+  const absolutePackagePath = target.startsWith("/");
+  const segments = absolutePackagePath ? [] : baseDirectory.split("/").filter(Boolean);
   for (const part of target.replace(/\\/g, "/").split("/")) {
     if (!part || part === ".") continue;
     if (part === "..") {
