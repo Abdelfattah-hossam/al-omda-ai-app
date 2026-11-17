@@ -705,6 +705,13 @@ function recordAgentToolFailure(state: AgentState, call: AgentToolCall, error: u
   };
   state.toolFailures = [...(state.toolFailures || []).filter((item) => item.callId !== failure.callId), failure].slice(-20);
 }
+function recordAgentToolResultFailure(state: AgentState, call: AgentToolCall, result: unknown): void {
+  if (!result || typeof result !== "object") return;
+  const details = result as Record<string, unknown>;
+  if (details.ok !== false && details.isError !== true) return;
+  const message = details.stderr || details.error || details.message || "Tool returned an unsuccessful result.";
+  recordAgentToolFailure(state, call, new Error(String(message)));
+}
 function agentExecutionWarnings(state: AgentState): { toolExecutionStatus: string; toolFailures: AgentToolFailure[] } {
   const toolFailures = state.toolFailures || [];
   state.toolFailures = [];
@@ -951,6 +958,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
         const call = readOnlyCalls[index];
         try {
           const result = await runTool(call, onProgress);
+          recordAgentToolResultFailure(state, call, result);
           appendMcpToolResult(state.messages, call, result, imageQueue);
         } catch (error) {
           recordAgentToolFailure(state, call, error);
@@ -975,6 +983,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       const call = calls[index];
       try {
         const result = await runTool(call, onProgress);
+        recordAgentToolResultFailure(state, call, result);
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
@@ -1211,10 +1220,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
       }
       try {
         const result = await runTool(call, onProgress, state.pendingMcpTools);
-        if (call.function.name === "terminal.execute" && result && typeof result === "object" && (result as Record<string, unknown>).ok === false) {
-          const details = result as Record<string, unknown>;
-          recordAgentToolFailure(state, call, new Error(String(details.stderr || details.error || "Terminal command exited unsuccessfully (exit code " + String(details.exitCode ?? "unknown") + ").")));
-        }
+        recordAgentToolResultFailure(state, call, result);
         appendMcpToolResult(state.messages, call, result, imageQueue);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
@@ -1241,6 +1247,9 @@ async function cancelAgent(body: Json): Promise<Json> {
   if (active) {
     active.abort();
     return { status: "cancelling", sessionId: id, message: "Cancellation requested. The current model request will be interrupted; a tool action already in progress may finish before the checkpoint is saved." };
+  }
+  if (activeAgentSessions.has(id)) {
+    return { status: "cancelling", sessionId: id, message: "The session is already changing state; cancellation will be handled by the active operation." };
   }
   return await withAgentSessionLock(id, "This agent session is already changing state. Retry cancellation shortly.", async () => {
     const state = await loadAgentState(id);
