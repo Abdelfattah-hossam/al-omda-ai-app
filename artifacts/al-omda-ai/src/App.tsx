@@ -391,7 +391,7 @@ const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang =
 
 function ModelProviderCard({ provider, health, isAr }: { provider: ModelProviderInfo; health?: ModelProviderHealth; isAr: boolean }) {
   const healthLabel = providerStatusLabel(health, isAr);
-  return <div className="panel panel-pad" key={provider.name}>
+  return <div className="panel panel-pad">
     <div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div>
     <p className="section-meta" style={{ overflowWrap: "anywhere" }}>{provider.model}</p>
     <small className="muted">{provider.hasApiKey ? (isAr ? "مفتاح متاح" : "API key available") : (isAr ? "بدون مفتاح" : "No API key")}</small>
