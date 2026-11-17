@@ -38,5 +38,5 @@ export function getRequestedPowerPointSlideCount(request: string): number | null
   const match = normalized.match(/(?:^|\D)(\d{1,2})\s*(?:slides?|شرائح|شريحة)/i);
   if (!match) return null;
   const count = Number(match[1]);
-  return count >= 3 && count <= 30 ? count : null;
+  return count > 0 ? count : null;
 }
