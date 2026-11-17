@@ -1980,7 +1980,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       { id:'completed', title:isAr?'مكتملة':'Completed', tasks:activeTasks.filter(task=>task.status==='approved' && task.steps.length>0 && task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
       { id:'paused', title:isAr?'متوقفة أو معلّقة':'Paused or stopped', tasks:activeTasks.filter(task=>task.status==='paused' || task.status==='stopped') },
     ];
-    return <div className="page-enter">
+    return <div className="page-enter" id="pipeline-board">
       {pageHeading(isAr?'مسار العمل':'WORKSPACE PIPELINE',isAr?'مسار المشاريع':'Project pipeline',isAr?'تابع انتقال كل مشروع بين المراجعة والتنفيذ والاكتمال.':'Track each saved project from review through execution and completion.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:12,alignItems:'start'}}>
         {columns.map(column=><section className="panel panel-pad" key={column.id} aria-label={column.title}>
@@ -2000,7 +2000,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const assetsPage = () => {
     const assets = tasks.filter(task=>!task.demo).flatMap(task=>task.steps.filter(step=>Boolean(step.result || step.output)).map(step=>({task,step})));
-    return <div className="page-enter">
+    return <div className="page-enter" id="assets-list">
       {pageHeading(isAr?'ملفات ومخرجات العمل':'WORKSPACE ASSETS',isAr?'الأصول والمخرجات':'Assets & outputs',isAr?'اعرض المخرجات المحفوظة ضمن مشاريعك وانتقل إلى مصدر كل مخرج.':'Browse outputs saved with your projects and open the task that produced each one.')}
       <div className="notice-bar" style={{marginBottom:16}}><FileText size={15}/><span>{isAr?'تعرض هذه الصفحة المخرجات المسجلة داخل المهام حاليًا. تخزين الملفات السحابي المستقل ومعايناتها سيُربطان ضمن تطوير نظام الملفات.':'This view currently indexes outputs recorded in task history. Dedicated cloud storage and file previews are part of the file-system implementation.'}</span></div>
       {assets.length>0?<div className="history-layout">{assets.map(({task,step})=><article className="panel history-item" key={task.id+':'+step.id}>
