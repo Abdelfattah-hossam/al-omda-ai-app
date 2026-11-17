@@ -87,6 +87,24 @@ test("legacy approved project results are backfilled without overriding explicit
   assert.match(migration, /where jsonb_typeof\(task\.steps\) = 'array'/i);
 });
 
+test("all applied production project-security and memory-graph migrations are tracked", () => {
+  const read = (name: string) => readFileSync(resolve(process.cwd(), "../supabase/migrations/" + name), "utf8");
+  const eightSteps = read("20261116173613_allow_eight_project_plan_steps.sql");
+  const sequencePrivileges = read("20261116174710_restrict_public_sequence_defaults.sql");
+  const fullSequenceRevoke = read("20261116174738_revoke_all_public_sequence_defaults.sql");
+  const anonTaskRevoke = read("20261116183805_revoke_anon_task_creation.sql");
+  const graph = read("20261116190037_create_private_ai_memory_graph.sql");
+  const graphIndexes = read("20261116190154_index_private_ai_memory_graph_foreign_keys.sql");
+  assert.match(eightSteps, /jsonb_array_length\(p_steps\) not between 3 and 8/i);
+  assert.match(sequencePrivileges, /alter default privileges[\s\S]*?revoke usage, select on sequences/i);
+  assert.match(fullSequenceRevoke, /revoke all on sequences from anon, authenticated, service_role/i);
+  assert.match(anonTaskRevoke, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from anon/i);
+  assert.match(graph, /create table if not exists public\.ai_memory_nodes/i);
+  assert.match(graph, /create table if not exists public\.ai_memory_edges/i);
+  assert.match(graphIndexes, /ai_memory_edges_source_fk_idx/i);
+  assert.match(graphIndexes, /ai_memory_edges_target_fk_idx/i);
+});
+
 test("private user tables and storage buckets retain ownership RLS", () => {
   for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_memory_nodes", "ai_memory_edges", "ai_conversations"]) {
     assert.match(sql, new RegExp("alter table public\\." + table + " enable row level security", "i"), table);
