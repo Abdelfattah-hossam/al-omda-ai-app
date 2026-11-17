@@ -1972,6 +1972,45 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>;
   };
 
+  const pipelinePage = () => {
+    const activeTasks = tasks.filter((task) => !task.demo);
+    const columns: Array<{ id:string; title:string; tasks:Task[] }> = [
+      { id:'review', title:isAr?'بانتظار المراجعة':'Needs review', tasks:activeTasks.filter(task=>task.status==='review') },
+      { id:'in-progress', title:isAr?'قيد التنفيذ':'In progress', tasks:activeTasks.filter(task=>task.status==='approved' && !task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
+      { id:'completed', title:isAr?'مكتملة':'Completed', tasks:activeTasks.filter(task=>task.status==='approved' && task.steps.length>0 && task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
+      { id:'paused', title:isAr?'متوقفة أو معلّقة':'Paused or stopped', tasks:activeTasks.filter(task=>task.status==='paused' || task.status==='stopped') },
+    ];
+    return <div className="page-enter">
+      {pageHeading(isAr?'مسار العمل':'WORKSPACE PIPELINE',isAr?'مسار المشاريع':'Project pipeline',isAr?'تابع انتقال كل مشروع بين المراجعة والتنفيذ والاكتمال.':'Track each saved project from review through execution and completion.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:12,alignItems:'start'}}>
+        {columns.map(column=><section className="panel panel-pad" key={column.id} aria-label={column.title}>
+          <div className="section-head"><h2 className="section-title">{column.title}</h2><span className="section-meta">{column.tasks.length}</span></div>
+          <div style={{display:'grid',gap:9}}>
+            {column.tasks.map(task=><Link key={task.id} href={focusedHref('/history/'+task.id,'task-plan')} className="panel" style={{display:'block',padding:13,textDecoration:'none',color:'inherit'}}>
+              <strong style={{display:'block',fontSize:12,marginBottom:7}}>{task.title}</strong>
+              <span className="section-meta">{label(task.specialty)} · {count(task)}/{task.steps.length} {isAr?'خطوات معتمدة':'approved steps'}</span>
+              <div className="task-detail-progress-track" style={{marginTop:11}}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+            </Link>)}
+            {column.tasks.length===0&&<div className="plan-empty" style={{padding:18,textAlign:'center'}}><span className="section-meta">{isAr?'لا توجد مشاريع هنا':'No projects in this stage'}</span></div>}
+          </div>
+        </section>)}
+      </div>
+    </div>;
+  };
+
+  const assetsPage = () => {
+    const assets = tasks.filter(task=>!task.demo).flatMap(task=>task.steps.filter(step=>Boolean(step.result || step.output)).map(step=>({task,step})));
+    return <div className="page-enter">
+      {pageHeading(isAr?'ملفات ومخرجات العمل':'WORKSPACE ASSETS',isAr?'الأصول والمخرجات':'Assets & outputs',isAr?'اعرض المخرجات المحفوظة ضمن مشاريعك وانتقل إلى مصدر كل مخرج.':'Browse outputs saved with your projects and open the task that produced each one.')}
+      <div className="notice-bar" style={{marginBottom:16}}><FileText size={15}/><span>{isAr?'تعرض هذه الصفحة المخرجات المسجلة داخل المهام حاليًا. تخزين الملفات السحابي المستقل ومعايناتها سيُربطان ضمن تطوير نظام الملفات.':'This view currently indexes outputs recorded in task history. Dedicated cloud storage and file previews are part of the file-system implementation.'}</span></div>
+      {assets.length>0?<div className="history-layout">{assets.map(({task,step})=><article className="panel history-item" key={task.id+':'+step.id}>
+        <Link href={focusedHref('/history/'+task.id,'task-plan')} className="history-item-open" style={{textDecoration:'none',color:'inherit'}}>
+          <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{step.text}</strong><small>{task.title} · {step.executionStatus==='succeeded'?(isAr?'تنفيذ ناجح':'Execution succeeded'):step.executionStatus==='failed'?(isAr?'فشل التنفيذ':'Execution failed'):(isAr?'مخرج محفوظ':'Saved output')}</small></span><ArrowLeft size={15} className="muted"/>
+        </Link>
+      </article>)}</div>:<div className="panel plan-empty"><div><span className="empty-mark"><FileText size={21}/></span><h3>{isAr?'لا توجد مخرجات محفوظة بعد':'No saved outputs yet'}</h3><p>{isAr?'ستظهر هنا مخرجات المشاريع بعد تسجيلها داخل خطوات التنفيذ.':'Project outputs will appear here once they are recorded in execution steps.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'ابدأ مشروعًا':'Start a project'}</Link></div></div>}
+    </div>;
+  };
+
   const taskDetailPage = (task:Task) => {
     const successfulExecutions = task.steps.filter((step)=>step.executionStatus === 'succeeded' && Boolean(step.result)).length;
     const failedExecutions = task.steps.filter((step)=>step.executionStatus === 'failed').length;
@@ -2146,6 +2185,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
+  else if (path === '/projects') page = historyPage();
+  else if (path === '/pipeline') page = pipelinePage();
+  else if (path === '/assets') page = assetsPage();
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
   else if (path === '/') page = dashboardPage();
@@ -2156,6 +2198,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const pageTitle = path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
@@ -2168,6 +2211,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="sidebar-nav-group" aria-label={isAr?'التنقل العام':'General navigation'}>
           <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
           <nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'إدارة مساحة العمل':'Workspace management'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'إدارة العمل':'WORK MANAGEMENT'}</div>
+          <nav className="nav-stack">
+            {[{path:'/projects',label:isAr?'المشاريع':'Projects',icon:BriefcaseBusiness},{path:'/pipeline',label:isAr?'مسار العمل':'Pipeline',icon:Activity},{path:'/assets',label:isAr?'الأصول والملفات':'Assets',icon:FileText}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={focusedHref(item.path,item.path==='/projects'?'history-list':item.path==='/pipeline'?'pipeline-board':'assets-list')} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined} data-testid={'link-platform-'+item.path.slice(1)}><Icon size={17} strokeWidth={1.8}/><span>{item.label}</span></Link>;})}
+          </nav>
         </section>
         <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Systems and tools'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'الأدوات المتخصصة':'SPECIALISTS & TOOLS'}</div>
@@ -2188,7 +2237,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
+      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{pageTitle}</div>
         {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'} title={workspaceLoadError ? (isAr?'تعذر تحميل بيانات مساحة العمل':'Workspace data could not be loaded') : undefined}>
           <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.total}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
           <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.needsReview}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
