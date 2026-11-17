@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
@@ -58,12 +58,7 @@ function isExcelRequest(messages: ChatMessage[]): boolean {
   return isExcelFileRequest(getLatestUserRequest(messages));
 }
 function isPowerPointRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  const asksForPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(request);
-  const asksToCreate = /(?:اعمل|اعملي|أنشئ|انشئ|جهز|جهّز|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|عايز|عاوز|محتاج|اريد|أريد|create|make|build|generate|prepare|design|produce|export|download)/i.test(request);
-  const asksForExplanation = /(?:شرح|اشرح|كيفية|ازاي|كيف\s*(?:أ|ا)?عمل|tutorial|how\s+to|explain)/i.test(request);
-  return asksForPresentation && asksToCreate && !asksForExplanation;
+  return isPowerPointFileRequest(getLatestUserRequest(messages));
 }
 function needsLongStructuredOutput(messages: ChatMessage[]): boolean {
   const latest = getLatestUserRequest(messages);
@@ -112,12 +107,8 @@ function isCodingRequest(messages: ChatMessage[]): boolean {
   return /code|coding|debug|typescript|javascript|python|react|node|sql|html|css|api|bug|error|stack trace|برمج|كود|بايثون|جافاسكريبت|تايب سكريبت|ريأكت|قاعدة بيانات|تصحيح|خطأ|برنامج|موقع|تطبيق/i.test(last);
 }
 function isSourceCodeFileRequest(messages: ChatMessage[]): boolean {
-  const request = getLatestUserRequest(messages);
-  if (!request || isHowToRequest(request)) return false;
-  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(request);
-  return hasSourceExtension || (isCodingRequest(messages) && /(?:ملف\s*(?:كود|برمجي|بايثون|جافاسكريبت|تايب\s*سكريبت)|(?:كود|code|script).{0,35}(?:ملف|تحميل|احفظ|تنزيل|download|save|export)|(?:ملف|file).{0,35}(?:python|javascript|typescript|source\s*code))/i.test(request));
+  return isExplicitSourceCodeFileRequest(getLatestUserRequest(messages));
 }
-
 
 function systemPrompt(coding: boolean, memory = ""): string {
   const base = "You are AL OMDA AI (العمدة), the AI assistant itself. The name AL OMDA always refers to YOU, the assistant, never to a separate human, colleague, or team. Match the user's language. Before answering, carefully parse the COMPLETE user request and the relevant conversation context. Silently make a requirements checklist: exact deliverable, every requested item, quantities, format, language, audience, constraints, exclusions, and what must not be changed. Resolve references such as this/that/previous using conversation context. Do not skip, reinterpret, or replace any explicit requirement. Never decide what the user wants from one keyword alone; interpret the complete sentence and its surrounding context. Distinguish a question, explanation, comparison, casual conversation, advice request, and plan from an explicit request to create a file, app, or other deliverable. Mentioning Word, Excel, a table, a report, or a file topic is NOT permission to create an attachment. Create Word/Excel files only when the current request clearly names that file format and explicitly asks to create, prepare, export, or download that file. A request for a table or written content without a file-format request should be answered directly in chat. Never infer a file request from unrelated earlier turns. If a request is actionable and sufficiently clear, do the work rather than merely describing how the user can do it. Before sending the response, silently verify that every requirement is addressed, all generated content is coherent and understandable, calculations and structure are consistent, and any claimed file or action actually exists. For structured files, validate the complete structure before declaring success; if the first output is malformed, correct it and validate again. Never return an empty, irrelevant, generic, or confusing artifact. If a requirement is genuinely ambiguous and changes the result materially, ask one focused question; otherwise make the safest reasonable assumption and state it briefly. Be accurate, practical, and honest about uncertainty. When the user delegates a project, YOU (AL OMDA AI) are the intended executor: analyze the request, create the deliverables or code using available tools, make revisions, and report what was actually completed. The user is the project owner who sets goals, gives direction, and reviews or approves important decisions. Never say the user should execute delegated work themselves. Never claim to have executed code or changed external systems unless a tool actually did so. If you lack a required tool, explain the specific limitation and provide the closest useful work you can actually complete. Do not reveal private reasoning; provide concise conclusions and verifiable results.";
@@ -1128,7 +1119,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const messages: ChatMessage[] = [];
     for (const item of rawMessages) {
-      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 8000) {
+      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || item.content.length > 8000 || !hasChatMessagePayload(item.content, item.image !== undefined)) {
         res.status(400).json({ error: "A chat message is invalid or too long." });
         return;
       }
@@ -1156,15 +1147,17 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       currentUsage(accessToken),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
-    const latestCustomerRequest = getLatestUserRequest(messages);
-    const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
-    // A greeting is a fresh conversational turn; do not let an old file request in
-    // the transcript steer the provider into producing an unrelated attachment.
+    const latestIntent = classifyLatestChatIntent(messages);
+    const latestCustomerRequest = latestIntent.request;
+    const standaloneGreeting = latestIntent.kind === "greeting";
+    // Artifact intent is authoritative for the latest user turn; older requests
+    // may resolve references but cannot independently trigger a new attachment.
     const modelConversation: ChatMessage[] = standaloneGreeting ? [messages[messages.length - 1]] : messages;
-    const excelRequest = isExcelRequest(messages);
-    const wordDocumentRequest = !excelRequest && isWordDocumentRequest(messages);
-    const powerPointRequest = !excelRequest && !wordDocumentRequest && isPowerPointRequest(messages);
-    const sourceCodeFileRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && isSourceCodeFileRequest(messages);
+    const latestUserMessages = messages.filter((message) => message.role === "user").slice(-1);
+    const excelRequest = latestIntent.kind === "excel_file";
+    const wordDocumentRequest = latestIntent.kind === "word_file" && isWordDocumentRequest(latestUserMessages);
+    const powerPointRequest = latestIntent.kind === "powerpoint_file" && isPowerPointRequest(latestUserMessages);
+    const sourceCodeFileRequest = latestIntent.kind === "source_code_file";
     const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
