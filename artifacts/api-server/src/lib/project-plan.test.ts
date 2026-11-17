@@ -45,3 +45,9 @@ test("rejects malformed, oversized, or incorrectly typed plan data", () => {
 test("rejects oversized raw plan payloads before JSON parsing", () => {
   assert.equal(parseProjectPlan(" ".repeat(100_001)), null);
 });
+
+test("validates trimmed step length rather than rejecting surrounding whitespace", () => {
+  const padded = { ...step(1), text: " ".repeat(80) + "x".repeat(1200) + " ".repeat(80) };
+  const result = parseProjectPlan(JSON.stringify({ title: "Whitespace", steps: [padded, step(2), step(3)] }));
+  assert.equal(result?.steps[0].text.length, 1200);
+});
