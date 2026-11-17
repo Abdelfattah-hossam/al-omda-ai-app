@@ -76,6 +76,8 @@ test("chat sync detects changed deliverables but ignores per-device blob URLs", 
     appData: { title: "App", html: "<main/>" },
     taskId: "task-1",
     taskTitle: "Build app",
+    toolExecutionStatus: "with_warnings",
+    toolFailures: [{ callId: "call-1", tool: "files.read", message: "ENOENT" }],
   };
   const local = [{ ...shared, attachment: { name: "report.xlsx", url: "blob:local-device-url" } }];
   const remote = [{ ...shared, attachment: { name: "report.xlsx", url: "blob:other-device-url" } }];
