@@ -92,6 +92,30 @@ test("legacy approved project results are backfilled without overriding explicit
   assert.match(migration, /where jsonb_typeof\(task\.steps\) = 'array'/i);
 });
 
+test("manual setup enforces the same public-schema privilege defaults", () => {
+  assert.match(sql, /revoke execute on all functions in schema public from public, anon/i);
+  assert.match(sql, /revoke all on all tables in schema public from anon/i);
+  assert.match(sql, /alter default privileges for role postgres in schema public[\s\S]*?revoke execute on functions from public, anon/i);
+  assert.match(sql, /alter default privileges for role postgres in schema public[\s\S]*?revoke all on tables from anon, authenticated/i);
+  assert.match(sql, /alter default privileges for role postgres in schema public[\s\S]*?revoke all on sequences from anon, authenticated, service_role/i);
+});
+
+test("early public privilege migrations are tracked with least-privilege grants", () => {
+  const read = (name: string) => readFileSync(resolve(process.cwd(), "../supabase/migrations/" + name), "utf8");
+  const functionRevoke = read("20261113131356_restrict_public_security_definer_function_execution.sql");
+  const futureGrantRevoke = read("20261113131427_restrict_future_public_function_grants.sql");
+  const anonTableRevoke = read("20261113131649_revoke_anon_access_to_application_tables.sql");
+  const authenticatedGrants = read("20261113131714_least_privilege_authenticated_table_grants.sql");
+  assert.match(functionRevoke, /revoke execute on all functions in schema public from public, anon/i);
+  assert.match(futureGrantRevoke, /alter default privileges for role postgres in schema public[\s\S]*?revoke execute on functions from public, anon/i);
+  assert.match(anonTableRevoke, /revoke all on all tables in schema public from anon/i);
+  assert.match(authenticatedGrants, /revoke all on all tables in schema public from authenticated/i);
+  assert.match(authenticatedGrants, /grant select, update on public\.profiles to authenticated/i);
+  assert.match(authenticatedGrants, /grant select, update, delete on public\.tasks to authenticated/i);
+  assert.match(authenticatedGrants, /grant select on public\.ai_daily_usage to authenticated/i);
+  assert.match(authenticatedGrants, /grant select, insert, update, delete on public\.ai_conversations to authenticated/i);
+});
+
 test("all applied production project-security and memory-graph migrations are tracked", () => {
   const read = (name: string) => readFileSync(resolve(process.cwd(), "../supabase/migrations/" + name), "utf8");
   const eightSteps = read("20261116173613_allow_eight_project_plan_steps.sql");

@@ -759,3 +759,22 @@ create policy "workspace_assets_delete_own"
     bucket_id = 'workspace-assets'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
+
+-- Final least-privilege hardening for the manual bootstrap path.
+-- Keep client access explicit and prevent future postgres-owned public objects
+-- from inheriting broad Supabase defaults.
+revoke execute on all functions in schema public from public, anon;
+grant execute on function public.get_ai_daily_usage() to authenticated;
+grant execute on function public.consume_ai_units(integer, integer) to authenticated;
+grant execute on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
+grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
+
+revoke all on all tables in schema public from anon;
+revoke all on all sequences in schema public from anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+  revoke execute on functions from public, anon;
+alter default privileges for role postgres in schema public
+  revoke all on tables from anon, authenticated;
+alter default privileges for role postgres in schema public
+  revoke all on sequences from anon, authenticated, service_role;
