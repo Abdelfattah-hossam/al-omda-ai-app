@@ -21,7 +21,7 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Monitor, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Globe2, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
@@ -454,12 +454,43 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
-const appLauncherGroups: { id:'core'|'secondary'; items:typeof navItems }[] = [
-  { id:'core', items:navItems.filter(item=>item.path!=='/') },
-  { id:'secondary', items:[
-    { path:'/ai/usage', key:'usage', icon:Activity },
-    { path:'/profile', key:'profile', icon:Settings2 },
-  ] },
+type DashboardShortcut = { path:string; ar:string; en:string; subtitleAr:string; subtitleEn:string; icon:LucideIcon };
+const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr:string; subtitleEn:string; items:DashboardShortcut[] }[] = [
+  { id:'core', titleAr:'مساحة العمل', titleEn:'WORKSPACE', subtitleAr:'إنشاء المشاريع ومتابعة تنفيذها', subtitleEn:'Create projects and track execution', items:[
+    {path:'/projects',ar:'المشاريع',en:'Projects',subtitleAr:'كل مشاريعك المحفوظة',subtitleEn:'All saved projects',icon:BriefcaseBusiness},
+    {path:'/pipeline',ar:'مسار العمل',en:'Pipeline',subtitleAr:'مراحل التنفيذ والموافقات',subtitleEn:'Execution stages and approvals',icon:Activity},
+    {path:'/assets',ar:'الأصول والملفات',en:'Assets',subtitleAr:'ملفات ومخرجات المشاريع',subtitleEn:'Project files and deliverables',icon:FileText},
+    {path:'/workbench',ar:'مشروع جديد',en:'New Project',subtitleAr:'ابدأ مشروعًا أو مهمة',subtitleEn:'Start a project or task',icon:Plus},
+    {path:'/history',ar:'سجل المهام',en:'Task History',subtitleAr:'النتائج وسجل التنفيذ',subtitleEn:'Results and execution history',icon:History},
+    {path:'/ai',ar:'الشات الذكي',en:'AI Chat',subtitleAr:'محادثة مباشرة مع العمدة',subtitleEn:'Chat with AL OMDA',icon:Bot},
+    {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
+  ]},
+  { id:'analytics', titleAr:'المالية والتحليلات', titleEn:'FINANCE & ANALYTICS', subtitleAr:'لوحات المتابعة والبيانات المتصلة', subtitleEn:'Dashboards and connected data', items:[
+    {path:'/finance/sales-overview',ar:'نظرة عامة على المبيعات',en:'Sales Overview',subtitleAr:'مؤشرات المبيعات',subtitleEn:'Sales metrics',icon:TrendingUp},
+    {path:'/finance/sales-distribution',ar:'توزيع المبيعات',en:'Sales Distribution',subtitleAr:'توزيع القنوات والمصادر',subtitleEn:'Channel and source distribution',icon:Globe},
+    {path:'/finance/payment-gateways',ar:'بوابات الدفع',en:'Payment Gateways',subtitleAr:'حالة تكاملات الدفع',subtitleEn:'Payment integrations',icon:CreditCard},
+    {path:'/finance/active-users',ar:'المستخدمون النشطون والخريطة العالمية',en:'Active Users & Global Map',subtitleAr:'خريطة عالمية وتحليلات المستخدمين',subtitleEn:'Global map and user analytics',icon:Globe2},
+  ]},
+  { id:'collaboration', titleAr:'التعاون والتطبيقات', titleEn:'COLLABORATION & APPS', subtitleAr:'أدوات التواصل وإدارة العمل', subtitleEn:'Communication and work tools', items:[
+    {path:'/collaboration/contacts',ar:'جهات الاتصال',en:'Contacts',subtitleAr:'دفتر جهات الاتصال',subtitleEn:'Contact directory',icon:Contact},
+    {path:'/ai',ar:'المحادثات',en:'Chats',subtitleAr:'محادثاتك مع العمدة',subtitleEn:'Your conversations',icon:MessageSquareText},
+    {path:'/collaboration/calendar',ar:'التقويم',en:'Calendar',subtitleAr:'المواعيد والجدولة',subtitleEn:'Events and scheduling',icon:CalendarDays},
+    {path:'/collaboration/email',ar:'البريد الإلكتروني',en:'Email',subtitleAr:'إدارة البريد بعد الربط',subtitleEn:'Email after connection',icon:Mail},
+    {path:'/collaboration/tickets',ar:'التذاكر والدعم',en:'Tickets & Support',subtitleAr:'طلبات الدعم والمتابعة',subtitleEn:'Support requests and tracking',icon:Ticket},
+  ]},
+  { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
+    {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
+    {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
+    {path:'/ai/usage',ar:'الاستخدام والحصص',en:'Usage & Quota',subtitleAr:'الاستهلاك والذاكرة',subtitleEn:'Usage and memory',icon:Activity},
+  ]},
+  { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
+    {path:'/agents',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
+    {path:'/agents',ar:'المهندس والتصميم الهندسي',en:'Engineer & Engineering',subtitleAr:'الهندسة والتصميم والمواصفات',subtitleEn:'Engineering, design, and specifications',icon:HardHat},
+    {path:'/agents',ar:'الطب والرعاية الصحية',en:'Medicine & Healthcare',subtitleAr:'المعلومات الصحية والبحث الطبي',subtitleEn:'Health information and medical research',icon:Stethoscope},
+    {path:'/agents',ar:'المحاسبة والمالية',en:'Accounting & Finance',subtitleAr:'الحسابات والتحليل المالي',subtitleEn:'Accounting and financial analysis',icon:Calculator},
+    {path:'/agents',ar:'الصيانة والتشغيل',en:'Maintenance & Operations',subtitleAr:'التشغيل والفحص والصيانة',subtitleEn:'Operations, inspection, and maintenance',icon:Wrench},
+    {path:'/agents',ar:'التعليم والتدريب',en:'Education & Training',subtitleAr:'التعليم وإعداد المحتوى التدريبي',subtitleEn:'Learning and training content',icon:GraduationCap},
+  ]},
 ];
 const launcherSubtitleKeys: Record<string, TranslationKey> = {
   '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
@@ -1274,8 +1305,30 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const platformStatusPage = (route:string) => {
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
+    const isGlobalMap = route === '/finance/active-users';
     return <div className="page-enter">
       {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'قسم جاهز للربط بمصدر بيانات حقيقي.':'A workspace area awaiting a real data connection.')}
+      {isGlobalMap && <section className="panel panel-pad" style={{marginTop:16}}>
+        <div className="section-head"><div><span className="eyebrow">{isAr?'GLOBAL OVERVIEW':'GLOBAL OVERVIEW'}</span><h2 className="section-title">{isAr?'الخريطة العالمية':'Global map'}</h2><p className="page-subtitle">{isAr?'عرض جغرافي عام؛ لن تظهر نقاط أو أعداد مستخدمين قبل ربط تحليلات موثوقة.':'Geographic overview. No user markers or counts appear until a trusted analytics source is connected.'}</p></div><Globe2 size={22}/></div>
+        <div role="img" aria-label={isAr?'رسم توضيحي للخريطة العالمية دون بيانات مستخدمين':'Illustrative world map without user data'} style={{marginTop:16,border:'1px solid var(--border,#303744)',borderRadius:14,overflow:'hidden',background:'radial-gradient(ellipse at 50% 45%,rgba(70,130,150,.16),rgba(15,22,32,.92) 72%)',padding:'clamp(8px,2vw,22px)'}}>
+          <svg viewBox="0 0 960 430" width="100%" role="presentation" style={{display:'block',maxHeight:430}}>
+            <defs><pattern id="map-grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="rgba(150,180,195,.10)" strokeWidth="1"/></pattern></defs>
+            <rect width="960" height="430" fill="url(#map-grid)"/>
+            <g fill="rgba(92,157,171,.42)" stroke="rgba(139,198,205,.72)" strokeWidth="2" strokeLinejoin="round">
+              <path d="M92 93l35-25 42-7 27 13 18-4 30 18 9 27-18 18-4 26-20 20-9 35-22 20-11 40-19 18-14-12-5-34-18-26-5-36-20-25-8-39-18-27z"/>
+              <path d="M230 258l25 13 17 32-5 35-15 37-11 37-17-9-8-42-18-36 7-37z"/>
+              <path d="M414 94l35-17 49 4 29 19 36-2 23 20 35 4 26 23-5 24-30 9-18 29-25 5-19 25-21-7-19-31-29-5-19-25-33-9-21-29-27-10z"/>
+              <path d="M457 226l32-10 37 12 26 31-8 39-20 35-17 43-22 16-19-24-7-42-23-31 2-39z"/>
+              <path d="M585 95l45-23 62 4 42 22 41 4 43 30-13 29-37 7-21 27-32-5-23-26-37 4-24-23-35-2-24-24z"/>
+              <path d="M750 270l36-15 45 12 22 26-11 26-34 12-38-10-25-22z"/>
+              <path d="M350 105l-18-24 6-29 20-12 20 15-5 25z"/>
+              <path d="M856 194l24-9 18 18-9 27-22 4-15-19z"/>
+            </g>
+            <g fill="none" stroke="rgba(94,190,198,.38)" strokeWidth="1.5" strokeDasharray="5 7"><path d="M150 150Q480 10 810 150"/><path d="M245 285Q480 390 720 170"/><path d="M480 110Q670 240 820 285"/></g>
+            <text x="480" y="405" textAnchor="middle" fill="rgba(210,225,230,.68)" fontSize="13">{isAr?'الخريطة التوضيحية — لا توجد بيانات مواقع متصلة':'Illustrative map — no location data connected'}</text>
+          </svg>
+        </div>
+      </section>}
       <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
@@ -1283,7 +1336,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </section>
     </div>;
   };
-
   const taskIcon = (id:Specialty, size=17) => {
     const Icon = specialties.find((item) => item.id === id)?.icon ?? Bot;
     return <Icon size={size} strokeWidth={1.7}/>;
@@ -1431,15 +1483,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>
           <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أدوات'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
         </div>
-        {appLauncherGroups.map(group=><div key={group.id} className={'app-launcher-group '+(group.id==='secondary'?'app-launcher-secondary-group':'')}>
+        {appLauncherGroups.map(group=><div key={group.id} className="app-launcher-group">
           <div className="app-launcher-group-title">
-            <strong>{group.id==='core'?t('launcherCoreTitle'):t('launcherInsightsAccount')}</strong>
-            <span>{group.id==='core'?t('launcherCoreDesc'):t('launcherSecondaryDesc')}</span>
+            <strong>{isAr?group.titleAr:group.titleEn}</strong>
+            <span>{isAr?group.subtitleAr:group.subtitleEn}</span>
           </div>
-          <div className={'app-launcher-grid '+(group.id==='secondary'?'app-launcher-grid-secondary':'')}>
-            {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} className="app-launcher-tile">
-              <span className="app-launcher-icon"><Icon size={group.id==='core'?21:19}/></span>
-              <span className="app-launcher-copy"><strong>{t(item.key)}</strong><small>{t(launcherSubtitleKeys[item.path] || 'launcherSubtitleProfile')}</small></span>
+          <div className="app-launcher-grid">
+            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} className="app-launcher-tile">
+              <span className="app-launcher-icon"><Icon size={20} strokeWidth={1.8}/></span>
+              <span className="app-launcher-copy"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?item.subtitleAr:item.subtitleEn}</small></span>
               <ArrowUpLeft size={14} className="app-launcher-arrow"/>
             </Link>})}
           </div>
@@ -2500,7 +2552,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
               {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
               {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
-              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة':'Active Users & Global Map',icon:UserRound},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة العالمية':'Active Users & Global Map',icon:Globe2},
             ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
