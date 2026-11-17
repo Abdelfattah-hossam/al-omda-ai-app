@@ -19,9 +19,11 @@ function isSafeProjectPath(path: string): boolean {
   if (!path || path.length > 180 || path.startsWith("/") || path.startsWith("~") || path.includes("\\") || path.includes("\0")) return false;
   const parts = path.split("/");
   if (parts.some((part) => !part || part === "." || part === "..")) return false;
-  if (/^(?:node_modules|\.git|dist|build)(?:\/|$)/i.test(path)) return false;
-  const baseName = parts[parts.length - 1].toLocaleLowerCase();
-  if (baseName === ".env" || (baseName.startsWith(".env.") && baseName !== ".env.example")) return false;
+  if (parts.some((part) => ["node_modules", ".git", "dist", "build"].includes(part.toLocaleLowerCase()))) return false;
+  if (parts.some((part, index) => {
+    const name = part.toLocaleLowerCase();
+    return name === ".env" || (name.startsWith(".env.") && !(index === parts.length - 1 && name === ".env.example"));
+  })) return false;
   if (/\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(path)) return false;
   return /^[\p{L}\p{N}._@+/-]+$/u.test(path);
 }
