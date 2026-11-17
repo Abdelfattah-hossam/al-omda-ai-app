@@ -35,6 +35,7 @@ type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research
 type PlanStepNote = { id:string; author:'user'|'assistant'|'system'; text:string; createdAt:string };
 type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
+type CommandAsset = { path:string; name:string; mimeType?:string|null; size?:number|null; projectId?:string|null };
 
 type TaskPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 function getTaskPresentation(result?: string): TaskPresentation | null {
@@ -479,6 +480,7 @@ function App() {
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
   const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
   const [projectCategoryFilter, setProjectCategoryFilter] = useState<'all'|Specialty>('all');
   const { language, tasks } = saved;
@@ -692,6 +694,32 @@ pnpm --filter @workspace/scripts agent:runtime`;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.classList.add('dark');
   }, [language]);
+  useEffect(() => {
+    if (!commandPaletteOpen || !authUser) return;
+    let cancelled = false;
+    const loadCommandAssets = async () => {
+      const projectIds = tasks.filter(task=>!task.demo).slice(0,15).map(task=>task.id);
+      const folders: Array<{projectId:string|null;url:string}> = [
+        {projectId:null,url:'/api/storage/assets'},
+        ...projectIds.map(projectId=>({projectId,url:'/api/storage/assets?projectId='+encodeURIComponent(projectId)})),
+      ];
+      const responses = await Promise.all(folders.map(async folder => {
+        try {
+          const response = await fetch(folder.url,{credentials:'same-origin'});
+          if(!response.ok)return [];
+          const data = await response.json().catch(()=>[]);
+          return Array.isArray(data) ? data.map((item:any)=>({...item,projectId:folder.projectId})) : [];
+        } catch { return []; }
+      }));
+      if(cancelled)return;
+      const unique = new Map<string,CommandAsset>();
+      for(const asset of responses.flat()) if(typeof asset.path==='string'&&typeof asset.name==='string') unique.set(asset.path,asset as CommandAsset);
+      setCommandAssets([...unique.values()]);
+    };
+    void loadCommandAssets();
+    return ()=>{cancelled=true;};
+  }, [commandPaletteOpen, authUser?.id, tasks]);
+
   useEffect(() => {
     if (authLoading) return;
     const localSnapshot = authUser
@@ -1121,6 +1149,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
+  const commandAssetMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    if(!needle)return [];
+    return commandAssets.filter(asset=>(asset.name+' '+(asset.mimeType||'')).toLocaleLowerCase().includes(needle)).slice(0,12);
+  }, [commandAssets, commandQuery]);
   const commandNavigationMatches = useMemo(() => {
     const needle = commandQuery.trim().toLocaleLowerCase();
     const entries = [
@@ -1149,6 +1182,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
     });
     return matches.slice(0,12);
   }, [tasks, commandQuery, isAr]);
+  const downloadCommandAsset = async (asset:CommandAsset) => {
+    try {
+      const response = await fetch('/api/storage/assets/download?path='+encodeURIComponent(asset.path),{credentials:'same-origin'});
+      if(!response.ok)throw new Error(isAr?'تعذر تنزيل الملف.':'Could not download the file.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href=url;link.download=asset.name;document.body.appendChild(link);link.click();link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(error) {
+      setWorkspaceError(error instanceof Error?error.message:(isAr?'تعذر تنزيل الملف.':'Could not download the file.'));
+    }
+  };
   const label = (id:Specialty) => t(specialtyKey(id));
   const count = (task:Task) => task.steps.filter((step) => step.state === 'approved').length;
   const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && Boolean(step.result)).length;
@@ -2442,16 +2488,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </main>
     {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
       <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
-        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في الأقسام والمشاريع والمخرجات...':'Search sections, projects, and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
+        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في الأقسام والمشاريع والملفات والمخرجات...':'Search sections, projects, files, and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
         <div className="section-meta" style={{padding:'5px 3px 10px'}}>{isAr?'نتائج من البيانات المتاحة حاليًا':'Results from currently available workspace data'}</div>
         <div style={{display:'grid',gap:6}}>
           {commandNavigationMatches.map(item=><Link key={item.path} href={item.path==='/workbench'?focusedHref(item.path,'request-input'):item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path==='/history'?focusedHref(item.path,'history-list'):item.path==='/profile'?focusedHref(item.path,'profile-account-card'):item.path} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:44,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
             <span className="task-icon"><Search size={15}/></span><span className="task-main"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?'فتح القسم':'Open section'}</small></span><ArrowLeft size={14} className="muted"/>
           </Link>)}
+          {commandAssetMatches.map(asset=><button key={asset.path} type="button" className="nav-link" onClick={()=>void downloadCommandAsset(asset)} style={{minHeight:48,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,color:'inherit',textAlign:isAr?'right':'left',cursor:'pointer'}}>
+            <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{asset.name}</strong><small>{isAr?'ملف محفوظ · تنزيل':'Saved file · Download'}</small></span><ArrowLeft size={14} className="muted"/>
+          </button>)}
           {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
             <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
           </Link>)}
-          {commandMatches.length===0&&commandNavigationMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+          {commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
         </div>
         <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
       </section>
