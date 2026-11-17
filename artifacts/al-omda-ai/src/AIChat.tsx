@@ -503,7 +503,6 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const createPowerPointAttachment = async (data: PowerPointData) => {
     const file = await buildPowerPointBlob(data);
     const url = createAttachmentUrl(file);
-    attachmentUrlsRef.current.add(url);
     return { name: safePowerPointFileName(data.title) + ".pptx", url };
   };
 
