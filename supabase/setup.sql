@@ -175,7 +175,12 @@ create policy "ai_daily_usage_select_own"
   on public.ai_daily_usage for select to authenticated
   using ((select auth.uid()) = user_id);
 
-create or replace function public.get_ai_daily_usage()
+-- Keep privileged quota/task implementations outside the exposed Data API schema.
+create schema if not exists omda_private;
+revoke all on schema omda_private from public, anon;
+grant usage on schema omda_private to authenticated;
+
+create or replace function omda_private.get_ai_daily_usage()
 returns jsonb
 language plpgsql
 security definer
@@ -201,8 +206,20 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.get_ai_daily_usage()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.get_ai_daily_usage();
+$$;
+revoke all on function omda_private.get_ai_daily_usage() from public, anon;
+grant execute on function omda_private.get_ai_daily_usage() to authenticated;
 
-create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+
+create or replace function omda_private.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
 returns jsonb
 language plpgsql
 security definer
@@ -251,8 +268,20 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.consume_ai_units(p_units, p_daily_limit);
+$$;
+revoke all on function omda_private.consume_ai_units(integer, integer) from public, anon;
+grant execute on function omda_private.consume_ai_units(integer, integer) to authenticated;
 
-create or replace function public.complete_ai_task_step(
+
+create or replace function omda_private.complete_ai_task_step(
   p_task_id uuid,
   p_step_id text,
   p_result text,
@@ -366,6 +395,25 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.complete_ai_task_step(
+  p_task_id uuid,
+  p_step_id text,
+  p_result text,
+  p_executed_at timestamptz,
+  p_units integer default 2,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.complete_ai_task_step(p_task_id, p_step_id, p_result, p_executed_at, p_units, p_daily_limit);
+$$;
+revoke all on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
+grant execute on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
+
 
 revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public;
 grant execute on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
@@ -478,7 +526,7 @@ where jsonb_array_length(old.messages) > 0
 
 -- Create a project task and charge its planning unit in one transaction.
 -- If task insertion fails, PostgreSQL rolls back the quota write as well.
-create or replace function public.create_ai_task_with_quota(
+create or replace function omda_private.create_ai_task_with_quota(
   p_title text,
   p_request text,
   p_specialty text,
@@ -564,6 +612,24 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.create_ai_task_with_quota(
+  p_title text,
+  p_request text,
+  p_specialty text,
+  p_steps jsonb,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.create_ai_task_with_quota(p_title, p_request, p_specialty, p_steps, p_daily_limit);
+$$;
+revoke all on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
+grant execute on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
+
 
 revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public;
 grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
