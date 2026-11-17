@@ -34,7 +34,7 @@ test("normalizes a case-insensitive requested entry point to its actual file pat
 });
 
 test("rejects path traversal, absolute paths, duplicate paths, and environment secrets", () => {
-  for (const path of ["../secret.txt", "/etc/passwd", "src/../../secret.txt", ".env", "keys/private.pem"]) {
+  for (const path of ["../secret.txt", "/etc/passwd", "src/../../secret.txt", ".env", "src/.env/config", "src/node_modules/pkg/index.js", "keys/private.pem"]) {
     const value = validProject();
     value.files.push({ path, content: "x" });
     assert.equal(parseCodeProjectArtifact(JSON.stringify(value)), null, "must reject " + path);
