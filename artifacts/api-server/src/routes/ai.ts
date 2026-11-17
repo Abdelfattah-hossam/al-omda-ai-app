@@ -80,11 +80,11 @@ function isDesktopAppRequest(request: string): boolean {
   if (isHowToRequest(request)) return false;
   const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
   const desktopClock = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
-  const directBuild = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?)?\s*(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|ساعة|website|web app|mobile app|application|software|project|store|platform|system|clock)/i.test(normalized);
-  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:مشروع|تطبيق|برنامج|موقع|متجر|نظام|منصة|ساعة|app|application|website|web app|software|store|platform|system|clock)/i.test(normalized);
+  const directBuild = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?)?\s*(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|website|web app|mobile app|application|software|project|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized);
+  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:مشروع|تطبيق|برنامج|موقع|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|app|application|website|web app|software|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized);
   const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
   if (planningOnly && !directBuild && !directAppRequest) return false;
-  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|متجر|ساعة|clock/i.test(normalized);
+  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|سوق\s*إلكتروني|متجر|marketplace|dashboard|portal|ساعة|clock/i.test(normalized);
   return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
 }
 const parseHtmlApp = parseHtmlAppArtifact;
