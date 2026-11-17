@@ -426,6 +426,8 @@ function App() {
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
+  const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState<'all'|Specialty>('all');
   const { language, tasks } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
@@ -1997,6 +1999,43 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>;
   };
 
+  const projectsPage = () => {
+    const projects = tasks.filter(task=>!task.demo)
+      .filter(task=>historyStatusFilter==='all'||(historyStatusFilter==='review'?(task.status==='review'||task.status==='paused'):task.status===historyStatusFilter))
+      .filter(task=>projectCategoryFilter==='all'||task.specialty===projectCategoryFilter)
+      .filter(task=>`${task.title} ${task.request} ${label(task.specialty)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+    const categories:Array<{id:'all'|Specialty;name:string}> = [{id:'all',name:isAr?'الكل':'All'},...specialties.map(item=>({id:item.id,name:label(item.id)}))];
+    return <div className="page-enter" id="projects-list">
+      {pageHeading(isAr?'مساحة العمل':'WORKSPACE',isAr?'المشاريع':'Projects',isAr?'كل مشاريعك المحفوظة وحالات تنفيذها في مكان واحد.':'All saved projects and their execution status in one place.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
+      <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المشاريع':'Project filters'}>
+        <div className="history-search-wrap">
+          <div className="field-group history-search-field"><label className="form-label" htmlFor="projects-search">{isAr?'ابحث في المشاريع':'Search projects'}</label><div className="history-search-control"><Search size={16}/><input id="projects-search" className="field" placeholder={isAr?'اسم المشروع أو وصفه...':'Project name or description...'} value={query} onChange={event=>setQuery(event.target.value)}/></div></div>
+          <div className="history-results-count"><strong>{projects.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
+          <div style={{display:'flex',gap:5}}>
+            <button type="button" className={'button button-small '+(projectViewMode==='grid'?'button-primary':'button-quiet')} onClick={()=>setProjectViewMode('grid')} aria-pressed={projectViewMode==='grid'}>{isAr?'شبكة':'Grid'}</button>
+            <button type="button" className={'button button-small '+(projectViewMode==='list'?'button-primary':'button-quiet')} onClick={()=>setProjectViewMode('list')} aria-pressed={projectViewMode==='list'}>{isAr?'قائمة':'List'}</button>
+          </div>
+        </div>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب التخصص':'Filter by specialty'}>
+          {categories.map(category=><button key={category.id} type="button" className={'history-filter-chip'+(projectCategoryFilter===category.id?' active':'')} aria-pressed={projectCategoryFilter===category.id} onClick={()=>setProjectCategoryFilter(category.id)}>{category.name}</button>)}
+        </nav>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
+          {[{key:'all',name:isAr?'كل الحالات':'All statuses'},{key:'review',name:isAr?'تحتاج مراجعة':'Needs review'},{key:'approved',name:isAr?'معتمدة':'Approved'},{key:'stopped',name:isAr?'متوقفة':'Stopped'}].map(filter=><button key={filter.key} type="button" className={'history-filter-chip'+(historyStatusFilter===filter.key?' active':'')} aria-pressed={historyStatusFilter===filter.key} onClick={()=>setHistoryStatusFilter(filter.key as 'all'|'review'|'approved'|'stopped')}>{filter.name}</button>)}
+        </nav>
+      </section>
+      {projects.length>0?<div className={projectViewMode==='grid'?'dashboard-grid':'history-layout'} style={projectViewMode==='grid'?{gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))'}:undefined}>
+        {projects.map(task=><article className="panel panel-pad" key={task.id}>
+          <div className="section-head"><span className="task-icon">{taskIcon(task.specialty,18)}</span>{statusBadge(task.status)}</div>
+          <h2 className="section-title" style={{fontSize:14,margin:'8px 0'}}>{task.title}</h2>
+          <p className="page-subtitle" style={{minHeight:42}}>{task.request.slice(0,150)}{task.request.length>150?'…':''}</p>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:17}}><span className="section-meta">{label(task.specialty)}</span><strong style={{fontSize:11}}>{task.steps.length?Math.round(count(task)/task.steps.length*100):0}%</strong></div>
+          <div className="task-detail-progress-track" style={{marginTop:8}}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginTop:15}}><span className="section-meta">{dateLabel(task.createdAt,language)}</span><Link href={focusedHref('/history/'+task.id,'task-plan')} className="button button-quiet button-small">{isAr?'فتح المشروع':'Open project'} <ArrowLeft size={13}/></Link></div>
+        </article>)}
+      </div>:<div className="panel plan-empty"><div><span className="empty-mark"><BriefcaseBusiness size={21}/></span><h3>{isAr?'لا توجد مشاريع مطابقة':'No matching projects'}</h3><p>{isAr?'أنشئ مشروعًا جديدًا أو غيّر عوامل التصفية.':'Create a project or adjust the filters.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link></div></div>}
+    </div>;
+  };
+
   const pipelinePage = () => {
     const activeTasks = tasks.filter((task) => !task.demo);
     const columns: Array<{ id:string; title:string; tasks:Task[] }> = [
@@ -2210,7 +2249,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
-  else if (path === '/projects') page = historyPage();
+  else if (path === '/projects') page = projectsPage();
   else if (path === '/pipeline') page = pipelinePage();
   else if (path === '/assets') page = assetsPage();
   else if (path === '/history') page = historyPage();
