@@ -556,6 +556,7 @@ rl.on("line", (line) => {
 
 
 test("model health diagnostics distinguish auth, redirects, invalid JSON, and timeouts", async () => {
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
   const providerServer = createHttpServer((req, res) => {
     const pathname = new URL(req.url || "/", "http://127.0.0.1").pathname;
     if (pathname === "/auth/v1/models") {
@@ -574,7 +575,7 @@ test("model health diagnostics distinguish auth, redirects, invalid JSON, and ti
       return;
     }
     if (pathname === "/timeout/v1/models") {
-      setTimeout(() => { res.writeHead(200); res.end(JSON.stringify({ data: [{ id: "test-model" }] })); }, 6500);
+      timeoutTimer = setTimeout(() => { res.writeHead(200); res.end(JSON.stringify({ data: [{ id: "test-model" }] })); }, 6500);
       return;
     }
     res.writeHead(200, { "content-type": "application/json" });
@@ -616,6 +617,7 @@ test("model health diagnostics distinguish auth, redirects, invalid JSON, and ti
     assert.equal(byName.get("timeout")?.reachable, false);
     assert.equal(byName.get("timeout")?.error, "timeout");
   } finally {
+    if (timeoutTimer !== undefined) clearTimeout(timeoutTimer);
     await stopRuntime(healthRuntime);
     providerServer.closeAllConnections();
     await new Promise<void>((resolve) => providerServer.close(() => resolve()));
