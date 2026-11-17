@@ -906,7 +906,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             : data.status === "cancelled"
               ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.")
               : "";
-        const reply = statusReply || (typeof data.message === "string" && data.message ? data.message : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished."));
+        const serverMessage = typeof data.message === "string" ? data.message : "";
+        const reply = statusReply
+          ? statusReply + (serverMessage && serverMessage !== statusReply ? "\\n\\n" + serverMessage : "")
+          : (serverMessage || (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished."));
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(toolFailures.length ? { toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
