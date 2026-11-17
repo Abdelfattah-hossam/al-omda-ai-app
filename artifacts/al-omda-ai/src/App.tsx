@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
+import WorkspaceAssets from './WorkspaceAssets';
 import { createDocxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
@@ -2063,18 +2064,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>;
   };
 
-  const assetsPage = () => {
-    const assets = tasks.filter(task=>!task.demo).flatMap(task=>task.steps.filter(step=>Boolean(step.result || step.output)).map(step=>({task,step})));
-    return <div className="page-enter" id="assets-list">
-      {pageHeading(isAr?'ملفات ومخرجات العمل':'WORKSPACE ASSETS',isAr?'الأصول والمخرجات':'Assets & outputs',isAr?'اعرض المخرجات المحفوظة ضمن مشاريعك وانتقل إلى مصدر كل مخرج.':'Browse outputs saved with your projects and open the task that produced each one.')}
-      <div className="notice-bar" style={{marginBottom:16}}><FileText size={15}/><span>{isAr?'تعرض هذه الصفحة المخرجات المسجلة داخل المهام حاليًا. تخزين الملفات السحابي المستقل ومعايناتها سيُربطان ضمن تطوير نظام الملفات.':'This view currently indexes outputs recorded in task history. Dedicated cloud storage and file previews are part of the file-system implementation.'}</span></div>
-      {assets.length>0?<div className="history-layout">{assets.map(({task,step})=><article className="panel history-item" key={task.id+':'+step.id}>
-        <Link href={focusedHref('/history/'+task.id,'task-plan')} className="history-item-open" style={{textDecoration:'none',color:'inherit'}}>
-          <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{step.text}</strong><small>{task.title} · {step.executionStatus==='succeeded'?(isAr?'تنفيذ ناجح':'Execution succeeded'):step.executionStatus==='failed'?(isAr?'فشل التنفيذ':'Execution failed'):(isAr?'مخرج محفوظ':'Saved output')}</small></span><ArrowLeft size={15} className="muted"/>
-        </Link>
-      </article>)}</div>:<div className="panel plan-empty"><div><span className="empty-mark"><FileText size={21}/></span><h3>{isAr?'لا توجد مخرجات محفوظة بعد':'No saved outputs yet'}</h3><p>{isAr?'ستظهر هنا مخرجات المشاريع بعد تسجيلها داخل خطوات التنفيذ.':'Project outputs will appear here once they are recorded in execution steps.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'ابدأ مشروعًا':'Start a project'}</Link></div></div>}
-    </div>;
-  };
+  const assetsPage = () => <WorkspaceAssets language={language} projects={tasks.filter(task=>!task.demo).map(task=>({id:task.id,title:task.title}))} />;
 
   const taskDetailPage = (task:Task) => {
     const successfulExecutions = task.steps.filter((step)=>step.executionStatus === 'succeeded' && Boolean(step.result)).length;
