@@ -33,11 +33,24 @@ test("privileged quota implementations are isolated in the non-exposed schema", 
 });
 
 test("private user tables and storage buckets retain ownership RLS", () => {
-  for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_conversations"]) {
+  for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_memory_nodes", "ai_memory_edges", "ai_conversations"]) {
     assert.match(sql, new RegExp("alter table public\\." + table + " enable row level security", "i"), table);
   }
   assert.match(sql, /workspace_assets_select_own[\s\S]*?bucket_id = 'workspace-assets'[\s\S]*?auth\.uid\(\)/i);
   assert.match(sql, /workspace_assets_insert_own[\s\S]*?bucket_id = 'workspace-assets'[\s\S]*?auth\.uid\(\)/i);
+});
+
+test("memory graph is bounded and prevents cross-user relationships", () => {
+  const nodes = sql.slice(sql.indexOf("create table if not exists public.ai_memory_nodes"), sql.indexOf("create table if not exists public.ai_memory_edges"));
+  const edges = sql.slice(sql.indexOf("create table if not exists public.ai_memory_edges"), sql.indexOf("-- Independent private conversations"));
+  assert.match(nodes, /details jsonb[\\s\\S]*?pg_column_size\(details\) <= 8192/i);
+  assert.match(nodes, /unique \(id, user_id\)/i);
+  assert.match(nodes, /ai_memory_nodes_user_all[\\s\\S]*?auth\.uid\(\)/i);
+  assert.match(edges, /pg_column_size\(details\) <= 4096/i);
+  assert.match(edges, /foreign key \(source_node_id, user_id\)[\\s\\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
+  assert.match(edges, /foreign key \(target_node_id, user_id\)[\\s\\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
+  assert.match(edges, /check \(source_node_id <> target_node_id\)/i);
+  assert.match(edges, /ai_memory_edges_user_all[\\s\\S]*?auth\.uid\(\)/i);
 });
 
 test("task completion RPC caps stored result payloads and charges quota atomically", () => {
