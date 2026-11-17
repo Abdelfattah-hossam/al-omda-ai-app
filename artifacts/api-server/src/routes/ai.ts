@@ -4,6 +4,7 @@ import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
 import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
+import { parseHtmlAppArtifact } from "../lib/html-app-artifact.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import {
@@ -88,14 +89,7 @@ function isDesktopAppRequest(request: string): boolean {
   const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|متجر|ساعة|clock/i.test(normalized);
   return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
 }
-function parseHtmlApp(text: string): string | null {
-  const source = text.trim().replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
-  if (!/<html[\s>]/i.test(source) || !/<body[\s>]/i.test(source) || !/<\/body>\s*<\/html>\s*$/i.test(source)) return null;
-  if (/<script[\s>]/i.test(source) && !/<\/script>/i.test(source)) return null;
-  if (/<style[\s>]/i.test(source) && !/<\/style>/i.test(source)) return null;
-  if (!/<main[\s>]|<div[\s>]|<form[\s>]|<canvas[\s>]/i.test(source) || source.length > 90000) return null;
-  return source;
-}
+const parseHtmlApp = parseHtmlAppArtifact;
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
   if (isExcelRequest(messages)) return false;
   const request = getLatestUserRequest(messages);
