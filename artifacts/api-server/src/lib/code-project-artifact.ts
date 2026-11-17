@@ -74,7 +74,10 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
 
   const isEntryPoint = (candidate: string) => /^(?:index\\.html|src\\/(?:main|index)\\.[cm]?[jt]sx?|src\\/app\\/page\\.[jt]sx?|app\\/page\\.[jt]sx?|pages\\/index\\.[jt]sx?)$/i.test(candidate);
   const detectedEntry = files.find((file) => isEntryPoint(file.path))?.path;
-  const entryPoint = typeof value.entryPoint === "string" && byPath.has(value.entryPoint.toLowerCase()) && isEntryPoint(value.entryPoint) ? value.entryPoint : detectedEntry;
+  const requestedEntry = typeof value.entryPoint === "string"
+    ? files.find((file) => file.path.toLowerCase() === value.entryPoint.toLowerCase() && isEntryPoint(file.path))?.path
+    : undefined;
+  const entryPoint = requestedEntry || detectedEntry;
   if (!entryPoint) return null;
 
   const buildCommand = "npm run build";
