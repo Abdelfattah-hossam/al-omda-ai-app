@@ -57,7 +57,7 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
-  if p_units is null or p_units < 1 or p_units > 5 or p_daily_limit <> 1000 then
+  if p_units is null or p_units < 1 or p_units > 5 or p_daily_limit is distinct from 1000 then
     raise exception 'Invalid AI quota request';
   end if;
 
