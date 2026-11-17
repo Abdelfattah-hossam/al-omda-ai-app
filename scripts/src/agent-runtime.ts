@@ -485,7 +485,7 @@ async function sessionPath(id: unknown): Promise<string> {
   return path;
 }
 
-async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions: string }>> {
+async function loadWorkspaceSkills(signal?: AbortSignal): Promise<Array<{ name: string; instructions: string }>> {
   const directory = resolve(workspaceRoot, ".omda", "skills");
   try {
     const actualDirectory = await realpath(directory);
@@ -493,6 +493,7 @@ async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions
     const entries = await readdir(actualDirectory, { withFileTypes: true });
     const skills: Array<{ name: string; instructions: string }> = [];
     for (const entry of entries.filter((item) => item.isDirectory()).slice(0, 30)) {
+      if (signal?.aborted) return skills;
       const folder = await realpath(resolve(actualDirectory, entry.name));
       if (!isInside(actualDirectory, folder)) continue;
       for (const filename of ["SKILL.md", "skill.md"]) {
@@ -501,7 +502,9 @@ async function loadWorkspaceSkills(): Promise<Array<{ name: string; instructions
           if (!isInside(actualDirectory, file)) continue;
           const info = await stat(file);
           if (!info.isFile() || info.size > 24000) continue;
-          skills.push({ name: entry.name, instructions: await readFile(file, "utf8") });
+          const instructions = await readFile(file, "utf8");
+          if (signal?.aborted) return skills;
+          skills.push({ name: entry.name, instructions });
           break;
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
@@ -1150,15 +1153,19 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal) => {
-    const skills = await loadWorkspaceSkills();
-    const systemMessage = state.messages[0];
-    if (systemMessage && typeof systemMessage.content === "string") {
-      systemMessage.content += "\n\nPROJECT SKILLS:\n" + skills.map((skill) => "### " + skill.name + "\n" + skill.instructions).join("\n\n").slice(0, 40000);
-    }
-    await saveAgentState(id, state);
-    return await runAgentLoop(id, state, onProgress, purpose, signal);
-  });
+  return await withAgentSessionAbort(
+    id,
+    "This agent session is already being processed. Wait for that request to finish.",
+    async (signal, skills = []) => {
+      const systemMessage = state.messages[0];
+      if (systemMessage && typeof systemMessage.content === "string") {
+        systemMessage.content += "\n\nPROJECT SKILLS:\n" + skills.map((skill) => "### " + skill.name + "\n" + skill.instructions).join("\n\n").slice(0, 40000);
+      }
+      await saveAgentState(id, state);
+      return await runAgentLoop(id, state, onProgress, purpose, signal);
+    },
+    async (signal) => loadWorkspaceSkills(signal),
+  );
 }
 const activeAgentSessions = new Set<string>();
 const activeAgentControllers = new Map<string, AbortController>();
@@ -1172,13 +1179,21 @@ async function withAgentSessionLock<T>(id: string, conflictMessage: string, oper
     activeAgentSessions.delete(id);
   }
 }
-async function withAgentSessionAbort<T>(id: string, conflictMessage: string, operation: (signal: AbortSignal) => Promise<T>): Promise<T> {
-  return await withAgentSessionLock(id, conflictMessage, async () => {
-    const controller = new AbortController();
-    activeAgentControllers.set(id, controller);
-    try { return await operation(controller.signal); }
-    finally { if (activeAgentControllers.get(id) === controller) activeAgentControllers.delete(id); }
-  });
+async function withAgentSessionAbort<T, P = undefined>(
+  id: string,
+  conflictMessage: string,
+  operation: (signal: AbortSignal, prepared: P | undefined) => Promise<T>,
+  prepare?: (signal: AbortSignal) => Promise<P>,
+): Promise<T> {
+  if (activeAgentSessions.has(id) || activeAgentControllers.has(id)) throw new Error(conflictMessage);
+  const controller = new AbortController();
+  activeAgentControllers.set(id, controller);
+  try {
+    const prepared = prepare ? await prepare(controller.signal) : undefined;
+    return await withAgentSessionLock(id, conflictMessage, () => operation(controller.signal, prepared));
+  } finally {
+    if (activeAgentControllers.get(id) === controller) activeAgentControllers.delete(id);
+  }
 }
 function pendingToolDisplayName(call: AgentToolCall, state: AgentState): string {
   const restored = state.pendingMcpTools?.[call.function.name];
