@@ -19,6 +19,8 @@ test("does not turn help, negated, or edit requests into new presentations", () 
     "I can't download my PowerPoint file",
     "Why won't PowerPoint export my deck?",
     "How do I create a presentation?",
+    "Teach me how to create a presentation",
+    "Please explain how to create a PowerPoint presentation",
     "Show me how to create a PowerPoint presentation",
     "Make my PowerPoint font bigger",
     "لا تعمل ملف بوربوينت",
