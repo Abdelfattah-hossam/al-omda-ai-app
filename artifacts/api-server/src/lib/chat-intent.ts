@@ -103,15 +103,16 @@ export function isStandaloneGreeting(request: string): boolean {
 
 
 /** Detect source-code file deliverables, not ordinary requests for inline explanations or code snippets. */
+/** Detect source-code file deliverables, not ordinary requests for inline explanations or generic documents. */
 export function isExplicitSourceCodeFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || (isComparisonOnlyRequest(text) && !hasExplicitSourceFileExport(text))) return false;
   const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\b/i.test(text);
   const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
-  const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\s*code)/i.test(text);
+  const namesSourceArtifact = /\b(?:source\s*code|code|script|program|python|javascript|typescript|java|c\+\+|c#|golang|rust|php|ruby|shell|html|css|sql)\b|كود|سكريبت/i.test(text);
+  const hasFileIntent = hasSourceExtension || /\b(?:file|script|download|export|save)\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
   const explicitlyInline = /\b(?:inline\s+code|code\s+inline|inline\s+(?:in|within)\s+(?:the\s+)?chat|in\s+(?:the\s+)?chat|directly\s+in\s+(?:the\s+)?chat|not\s+as\s+(?:a\s+)?file|without\s+(?:a\s+)?file|no\s+file)\b|مش\s+كملف|بدون\s+ملف|داخل\s+المحادثة|في\s+الشات/i.test(text);
-  const explicitFileIntent = hasSourceExtension || /\b(?:file|script|download|export|save)\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
-  return asksToCreateOrExport && (namesSourceFile || hasSourceExtension) && explicitFileIntent && !explicitlyInline;
+  return asksToCreateOrExport && hasFileIntent && (hasSourceExtension || namesSourceArtifact) && !explicitlyInline;
 }
 
 
