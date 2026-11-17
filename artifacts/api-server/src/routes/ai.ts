@@ -1503,7 +1503,12 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
     }
+    let memorySaveWarning = "";
+    const explicitMemoryIntent = /^(?:please\\s+)?(?:remember|save|store|keep in memory)\\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك)/i.test(latestCustomerRequest);
     const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
+    if (!explicitMemory && explicitMemoryIntent && latestCustomerRequest.length > 400) {
+      memorySaveWarning = "لم يتم حفظ طلب الذاكرة لأنه تجاوز الحد المسموح لطول المعلومة.";
+    }
     if (explicitMemory) {
       try {
         const memoryNode = { ...parseMemoryNode(explicitMemory, session.user.id), updated_at: new Date().toISOString() };
@@ -1514,10 +1519,11 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         }, accessToken);
         await readSupabaseJson<unknown>(memoryResponse);
       } catch (error) {
+        memorySaveWarning = "لم أتمكن من تأكيد حفظ المعلومة في الذاكرة بسبب خطأ في التخزين. لم أعتبرها محفوظة.";
         console.warn("[Explicit AI memory save failed]", error instanceof Error ? error.message : "Unknown error");
       }
     }
-    res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
+    res.json({ reply: memorySaveWarning ? answer.text + "\\n\\n" + memorySaveWarning : answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
