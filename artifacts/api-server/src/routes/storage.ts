@@ -207,7 +207,7 @@ router.put(
     next();
   },
   express.raw({
-    type: (req) => WORKSPACE_ASSET_MIME_SET.has(req.get("content-type")?.split(";")[0].trim().toLowerCase() ?? ""),
+    type: (req) => WORKSPACE_ASSET_MIME_SET.has(String(req.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase()),
     limit: MAX_WORKSPACE_ASSET_BYTES,
   }),
   async (req, res): Promise<void> => {
