@@ -76,6 +76,8 @@ export type SyncableChatMessage = {
   appData?: unknown;
   taskId?: string;
   taskTitle?: string;
+  toolExecutionStatus?: string;
+  toolFailures?: Array<{ callId?: string; tool?: string; message?: string }>;
 };
 
 function stableJsonValue(value: unknown): unknown {
