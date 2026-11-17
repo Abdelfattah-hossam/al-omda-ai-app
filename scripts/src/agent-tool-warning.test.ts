@@ -21,5 +21,6 @@ test("renders localized warnings and limits the list to five entries", () => {
 
 test("truncates long tool failure messages", () => {
   const warning = buildAgentToolWarning([{ tool: "terminal.execute", message: "x".repeat(400) }], false);
-  assert.ok(warning.length < 320);
+  assert.ok(warning.endsWith("x".repeat(240)));
+  assert.equal(warning.includes("x".repeat(241)), false);
 });
