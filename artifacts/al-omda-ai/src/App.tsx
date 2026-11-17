@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import WorkspaceAssets from './WorkspaceAssets';
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
+import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
@@ -37,6 +38,7 @@ type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStep
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 type CommandAsset = { path:string; name:string; mimeType?:string|null; size?:number|null; projectId?:string|null };
 
+type TaskCodeProject = { title: string; framework: string; entryPoint: string; files: Array<{ path: string; content: string }>; buildCommand: string; testCommand?: string; buildStatus: "not_run"; testStatus: "not_run" };
 type TaskPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 function getTaskPresentation(result?: string): TaskPresentation | null {
   if (!result?.startsWith("ALOMDA_PPTX_JSON:")) return null;
@@ -106,6 +108,20 @@ function getTaskWordDocument(result?: string): TaskWordDocument | null {
     return value as TaskWordDocument;
   } catch { return null; }
 }
+function getTaskCodeProject(result?: string): TaskCodeProject | null {
+  if (!result?.startsWith("ALOMDA_CODE_PROJECT_JSON:")) return null;
+  try {
+    const value = JSON.parse(result.slice("ALOMDA_CODE_PROJECT_JSON:".length));
+    if (typeof value.title !== "string" || typeof value.framework !== "string" ||
+      typeof value.entryPoint !== "string" || !Array.isArray(value.files) ||
+      value.files.length < 3 || value.files.length > 60 ||
+      !value.files.some((file: any) => file?.path === value.entryPoint)) return null;
+    if (value.files.some((file: any) => !file || typeof file.path !== "string" || typeof file.content !== "string" ||
+      file.path.startsWith("/") || file.path.includes("..") || file.path.includes("\\\\"))) return null;
+    if (value.buildStatus !== "not_run" || value.testStatus !== "not_run" || typeof value.buildCommand !== "string") return null;
+    return value as TaskCodeProject;
+  } catch { return null; }
+}
 function getTaskHtmlApp(result?: string): string | null {
   return result?.startsWith("ALOMDA_HTML_APP:") ? result.slice("ALOMDA_HTML_APP:".length) : null;
 }
@@ -164,6 +180,11 @@ async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeTyp
 }
 
 async function persistTaskDeliverable(result: string, projectId: string, fallbackTitle: string): Promise<boolean> {
+  const codeProject = getTaskCodeProject(result);
+  if (codeProject) {
+    await persistTaskArtifact(createZipBlob(codeProject.files), safeArtifactName(codeProject.title || fallbackTitle, "AL-OMDA-project") + ".zip", "application/zip", projectId);
+    return true;
+  }
   if (result.startsWith("ALOMDA_HTML_APP:")) {
     const html = result.slice("ALOMDA_HTML_APP:".length);
     if (!html.trim()) return false;
@@ -187,6 +208,10 @@ async function persistTaskDeliverable(result: string, projectId: string, fallbac
     return true;
   }
   return false;
+}
+async function downloadTaskCodeProject(data: TaskCodeProject, projectId?: string): Promise<void> {
+  const blob = createZipBlob(data.files);
+  await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-project") + ".zip", "application/zip", projectId);
 }
 async function downloadTaskHtml(data: { title: string; html: string }, projectId?: string): Promise<void> {
   const filename = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
@@ -1273,6 +1298,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
                      {slide.notes&&<small style={{display:'block',marginTop:8,color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملاحظات المتحدث: ':'Speaker notes: '}{slide.notes}</small>}
                    </article>)}
                  </div>
+               </div> : getTaskCodeProject(step.result) ? <div style={{display:'grid',gap:10}}>
+                 <strong>{getTaskCodeProject(step.result)!.title}</strong>
+                 <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{getTaskCodeProject(step.result)!.framework} · {getTaskCodeProject(step.result)!.files.length} {isAr?'ملفات':'files'} · {isAr?'نقطة الدخول: ':'Entry: '}{getTaskCodeProject(step.result)!.entryPoint}</small>
+                 <div style={{display:'grid',gap:7}}>
+                   {getTaskCodeProject(step.result)!.files.map((file)=><details key={file.path} style={{border:'1px solid var(--border,#59616c)',borderRadius:8,padding:8}}>
+                     <summary style={{cursor:'pointer',fontWeight:600,overflowWrap:'anywhere'}}>{file.path}</summary>
+                     <pre style={{maxHeight:260,overflow:'auto',whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,padding:8,background:'var(--surface-muted,transparent)',borderRadius:6}}>{file.content}</pre>
+                   </details>)}
+                 </div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskCodeProject(getTaskCodeProject(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل حزمة المشروع.":"Could not save or download the project ZIP.")))}><Code2 size={14}/>{isAr?'حفظ وتنزيل المشروع كاملًا (.zip)':'Save & download full project (.zip)'}</button></div>
+                 <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'تم تجهيز ملفات المصدر. لم يتم تشغيل البناء أو الاختبارات داخل الخادم؛ راجع README وشغّل الأوامر في بيئة تطوير آمنة.':'Source files are packaged. The hosted pipeline has not run build or tests; review README and run the commands in a trusted development environment.'}</small>
                </div> : getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
