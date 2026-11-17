@@ -83,8 +83,9 @@ test("chat sync detects changed deliverables but ignores per-device blob URLs", 
   const remote = [{ ...shared, attachment: { name: "report.xlsx", url: "blob:other-device-url" } }];
   const signature = (items: typeof local) => getChatMessageSyncSignature(items);
   assert.equal(signature(local), signature(remote));
-  const transientRemote = { ...remote[0], provider: "different model", agentPending: { pending: true }, spreadsheetData: { rows: [[10]], columns: ["Amount"], title: "Report" } };
+  const transientRemote = { ...remote[0], provider: "different model", spreadsheetData: { rows: [[10]], columns: ["Amount"], title: "Report" } };
   assert.equal(signature(local), getChatMessageSyncSignature([transientRemote]));
+  assert.notEqual(signature(local), getChatMessageSyncSignature([{ ...remote[0], agentPending: { sessionId: "session-1", calls: [{ id: "call-1", tool: "files.write", arguments: { path: "output.txt" } }] } }]));
   assert.notEqual(signature(local), signature([{ ...remote[0], spreadsheetData: { ...remote[0].spreadsheetData, rows: [[20]] } }]));
   assert.notEqual(signature(local), signature([{ ...remote[0], toolFailures: [{ callId: "call-1", tool: "files.read", message: "Different failure" }] }]));
 });
