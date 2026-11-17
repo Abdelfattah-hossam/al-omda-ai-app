@@ -1180,7 +1180,7 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
       { role: "user", content: goal },
     ],
   };
-  return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal, skills = []) => {
+  return await withAgentSessionAbort<Json, Array<{ name: string; instructions: string }>>(id, "This agent session is already being processed. Wait for that request to finish.", async (signal, skills = []) => {
     const systemMessage = state.messages[0];
     if (systemMessage && typeof systemMessage.content === "string") systemMessage.content += "\n\nPROJECT SKILLS:\n" + skills.map((skill) => "### " + skill.name + "\n" + skill.instructions).join("\n\n").slice(0, 40000);
     await saveAgentState(id, state);
@@ -1490,6 +1490,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       { name: "agent.delegate", description: "Run 2 to 4 specialist agents concurrently with read-only tools." },
       { name: "agent.run", description: "Run a model-driven agent loop with tool calls and approval gates." },
       { name: "agent.continue", description: "Resume a saved agent run after approving or denying pending actions." },
+      { name: "agent.cancel", description: "Safely stop an active agent run or cancel pending approvals while preserving its latest checkpoint." },
       { name: "agent.resume", description: "Restore a saved agent session after the runtime or terminal was restarted." },
       { name: "mcp.list_tools", description: "Discover tools from configured MCP servers." },
       { name: "mcp.call_tool", description: "Call an MCP tool after user approval." },
