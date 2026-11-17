@@ -119,5 +119,6 @@ export function combineReplyAndPlan(reply: string, plan: string, maxChars = 7800
 
 /** Only fetch large persisted message payloads when the server revision changes. */
 export function hasConversationUpdatedAtChanged(remoteUpdatedAt: string, lastSyncedUpdatedAt: string): boolean {
-  return !remoteUpdatedAt || remoteUpdatedAt !== lastSyncedUpdatedAt;
+  if (!remoteUpdatedAt) return lastSyncedUpdatedAt !== "";
+  return remoteUpdatedAt !== lastSyncedUpdatedAt;
 }
