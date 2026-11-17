@@ -2312,7 +2312,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </span>
         </div>}
         <div className="top-actions">
-          <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>
+          {showWorkspaceHeader && <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>}
           {showWorkspaceHeader && <div className="topbar-quick-actions">
             <Link href={navigationHref("/ai")} className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
             <Link href={focusedHref("/workbench","request-input")} className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
