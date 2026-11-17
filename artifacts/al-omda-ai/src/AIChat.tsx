@@ -758,6 +758,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       return;
     }
     try {
+      const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+      const response = await fetch(endpoint + "/v1/agent/cancel", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() },
         body: JSON.stringify({ sessionId }),
@@ -781,8 +783,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError(""); setAgentRunSessionId(target.agentPending.sessionId);
+    let controller: AbortController | null = null;
     try {
-      let controller: AbortController | null = null;
       const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
       controller = new AbortController();
       agentStreamControllerRef.current = controller;
