@@ -114,9 +114,18 @@ function hasMemoryOptOut(value: string): boolean {
   return /(?:\b(?:do not|don't|never)\s+(?:remember|save|store)\b|\bforget\b|مش\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي))/i.test(value);
 }
 
+export function isExplicitMemoryIntent(request: string): boolean {
+  return /^(?:please\s+)?(?:remember|save|store|keep in memory)\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك)/i.test(request.normalize("NFKC").trim());
+}
+
+export function shouldWarnExplicitMemoryNotSaved(request: string, extractedNode: Record<string, unknown> | null): boolean {
+  const normalized = request.normalize("NFKC").trim();
+  return isExplicitMemoryIntent(normalized) && !extractedNode && !hasMemoryOptOut(normalized);
+}
+
 export function extractExplicitMemoryNode(request: string): Record<string, unknown> | null {
   const text = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
-  if (!text || hasMemoryOptOut(text) || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
+  if (!text || hasMemoryOptOut(text)) return null;
   const patterns = [
     /^(?:please\s+)?(?:remember|save|store|keep in memory)\s+(?:that\s+)?(.+)$/i,
     /^(?:افتكر|افتكر\s+ان|افتكر\s+أن|افتكر\s+إن|احفظ|احفظ\s+ان|احفظ\s+أن|احفظ\s+إن|سجل\s+في\s+الذاكرة|سجل\s+عندك|ثبت\s+عندك|متنساش|ما\s+تنساش)\s*(.+)$/i,
