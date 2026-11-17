@@ -492,12 +492,11 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         // A send may have started while the network requests were in flight.
         // Never let a stale poll overwrite the active draft/transcript mid-send.
         if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current) return;
-        if (Array.isArray(listData.conversations) && JSON.stringify(conversationsRef.current) !== JSON.stringify(listData.conversations)) {
-          setConversations(listData.conversations);
+        const remoteConversations = Array.isArray(listData.conversations) ? listData.conversations as Conversation[] : [];
+        if (hasConversationListChanged(conversationsRef.current, remoteConversations)) {
+          setConversations(remoteConversations);
         }
-        const activeSummary = Array.isArray(listData.conversations)
-          ? listData.conversations.find((item: any) => item?.id === activeConversationId)
-          : undefined;
+        const activeSummary = remoteConversations.find((item) => item?.id === activeConversationId);
         const listedUpdatedAt = typeof activeSummary?.updated_at === "string" ? activeSummary.updated_at : "";
         // Conversation messages can contain large Office artifacts. Fetch and compare
         // those payloads only after the server's updated_at changes, not on every poll.
@@ -506,9 +505,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (!conversationResponse.ok) return;
         const conversationData = await conversationResponse.json();
         if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current || !conversationData.conversation) return;
-        const remote = Array.isArray(conversationData.conversation.messages)
+        const remote: ChatMessage[] = Array.isArray(conversationData.conversation.messages)
           ? conversationData.conversation.messages
-              .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+              .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
               .slice(-100)
           : [];
         const local = messagesRef.current;
