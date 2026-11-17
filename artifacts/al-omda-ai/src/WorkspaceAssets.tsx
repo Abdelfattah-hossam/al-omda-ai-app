@@ -120,7 +120,9 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       if (!response.ok) throw new Error(ar ? "تعذر تحميل المعاينة." : "Could not load preview.");
       const blob = await response.blob();
       const mime = asset.mimeType ?? blob.type;
-      if (mime.startsWith("image/") || mime === "application/pdf") {
+      if (mime.startsWith("image/") || mime === "application/pdf" || mime === "text/html") {
+        // Render HTML in a sandboxed iframe so users can inspect the page visually
+        // without granting the uploaded document same-origin access or script execution.
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith("text/") || ["application/json","application/xml"].includes(mime)) {
         setPreviewText(await blob.text());
