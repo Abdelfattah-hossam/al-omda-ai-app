@@ -16,6 +16,7 @@ test("renders localized warnings and limits the list to five entries", () => {
   assert.match(arabic, /تنبيه تنفيذ/);
   assert.match(english, /tool-4/);
   assert.doesNotMatch(english, /tool-5/);
+  assert.match(english, /1 additional failures were omitted/);
 });
 
 test("truncates long tool failure messages", () => {
