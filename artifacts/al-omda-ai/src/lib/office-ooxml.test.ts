@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from "./office-ooxml.js";
-import { previewOfficeDocument } from "./office-preview.js";
 
 test("creates a real DOCX with Arabic text and a multi-column table", async () => {
   const blob = createDocxBlob({
@@ -11,10 +10,10 @@ test("creates a real DOCX with Arabic text and a multi-column table", async () =
     rows: [["التصميم", "الفريق", "مكتمل"]],
   });
   assert.equal(blob.type, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  const text = await previewOfficeDocument(new File([blob], "report.docx"), "docx");
-  assert.match(text, /تقرير المشروع/);
-  assert.match(text, /المسؤول/);
-  assert.match(text, /مكتمل/);
+  const entries = await readStoredZip(blob);
+  assert.match(entries["word/document.xml"], /تقرير المشروع/);
+  assert.match(entries["word/document.xml"], /المسؤول/);
+  assert.match(entries["word/document.xml"], /مكتمل/);
 });
 
 test("creates a real XLSX workbook with multiple sheets and formulas", async () => {
@@ -28,10 +27,11 @@ test("creates a real XLSX workbook with multiple sheets and formulas", async () 
     ],
   });
   assert.equal(blob.type, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  const text = await previewOfficeDocument(new File([blob], "sales.xlsx"), "xlsx");
-  assert.match(text, /ملخص/);
-  assert.match(text, /التفاصيل/);
-  assert.match(text, /منتج أ/);
+  const entries = await readStoredZip(blob);
+  assert.match(entries["xl/workbook.xml"], /ملخص/);
+  assert.match(entries["xl/workbook.xml"], /التفاصيل/);
+  assert.match(entries["xl/worksheets/sheet2.xml"], /منتج أ/);
+  assert.match(entries["xl/worksheets/sheet1.xml"], /<f>SUM\(B3:B4\)<\/f>/);
 });
 
 test("rejects dangerous Excel formula functions and external workbook references", () => {
@@ -57,10 +57,11 @@ test("creates an editable PowerPoint with the requested slide count and RTL text
   assert.equal(blob.type, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
   const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
   assert.deepEqual([...signature], [0x50, 0x4b, 0x03, 0x04]);
-  const text = await previewOfficeDocument(new File([blob], "plan.pptx"), "pptx");
-  assert.match(text, /الهدف/);
-  assert.match(text, /توزيع المسؤوليات/);
-  assert.match(text, /النتائج/);
+  const entries = await readStoredZip(blob);
+  assert.match(entries["ppt/presentation.xml"], /<p:sldId /);
+  assert.match(entries["ppt/slides/slide1.xml"], /الهدف/);
+  assert.match(entries["ppt/slides/slide1.xml"], /توزيع المسؤوليات/);
+  assert.match(entries["ppt/slides/slide3.xml"], /النتائج/);
 });
 
 test("rejects malformed PowerPoint data instead of creating a broken file", () => {
