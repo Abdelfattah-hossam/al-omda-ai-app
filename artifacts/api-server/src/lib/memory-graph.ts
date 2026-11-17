@@ -73,8 +73,10 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Memory node must be a JSON object.");
   const value = input as Record<string, unknown>;
   if (!MEMORY_NODE_TYPES.includes(value.nodeType as MemoryNodeType)) throw new Error("Unsupported memory node type.");
-  if (typeof value.label !== "string" || !value.label.trim() || value.label.trim().length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
+  if (typeof value.label !== "string" || !value.label.trim()) throw new Error("Memory node label must contain 1 to 160 characters.");
   const label = value.label.normalize("NFKC").trim().replace(/\s+/g, " ");
+  if (label.length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
+  if (BLOCKED_SECRET_VALUE.test(label)) throw new Error("Memory node label appears to contain a credential or access token.");
   if (BLOCKED_SENSITIVE_TEXT.test(label)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   const normalizedLabel = label.toLocaleLowerCase().replace(/[؟?!.,،؛;:]+/g, "").replace(/\s+/g, " ");
   if (!normalizedLabel) throw new Error("Memory node label must contain searchable text.");
@@ -92,8 +94,8 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
 export function parseMemoryEdge(input: unknown, userId: string): MemoryEdgeInput {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Memory edge must be a JSON object.");
   const value = input as Record<string, unknown>;
-  if (typeof value.sourceNodeId !== "string" || !/^[0-9a-f-]{36}$/i.test(value.sourceNodeId)) throw new Error("A valid source node ID is required.");
-  if (typeof value.targetNodeId !== "string" || !/^[0-9a-f-]{36}$/i.test(value.targetNodeId)) throw new Error("A valid target node ID is required.");
+  if (typeof value.sourceNodeId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.sourceNodeId)) throw new Error("A valid source node ID is required.");
+  if (typeof value.targetNodeId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.targetNodeId)) throw new Error("A valid target node ID is required.");
   if (value.sourceNodeId === value.targetNodeId) throw new Error("A memory relationship cannot connect a node to itself.");
   if (!MEMORY_RELATIONS.includes(value.relation as MemoryRelation)) throw new Error("Unsupported memory relationship.");
   return {
@@ -108,9 +110,13 @@ export function parseMemoryEdge(input: unknown, userId: string): MemoryEdgeInput
 }
 
 
+function hasMemoryOptOut(value: string): boolean {
+  return /(?:\b(?:do not|don't|never)\s+(?:remember|save|store)\b|\bforget\b|مش\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي))/i.test(value);
+}
+
 export function extractExplicitMemoryNode(request: string): Record<string, unknown> | null {
   const text = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
-  if (!text || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
+  if (!text || hasMemoryOptOut(text) || /^(?:don't|do not|never)\s+(?:remember|save|store)\b|^(?:مش|مت)\s*(?:تفتكر|تحفظ|تسجل)|لا\s*(?:تفتكر|تحفظ|تسجل)|انس(?:ى|ي)|forget\b/i.test(text)) return null;
   const patterns = [
     /^(?:please\s+)?(?:remember|save|store|keep in memory)\s+(?:that\s+)?(.+)$/i,
     /^(?:افتكر|افتكر\s+ان|افتكر\s+أن|افتكر\s+إن|احفظ|احفظ\s+ان|احفظ\s+أن|احفظ\s+إن|سجل\s+في\s+الذاكرة|سجل\s+عندك|ثبت\s+عندك|متنساش|ما\s+تنساش)\s*(.+)$/i,
@@ -143,6 +149,7 @@ export function extractExplicitMemoryNode(request: string): Record<string, unkno
 
 export function extractUserCorrectionNode(request: string): Record<string, unknown> | null {
   const text = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "").trim();
+  if (hasMemoryOptOut(text)) return null;
   const patterns = [
     /^(?:correction|that's incorrect|that is incorrect|you got that wrong|i said)\s*[:,—-]?\s*(.+)$/i,
     /^(?:التصحيح(?:\s+هو)?|الصح(?:\s+إن|\s+ان)?|انا\s+قلتلك(?:\s+ان|\s+إن)?|أنا\s+قلت\s+لك(?:\s+أن|\s+ان)?|لا[،,\s]+(?:ده|دا)?\s*(?:غلط|مش\s+صح))\s*[:,—-]?\s*(.+)$/i,
