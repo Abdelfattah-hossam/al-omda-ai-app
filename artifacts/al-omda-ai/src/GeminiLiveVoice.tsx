@@ -50,6 +50,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const nextPlayTimeRef = useRef(0);
   const mountedRef = useRef(true);
+  // State updates are asynchronous; refs prevent rapid taps from opening
+  // multiple live sessions before React has rendered the connecting state.
+  const connectingRef = useRef(false);
+  const activeRef = useRef(false);
+  // Each session owns its callbacks and resources. Old socket events must not
+  // tear down a newer session after stop/restart or modal unmount.
+  const sessionIdRef = useRef(0);
   const sessionReadyRef = useRef(false);
   const userTranscriptRef = useRef("");
   const assistantTranscriptRef = useRef("");
@@ -68,7 +75,21 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     unavailable: ar ? "المحادثة الصوتية غير متاحة حاليًا." : "Live voice is unavailable right now.",
   };
 
-  const cleanup = () => {
+  const setConnectingState = (value: boolean) => {
+    connectingRef.current = value;
+    if (mountedRef.current) setConnecting(value);
+  };
+
+  const setActiveState = (value: boolean) => {
+    activeRef.current = value;
+    if (mountedRef.current) setActive(value);
+  };
+
+  const cleanup = (expectedSessionId?: number) => {
+    if (expectedSessionId !== undefined && sessionIdRef.current !== expectedSessionId) return;
+    sessionIdRef.current += 1;
+    setConnectingState(false);
+    setActiveState(false);
     sessionReadyRef.current = false;
     speechActiveRef.current = false;
     silenceFramesRef.current = 0;
@@ -88,36 +109,50 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     assistantResponseActiveRef.current = false;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     fallbackUtteranceRef.current = null;
-    if (mountedRef.current) {
-      setActive(false);
-      setConnecting(false);
-      setSpeaking(false);
-    }
+    if (mountedRef.current) setSpeaking(false);
   };
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      sessionIdRef.current += 1;
+      connectingRef.current = false;
+      activeRef.current = false;
+      sessionReadyRef.current = false;
+      speechActiveRef.current = false;
+      assistantResponseActiveRef.current = false;
+      assistantTurnCompleteRef.current = true;
+      silenceFramesRef.current = 0;
+      pendingPcmPlaybackRef.current = 0;
+      nextPlayTimeRef.current = 0;
       processorRef.current?.disconnect();
       sourceRef.current?.disconnect();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       socketRef.current?.close();
       void contextRef.current?.close();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      fallbackUtteranceRef.current = null;
     };
   }, []);
 
   const start = async () => {
-    if (active || connecting || disabled) return;
-    setConnecting(true);
-    setStatus(labels.connecting);
+    if (activeRef.current || connectingRef.current || disabled || !mountedRef.current) return;
+    const sessionId = ++sessionIdRef.current;
+    const isCurrentSession = () => mountedRef.current && sessionIdRef.current === sessionId;
+    setConnectingState(true);
     try {
+      if (mountedRef.current) setStatus(labels.connecting);
       // Request microphone permission before creating a billable temporary Gemini session.
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
+      if (!isCurrentSession()) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
 
       const tokenResponse = await fetch("/api/ai/live-token", {
@@ -126,7 +161,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         headers: { "content-type": "application/json" },
         body: "{}",
       });
+      if (!isCurrentSession()) return;
       const tokenData = await tokenResponse.json().catch(() => ({}));
+      if (!isCurrentSession()) return;
       if (!tokenResponse.ok || typeof tokenData.token !== "string") {
         const diagnostic = [tokenData.error, tokenData.details].filter((value) => typeof value === "string" && value.trim()).join(" — ");
         throw new Error(diagnostic || labels.unavailable);
@@ -135,6 +172,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       const context: AudioContext = new AudioContextClass();
       contextRef.current = context;
       await context.resume();
+      if (!isCurrentSession()) {
+        void context.close();
+        return;
+      }
 
       const socket = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=" + encodeURIComponent(tokenData.token));
       socketRef.current = socket;
@@ -142,6 +183,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       await new Promise<void>((resolve, reject) => {
         let lastServerMessage = "";
         let opened = false;
+        let setupComplete = false;
         const timeout = window.setTimeout(() => {
           const detail = lastServerMessage ? " — " + lastServerMessage.slice(0, 700) : "";
           reject(new Error((ar ? "انتهت مهلة اتصال Gemini بعد فتح القناة." : "Gemini connection timed out after the WebSocket opened.") + detail));
@@ -165,17 +207,21 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           }));
         };
         socket.onerror = () => {
+          if (!isCurrentSession()) return;
           window.clearTimeout(timeout);
           reject(new Error(opened ? (ar ? "فُتح اتصال Gemini لكن حدث خطأ أثناء تهيئة الجلسة." : "Gemini WebSocket opened but failed during session setup.") : labels.unavailable));
         };
         socket.onmessage = async (event) => {
+          if (!isCurrentSession()) return;
           let message: any;
           try {
             const raw = typeof event.data === "string" ? event.data : await event.data.text();
+            if (!isCurrentSession()) return;
             lastServerMessage = raw;
             message = JSON.parse(raw);
           } catch { return; }
           if (message.setupComplete) {
+            setupComplete = true;
             window.clearTimeout(timeout);
             resolve();
           } else if (message.error) {
@@ -185,18 +231,27 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         };
         socket.onclose = (event) => {
           window.clearTimeout(timeout);
-          if (!sessionReadyRef.current) {
+          if (!setupComplete) {
             const detail = [event.code ? "code " + event.code : "", event.reason || ""].filter(Boolean).join(": ");
             reject(new Error((ar ? "أغلق Gemini الاتصال قبل اكتمال الجلسة." : "Gemini closed the connection before setup completed.") + (detail ? " — " + detail : "")));
           }
         };
       });
+      if (!isCurrentSession()) {
+        socket.close();
+        void context.close();
+        return;
+      }
+      if (socket.readyState !== WebSocket.OPEN) {
+        throw new Error(ar ? "انقطع اتصال Gemini أثناء تجهيز الصوت." : "Gemini disconnected while preparing audio.");
+      }
 
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
       sourceRef.current = source;
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
+        if (!isCurrentSession()) return;
         if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         let energy = 0;
@@ -241,18 +296,20 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       processor.connect(context.destination);
 
       sessionReadyRef.current = true;
-      setConnecting(false);
-      setActive(true);
+      setConnectingState(false);
+      setActiveState(true);
       setStatus(labels.listening);
 
       let receivedAudioChunks = 0;
       socket.onmessage = async (event) => {
+        if (!isCurrentSession()) return;
         let message: any;
         try {
           const raw = typeof event.data === "string" ? event.data : await event.data.text();
+          if (!isCurrentSession()) return;
           message = JSON.parse(raw);
         } catch {
-          if (mountedRef.current) setStatus(ar ? "وصلت رسالة غير مفهومة من Gemini." : "Received an unreadable message from Gemini.");
+          if (isCurrentSession() && mountedRef.current) setStatus(ar ? "وصلت رسالة غير مفهومة من Gemini." : "Received an unreadable message from Gemini.");
           return;
         }
         if (message.error) {
@@ -301,6 +358,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             // Keep the turn-complete latch set until the next user utterance.
             // Audio chunks can arrive in trailing/duplicate frames after turnComplete.
             player.onended = () => {
+              if (!isCurrentSession()) return;
               pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
               if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0) {
                 assistantResponseActiveRef.current = false;
@@ -375,14 +433,17 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         }
       };
       socket.onclose = () => {
-        if (mountedRef.current) {
+        if (isCurrentSession()) {
           setStatus(ar ? "انقطع الاتصال الصوتي." : "Voice connection ended.");
-          cleanup();
+          cleanup(sessionId);
         }
       };
     } catch (error) {
-      cleanup();
-      setStatus(error instanceof Error ? error.message : labels.unavailable);
+      const wasCurrentSession = isCurrentSession();
+      cleanup(sessionId);
+      if (wasCurrentSession && mountedRef.current) {
+        setStatus(error instanceof Error ? error.message : labels.unavailable);
+      }
     }
   };
 
