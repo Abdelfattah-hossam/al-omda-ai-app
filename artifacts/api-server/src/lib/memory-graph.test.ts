@@ -27,6 +27,21 @@ test("rejects invalid node types, empty labels, oversized details, and sensitive
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { apiKey: "do-not-store" } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { metadata: { medicalNotes: "private" } } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My medical diagnosis is private" }, userId), /Sensitive personal information/);
+  for (const label of [
+    "Remember that I am Christian",
+    "I am Muslim",
+    "I support the XYZ political party",
+    "I am gay",
+    "My ethnicity is Kurdish",
+    "I have epilepsy",
+    "أنا مسلم",
+    "أنا مسيحي",
+    "أنتمي إلى حزب سياسي",
+    "ميولي الجنسية خاصة",
+    "أنا من أصول عرقية محددة",
+  ]) {
+    assert.throws(() => parseMemoryNode({ nodeType: "other", label }, userId), /Sensitive personal information/, label);
+  }
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { text: "sk-abcdefghijklmnopqrstuvwxyz123456" } }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "Remember sk-abcdefghijklmnopqrstuvwxyz123456" }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "ﬃ".repeat(54) }, userId), /1 to 160 characters/);
