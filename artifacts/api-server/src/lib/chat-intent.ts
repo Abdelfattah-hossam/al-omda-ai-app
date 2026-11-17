@@ -49,7 +49,7 @@ export function isPowerPointFileRequest(request: string): boolean {
   const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
   if (!mentionsPresentation) return false;
   const comparisonOnly = /^(?:ممكن\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|create|make)\s+(?:لي\s*)?(?:مقارنة|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
-  const explanationOnly = /^(?:(?:please|من فضلك|لو سمحت|ممكن)\\s+)?(?:اشرح|تشرح|شرح|اكتبلي\\s+شرح|اعمل\\s+شرح|ممكن\\s+شرح|explain|write\\s+an?\\s+explanation)(?:$|[\\s،,.?!])/i.test(text);
+  const explanationOnly = /^(?:(?:please|من فضلك|لو سمحت|ممكن)\s+)?(?:اشرح|تشرح|شرح|اكتبلي\s+شرح|اعمل\s+شرح|ممكن\s+شرح|explain|write\s+an?\s+explanation)(?:$|[\s،,.?!])/i.test(text);
   if (comparisonOnly || explanationOnly) return false;
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
   const directlyRequestsPresentation = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|powerpoint(?:\s+presentation)?|presentation|pptx|slide\s*deck)/i.test(text);
@@ -88,8 +88,8 @@ export function isExplicitSourceCodeFileRequest(request: string): boolean {
   const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|json|xml|ya?ml|md|html|svg|dxf|toml|ini)\b/i.test(text);
   const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
   const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\\s*code|python|javascript|typescript|html|css|sql)/i.test(text);
-  const explicitlyInline = /\\binline\\b|\\bnot\\s+as\\s+(?:a\\s+)?file\\b|\\bwithout\\s+(?:a\\s+)?file\\b|\\bno\\s+file\\b|\\bin\\s+chat\\b|مش\\s+كملف|بدون\\s+ملف/i.test(text);
-  const explicitFileIntent = hasSourceExtension || /\\b(?:file|script|download|export|save)\\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
+  const explicitlyInline = /\binline\b|\bnot\s+as\s+(?:a\s+)?file\b|\bwithout\s+(?:a\s+)?file\b|\bno\s+file\b|\bin\s+chat\b|مش\s+كملف|بدون\s+ملف/i.test(text);
+  const explicitFileIntent = hasSourceExtension || /\b(?:file|script|download|export|save)\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
   return asksToCreateOrExport && namesSourceFile && explicitFileIntent && !explicitlyInline;
 }
 
