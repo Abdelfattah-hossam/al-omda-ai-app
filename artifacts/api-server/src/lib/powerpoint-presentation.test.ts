@@ -66,5 +66,5 @@ test("extracts exact requested slide counts in English and Arabic", () => {
   assert.equal(getRequestedPowerPointSlideCount("Create a PowerPoint with 8 slides"), 8);
   assert.equal(getRequestedPowerPointSlideCount("اعمل عرض تقديمي من ٨ شرائح"), 8);
   assert.equal(getRequestedPowerPointSlideCount("Make a presentation"), null);
-  assert.equal(getRequestedPowerPointSlideCount("Create 40 slides"), null);
+  assert.equal(getRequestedPowerPointSlideCount("Create 40 slides"), 40);
 });
