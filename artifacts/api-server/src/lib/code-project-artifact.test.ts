@@ -40,6 +40,18 @@ test("rejects path traversal, absolute paths, duplicate paths, and environment s
   assert.equal(parseCodeProjectArtifact(JSON.stringify(secret)), null);
 });
 
+test("allows placeholder env examples but rejects nested env files and install hooks", () => {
+  const example = validProject();
+  example.files.push({ path: ".env.example", content: "PUBLIC_API_URL=https://example.invalid" });
+  assert.ok(parseCodeProjectArtifact(JSON.stringify(example)));
+  const nestedEnv = validProject();
+  nestedEnv.files.push({ path: "src/.env.local", content: "TOKEN=placeholder" });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(nestedEnv)), null);
+  const lifecycle = validProject();
+  lifecycle.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "vite build", postinstall: "node setup.js" } });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(lifecycle)), null);
+});
+
 test("requires package metadata, a build script, README, and a real entry point", () => {
   const noReadme = validProject();
   noReadme.files = noReadme.files.filter((file) => file.path !== "README.md");
