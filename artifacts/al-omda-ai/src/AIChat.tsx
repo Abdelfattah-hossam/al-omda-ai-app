@@ -248,7 +248,11 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const sendingRef = useRef(false);
   const agentStreamControllerRef = useRef<AbortController | null>(null);
   const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
-  useEffect(() => () => agentStreamControllerRef.current?.abort(), []);
+  useEffect(() => () => {
+    const config = agentRunConfigRef.current;
+    if (config) void fetch(config.endpoint + "/v1/agent/cancel", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + config.token }, body: JSON.stringify({ sessionId: config.sessionId }), keepalive: true }).catch(() => undefined);
+    agentStreamControllerRef.current?.abort();
+  }, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
