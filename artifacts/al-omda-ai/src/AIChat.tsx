@@ -247,6 +247,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
   const agentStreamControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => () => agentStreamControllerRef.current?.abort(), []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -748,11 +749,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
 
   const cancelLocalAgent = async () => {
     const sessionId = agentRunSessionId;
-    if (!sessionId || !agentToken.trim() || agentCancelling) return;
+    if (!sessionId || agentCancelling) return;
     setAgentCancelling(true);
+    agentStreamControllerRef.current?.abort();
+    if (!agentToken.trim()) {
+      setError(ar ? "تعذر إرسال طلب الإلغاء لأن رمز الاتصال غير موجود." : "Cannot send the cancellation request because the runtime token is missing.");
+      setAgentCancelling(false);
+      return;
+    }
     try {
-      const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
-      const response = await fetch(endpoint + "/v1/agent/cancel", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() },
         body: JSON.stringify({ sessionId }),
@@ -777,10 +782,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     if (!target?.agentPending || !agentToken.trim() || loading) return;
     setLoading(true); setError(""); setAgentRunSessionId(target.agentPending.sessionId);
     try {
+      let controller: AbortController | null = null;
       const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+      controller = new AbortController();
+      agentStreamControllerRef.current = controller;
       let streamedText = "";
       const startedAt = Date.now();
-      const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
+      const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }), signal: controller.signal });
       const data = await readAgentEventStream(response, (event) => {
         if (event.type === "token" && event.text) {
           streamedText += event.text;
@@ -797,10 +805,10 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       const completed = [...updated, resultMessage].slice(-100); setMessages(completed); await saveHistory(completed);
       if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
     } catch (err) {
-      const aborted = agentStreamControllerRef.current?.signal.aborted;
+      const aborted = controller?.signal.aborted;
       if (!aborted) setError(err instanceof Error ? err.message : (ar ? "فشل استكمال الوكيل." : "Agent continuation failed."));
     } finally {
-      if (agentStreamControllerRef.current?.signal.aborted || agentStreamControllerRef.current) agentStreamControllerRef.current = null;
+      if (controller && agentStreamControllerRef.current === controller) agentStreamControllerRef.current = null;
       setLoading(false);
       setAgentRunSessionId("");
     }
