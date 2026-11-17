@@ -50,14 +50,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_NAME: pr-${{ github.event.pull_request.number }}
         run: |
-          set -o pipefail
+          set -euo pipefail
           pnpm dlx wrangler@4.161.0 preview --config artifacts/al-omda-ai/wrangler.jsonc --name "$PREVIEW_NAME" --message "Preview for PR #${{ github.event.pull_request.number }}" 2>&1 | tee /tmp/preview.log
-          preview_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' /tmp/preview.log | tail -n 1)"
-          if [ -z "$preview_url" ]; then
-            echo "Wrangler did not return a workers.dev Preview URL."
+          mapfile -t preview_urls < <(grep -Eo "https://[A-Za-z0-9.-]*${PREVIEW_NAME}[A-Za-z0-9.-]*\.workers\.dev" /tmp/preview.log | sort -u)
+          if [ "${#preview_urls[@]}" -ne 1 ]; then
+            echo "Expected exactly one workers.dev Preview URL containing $PREVIEW_NAME; found ${#preview_urls[@]}."
             exit 1
           fi
-          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "url=${preview_urls[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Add or update preview link on pull request
         uses: actions/github-script@v7
