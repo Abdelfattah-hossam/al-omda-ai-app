@@ -6,6 +6,7 @@ import storageRouter from "./storage";
 import aiRouter from "./ai";
 import chatHistoryRouter from "./chat-history";
 import memoryRouter from "./memory";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(storageRouter);
 router.use(aiRouter);
 router.use(chatHistoryRouter);
 router.use(memoryRouter);
+router.use(analyticsRouter);
 
 export default router;
