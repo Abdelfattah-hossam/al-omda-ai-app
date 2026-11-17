@@ -3,7 +3,7 @@ export type XlsxData = { title: string; columns: string[]; rows: Array<Array<str
 export type DocxData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 
 const encoder = new TextEncoder();
-const xmlEscape = (value: unknown) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const xmlEscape = (value: unknown) => String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1)); }
@@ -53,6 +53,12 @@ export function createXlsxBlob(data: XlsxData): Blob {
     { name: "xl/styles.xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF334155"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="1" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
   ];
   sheets.forEach((sheet, sheetIndex) => {
+    for (const [address, rawFormula] of Object.entries(sheet.formulas ?? {})) {
+      const formula = String(rawFormula).trim().replace(/^=/, "");
+      if (!formula || formula.includes("|") || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
+        throw new Error("Unsafe Excel formula rejected at " + address + ".");
+      }
+    }
     const rows = [sheet.columns, ...sheet.rows];
     const rowXml = rows.map((row, rowIndex) => '<row r="' + (rowIndex + 1) + '">' + sheet.columns.map((_, colIndex) => {
       const address = excelColumn(colIndex) + (rowIndex + 1), formula = sheet.formulas?.[address] ?? sheet.formulas?.[address.toLowerCase()], value = row[colIndex] ?? "";
@@ -84,4 +90,64 @@ export function createDocxBlob(data: DocxData, rtl = true): Blob {
     { name: "word/styles.xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' + [1,2,3].map(n => '<w:style w:type="paragraph" w:styleId="Heading' + n + '"><w:name w:val="heading ' + n + '"/><w:basedOn w:val="Normal"/><w:qFormat/><w:rPr><w:b/><w:sz w:val="' + (32 - n * 2) + '"/></w:rPr></w:style>').join("") + '</w:styles>' },
   ];
   return zipBlob(entries, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+
+export type PptxSlideData = { title: string; bullets: string[]; notes?: string };
+export type PptxData = { title: string; slides: PptxSlideData[] };
+
+/** Builds a self-contained, editable OOXML PowerPoint without a network dependency. */
+export function createPptxBlob(data: PptxData): Blob {
+  if (!data.title.trim() || data.slides.length < 3 || data.slides.length > 30) throw new Error("PowerPoint requires a title and 3 to 30 slides.");
+  if (data.slides.some((slide) => !slide.title.trim() || slide.bullets.length < 1 || slide.bullets.length > 8 || slide.bullets.some((bullet) => !bullet.trim()))) {
+    throw new Error("Every PowerPoint slide requires a title and 1 to 8 non-empty bullet points.");
+  }
+  const relNs = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const pNs = "http://schemas.openxmlformats.org/presentationml/2006/main";
+  const aNs = "http://schemas.openxmlformats.org/drawingml/2006/main";
+  const pkgNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+  const rtlFor = (value: string) => /[\u0590-\u08ff]/.test(value);
+  const shape = (id: number, name: string, x: number, y: number, cx: number, cy: number, paragraphs: string) =>
+    '<p:sp><p:nvSpPr><p:cNvPr id="' + id + '" name="' + name + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="' + x + '" y="' + y + '"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="square" rtlCol="1" anchor="ctr"><a:spAutoFit/></a:bodyPr><a:lstStyle/>' + paragraphs + '</p:txBody></p:sp>';
+  const run = (value: string, size: number, color: string, bold: boolean, rtl: boolean) =>
+    '<a:r><a:rPr lang="' + (rtl ? "ar-SA" : "en-US") + '" sz="' + size + '" b="' + (bold ? "1" : "0") + '" dirty="0"><a:solidFill><a:srgbClr val="' + color + '"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t xml:space="preserve">' + xmlEscape(value) + '</a:t></a:r>';
+  const slideEntries: Array<{name:string;content:string}> = [];
+  data.slides.forEach((slide, index) => {
+    const rtl = rtlFor(slide.title + slide.bullets.join(" "));
+    const align = rtl ? "r" : "l";
+    const title = '<a:p><a:pPr algn="' + align + '" rtl="' + (rtl ? "1" : "0") + '"/>' + run(slide.title, 3000, "D8B978", true, rtl) + '<a:endParaRPr lang="' + (rtl ? "ar-SA" : "en-US") + '"/></a:p>';
+    const bullets = slide.bullets.map((bullet) => '<a:p><a:pPr lvl="0" algn="' + align + '" rtl="' + (rtl ? "1" : "0") + '" marL="342900" indent="-228600"><a:buChar char="•"/></a:pPr>' + run(bullet, 2000, "F1F5F9", false, rtl) + '<a:endParaRPr lang="' + (rtl ? "ar-SA" : "en-US") + '"/></a:p>').join("");
+    const footer = '<a:p><a:pPr algn="ctr"/>' + run("AL OMDA AI  •  " + (index + 1), 900, "8290A3", false, false) + '</a:p>';
+    const tree = '<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>' +
+      shape(2, "Slide title", 500000, 350000, 11200000, 1050000, title) +
+      shape(3, "Slide content", 800000, 1550000, 10600000, 4500000, bullets) +
+      shape(4, "Footer", 500000, 6200000, 11200000, 300000, footer) + '</p:spTree>';
+    slideEntries.push({
+      name: "ppt/slides/slide" + (index + 1) + ".xml",
+      content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="' + aNs + '" xmlns:r="' + relNs + '" xmlns:p="' + pNs + '"><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="101722"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>' + tree + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>',
+    });
+    slideEntries.push({
+      name: "ppt/slides/_rels/slide" + (index + 1) + ".xml.rels",
+      content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + pkgNs + '"><Relationship Id="rId1" Type="' + relNs + '/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>',
+    });
+  });
+  const slideOverrides = data.slides.map((_, i) => '<Override PartName="/ppt/slides/slide' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>').join("");
+  const slideIds = data.slides.map((_, i) => '<p:sldId id="' + (256 + i) + '" r:id="rId' + (i + 2) + '"/>').join("");
+  const presentationRels = '<Relationship Id="rId1" Type="' + relNs + '/slideMaster" Target="slideMasters/slideMaster1.xml"/>' + data.slides.map((_, i) => '<Relationship Id="rId' + (i + 2) + '" Type="' + relNs + '/slide" Target="slides/slide' + (i + 1) + '.xml"/>').join("");
+  const groupTree = '<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree>';
+  const theme = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><a:theme xmlns:a="' + aNs + '" name="AL OMDA"><a:themeElements><a:clrScheme name="AL OMDA"><a:dk1><a:srgbClr val="101722"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="273244"/></a:dk2><a:lt2><a:srgbClr val="F1F5F9"/></a:lt2>' +
+    ['D8B978','64748B','0F766E','2563EB','7C3AED','C2410C'].map((color,i)=>'<a:accent'+(i+1)+'><a:srgbClr val="'+color+'"/></a:accent'+(i+1)+'>').join("") +
+    '<a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="Arial"><a:majorFont><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:majorFont><a:minorFont><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:minorFont></a:fontScheme><a:fmtScheme name="AL OMDA"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>';
+  const entries = [
+    { name: "[Content_Types].xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>' + slideOverrides + '</Types>' },
+    { name: "_rels/.rels", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + pkgNs + '"><Relationship Id="rId1" Type="' + relNs + '/officeDocument" Target="ppt/presentation.xml"/></Relationships>' },
+    { name: "ppt/presentation.xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="' + aNs + '" xmlns:r="' + relNs + '" xmlns:p="' + pNs + '"><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>' + slideIds + '</p:sldIdLst><p:sldSz cx="12192000" cy="6858000" type="screen16x9"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>' },
+    { name: "ppt/_rels/presentation.xml.rels", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + pkgNs + '">' + presentationRels + '</Relationships>' },
+    { name: "ppt/slideMasters/slideMaster1.xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldMaster xmlns:a="' + aNs + '" xmlns:r="' + relNs + '" xmlns:p="' + pNs + '"><p:cSld name="AL OMDA Master">' + groupTree + '</p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="1" r:id="rId1"/></p:sldLayoutIdLst><p:txStyles><p:titleStyle><a:lvl1pPr><a:defRPr sz="3000" b="1"/></a:lvl1pPr></p:titleStyle><p:bodyStyle><a:lvl1pPr><a:defRPr sz="2000"/></a:lvl1pPr></p:bodyStyle><p:otherStyle><a:defPPr><a:defRPr sz="1800"/></a:defPPr></p:otherStyle></p:txStyles></p:sldMaster>' },
+    { name: "ppt/slideMasters/_rels/slideMaster1.xml.rels", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + pkgNs + '"><Relationship Id="rId1" Type="' + relNs + '/slideLayout" Target="../slideLayouts/slideLayout1.xml"/><Relationship Id="rId2" Type="' + relNs + '/theme" Target="../theme/theme1.xml"/></Relationships>' },
+    { name: "ppt/slideLayouts/slideLayout1.xml", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldLayout xmlns:a="' + aNs + '" xmlns:r="' + relNs + '" xmlns:p="' + pNs + '" type="blank" preserve="1"><p:cSld name="Blank">' + groupTree + '</p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>' },
+    { name: "ppt/slideLayouts/_rels/slideLayout1.xml.rels", content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="' + pkgNs + '"><Relationship Id="rId1" Type="' + relNs + '/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>' },
+    { name: "ppt/theme/theme1.xml", content: theme },
+    ...slideEntries,
+  ];
+  return zipBlob(entries, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
 }

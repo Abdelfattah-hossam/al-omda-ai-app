@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parsePowerPointPresentation } from "./powerpoint-presentation.js";
+import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from "./powerpoint-presentation.js";
 
 const base = {
   title: "Project overview",
@@ -60,4 +60,11 @@ test("rejects slides whose combined bullet text is too long for a readable slide
       : slide),
   };
   assert.equal(parsePowerPointPresentation(JSON.stringify(crowded)), null);
+});
+
+test("extracts exact requested slide counts in English and Arabic", () => {
+  assert.equal(getRequestedPowerPointSlideCount("Create a PowerPoint with 8 slides"), 8);
+  assert.equal(getRequestedPowerPointSlideCount("اعمل عرض تقديمي من ٨ شرائح"), 8);
+  assert.equal(getRequestedPowerPointSlideCount("Make a presentation"), null);
+  assert.equal(getRequestedPowerPointSlideCount("Create 40 slides"), 40);
 });

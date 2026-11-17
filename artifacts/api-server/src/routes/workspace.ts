@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import {
   UpdateProfileResponse,
   UpdateProfileBody,
@@ -134,6 +135,8 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   const firstOpen = previous.steps.findIndex((step) => step.state !== "approved");
   const changedIndex = changedIndices[0];
   if (firstOpen < 0 || changedIndex !== firstOpen) return false;
+
+  if (!hasCompletedPriorProjectStages(previous.steps, changedIndex)) return false;
 
   const oldStep = previous.steps[changedIndex];
   const newStep = next.steps[changedIndex];

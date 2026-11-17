@@ -13,6 +13,8 @@ import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js"
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
+import { fetchPinned } from "./pinned-http.js";
+import { terminateChildProcess } from "./supervisor-process.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -174,7 +176,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
   let response: Response | null = null;
   for (let hop = 0; hop < 4; hop++) {
-    response = await fetch(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) });
+    response = await fetchPinned(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) }, { allowPrivate: ALLOW_LOCAL_LAB_TARGETS, maxBytes: 50000, timeoutMs: 12000 });
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get("location");
     if (!location) break;
@@ -289,7 +291,7 @@ async function searchWeb(body: Json): Promise<Json> {
   const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
   await assertAllowedTarget(url.toString());
-  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY);
+  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, (input, init) => fetchPinned(input instanceof Request ? input.url : input, init ?? {}, { allowPrivate: false, maxBytes: 150000, timeoutMs: 12000 }));
   return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
 }
 
@@ -427,10 +429,12 @@ async function executeCommand(body: Json): Promise<Json> {
     image, command, ...(args as string[]),
   ] : args as string[];
   const commandEnv = buildCommandEnvironment(process.env);
+  const processGroup = process.platform !== "win32";
   return await new Promise((resolveResult) => {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
       shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
+      detached: processGroup,
       env: commandEnv,
     });
     let stdout = "";
@@ -440,10 +444,12 @@ async function executeCommand(body: Json): Promise<Json> {
     let capped = false;
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let killTimer: NodeJS.Timeout | null = null;
     const finish = (result: Json) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (killTimer && !processGroup) clearTimeout(killTimer);
       resolveResult({ ...result, durationMs: Date.now() - started });
     };
     const collect = (target: "stdout" | "stderr") => (chunk: Buffer) => {
@@ -451,11 +457,17 @@ async function executeCommand(body: Json): Promise<Json> {
       const remaining = Math.max(0, OUTPUT_LIMIT - Buffer.byteLength(stdout) - Buffer.byteLength(stderr));
       const text = chunk.toString("utf8").slice(0, remaining);
       if (target === "stdout") stdout += text; else stderr += text;
-      if (outputBytes > OUTPUT_LIMIT && !capped) { capped = true; child.kill("SIGTERM"); }
+      if (outputBytes > OUTPUT_LIMIT && !capped) {
+        capped = true;
+        killTimer = terminateChildProcess(child, 2000, processGroup);
+      }
     };
     child.stdout.on("data", collect("stdout"));
     child.stderr.on("data", collect("stderr"));
-    timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, COMMAND_TIMEOUT_MS);
+    timer = setTimeout(() => {
+      timedOut = true;
+      killTimer = killTimer ?? terminateChildProcess(child, 2000, processGroup);
+    }, COMMAND_TIMEOUT_MS);
     child.on("error", (error) => finish({ ok: false, error: useContainer ? "Docker execution could not start: " + error.message : error.message, stdout, stderr }));
     child.on("close", (code, signal) => finish({
       ok: code === 0 && !timedOut && !capped,

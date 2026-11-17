@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
-import { createDocxBlob, createXlsxBlob } from './lib/office-ooxml';
+import WorkspaceAssets from './WorkspaceAssets';
+import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
@@ -34,6 +35,27 @@ type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research
 type PlanStepNote = { id:string; author:'user'|'assistant'|'system'; text:string; createdAt:string };
 type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
 type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
+type CommandAsset = { path:string; name:string; mimeType?:string|null; size?:number|null; projectId?:string|null };
+
+type TaskPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
+function getTaskPresentation(result?: string): TaskPresentation | null {
+  if (!result?.startsWith("ALOMDA_PPTX_JSON:")) return null;
+  try {
+    const value = JSON.parse(result.slice("ALOMDA_PPTX_JSON:".length));
+    if (typeof value.title !== "string" || !Array.isArray(value.slides) || value.slides.length < 3 || value.slides.length > 30) return null;
+    if (value.slides.some((slide: any) => !slide || typeof slide.title !== "string" || !Array.isArray(slide.bullets) || slide.bullets.length < 1 || slide.bullets.length > 8 || slide.bullets.some((bullet: unknown) => typeof bullet !== "string"))) return null;
+    return value as TaskPresentation;
+  } catch { return null; }
+}
+async function downloadTaskPowerPoint(data: TaskPresentation, projectId?: string): Promise<void> {
+  const blob = createPptxBlob(data);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    projectId,
+  );
+}
 
 type TaskSpreadsheet = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?:Record<string,string>; sheets?:Array<{name:string;columns:string[];rows:Array<Array<string|number|boolean>>;formulas?:Record<string,string>}> };
 function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
@@ -46,45 +68,15 @@ function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
     return value as TaskSpreadsheet;
   } catch { return null; }
 }
-async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
-  const primary = "https://esm.sh/xlsx@0.18.5";
-  const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
-  let module: any;
-  try { module = await import(/* @vite-ignore */ primary); }
-  catch {
-    try { module = await import(/* @vite-ignore */ fallback); }
-    catch {
-      const blob = createXlsxBlob(data);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx";
-      document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return;
-    }
-  }
-  const XLSX = module.default ?? module;
-  const workbook = XLSX.utils.book_new();
-  const sheets = data.sheets?.length ? data.sheets : [{ name: "Sheet1", columns: data.columns, rows: data.rows, formulas: data.formulas }];
-  for (const item of sheets) {
-    const sheet = XLSX.utils.aoa_to_sheet([item.columns, ...item.rows]);
-    sheet["!cols"] = item.columns.map(() => ({ wch: 20 }));
-    for (const [address, formula] of Object.entries(item.formulas ?? {})) {
-      const normalized = String(formula).trim().replace(/^=/, "");
-      if (!normalized || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(normalized) || /[\[\]]/.test(normalized)) throw new Error("Unsafe Excel formula rejected.");
-      sheet[address] = { f: normalized };
-    }
-    XLSX.utils.book_append_sheet(workbook, sheet, item.name.slice(0,31));
-  }
-  const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
-  const link = document.createElement("a");
-  link.href = url; link.download = safeName + ".xlsx"; document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+async function downloadTaskExcel(data: TaskSpreadsheet, projectId?: string): Promise<void> {
+  const blob = createXlsxBlob(data);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    projectId,
+  );
 }
-
 
 type TaskWordDocument = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
 function getTaskWordDocument(result?: string): TaskWordDocument | null {
@@ -104,58 +96,47 @@ function getTaskHtmlApp(result?: string): string | null {
 function safeArtifactName(value: string, fallback: string): string {
   return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
 }
-function downloadTaskHtml(data: { title: string; html: string }): void {
+async function persistTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+  if (!projectId) return;
+  const params = new URLSearchParams({ filename, projectId });
+  const response = await fetch("/api/storage/assets?" + params.toString(), {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "content-type": mimeType },
+    body: blob,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : "Could not save the generated file to project assets.");
+}
+function triggerArtifactDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url; link.download = filename;
+  document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+  // Trigger the browser download synchronously within the user's click, before awaiting network I/O.
+  // This preserves iOS Safari's user-activation requirement while the private asset upload continues.
+  triggerArtifactDownload(blob, filename);
+  await persistTaskArtifact(blob, filename, mimeType, projectId);
+}
+async function downloadTaskHtml(data: { title: string; html: string }, projectId?: string): Promise<void> {
+  const filename = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
   const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  await saveAndDownloadTaskArtifact(blob, filename, "text/html", projectId);
 }
-async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
-  const primary = "https://esm.sh/docx@9.5.1";
-  const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
-  let lib: any;
-  try { lib = await import(/* @vite-ignore */ primary); }
-  catch {
-    try { lib = await import(/* @vite-ignore */ fallback); }
-    catch {
-      const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
-      const rtl = /[\u0590-\u08ff]/.test([data.title, ...data.paragraphs].join(" "));
-      const paragraphs = data.paragraphs.map((item) => "<p>" + escapeHtml(item).replace(/\n/g, "<br>") + "</p>").join("");
-      const table = data.columns.length ? "<table><thead><tr>" + data.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + data.rows.map((row) => "<tr>" + data.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
-      const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (rtl ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
-      const blob = createDocxBlob(data, rtl);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".docx";
-      document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      return;
-    }
-  }
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = lib;
-  const border = { style: "single", size: 1, color: "B8C2D2" };
-  const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
-  const para = (value: string, bold = false) => new Paragraph({ alignment: AlignmentType.RIGHT, bidirectional: true, children: [new TextRun({ text: value, bold, font: "Arial", size: 20 })], spacing: { after: 120 } });
-  const children: any[] = [
-    new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: data.title, bold: true, size: 32, font: "Arial" })], spacing: { after: 260 } }),
-    ...data.paragraphs.map((p) => para(p)),
-  ];
-  if (data.columns.length > 0) {
-    const rows = [
-      new TableRow({ tableHeader: true, children: data.columns.map((column) => new TableCell({ shading: { fill: "E8EDF5" }, children: [para(column, true)] })) }),
-      ...data.rows.map((row) => new TableRow({ children: data.columns.map((_, index) => new TableCell({ children: [para(String(row[index] ?? ""))] })) })),
-    ];
-    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows }));
-  }
-  const blob = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".docx";
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+async function downloadTaskWord(data: TaskWordDocument, projectId?: string): Promise<void> {
+  const rtl = /[\u0590-\u08ff]/.test(data.title + data.paragraphs.join(" ") + data.columns.join(" ") + data.rows.flat().join(" "));
+  const blob = createDocxBlob(data, rtl);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-document") + ".docx",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    projectId,
+  );
 }
+
 
 const translations = {
   ar: {
@@ -371,6 +352,18 @@ const mobileNavItems: typeof navItems = [
   { path:'/history', key:'history', icon:History },
   { path:'/profile', key:'profile', icon:UserRound },
 ];
+const platformStatusPages = {
+  '/finance/sales-overview': { ar:'نظرة عامة على المبيعات', en:'Sales Overview', sourceAr:'مصدر بيانات المبيعات غير مربوط', sourceEn:'Sales data source is not connected', detailAr:'لن تظهر إيرادات أو مصروفات أو أرباح تقديرية. ستظهر الأرقام بعد ربط مصدر مبيعات حقيقي.', detailEn:'Revenue, expenses, and profit are intentionally hidden until a real sales source is connected.' },
+  '/finance/sales-distribution': { ar:'توزيع المبيعات', en:'Sales Distribution', sourceAr:'قنوات المبيعات غير مربوطة', sourceEn:'Sales channels are not connected', detailAr:'لن يتم توزيع المبيعات على الموقع أو التطبيق أو السوق أو الوكلاء دون بيانات معاملات فعلية.', detailEn:'Sales will not be attributed to web, mobile, marketplace, or agents without actual transaction data.' },
+  '/finance/payment-gateways': { ar:'بوابات الدفع', en:'Payment Gateways', sourceAr:'لا توجد بوابة دفع متصلة', sourceEn:'No payment gateway is connected', detailAr:'لا توجد معاملات أو مفاتيح ربط مؤكدة لعرضها. لا تُدخل مفاتيح سرية في المحادثة؛ استخدم إعدادات الربط الآمنة عند تجهيز التكامل.', detailEn:'There are no verified payment connections or transactions to display. Never paste secret keys into chat; use secure integration settings when available.' },
+  '/finance/active-users': { ar:'المستخدمون النشطون والخريطة', en:'Active Users & Global Map', sourceAr:'تحليلات المستخدمين غير مفعّلة', sourceEn:'User analytics are not enabled', detailAr:'لن يتم عرض أعداد مستخدمين أو مواقع جغرافية تخمينية. يلزم مصدر تحليلات حقيقي ومصرّح به.', detailEn:'No estimated user counts or guessed locations are shown. A real, authorized analytics source is required.' },
+  '/collaboration/contacts': { ar:'جهات الاتصال', en:'Contacts', sourceAr:'دفتر جهات الاتصال غير مربوط', sourceEn:'Contacts provider is not connected', detailAr:'اربط مصدر جهات الاتصال أولًا حتى لا تظهر أسماء أو بيانات أشخاص وهمية.', detailEn:'Connect a contacts source before displaying people or contact details.' },
+  '/collaboration/calendar': { ar:'التقويم', en:'Calendar', sourceAr:'التقويم الخارجي غير مربوط', sourceEn:'External calendar is not connected', detailAr:'لا توجد مواعيد خارجية متاحة حاليًا. لن ننشئ أحداثًا أو اجتماعات غير محفوظة.', detailEn:'No external events are available. The app will not invent or imply saved meetings.' },
+  '/collaboration/email': { ar:'البريد الإلكتروني', en:'Email', sourceAr:'حساب البريد غير مربوط', sourceEn:'Email account is not connected', detailAr:'لن يتم عرض رسائل أو الادعاء بإرسال بريد قبل ربط حساب بريد فعلي ومنح الإذن.', detailEn:'Messages are not displayed and emails are not claimed as sent until a real mailbox is connected and authorized.' },
+  '/collaboration/tickets': { ar:'التذاكر والدعم', en:'Tickets & Support', sourceAr:'نظام التذاكر غير مربوط', sourceEn:'Ticketing system is not connected', detailAr:'لا توجد تذاكر فعلية متاحة. يلزم ربط نظام دعم أو تفعيل تخزين التذاكر قبل استخدامها.', detailEn:'There are no real tickets available. Connect a support system or enable ticket storage before using this area.' },
+  '/system/security': { ar:'الأمان والسجلات', en:'Security & Logs', sourceAr:'مصدر سجلات التدقيق غير مربوط', sourceEn:'Audit log source is not connected', detailAr:'لا نعرض سجلات أمنية مصطنعة. يلزم تفعيل سجل أحداث موثوق قبل عرض التنبيهات والتغييرات.', detailEn:'Synthetic security events are not shown. A trusted audit-event source must be enabled before displaying alerts or changes.' },
+} as const;
+
 const STORE_KEY = 'al-omda-demo-v1';
 const workspaceCacheKey = (userId:string) => `${STORE_KEY}:workspace:${userId}`;
 function readWorkspaceTaskCache(userId:string): Task[] {
@@ -424,6 +417,11 @@ function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
+  const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
+  const [projectCategoryFilter, setProjectCategoryFilter] = useState<'all'|Specialty>('all');
   const { language, tasks } = saved;
   const t = (key:TranslationKey) => translations[language][key];
   const isAr = language === 'ar';
@@ -619,10 +617,50 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [location, focusTarget, saved.reduceMotion]);
 
   useEffect(() => {
+    const onKeyDown = (event:KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      } else if (event.key === 'Escape') {
+        setCommandPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+  useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.classList.add('dark');
   }, [language]);
+  useEffect(() => {
+    if (!commandPaletteOpen) return;
+    if (!authUser) { setCommandAssets([]); return; }
+    setCommandAssets([]);
+    let cancelled = false;
+    const loadCommandAssets = async () => {
+      const projectIds = tasks.filter(task=>!task.demo).slice(0,15).map(task=>task.id);
+      const folders: Array<{projectId:string|null;url:string}> = [
+        {projectId:null,url:'/api/storage/assets'},
+        ...projectIds.map(projectId=>({projectId,url:'/api/storage/assets?projectId='+encodeURIComponent(projectId)})),
+      ];
+      const responses = await Promise.all(folders.map(async folder => {
+        try {
+          const response = await fetch(folder.url,{credentials:'same-origin'});
+          if(!response.ok)return [];
+          const data = await response.json().catch(()=>[]);
+          return Array.isArray(data) ? data.map((item:any)=>({...item,projectId:folder.projectId})) : [];
+        } catch { return []; }
+      }));
+      if(cancelled)return;
+      const unique = new Map<string,CommandAsset>();
+      for(const asset of responses.flat()) if(typeof asset.path==='string'&&typeof asset.name==='string') unique.set(asset.path,asset as CommandAsset);
+      setCommandAssets([...unique.values()]);
+    };
+    void loadCommandAssets();
+    return ()=>{cancelled=true;};
+  }, [commandPaletteOpen, authUser?.id, tasks]);
+
   useEffect(() => {
     if (authLoading) return;
     const localSnapshot = authUser
@@ -968,6 +1006,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (stepIndex !== firstOpen) return;
+    if (task.steps.slice(0, stepIndex).some((step) => !step.result?.trim())) {
+      setExecutionError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before the next stage can be approved.');
+      return;
+    }
     approvalLockRef.current = true;
     const steps = task.steps.map((step) => step.id === stepId ? { ...step, state:'approved' as StepState } : step);
     const approvedStep = steps[stepIndex];
@@ -1048,10 +1090,70 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
+  const commandAssetMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    if(!needle)return [];
+    return commandAssets.filter(asset=>(asset.name+' '+(asset.mimeType||'')).toLocaleLowerCase().includes(needle)).slice(0,12);
+  }, [commandAssets, commandQuery]);
+  const commandNavigationMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    const entries = [
+      { path:'/', ar:'لوحة التحكم', en:'Dashboard' },
+      { path:'/projects', ar:'المشاريع', en:'Projects' },
+      { path:'/pipeline', ar:'مسار العمل', en:'Pipeline' },
+      { path:'/assets', ar:'الأصول والملفات', en:'Assets and files' },
+      { path:'/workbench', ar:'مشروع جديد', en:'New project' },
+      { path:'/history', ar:'سجل المهام', en:'Task history' },
+      { path:'/ai', ar:'المحادثات', en:'Chats' },
+      { path:'/agents', ar:'شبكة الوكلاء', en:'Agent network' },
+      { path:'/ai/usage', ar:'الاستخدام والحصص', en:'Usage and quota' },
+      { path:'/profile', ar:'الإعدادات', en:'Settings' },
+      ...Object.entries(platformStatusPages).map(([path, info])=>({path,ar:info.ar,en:info.en})),
+    ];
+    return entries.filter(item=>!needle||((item.ar+' '+item.en).toLocaleLowerCase().includes(needle))).slice(0,12);
+  }, [commandQuery, isAr]);
+  const commandMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    const realTasks = tasks.filter(task=>!task.demo);
+    const matches = realTasks.flatMap(task => {
+      const taskMatch = !needle || `${task.title} ${task.request}`.toLocaleLowerCase().includes(needle);
+      const outputMatches = task.steps.filter(step=>needle && `${step.text} ${step.output ?? ''} ${step.result ?? ''}`.toLocaleLowerCase().includes(needle));
+      if (taskMatch) return [{task,detail:isAr?'مشروع':'Project'}];
+      return outputMatches.map(step=>({task,detail:(isAr?'مخرج: ':'Output: ')+step.text}));
+    });
+    return matches.slice(0,12);
+  }, [tasks, commandQuery, isAr]);
+  const downloadCommandAsset = async (asset:CommandAsset) => {
+    try {
+      const response = await fetch('/api/storage/assets/download?path='+encodeURIComponent(asset.path),{credentials:'same-origin'});
+      if(!response.ok)throw new Error(isAr?'تعذر تنزيل الملف.':'Could not download the file.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href=url;link.download=asset.name;document.body.appendChild(link);link.click();link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } catch(error) {
+      setWorkspaceError(error instanceof Error?error.message:(isAr?'تعذر تنزيل الملف.':'Could not download the file.'));
+    }
+  };
   const label = (id:Specialty) => t(specialtyKey(id));
   const count = (task:Task) => task.steps.filter((step) => step.state === 'approved').length;
+  const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && Boolean(step.result)).length;
 
   const pageHeading = (eyebrow:string, title:string, subtitle:string, action?:ReactNode) => <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1 className="page-title">{title}</h1><p className="page-subtitle">{subtitle}</p></div>{action}</div>;
+  const platformStatusPage = (route:string) => {
+    const info = platformStatusPages[route as keyof typeof platformStatusPages];
+    if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
+    return <div className="page-enter">
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'قسم جاهز للربط بمصدر بيانات حقيقي.':'A workspace area awaiting a real data connection.')}
+      <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+        <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
+        <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
+        <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض العمدة أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: AL OMDA will not display invented figures, records, or locations without a connected source.'}</span></div>
+      </section>
+    </div>;
+  };
+
   const taskIcon = (id:Specialty, size=17) => {
     const Icon = specialties.find((item) => item.id === id)?.icon ?? Bot;
     return <Icon size={size} strokeWidth={1.7}/>;
@@ -1084,23 +1186,33 @@ pnpm --filter @workspace/scripts agent:runtime`;
             </div>; })()}
             {step.result && <div style={{marginTop:12,padding:12,borderRadius:9,border:'1px solid rgba(74,190,145,.28)',background:'rgba(74,190,145,.06)'}}>
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
-               {getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
+               {getTaskPresentation(step.result) ? <div style={{display:'grid',gap:10}}>
+                 <strong>{getTaskPresentation(step.result)!.title}</strong>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف PowerPoint.":"Could not save or download the PowerPoint file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل عرض PowerPoint (.pptx)':'Save & download PowerPoint (.pptx)'}</button></div>
+                 <div style={{display:'grid',gap:8}}>
+                   {getTaskPresentation(step.result)!.slides.map((slide,index)=><article key={index} style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
+                     <strong style={{display:'block',marginBottom:8}}>{index+1}. {slide.title}</strong>
+                     <ul dir={isAr?'rtl':'ltr'} style={{margin:0,paddingInlineStart:22,lineHeight:1.8}}>{slide.bullets.map((bullet,i)=><li key={i}>{bullet}</li>)}</ul>
+                     {slide.notes&&<small style={{display:'block',marginTop:8,color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملاحظات المتحدث: ':'Speaker notes: '}{slide.notes}</small>}
+                   </article>)}
+                 </div>
+               </div> : getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
                    <iframe title={task.title} sandbox="allow-scripts" srcDoc={getTaskHtmlApp(step.result)!} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
                  </div>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>downloadTaskHtml({title:task.title,html:getTaskHtmlApp(step.result)!})}><FileText size={14}/>{isAr?'تحميل التطبيق HTML':'Download app (.html)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskHtml({title:task.title,html:getTaskHtmlApp(step.result)!},task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف الموقع.":"Could not save or download the website file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل التطبيق HTML':'Save & download app (.html)'}</button></div>
                  <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملف HTML مستقل يعمل في المتصفح.':'A standalone HTML file that runs in a browser.'}</small>
                </div> : getTaskSpreadsheet(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskSpreadsheet(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!)}><FileText size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف Excel.":"Could not save or download the Excel file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل ملف Excel (.xlsx)':'Save & download Excel (.xlsx)'}</button></div>
                  <div style={{overflowX:'auto',maxWidth:'100%'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:560,width:'100%',fontSize:12}}>
                    <thead><tr>{getTaskSpreadsheet(step.result)!.columns.map((column,index)=><th key={index} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead>
                    <tbody>{getTaskSpreadsheet(step.result)!.rows.map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,cellIndex)=><td key={cellIndex} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody>
                  </table></div>
                </div> : getTaskWordDocument(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskWordDocument(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(step.result)!)}><FileText size={14}/>{isAr?'تحميل مستند Word (.docx)':'Download Word (.docx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف Word.":"Could not save or download the Word file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل مستند Word (.docx)':'Save & download Word (.docx)'}</button></div>
                  <div style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
                    {getTaskWordDocument(step.result)!.paragraphs.map((p,i)=><p key={i} style={{margin:'5px 0',lineHeight:1.8}}>{p}</p>)}
                    <div style={{overflowX:'auto'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:480,width:'100%',fontSize:12}}><thead><tr>{getTaskWordDocument(step.result)!.columns.map((column,i)=><th key={i} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead><tbody>{getTaskWordDocument(step.result)!.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody></table></div>
@@ -1717,7 +1829,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
     const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
     return <div className="page-enter">
-      {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span>)}
+      {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-primary button-small" onClick={()=>{setSelectedTaskId(null);setRequest('');setLocation(focusedHref('/workbench','request-input'));}} data-testid="button-new-project"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</button><span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span></div>)}
       <ol className="workbench-flow" aria-label={isAr?'مراحل تنفيذ المهمة':'Task workflow'}>
         <li className="workbench-flow-step" data-stage={workflowStage===0?'current':workflowStage>0?'complete':'upcoming'}><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
         <li className="workbench-flow-step" data-stage={workflowStage===1?'current':workflowStage>1?'complete':'upcoming'}><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
@@ -1972,6 +2084,71 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>;
   };
 
+  const projectsPage = () => {
+    const projects = tasks.filter(task=>!task.demo)
+      .filter(task=>historyStatusFilter==='all'||(historyStatusFilter==='review'?(task.status==='review'||task.status==='paused'):task.status===historyStatusFilter))
+      .filter(task=>projectCategoryFilter==='all'||task.specialty===projectCategoryFilter)
+      .filter(task=>`${task.title} ${task.request} ${label(task.specialty)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+    const categories:Array<{id:'all'|Specialty;name:string}> = [{id:'all',name:isAr?'الكل':'All'},...specialties.map(item=>({id:item.id,name:label(item.id)}))];
+    return <div className="page-enter" id="projects-list">
+      {pageHeading(isAr?'مساحة العمل':'WORKSPACE',isAr?'المشاريع':'Projects',isAr?'كل مشاريعك المحفوظة وحالات تنفيذها في مكان واحد.':'All saved projects and their execution status in one place.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
+      <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المشاريع':'Project filters'}>
+        <div className="history-search-wrap">
+          <div className="field-group history-search-field"><label className="form-label" htmlFor="projects-search">{isAr?'ابحث في المشاريع':'Search projects'}</label><div className="history-search-control"><Search size={16}/><input id="projects-search" className="field" placeholder={isAr?'اسم المشروع أو وصفه...':'Project name or description...'} value={query} onChange={event=>setQuery(event.target.value)}/></div></div>
+          <div className="history-results-count"><strong>{projects.length}</strong><span>{isAr?'مشروع':'projects'}</span></div>
+          <div style={{display:'flex',gap:5}}>
+            <button type="button" className={'button button-small '+(projectViewMode==='grid'?'button-primary':'button-quiet')} onClick={()=>setProjectViewMode('grid')} aria-pressed={projectViewMode==='grid'}>{isAr?'شبكة':'Grid'}</button>
+            <button type="button" className={'button button-small '+(projectViewMode==='list'?'button-primary':'button-quiet')} onClick={()=>setProjectViewMode('list')} aria-pressed={projectViewMode==='list'}>{isAr?'قائمة':'List'}</button>
+          </div>
+        </div>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب التخصص':'Filter by specialty'}>
+          {categories.map(category=><button key={category.id} type="button" className={'history-filter-chip'+(projectCategoryFilter===category.id?' active':'')} aria-pressed={projectCategoryFilter===category.id} onClick={()=>setProjectCategoryFilter(category.id)}>{category.name}</button>)}
+        </nav>
+        <nav className="history-filter-list" aria-label={isAr?'تصفية حسب الحالة':'Filter by status'}>
+          {[{key:'all',name:isAr?'كل الحالات':'All statuses'},{key:'review',name:isAr?'تحتاج مراجعة':'Needs review'},{key:'approved',name:isAr?'معتمدة':'Approved'},{key:'stopped',name:isAr?'متوقفة':'Stopped'}].map(filter=><button key={filter.key} type="button" className={'history-filter-chip'+(historyStatusFilter===filter.key?' active':'')} aria-pressed={historyStatusFilter===filter.key} onClick={()=>setHistoryStatusFilter(filter.key as 'all'|'review'|'approved'|'stopped')}>{filter.name}</button>)}
+        </nav>
+      </section>
+      {projects.length>0?<div className={projectViewMode==='grid'?'dashboard-grid':'history-layout'} style={projectViewMode==='grid'?{gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))'}:undefined}>
+        {projects.map(task=><article className="panel panel-pad" key={task.id}>
+          <div className="section-head"><span className="task-icon">{taskIcon(task.specialty,18)}</span>{statusBadge(task.status)}</div>
+          <h2 className="section-title" style={{fontSize:14,margin:'8px 0'}}>{task.title}</h2>
+          <p className="page-subtitle" style={{minHeight:42}}>{task.request.slice(0,150)}{task.request.length>150?'…':''}</p>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:17}}><span className="section-meta">{label(task.specialty)}</span><strong style={{fontSize:11}}>{task.steps.length?Math.round(executionCount(task)/task.steps.length*100):0}%</strong></div>
+          <div className="task-detail-progress-track" style={{marginTop:8}}><span style={{width:(task.steps.length?executionCount(task)/task.steps.length*100:0)+'%'}}/></div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginTop:15}}><span className="section-meta">{dateLabel(task.createdAt,language)}</span><Link href={focusedHref('/history/'+task.id,'task-plan')} className="button button-quiet button-small">{isAr?'فتح المشروع':'Open project'} <ArrowLeft size={13}/></Link></div>
+        </article>)}
+      </div>:<div className="panel plan-empty"><div><span className="empty-mark"><BriefcaseBusiness size={21}/></span><h3>{isAr?'لا توجد مشاريع مطابقة':'No matching projects'}</h3><p>{isAr?'أنشئ مشروعًا جديدًا أو غيّر عوامل التصفية.':'Create a project or adjust the filters.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link></div></div>}
+    </div>;
+  };
+
+  const pipelinePage = () => {
+    const activeTasks = tasks.filter((task) => !task.demo);
+    const columns: Array<{ id:string; title:string; tasks:Task[] }> = [
+      { id:'review', title:isAr?'بانتظار المراجعة':'Needs review', tasks:activeTasks.filter(task=>task.status==='review') },
+      { id:'in-progress', title:isAr?'قيد التنفيذ':'In progress', tasks:activeTasks.filter(task=>task.status==='approved' && !task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
+      { id:'completed', title:isAr?'مكتملة':'Completed', tasks:activeTasks.filter(task=>task.status==='approved' && task.steps.length>0 && task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
+      { id:'paused', title:isAr?'متوقفة أو معلّقة':'Paused or stopped', tasks:activeTasks.filter(task=>task.status==='paused' || task.status==='stopped') },
+    ];
+    return <div className="page-enter" id="pipeline-board">
+      {pageHeading(isAr?'مسار العمل':'WORKSPACE PIPELINE',isAr?'مسار المشاريع':'Project pipeline',isAr?'تابع انتقال كل مشروع بين المراجعة والتنفيذ والاكتمال.':'Track each saved project from review through execution and completion.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:12,alignItems:'start'}}>
+        {columns.map(column=><section className="panel panel-pad" key={column.id} aria-label={column.title}>
+          <div className="section-head"><h2 className="section-title">{column.title}</h2><span className="section-meta">{column.tasks.length}</span></div>
+          <div style={{display:'grid',gap:9}}>
+            {column.tasks.map(task=><Link key={task.id} href={focusedHref('/history/'+task.id,'task-plan')} className="panel" style={{display:'block',padding:13,textDecoration:'none',color:'inherit'}}>
+              <strong style={{display:'block',fontSize:12,marginBottom:7}}>{task.title}</strong>
+              <span className="section-meta">{label(task.specialty)} · {executionCount(task)}/{task.steps.length} {isAr?'خطوات منفذة':'completed steps'}</span>
+              <div className="task-detail-progress-track" style={{marginTop:11}}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+            </Link>)}
+            {column.tasks.length===0&&<div className="plan-empty" style={{padding:18,textAlign:'center'}}><span className="section-meta">{isAr?'لا توجد مشاريع هنا':'No projects in this stage'}</span></div>}
+          </div>
+        </section>)}
+      </div>
+    </div>;
+  };
+
+  const assetsPage = () => <WorkspaceAssets language={language} projects={tasks.filter(task=>!task.demo).map(task=>({id:task.id,title:task.title}))} />;
+
   const taskDetailPage = (task:Task) => {
     const successfulExecutions = task.steps.filter((step)=>step.executionStatus === 'succeeded' && Boolean(step.result)).length;
     const failedExecutions = task.steps.filter((step)=>step.executionStatus === 'failed').length;
@@ -2146,6 +2323,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path === '/workbench') page = workbenchPage();
+  else if (path === '/projects') page = projectsPage();
+  else if (path === '/pipeline') page = pipelinePage();
+  else if (path === '/assets') page = assetsPage();
+  else if (path in platformStatusPages) page = platformStatusPage(path);
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
   else if (path === '/') page = dashboardPage();
@@ -2156,6 +2337,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
+  const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
+  const pageTitle = platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
@@ -2165,13 +2348,49 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <div className="sidebar-scroll">
         <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-        <section className="sidebar-nav-group" aria-label={isAr?'التنقل العام':'General navigation'}>
+        <section className="sidebar-nav-group" aria-label={isAr?'مساحة العمل':'Workspace'}>
           <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
-          <nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+          <nav className="nav-stack">
+            {[{path:'/',label:isAr?'لوحة التحكم':'Dashboard',icon:LayoutDashboard,target:'dashboard-overview'},{path:'/projects',label:isAr?'المشاريع':'Projects',icon:BriefcaseBusiness,target:'history-list'},{path:'/pipeline',label:isAr?'مسار العمل':'Pipeline',icon:Activity,target:'pipeline-board'},{path:'/assets',label:isAr?'الأصول والملفات':'Assets',icon:FileText,target:'assets-list'},{path:'/workbench',label:isAr?'مشروع جديد':'New Project',icon:Plus,target:'request-input'},{path:'/history',label:isAr?'سجل المهام':'Task History',icon:History,target:'history-list'}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/'?path==='/':path===item.path;return <Link key={item.path} href={focusedHref(item.path,item.target)} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17} strokeWidth={1.8}/><span>{item.label}</span></Link>;})}
+          </nav>
         </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Systems and tools'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'الأدوات المتخصصة':'SPECIALISTS & TOOLS'}</div>
-          <nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        <section className="sidebar-nav-group" aria-label={isAr?'المالية والتحليلات':'Finance and analytics'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'المالية والتحليلات':'FINANCE & ANALYTICS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
+              {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
+              {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة':'Active Users & Global Map',icon:UserRound},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'التعاون والتطبيقات':'Collaboration and apps'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'التعاون والتطبيقات':'COLLABORATION & APPS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/collaboration/contacts',label:isAr?'جهات الاتصال':'Contacts',icon:UserRound},
+              {path:'/ai',label:isAr?'المحادثات':'Chats',icon:MessageSquareText},
+              {path:'/collaboration/calendar',label:isAr?'التقويم':'Calendar',icon:History},
+              {path:'/collaboration/email',label:isAr?'البريد الإلكتروني':'Email',icon:Send},
+              {path:'/collaboration/tickets',label:isAr?'التذاكر والدعم':'Tickets',icon:FileText},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/ai'?path==='/ai':path===item.path;return <Link key={item.path} href={item.path==='/ai'?navigationHref('/ai'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'النظام والإعدادات':'System and settings'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'النظام والإعدادات':'SYSTEM & SETTINGS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/system/security',label:isAr?'الأمان والسجلات':'Security & Logs',icon:ShieldCheck},
+              {path:'/profile',label:isAr?'الإعدادات':'Settings',icon:Settings2},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path==='/profile'?focusedHref('/profile','profile-account-card'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
+          <nav className="nav-stack">
+            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass},{path:'/ai/usage',label:isAr?'الاستخدام والحصص':'Usage & Quota',icon:Activity}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
@@ -2188,7 +2407,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{t(pageTitleKey)}</div>
+      <header className="topbar"><button type="button" className="curtain-trigger icon-button" onClick={()=>setCurtainOpen(true)} aria-label={isAr?'فتح القائمة':'Open menu'} aria-expanded={curtainOpen}><Menu size={18}/></button><div className="crumb">{pageTitle}</div>
         {showWorkspaceHeader && <div className="topbar-workspace-metrics" role="status" aria-live="polite" aria-label={isAr?'مؤشرات مساحة العمل':'Workspace metrics'} title={workspaceLoadError ? (isAr?'تعذر تحميل بيانات مساحة العمل':'Workspace data could not be loaded') : undefined}>
           <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.total}</strong><small>{isAr?'المهام':'Tasks'}</small></span>
           <span className="topbar-metric"><strong>{workspaceLoadError || !workspaceLoaded ? '—' : workspaceMetrics.needsReview}</strong><small>{isAr?'تحتاج متابعة':'Needs review'}</small></span>
@@ -2198,6 +2417,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </span>
         </div>}
         <div className="top-actions">
+          {showWorkspaceHeader && <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>}
           {showWorkspaceHeader && <div className="topbar-quick-actions">
             <Link href={navigationHref("/ai")} className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
             <Link href={focusedHref("/workbench","request-input")} className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
@@ -2207,6 +2427,25 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div></header>
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
+    {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
+      <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
+        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في الأقسام والمشاريع والملفات والمخرجات...':'Search sections, projects, files, and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
+        <div className="section-meta" style={{padding:'5px 3px 10px'}}>{isAr?'نتائج من البيانات المتاحة حاليًا':'Results from currently available workspace data'}</div>
+        <div style={{display:'grid',gap:6}}>
+          {commandNavigationMatches.map(item=><Link key={item.path} href={item.path==='/workbench'?focusedHref(item.path,'request-input'):item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path==='/history'?focusedHref(item.path,'history-list'):item.path==='/profile'?focusedHref(item.path,'profile-account-card'):item.path} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:44,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
+            <span className="task-icon"><Search size={15}/></span><span className="task-main"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?'فتح القسم':'Open section'}</small></span><ArrowLeft size={14} className="muted"/>
+          </Link>)}
+          {commandAssetMatches.map(asset=><button key={asset.path} type="button" className="nav-link" onClick={()=>void downloadCommandAsset(asset)} style={{minHeight:48,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,color:'inherit',textAlign:isAr?'right':'left',cursor:'pointer'}}>
+            <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{asset.name}</strong><small>{isAr?'ملف محفوظ · تنزيل':'Saved file · Download'}</small></span><ArrowLeft size={14} className="muted"/>
+          </button>)}
+          {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
+            <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
+          </Link>)}
+          {commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+        </div>
+        <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
+      </section>
+    </div>}
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة العمدة':'AL OMDA menu'} onClick={event=>event.stopPropagation()}>
         <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg" alt={isAr ? "العمدة AL OMDA AI" : "AL OMDA AI"}/></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
@@ -2218,6 +2457,20 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {group.items.map(item=>{const Icon=item.icon;return <Link key={item.path} href={navigationHref(item.path)} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{t(item.key)}</strong></Link>})}
             </nav>
           </section>)}
+          <section className="curtain-launcher-group">
+            <div className="curtain-caption">{isAr?'أقسام المنصة':'Platform areas'}</div>
+            <nav className="curtain-launcher-grid" aria-label={isAr?'أقسام المنصة':'Platform areas'}>
+              {[
+                {path:'/projects',ar:'المشاريع',en:'Projects'},
+                {path:'/pipeline',ar:'مسار العمل',en:'Pipeline'},
+                {path:'/assets',ar:'الأصول والملفات',en:'Assets'},
+                {path:'/ai',ar:'المحادثات',en:'Chats'},
+                ...Object.entries(platformStatusPages).map(([pagePath,info])=>({path:pagePath,ar:info.ar,en:info.en})),
+              ].map(item=><Link key={item.path} href={item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path} onClick={()=>setCurtainOpen(false)} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}>
+                <span className="curtain-launcher-icon"><Globe size={19}/></span><strong>{isAr?item.ar:item.en}</strong>
+              </Link>)}
+            </nav>
+          </section>
         </div>
       </aside>
     </div>}

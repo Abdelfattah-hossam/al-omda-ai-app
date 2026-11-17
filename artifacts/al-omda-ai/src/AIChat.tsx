@@ -7,6 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
+import { previewOfficeDocument } from "./lib/office-preview";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -190,6 +191,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pendingImage, setPendingImage] = useState<{ name: string; mimeType: string; data: string; preview: string } | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ name: string; text: string } | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -244,6 +246,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const sendingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -795,10 +798,15 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
   const sendMessage = async (event?: FormEvent, draftOverride?: string) => {
     event?.preventDefault();
     const imageForRequest = pendingImage;
+    const fileForRequest = pendingFile;
     // Keep the exact raw composer value so a successful send clears it even
     // when the user entered leading/trailing whitespace. Never clear newer typing.
     const submittedDraft = draftOverride ?? input;
-    const text = submittedDraft.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : "");
+    const text = submittedDraft.trim() || (imageForRequest ? (ar ? "حلّل الصورة المرفقة واشرح ما يظهر فيها." : "Analyze the attached image and explain what it shows.") : fileForRequest ? (ar ? "اقرأ الملف المرفق وافهم محتواه وساعدني في طلبي." : "Read the attached file and help me with it.") : "");
+    const visibleText = fileForRequest ? text + "\n\n📎 " + fileForRequest.name : text;
+    const attachmentPrompt = fileForRequest ? text.slice(0, 6000) : text;
+    const attachmentText = fileForRequest ? fileForRequest.text.slice(0, Math.max(0, 7800 - attachmentPrompt.length - 100)) : "";
+    const requestText = fileForRequest ? attachmentPrompt + "\n\n[Attached file: " + fileForRequest.name + "]\n" + attachmentText : text;
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
@@ -810,9 +818,9 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       // If the previous attempt failed after its user turn was persisted,
       // retry that same draft without appending a duplicate user bubble.
       const lastMessage = messages[messages.length - 1];
-      const next = lastMessage?.role === "user" && lastMessage.content === text
+      const next = lastMessage?.role === "user" && lastMessage.content === visibleText
         ? [...messages]
-        : [...messages, { role: "user" as const, content: text }];
+        : [...messages, { role: "user" as const, content: visibleText }];
       // Keep the draft and attachment in the composer until the request and
       // conversation save both succeed. A network/provider failure must not eat user input.
       shouldAutoScrollRef.current = true;
@@ -825,7 +833,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (!agentRuntimeUrl.trim() || !agentToken.trim()) throw new Error(ar ? "أدخل عنوان Runtime المحلي ورمز الاتصال أولًا." : "Enter the local runtime URL and access token first.");
         const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
         const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\n\n").slice(-12000);
-        const goal = [priorContext, "Current user request: " + text].filter(Boolean).join("\n\n");
+        const goal = [priorContext, "Current user request: " + requestText].filter(Boolean).join("\n\n");
         const action = agentSessionId ? "resume" : "run";
         let streamedText = "";
         const startedAt = Date.now();
@@ -850,15 +858,16 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
         setInput((current) => current === submittedDraft ? "" : current);
+        if (fileForRequest) setPendingFile((current) => current?.name === fileForRequest.name && current?.text === fileForRequest.text ? null : current);
         return;
       }
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-12).map((message, index, list) => ({
+        body: JSON.stringify({ messages: next.slice(fileForRequest ? -8 : -12).map((message, index, list) => ({
           role: message.role,
-          content: message.content,
+          content: index === list.length - 1 ? requestText : fileForRequest ? message.content.slice(-2500) : message.content,
           ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
         })) }),
       });
@@ -950,6 +959,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
       if (officeArtifactIntent) setCurrentMode(null);
       setInput((current) => current === submittedDraft ? "" : current);
       if (imageForRequest) setPendingImage((current) => current?.data === imageForRequest.data ? null : current);
+      if (fileForRequest) setPendingFile((current) => current?.name === fileForRequest.name && current?.text === fileForRequest.text ? null : current);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -1290,11 +1300,34 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             <span style={{fontSize:12,overflowWrap:"anywhere",flex:1}}>{pendingImage.name}</span>
             <button type="button" className="icon-button" onClick={()=>setPendingImage(null)} aria-label={ar?"إزالة الصورة":"Remove image"}><X size={15}/></button>
           </div>}
+          <input ref={fileInputRef} type="file" accept=".docx,.xlsx,.pptx,.txt,.md,.csv,.json,.xml,.html,.htm" hidden onChange={async(event)=>{
+            const file=event.currentTarget.files?.[0];
+            event.currentTarget.value="";
+            if(!file)return;
+            if(file.size<=0||file.size>25*1024*1024){setError(ar?"حجم الملف يجب أن يكون أقل من 25 ميجابايت.":"File must be smaller than 25 MB.");return;}
+            const extension=file.name.split(".").pop()?.toLowerCase()||"";
+            const office=["docx","xlsx","pptx"].includes(extension);
+            const textTypes=["txt","md","csv","json","xml","html","htm"];
+            if(!office&&!textTypes.includes(extension)){setError(ar?"صيغة الملف غير مدعومة. استخدم Word أو Excel أو PowerPoint أو ملفًا نصيًا.":"Unsupported file type. Use Word, Excel, PowerPoint, or a text file.");return;}
+            try{
+              const extracted=office?await previewOfficeDocument(file,extension):await file.text();
+              const normalized=extracted.replace(/\u0000/g,"").slice(0,40000);
+              if(!normalized.trim())throw new Error(ar?"لم أستطع استخراج محتوى قابل للقراءة من الملف.":"No readable text could be extracted from this file.");
+              setPendingFile({name:file.name,text:normalized});
+              setError("");
+            }catch(error){setError(error instanceof Error?error.message:(ar?"تعذر قراءة الملف.":"Could not read the file."));}
+          }}/>
+          {pendingFile&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",border:"1px solid var(--border,#343a44)",borderRadius:10,marginBottom:8}}>
+            <FileText size={22}/>
+            <span style={{fontSize:12,overflowWrap:"anywhere",flex:1}}>{pendingFile.name}<small style={{display:"block",opacity:.65}}>{ar?"تم استخراج النص لإرساله مع طلبك":"Text extracted and ready to send"}</small></span>
+            <button type="button" className="icon-button" onClick={()=>setPendingFile(null)} aria-label={ar?"إزالة الملف":"Remove file"}><X size={15}/></button>
+          </div>}
           <div className="ai-composer-tools">
             <button type="button" className="ai-attach-image-button" aria-label={ar ? "إرفاق صورة" : "Attach image"} title={ar ? "إرفاق صورة" : "Attach image"} onClick={()=>imageInputRef.current?.click()} disabled={loading || historyLoading || !signedIn}><ImagePlus size={18}/></button>
             <div ref={plusWrapRef} className="ai-plus-wrap">
               <button type="button" className="ai-plus-button" aria-label={ar ? "إضافة أو اختيار أداة" : "Add or choose a tool"} aria-expanded={showPlusMenu} onClick={()=>{setShowChatMenu(false);setShowPlusMenu((v)=>!v)}}><Plus size={20}/></button>
               {showPlusMenu && <div className="ai-plus-menu" role="menu">
+                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);fileInputRef.current?.click();}}><FileText size={16}/><span>{ar ? "إرفاق مستند أو جدول أو عرض" : "Attach a document or spreadsheet"}</span></button>
                 <div className="ai-chat-menu-caption">{ar ? "برامج الأوفيس الكاملة" : "Office tools"}</div>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("word")}><FileText size={16}/><span>{ar ? "مستند Word (مع زر تحميل)" : "Word document"}</span></button>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("excel")}><Sheet size={16}/><span>{ar ? "جدول Excel (مع زر تحميل)" : "Excel workbook"}</span></button>

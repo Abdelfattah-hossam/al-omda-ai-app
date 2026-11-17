@@ -50,6 +50,10 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/excel-workbook.test.ts
       - name: Test PowerPoint presentation validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/powerpoint-presentation.test.ts
+      - name: Test generated HTML app artifact policy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/html-app-artifact.test.ts
+      - name: Test generated Office files
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-ooxml.test.ts
       - name: Test Word document validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/word-document.test.ts
       - name: Test professional legal and engineering standards
@@ -64,6 +68,12 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
       - name: Test API CORS policy
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/app.cors.test.ts
+      - name: Test workspace asset validation
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/storage-assets.test.ts
+      - name: Test sequential project stage prerequisites
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-stage-sequence.test.ts
+      - name: Test Supabase schema security and quota contracts
+        run: pnpm --filter @workspace/scripts exec tsx --test ../supabase/setup.test.ts
 
       - name: Set up reviewdog
         if: github.event_name == 'pull_request'

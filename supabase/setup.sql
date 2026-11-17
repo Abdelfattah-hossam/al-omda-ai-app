@@ -175,7 +175,12 @@ create policy "ai_daily_usage_select_own"
   on public.ai_daily_usage for select to authenticated
   using ((select auth.uid()) = user_id);
 
-create or replace function public.get_ai_daily_usage()
+-- Keep privileged quota/task implementations outside the exposed Data API schema.
+create schema if not exists omda_private;
+revoke all on schema omda_private from public, anon;
+grant usage on schema omda_private to authenticated;
+
+create or replace function omda_private.get_ai_daily_usage()
 returns jsonb
 language plpgsql
 security definer
@@ -201,8 +206,20 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.get_ai_daily_usage()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.get_ai_daily_usage();
+$$;
+revoke all on function omda_private.get_ai_daily_usage() from public, anon;
+grant execute on function omda_private.get_ai_daily_usage() to authenticated;
 
-create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+
+create or replace function omda_private.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
 returns jsonb
 language plpgsql
 security definer
@@ -251,8 +268,20 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.consume_ai_units(p_units, p_daily_limit);
+$$;
+revoke all on function omda_private.consume_ai_units(integer, integer) from public, anon;
+grant execute on function omda_private.consume_ai_units(integer, integer) to authenticated;
 
-create or replace function public.complete_ai_task_step(
+
+create or replace function omda_private.complete_ai_task_step(
   p_task_id uuid,
   p_step_id text,
   p_result text,
@@ -278,8 +307,8 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
-  if p_task_id is null or p_step_id is null or char_length(p_step_id) < 1
-     or p_result is null or char_length(p_result) < 1
+  if p_task_id is null or p_step_id is null or char_length(p_step_id) not between 1 and 80
+     or p_result is null or char_length(p_result) < 1 or octet_length(p_result) > 500000
      or p_executed_at is null or p_units is null or p_units < 1
      or p_units > 5 or p_daily_limit <> 1000 then
     raise exception 'Invalid task completion request';
@@ -308,7 +337,10 @@ begin
        select 1
        from jsonb_array_elements(v_steps) with ordinality as item(value, ordinality)
        where item.ordinality < v_step_index
-         and item.value ->> 'state' is distinct from 'approved'
+         and (
+           item.value ->> 'state' is distinct from 'approved'
+           or nullif(btrim(item.value ->> 'result'), '') is null
+         )
      ) then
     return jsonb_build_object('saved', false, 'conflict', true);
   end if;
@@ -363,12 +395,31 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.complete_ai_task_step(
+  p_task_id uuid,
+  p_step_id text,
+  p_result text,
+  p_executed_at timestamptz,
+  p_units integer default 2,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.complete_ai_task_step(p_task_id, p_step_id, p_result, p_executed_at, p_units, p_daily_limit);
+$$;
+revoke all on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
+grant execute on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
 
-revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public;
+
+revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
 grant execute on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
 
-revoke all on function public.get_ai_daily_usage() from public;
-revoke all on function public.consume_ai_units(integer, integer) from public;
+revoke all on function public.get_ai_daily_usage() from public, anon;
+revoke all on function public.consume_ai_units(integer, integer) from public, anon;
 grant execute on function public.get_ai_daily_usage() to authenticated;
 grant execute on function public.consume_ai_units(integer, integer) to authenticated;
 
@@ -427,6 +478,62 @@ drop policy if exists "ai_user_memory_delete_own" on public.ai_user_memory;
 create policy "ai_user_memory_delete_own" on public.ai_user_memory
   for delete to authenticated using ((select auth.uid()) = user_id);
 
+-- Private, user-scoped memory graph. The composite foreign keys prevent cross-account edges.
+create table if not exists public.ai_memory_nodes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  node_type text not null check (node_type in ('preference','project','decision','constraint','correction','person','organization','tool','other')),
+  label text not null check (char_length(label) between 1 and 160),
+  normalized_label text not null check (char_length(normalized_label) between 1 and 180),
+  details jsonb not null default '{}'::jsonb check (jsonb_typeof(details) = 'object' and pg_column_size(details) <= 8192),
+  source text not null default 'user_confirmed' check (source in ('user_confirmed','conversation_confirmed','imported')),
+  confidence numeric not null default 1.00 check (confidence between 0 and 1),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (id, user_id),
+  unique (user_id, node_type, normalized_label)
+);
+create index if not exists ai_memory_nodes_user_type_updated_idx
+  on public.ai_memory_nodes (user_id, node_type, updated_at desc);
+alter table public.ai_memory_nodes enable row level security;
+grant select, insert, update, delete on public.ai_memory_nodes to authenticated;
+drop policy if exists "ai_memory_nodes_user_all" on public.ai_memory_nodes;
+create policy "ai_memory_nodes_user_all" on public.ai_memory_nodes
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create table if not exists public.ai_memory_edges (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  source_node_id uuid not null,
+  target_node_id uuid not null,
+  relation text not null check (relation in ('prefers','owns','works_on','decided','constrained_by','corrected','related_to','member_of','uses','created')),
+  details jsonb not null default '{}'::jsonb check (jsonb_typeof(details) = 'object' and pg_column_size(details) <= 4096),
+  source text not null default 'user_confirmed' check (source in ('user_confirmed','conversation_confirmed','imported')),
+  confidence numeric not null default 1.00 check (confidence between 0 and 1),
+  created_at timestamptz not null default now(),
+  check (source_node_id <> target_node_id),
+  foreign key (source_node_id, user_id) references public.ai_memory_nodes(id, user_id) on delete cascade,
+  foreign key (target_node_id, user_id) references public.ai_memory_nodes(id, user_id) on delete cascade,
+  unique (user_id, source_node_id, target_node_id, relation)
+);
+create index if not exists ai_memory_edges_user_source_idx
+  on public.ai_memory_edges (user_id, source_node_id);
+create index if not exists ai_memory_edges_user_target_idx
+  on public.ai_memory_edges (user_id, target_node_id);
+create index if not exists ai_memory_edges_source_fk_idx
+  on public.ai_memory_edges (source_node_id, user_id);
+create index if not exists ai_memory_edges_target_fk_idx
+  on public.ai_memory_edges (target_node_id, user_id);
+alter table public.ai_memory_edges enable row level security;
+grant select, insert, update, delete on public.ai_memory_edges to authenticated;
+drop policy if exists "ai_memory_edges_user_all" on public.ai_memory_edges;
+create policy "ai_memory_edges_user_all" on public.ai_memory_edges
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 -- Independent private conversations per account (required by the current chat UI).
 create table if not exists public.ai_conversations (
   id uuid primary key default gen_random_uuid(),
@@ -475,7 +582,7 @@ where jsonb_array_length(old.messages) > 0
 
 -- Create a project task and charge its planning unit in one transaction.
 -- If task insertion fails, PostgreSQL rolls back the quota write as well.
-create or replace function public.create_ai_task_with_quota(
+create or replace function omda_private.create_ai_task_with_quota(
   p_title text,
   p_request text,
   p_specialty text,
@@ -561,6 +668,91 @@ begin
   );
 end;
 $$;
+ 
+create or replace function public.create_ai_task_with_quota(
+  p_title text,
+  p_request text,
+  p_specialty text,
+  p_steps jsonb,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.create_ai_task_with_quota(p_title, p_request, p_specialty, p_steps, p_daily_limit);
+$$;
+revoke all on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
+grant execute on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
 
-revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public;
+
+revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
 grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
+
+-- Private workspace files and project attachments.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'workspace-assets',
+  'workspace-assets',
+  false,
+  26214400,
+  array[
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'application/json',
+    'text/html',
+    'application/xml',
+    'application/zip',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif'
+  ]
+)
+on conflict (id) do update
+set
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "workspace_assets_select_own" on storage.objects;
+create policy "workspace_assets_select_own"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'workspace-assets'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "workspace_assets_insert_own" on storage.objects;
+create policy "workspace_assets_insert_own"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'workspace-assets'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "workspace_assets_update_own" on storage.objects;
+create policy "workspace_assets_update_own"
+  on storage.objects for update to authenticated
+  using (
+    bucket_id = 'workspace-assets'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  )
+  with check (
+    bucket_id = 'workspace-assets'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "workspace_assets_delete_own" on storage.objects;
+create policy "workspace_assets_delete_own"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'workspace-assets'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );

@@ -3,18 +3,20 @@ import { strict as assert } from "node:assert";
 import { isBlockedNetworkAddress } from "./network-safety.js";
 
 test("blocks private, loopback, link-local, carrier-grade NAT and reserved IPv4", () => {
-  for (const address of ["10.0.0.1", "127.0.0.1", "192.168.1.10", "172.20.0.1", "169.254.1.1", "100.64.0.1", "198.18.0.1", "224.0.0.1", "0.0.0.0"]) {
+  for (const address of ["10.0.0.1", "127.0.0.1", "192.168.1.10", "172.20.0.1", "169.254.1.1", "100.64.0.1", "198.18.0.1", "192.0.2.1", "192.88.99.1", "198.51.100.1", "203.0.113.1", "240.0.0.1", "224.0.0.1", "0.0.0.0"]) {
     assert.equal(isBlockedNetworkAddress(address), true, address);
   }
 });
 
-test("allows ordinary public IPv4", () => {
-  assert.equal(isBlockedNetworkAddress("1.1.1.1"), false);
-  assert.equal(isBlockedNetworkAddress("8.8.8.8"), false);
+test("allows ordinary public IPv4 and does not overblock adjacent prefixes", () => {
+  for (const address of ["1.1.1.1", "8.8.8.8", "192.0.1.1", "192.1.1.1", "198.51.99.1"]) {
+    assert.equal(isBlockedNetworkAddress(address), false, address);
+  }
+  assert.equal(isBlockedNetworkAddress("198.51.100.1"), true);
 });
 
 test("blocks IPv6 unspecified, loopback, ULA, link-local, multicast and mapped private IPv4", () => {
-  for (const address of ["::", "::1", "fc00::1", "fd12:3456::1", "fe80::1", "ff02::1", "::ffff:127.0.0.1", "::ffff:192.168.1.2", "2001:db8::1"]) {
+  for (const address of ["::", "::1", "fc00::1", "fd12:3456::1", "fe80::1", "ff02::1", "::ffff:127.0.0.1", "::ffff:192.168.1.2", "2001:db8::1", "2001:0::1", "2002:c0a8:0101::1", "64:ff9b::192.168.1.1", "fec0::1"]) {
     assert.equal(isBlockedNetworkAddress(address), true, address);
   }
 });
