@@ -1,3 +1,4 @@
+import { summarizeAgentToolFailures } from "./agent-execution-warnings.js";
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -715,7 +716,7 @@ function recordAgentToolResultFailure(state: AgentState, call: AgentToolCall, re
 function agentExecutionWarnings(state: AgentState): { toolExecutionStatus: string; toolFailures: AgentToolFailure[] } {
   const toolFailures = state.toolFailures || [];
   state.toolFailures = [];
-  return { toolExecutionStatus: toolFailures.length ? "with_warnings" : "no_tool_errors", toolFailures };
+  return summarizeAgentToolFailures(toolFailures);
 }
 const providerCooldowns = new Map<string, number>();
 const MODEL_BASE_URL = (process.env.OMDA_AGENT_MODEL_BASE_URL || "http://127.0.0.1:1234/v1").replace(/\/+$/, "");
