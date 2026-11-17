@@ -900,7 +900,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) {
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
@@ -919,7 +919,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       appendMcpImageObservations(state.messages, imageQueue);
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: mcpToolDisplayName(call.function.name), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     for (const call of calls) {
       try {
@@ -933,7 +933,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     await saveAgentState(id, state);
   }
   await saveAgentState(id, state);
-  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
+  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
 }
 const AGENT_OPERATING_RULES = `
 
