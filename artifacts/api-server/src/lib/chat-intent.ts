@@ -50,6 +50,7 @@ function hasExplicitSourceFileExport(text: string): boolean {
     /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\b/i.test(text);
 }
 
+/** Detect explicit Excel workbook/spreadsheet creation or export requests. */
 export function isExcelFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "excel"))) return false;
