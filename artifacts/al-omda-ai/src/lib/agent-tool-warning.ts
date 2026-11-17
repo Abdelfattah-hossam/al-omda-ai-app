@@ -9,7 +9,11 @@ export function buildAgentToolWarning(failures: unknown, ar: boolean): string {
   const heading = ar
     ? "تنبيه تنفيذ: فشلت بعض الأدوات، لذلك لا يُعد التنفيذ مكتملًا بالكامل:"
     : "Execution warning: some tools failed, so the run is not fully verified:";
-  return "\n\n" + heading + items.map((failure) =>
+  const details = items.map((failure) =>
     "\n- " + String(failure.tool || "tool") + ": " + String(failure.message || "failed").slice(0, 240)
   ).join("");
+  const more = omitted
+    ? (ar ? "\n- وهناك " + omitted + " إخفاقات أخرى لم تُعرض." : "\n- " + omitted + " additional failures were omitted.")
+    : "";
+  return "\n\n" + heading + details + more;
 }
