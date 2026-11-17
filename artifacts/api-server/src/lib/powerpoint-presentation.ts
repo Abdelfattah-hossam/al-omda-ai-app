@@ -31,3 +31,12 @@ export function parsePowerPointPresentation(text: string): PowerPointPresentatio
     return null;
   }
 }
+
+/** Extracts an explicitly requested slide count without guessing when none is stated. */
+export function getRequestedPowerPointSlideCount(request: string): number | null {
+  const normalized = request.normalize("NFKC").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  const match = normalized.match(/(?:^|\\D)(\\d{1,2})\\s*(?:slides?|شرائح|شريحة)/i);
+  if (!match) return null;
+  const count = Number(match[1]);
+  return count >= 3 && count <= 30 ? count : null;
+}
