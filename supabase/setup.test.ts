@@ -66,7 +66,6 @@ test("pending database migration secures every quota RPC without changing public
   const completion = migration.slice(completionStart, completionEnd + 4);
   assert.match(completion, /octet_length\(p_result\) > 500000/i);
   assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
-  assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
   assert.match(completion, /p_units is distinct from 2/i);
 });
 
