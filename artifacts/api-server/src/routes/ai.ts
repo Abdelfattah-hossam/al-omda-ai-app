@@ -20,21 +20,32 @@ const DAILY_LIMIT = 1000;
 type ChatMessage = { role: "user" | "assistant"; content: string; image?: { mimeType: string; data: string } };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
 type ModelTokenUsage = { promptTokens?: number; completionTokens?: number; totalTokens?: number };
-type ProviderAnswer = { text: string; model: string; usage?: ModelTokenUsage };
+type ProviderAnswer = { text: string; model: string; usage?: ModelTokenUsage; finishReason?: string };
 
-function readModelTokenUsage(payload: any): ModelTokenUsage | undefined {
-  const usage = payload?.usage && typeof payload.usage === "object" ? payload.usage
-    : payload?.usageMetadata && typeof payload.usageMetadata === "object" ? payload.usageMetadata
+function readModelTokenUsage(payload: unknown): ModelTokenUsage | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const root = payload as Record<string, unknown>;
+  const rawUsage = root.usage && typeof root.usage === "object" ? root.usage
+    : root.usageMetadata && typeof root.usageMetadata === "object" ? root.usageMetadata
     : undefined;
-  if (!usage) return undefined;
-  const promptTokens = Number(usage.prompt_tokens ?? usage.promptTokenCount);
-  const completionTokens = Number(usage.completion_tokens ?? usage.candidatesTokenCount);
-  const totalTokens = Number(usage.total_tokens ?? usage.totalTokenCount);
+  if (!rawUsage || typeof rawUsage !== "object") return undefined;
+  const usage = rawUsage as Record<string, unknown>;
+  const readCount = (value: unknown): number | undefined => {
+    const count = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+    return Number.isFinite(count) && count >= 0 ? count : undefined;
+  };
   const result: ModelTokenUsage = {};
-  if (Number.isFinite(promptTokens) && promptTokens >= 0) result.promptTokens = promptTokens;
-  if (Number.isFinite(completionTokens) && completionTokens >= 0) result.completionTokens = completionTokens;
-  if (Number.isFinite(totalTokens) && totalTokens >= 0) result.totalTokens = totalTokens;
+  const promptTokens = readCount(usage.prompt_tokens ?? usage.promptTokenCount);
+  const completionTokens = readCount(usage.completion_tokens ?? usage.candidatesTokenCount);
+  const totalTokens = readCount(usage.total_tokens ?? usage.totalTokenCount);
+  if (promptTokens !== undefined) result.promptTokens = promptTokens;
+  if (completionTokens !== undefined) result.completionTokens = completionTokens;
+  if (totalTokens !== undefined) result.totalTokens = totalTokens;
   return Object.keys(result).length ? result : undefined;
+}
+
+function isIncompleteProviderAnswer(answer: ProviderAnswer): boolean {
+  return /^(?:length|max_tokens|max_tokens_reached)$/i.test(answer.finishReason || "");
 }
 
 async function currentUsage(accessToken: string): Promise<Usage> {
@@ -261,7 +272,7 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<ProviderA
   const raw = payload?.choices?.[0]?.message?.content;
   const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
   if (!text) throw new Error("Groq returned an empty response.");
-  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
 async function callGemini(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
@@ -313,7 +324,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<Provide
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model, usage: readModelTokenUsage(payload) };
+      return { text, model, usage: readModelTokenUsage(payload), finishReason: payload?.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "length" : typeof payload?.candidates?.[0]?.finishReason === "string" ? payload.candidates[0].finishReason : undefined };
     } catch (error) {
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
@@ -431,7 +442,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
+      return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
     } catch (error) {
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
@@ -469,7 +480,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<Pro
   const raw = payload?.choices?.[0]?.message?.content ?? payload?.result?.response;
   const text = (typeof raw === "string" ? raw : "").trim();
   if (!text) throw new Error("Cloudflare Workers AI returned an empty response.");
-  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
 async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
@@ -1483,7 +1494,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     if (!answer) throw new Error("No AI answer was generated.");
     let finalAnswer: ProviderAnswer = answer;
+    const initialAnswerUsage = answer.usage;
     let qualityReviewUsage: ModelTokenUsage = {};
+    let qualityReviewWarning = "";
     if (shouldAuditChatRequest(latestCustomerRequest)) {
       try {
         const containsImages = modelConversation.some((message) => Boolean(message.image));
@@ -1503,8 +1516,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
             ].join("\n") }
           ];
           const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory);
+          if (isIncompleteProviderAnswer(reviewAnswer)) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: true };
           const issues = parseHostedAuditIssues(reviewAnswer.text);
-          if (!issues.length) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {} };
+          if (!issues.length) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: false };
           const refinementMessages: ChatMessage[] = [
             ...modelConversation,
             { role: "user", content: [
@@ -1515,19 +1529,23 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
             ].join("\n") }
           ];
           const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory);
+          const reviewUsage = {
+            promptTokens: (reviewAnswer.usage?.promptTokens || 0) + (refined.usage?.promptTokens || 0),
+            completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
+            totalTokens: (reviewAnswer.usage?.totalTokens || 0) + (refined.usage?.totalTokens || 0),
+          };
+          if (isIncompleteProviderAnswer(refined)) return { answer: finalAnswer, provider: usedProvider, usage: reviewUsage, incomplete: true };
           return refined.text.trim() ? {
             answer: refined,
             provider: reviewProvider,
-            usage: {
-              promptTokens: (reviewAnswer.usage?.promptTokens || 0) + (refined.usage?.promptTokens || 0),
-              completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
-              totalTokens: (reviewAnswer.usage?.totalTokens || 0) + (refined.usage?.totalTokens || 0),
-            },
-          } : { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {} };
+            usage: reviewUsage,
+            incomplete: false,
+          } : { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: false };
         });
         finalAnswer = auditResult.answer;
         usedProvider = auditResult.provider;
         qualityReviewUsage = auditResult.usage;
+        if (auditResult.incomplete) qualityReviewWarning = "لم تكتمل مراجعة الجودة؛ احتفظت بالإجابة الكاملة بدل استبدالها بتصحيح ناقص.";
       } catch (error) {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
@@ -1554,7 +1572,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const responseUsage = {
       ...latestUsage,
-      ...(finalAnswer.usage ? { modelTokens: finalAnswer.usage } : {}),
+      ...(initialAnswerUsage ? { modelTokens: initialAnswerUsage } : {}),
       ...(Object.keys(qualityReviewUsage).length ? { qualityReviewTokens: qualityReviewUsage } : {}),
     };
     res.json({ reply: memorySaveWarning ? finalAnswer.text + "\n\n" + memorySaveWarning : finalAnswer.text, provider: usedProvider, model: finalAnswer.model, usage: responseUsage });
