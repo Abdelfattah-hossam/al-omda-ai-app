@@ -874,7 +874,11 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (!latest || latest.status === "paused" || latest.status === "stopped") {
       res.status(409).json({ error: "The project changed while this step was running. Review the project and try again." }); return;
     }
-    const latestStep = latest.steps.find((item) => item.id === stepId);
+    const latestStepIndex = latest.steps.findIndex((item) => item.id === stepId);
+    if (latestStepIndex !== stepIndex || !hasCompletedPriorProjectStages(latest.steps, latestStepIndex)) {
+      res.status(409).json({ error: "An earlier stage changed or no longer has a saved deliverable. Refresh the project before continuing." }); return;
+    }
+    const latestStep = latest.steps[latestStepIndex];
     if (!latestStep || latestStep.state !== "approved" || latestStep.result) {
       res.status(409).json({ error: "This step changed or was already executed. Refresh the project." }); return;
     }
