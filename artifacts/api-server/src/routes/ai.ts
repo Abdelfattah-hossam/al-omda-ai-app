@@ -533,7 +533,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
     const failures: string[] = [];
-    let answer: { text: string; model: string } | null = null;
+    let answer: ProviderAnswer | null = null;
     let provider = "";
     for (const candidate of providers) {
       try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory); provider = candidate; break; }
@@ -1165,6 +1165,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestCustomerRequest = getLatestUserRequest(messages);
+    const responseLanguage = /[\\u0600-\\u06FF]/.test(latestCustomerRequest) ? "ar" : "en";
     const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
@@ -1544,7 +1545,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         finalAnswer = auditResult.answer;
         usedProvider = auditResult.provider;
         qualityReviewUsage = auditResult.usage;
-        if (auditResult.incomplete) qualityReviewWarning = language === "ar"
+        if (auditResult.incomplete) qualityReviewWarning = responseLanguage === "ar"
           ? "لم تكتمل مراجعة الجودة؛ احتفظت بالإجابة الكاملة بدل استبدالها بتصحيح ناقص."
           : "The quality review did not finish; the complete original answer was retained.";
       } catch (error) {
@@ -1554,8 +1555,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     let memorySaveWarning = "";
     const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
     if (shouldWarnExplicitMemoryNotSaved(latestCustomerRequest, explicitMemory)) {
-      memorySaveWarning = "لم أتمكن من حفظ المعلومة في الذاكرة؛ لم يتم تسجيلها."; 
-    }
+      memorySaveWarning = "لم أتمكن من حفظ المعلومة في الذاكرة؛ لم يتم تسجيلها.";
     }
     if (explicitMemory) {
       try {
