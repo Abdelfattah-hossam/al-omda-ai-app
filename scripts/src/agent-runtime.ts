@@ -13,6 +13,7 @@ import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js"
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
 import { isBlockedNetworkAddress } from "./network-safety.js";
+import { fetchPinned } from "./pinned-http.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -174,7 +175,7 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
   let response: Response | null = null;
   for (let hop = 0; hop < 4; hop++) {
-    response = await fetch(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) });
+    response = await fetchPinned(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) }, { allowPrivate: ALLOW_LOCAL_LAB_TARGETS, maxBytes: 50000, timeoutMs: 12000 });
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get("location");
     if (!location) break;
@@ -289,7 +290,7 @@ async function searchWeb(body: Json): Promise<Json> {
   const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
   await assertAllowedTarget(url.toString());
-  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY);
+  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, (input, init) => fetchPinned(input, init, { allowPrivate: false, maxBytes: 150000, timeoutMs: 12000 }));
   return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
 }
 
