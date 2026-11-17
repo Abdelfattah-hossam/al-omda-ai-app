@@ -378,7 +378,7 @@ components:
         text:
           type: string
           minLength: 1
-          maxLength: 1200
+          maxLength: 2000
         output:
           type: string
           maxLength: 1200
