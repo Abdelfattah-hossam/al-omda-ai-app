@@ -52,28 +52,49 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
   for (const item of value.files) {
     if (!item || typeof item !== "object") return null;
     const file = item as Record<string, unknown>;
-    if (typeof file.path !== "string" || !isSafeProjectPath(file.path) || new TextEncoder().encode(file.path).length > 180 ||
-      typeof file.content !== "string" || file.content.length > MAX_FILE_BYTES) return null;
+    if (typeof file.path !== "string" || typeof file.content !== "string") return null;
     const normalizedPath = file.path.normalize("NFKC");
+    if (normalizedPath !== file.path || !isSafeProjectPath(normalizedPath) ||
+      new TextEncoder().encode(normalizedPath).length > 180) return null;
+    const contentBytes = new TextEncoder().encode(file.content).length;
+    if (contentBytes > MAX_FILE_BYTES) return null;
     const key = normalizedPath.toLocaleLowerCase();
     if (seen.has(key)) return null;
     seen.add(key);
     if (SECRET_PATTERN.test(file.content)) return null;
-    totalBytes += new TextEncoder().encode(file.content).length;
+    totalBytes += contentBytes;
     if (totalBytes > MAX_TOTAL_BYTES) return null;
     files.push({ path: normalizedPath, content: file.content });
   }
 
   const byPath = new Map(files.map((file) => [file.path.toLowerCase(), file]));
-  const packageFile = byPath.get("package.json");
+  const packageFile = files.find((file) => file.path === "package.json");
   const readme = byPath.get("readme.md");
   if (!packageFile || !readme) return null;
   const packageJson = parseJsonObject(packageFile.content);
   if (!packageJson || !packageJson.scripts || typeof packageJson.scripts !== "object" || Array.isArray(packageJson.scripts)) return null;
   const scripts = packageJson.scripts as Record<string, unknown>;
   if (typeof scripts.build !== "string" || !scripts.build.trim()) return null;
-  if (["preinstall", "install", "postinstall", "prepare", "prepack", "postpack", "prepublish", "prepublishOnly"].some((name) => typeof scripts[name] === "string")) return null;
-  if (scripts.build.length > 300 || /\b(?:curl|wget|powershell|bash\s+-c|sh\s+-c|eval|rm\s+-rf|child_process|node\s+-e|python\s+-c)\b/i.test(scripts.build)) return null;
+  const scriptEntries = Object.entries(scripts);
+  const dangerousScript = /\b(?:curl|wget|powershell|bash\s+-c|sh\s+-c|eval|rm\s+-rf|child_process|node\s+-e|python\s+-c)\b/i;
+  if (scriptEntries.some(([name, command]) =>
+    /^(?:pre|post)/i.test(name) ||
+    typeof command !== "string" ||
+    command.length > 300 ||
+    dangerousScript.test(command)
+  )) return null;
+  const dependencyNames = new Set<string>();
+  for (const field of ["dependencies", "devDependencies"]) {
+    const dependencies = packageJson[field];
+    if (dependencies === undefined) continue;
+    if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) return null;
+    for (const [name, version] of Object.entries(dependencies as Record<string, unknown>)) {
+      if (typeof version !== "string" || !version.trim()) return null;
+      dependencyNames.add(name);
+    }
+  }
+  if (/\bvite\b/i.test(scripts.build) && !dependencyNames.has("vite")) return null;
+  if (/\btsc\b/i.test(scripts.build) && !dependencyNames.has("typescript")) return null;
 
   const isEntryPoint = (candidate: string) => /^(?:index\.html|src\/(?:main|index)\.[cm]?[jt]sx?|src\/app\/page\.[jt]sx?|app\/page\.[jt]sx?|pages\/index\.[jt]sx?)$/i.test(candidate);
   const detectedEntry = files.find((file) => isEntryPoint(file.path))?.path;
