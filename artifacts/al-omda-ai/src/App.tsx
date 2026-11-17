@@ -121,6 +121,32 @@ async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeTyp
   triggerArtifactDownload(blob, filename);
   await persistTaskArtifact(blob, filename, mimeType, projectId);
 }
+
+async function persistTaskDeliverable(result: string, projectId: string): Promise<boolean> {
+  if (result.startsWith("ALOMDA_HTML_APP:")) {
+    const html = result.slice("ALOMDA_HTML_APP:".length);
+    if (!html.trim()) return false;
+    await persistTaskArtifact(new Blob([html], { type: "text/html;charset=utf-8" }), "الموقع-أو-التطبيق.html", "text/html", projectId);
+    return true;
+  }
+  const word = getTaskWordDocument(result);
+  if (word) {
+    const rtl = /[\\u0590-\\u08ff]/.test(word.title + word.paragraphs.join(" ") + word.columns.join(" ") + word.rows.flat().join(" "));
+    await persistTaskArtifact(createDocxBlob(word, rtl), safeArtifactName(word.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
+    return true;
+  }
+  const workbook = getTaskSpreadsheet(result);
+  if (workbook) {
+    await persistTaskArtifact(createXlsxBlob(workbook), safeArtifactName(workbook.title, "AL-OMDA-workbook") + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", projectId);
+    return true;
+  }
+  const presentation = getTaskPresentation(result);
+  if (presentation) {
+    await persistTaskArtifact(createPptxBlob(presentation), safeArtifactName(presentation.title, "AL-OMDA-presentation") + ".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", projectId);
+    return true;
+  }
+  return false;
+}
 async function downloadTaskHtml(data: { title: string; html: string }, projectId?: string): Promise<void> {
   const filename = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
   const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
@@ -843,6 +869,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const data = await response.json().catch(()=>({}));
       if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تنفيذ الخطوة.' : 'Could not execute this step.'));
       if (typeof data.result !== 'string' || !data.result.trim()) throw new Error(isAr ? 'لم يصل مخرج صالح من الذكاء الاصطناعي.' : 'The AI returned no usable deliverable.');
+      // A generated project file is saved to the private Assets workspace automatically.
+      // Keep the successfully completed stage even if the separate file upload fails.
+      try {
+        await persistTaskDeliverable(data.result, task.id);
+      } catch (artifactError) {
+        const detail = artifactError instanceof Error ? artifactError.message : '';
+        setWorkspaceError(isAr
+          ? 'تم تنفيذ المرحلة وحفظ نتيجتها، لكن تعذر حفظ الملف في الأصول. يمكنك إعادة حفظه من بطاقة المرحلة. ' + detail
+          : 'The stage completed and its result was saved, but the file could not be added to Assets. You can save it again from the stage card. ' + detail);
+      }
       setSaved(prev=>({...prev,tasks:prev.tasks.map(item=>item.id===task.id?{...item,steps:item.steps.map(current=>current.id===step.id?{...current,result:data.result,executedAt:data.executedAt,executionStatus:"succeeded",executionError:undefined}:current)}:item)}));
       return { result:data.result, executedAt:data.executedAt };
     } catch(error) {
