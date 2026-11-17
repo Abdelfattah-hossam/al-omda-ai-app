@@ -15,6 +15,7 @@ export function resolveWorkspaceUploadMime(filename: string, browserMime: string
   const expected = WORKSPACE_UPLOAD_MIME_BY_EXTENSION[extension];
   if (!expected) return null;
   const reported = browserMime.split(";")[0].trim().toLowerCase();
-  if (!reported || reported === expected || GENERIC_BROWSER_MIME_TYPES.has(reported)) return expected;
+  if (!reported || reported === expected || reported === "application/octet-stream") return expected;
+  if (GENERIC_BROWSER_MIME_TYPES.has(reported) && (extension === "zip" || extension === "docx" || extension === "xlsx" || extension === "pptx")) return expected;
   return null;
 }
