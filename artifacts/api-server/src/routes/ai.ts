@@ -591,7 +591,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
     const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
-    const requestedSlideCountMatch = customerRequest.normalize("NFKC").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).match(/(?:^|\\D)(\\d{1,2})\\s*(?:slides?|شرائح|شريحة)/i);
+    const requestedSlideCountMatch = customerRequest.normalize("NFKC").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).match(/(?:^|\D)(\d{1,2})\s*(?:slides?|شرائح|شريحة)/i);
     const requestedSlideCount = requestedSlideCountMatch ? Number(requestedSlideCountMatch[1]) : null;
     const isRequestedSlideCountValid = (presentation: ReturnType<typeof parsePowerPointPresentation>) =>
       Boolean(presentation && (!requestedSlideCount || presentation.slides.length === requestedSlideCount));
