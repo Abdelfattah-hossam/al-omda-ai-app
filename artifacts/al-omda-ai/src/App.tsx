@@ -1744,7 +1744,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
     const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
     return <div className="page-enter">
-      {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span>)}
+      {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-primary button-small" onClick={()=>{setSelectedTaskId(null);setRequest('');setLocation(focusedHref('/workbench','request-input'));}} data-testid="button-new-project"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</button><span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span></div>)}
       <ol className="workbench-flow" aria-label={isAr?'مراحل تنفيذ المهمة':'Task workflow'}>
         <li className="workbench-flow-step" data-stage={workflowStage===0?'current':workflowStage>0?'complete':'upcoming'}><span>01</span><div><strong>{isAr?'اكتب الطلب':'Describe'}</strong><small>{isAr?'حدد المطلوب والتخصص':'Set the goal and specialty'}</small></div></li>
         <li className="workbench-flow-step" data-stage={workflowStage===1?'current':workflowStage>1?'complete':'upcoming'}><span>02</span><div><strong>{isAr?'راجع الخطة':'Review plan'}</strong><small>{isAr?'افحص الخطوات والمخرجات':'Check steps and deliverables'}</small></div></li>
