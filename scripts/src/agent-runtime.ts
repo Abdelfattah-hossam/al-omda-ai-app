@@ -1191,8 +1191,9 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
     if (state.pendingToolCalls?.length) {
-      return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })) };
+      return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), ...summarizeAgentToolFailures(state.toolFailures || []) };
     }
+    state.toolFailures = [];
     await saveAgentState(id, state);
     return await runAgentLoop(id, state, onProgress);
   });
