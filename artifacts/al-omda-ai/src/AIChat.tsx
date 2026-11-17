@@ -908,7 +908,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
               : "";
         const serverMessage = typeof data.message === "string" ? data.message : "";
         const reply = statusReply
-          ? statusReply + (serverMessage && serverMessage !== statusReply ? "\\n\\n" + serverMessage : "")
+          ? statusReply + (serverMessage && serverMessage !== statusReply ? "\n\n" + serverMessage : "")
           : (serverMessage || (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished."));
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(toolFailures.length ? { toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
