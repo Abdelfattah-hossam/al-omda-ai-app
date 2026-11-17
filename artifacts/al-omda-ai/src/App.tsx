@@ -1077,6 +1077,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [tasks, commandQuery, isAr]);
   const label = (id:Specialty) => t(specialtyKey(id));
   const count = (task:Task) => task.steps.filter((step) => step.state === 'approved').length;
+  const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && Boolean(step.result)).length;
 
   const pageHeading = (eyebrow:string, title:string, subtitle:string, action?:ReactNode) => <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1 className="page-title">{title}</h1><p className="page-subtitle">{subtitle}</p></div>{action}</div>;
   const taskIcon = (id:Specialty, size=17) => {
@@ -2028,8 +2029,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="section-head"><span className="task-icon">{taskIcon(task.specialty,18)}</span>{statusBadge(task.status)}</div>
           <h2 className="section-title" style={{fontSize:14,margin:'8px 0'}}>{task.title}</h2>
           <p className="page-subtitle" style={{minHeight:42}}>{task.request.slice(0,150)}{task.request.length>150?'…':''}</p>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:17}}><span className="section-meta">{label(task.specialty)}</span><strong style={{fontSize:11}}>{task.steps.length?Math.round(count(task)/task.steps.length*100):0}%</strong></div>
-          <div className="task-detail-progress-track" style={{marginTop:8}}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:17}}><span className="section-meta">{label(task.specialty)}</span><strong style={{fontSize:11}}>{task.steps.length?Math.round(executionCount(task)/task.steps.length*100):0}%</strong></div>
+          <div className="task-detail-progress-track" style={{marginTop:8}}><span style={{width:(task.steps.length?executionCount(task)/task.steps.length*100:0)+'%'}}/></div>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginTop:15}}><span className="section-meta">{dateLabel(task.createdAt,language)}</span><Link href={focusedHref('/history/'+task.id,'task-plan')} className="button button-quiet button-small">{isAr?'فتح المشروع':'Open project'} <ArrowLeft size={13}/></Link></div>
         </article>)}
       </div>:<div className="panel plan-empty"><div><span className="empty-mark"><BriefcaseBusiness size={21}/></span><h3>{isAr?'لا توجد مشاريع مطابقة':'No matching projects'}</h3><p>{isAr?'أنشئ مشروعًا جديدًا أو غيّر عوامل التصفية.':'Create a project or adjust the filters.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link></div></div>}
@@ -2052,7 +2053,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div style={{display:'grid',gap:9}}>
             {column.tasks.map(task=><Link key={task.id} href={focusedHref('/history/'+task.id,'task-plan')} className="panel" style={{display:'block',padding:13,textDecoration:'none',color:'inherit'}}>
               <strong style={{display:'block',fontSize:12,marginBottom:7}}>{task.title}</strong>
-              <span className="section-meta">{label(task.specialty)} · {count(task)}/{task.steps.length} {isAr?'خطوات معتمدة':'approved steps'}</span>
+              <span className="section-meta">{label(task.specialty)} · {executionCount(task)}/{task.steps.length} {isAr?'خطوات منفذة':'completed steps'}</span>
               <div className="task-detail-progress-track" style={{marginTop:11}}><span style={{width:(task.steps.length?count(task)/task.steps.length*100:0)+'%'}}/></div>
             </Link>)}
             {column.tasks.length===0&&<div className="plan-empty" style={{padding:18,textAlign:'center'}}><span className="section-meta">{isAr?'لا توجد مشاريع هنا':'No projects in this stage'}</span></div>}
