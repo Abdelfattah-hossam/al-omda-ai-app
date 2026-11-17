@@ -21,12 +21,12 @@ function isInformationRequest(value: string): boolean {
   return false;
 }
 
-const PROJECT_BUILD_VERB_PATTERN = /(?:اعمل|اعملي|اعمللي|تعمل|تعملي|تعمللي|اعملوا|انشئ|انشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|صمملي|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|جهز|جهزلي|جهز\s+لي|سوي|سويلي|سوي\s+لي|build|create|develop|make|implement|start|design|prepare|generate|write|export)/i;
+const PROJECT_BUILD_VERB_PATTERN = /(?:اعمل|اعملي|اعمللي|تعمل|تعملي|تعمللي|اعملوا|انشئ|انشاء|ابني|ابنيلي|بناء|نفذ|تنفيذ|صمم|صمملي|طور|تطوير|برمج|ابدا|اشتغل على|كمل بناء|جهز|جهزلي|اكتب|اكتبلي|جهز\s+لي|سوي|سويلي|سوي\s+لي|build|create|develop|make|implement|start|design|prepare|generate|write|export)/i;
 const DIRECT_PROJECT_REQUEST_PATTERN = /(?:عايز|عاوز|محتاج|اريد)\s+(?:(?:اعمل|اعمللي|انشئ|انشاء|ابني|بناء|نفذ|صمم|طور|جهز|سوي)\s+)?(?:مشروع(?:\s+جديد)?|تطبيق|ابلكيشن|موقع(?:\s+الكتروني)?|برنامج|متجر(?:\s+الكتروني)?|نظام|منصة|لعبة|(?:ملف|مستند|وثيقة)\s*(?:وورد|اكسل|اكسيل|بوربوينت|pdf|word|excel|powerpoint|docx|xlsx|pptx)|مصنف|جدول\s*(?:اكسل|اكسيل|excel)|عرض\s+تقديمي|تقرير|website|web app|mobile app|application|software|project|store|platform|system|excel\s+spreadsheet|word\s+document|powerpoint\s+presentation|spreadsheet|workbook|presentation|report)/i;
 const VAGUE_BARE_DELIVERABLE_PATTERN = /^(?:report|file|document|spreadsheet|workbook|presentation)$/i;
 const VAGUE_BARE_ARABIC_DELIVERABLE_PATTERN = /^(?:(?:عايز|عاوز|محتاج|اريد)\s+(?:لي\s*)?|(?:اعمل|اعملي|جهز|جهزلي|اكتب|اكتبلي)\s+(?:لي\s*)?)(?:تقرير|ملف|مستند|وثيقة|عرض تقديمي|مصنف)$/i;
-const STANDALONE_DOCUMENT_REQUEST_PATTERN = /^(?:(?:please|kindly)\s+)?(?:write|prepare|generate|create|make)\s+(?:a|an)\s+(?:report|file|document|spreadsheet|workbook|presentation)\b/i;
-const STANDALONE_ARABIC_DOCUMENT_REQUEST_PATTERN = /^(?:اكتب|اكتبلي|جهز|جهزلي|اعمل|اعملي)\s+(?:لي\s*)?(?:تقرير|ملف|مستند|وثيقة|عرض\s+تقديمي|مصنف|جدول)\b/i;
+const STANDALONE_DOCUMENT_REQUEST_PATTERN = /^(?:(?:please|kindly)\s+)?(?:write|prepare|generate|create|make)\s+(?:a|an)\s+(?:report|file|document|spreadsheet|workbook|presentation)\s*$/i;
+const STANDALONE_ARABIC_DOCUMENT_REQUEST_PATTERN = /^(?:اكتب|اكتبلي|جهز|جهزلي|اعمل|اعملي)\s+(?:لي\s*)?(?:تقرير|ملف|مستند|وثيقة|عرض\s+تقديمي|مصنف|جدول)\s*$/i;
 export function detectProjectSpecialty(request: string): ProjectSpecialty | null {
   const value = normalizeProjectRequest(request);
   if (!value || isNegatedProjectRequest(value)) return null;
