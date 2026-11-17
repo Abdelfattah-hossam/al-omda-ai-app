@@ -49,7 +49,8 @@ test("rejects path traversal, absolute paths, duplicate paths, and environment s
 
 test("allows placeholder env examples but rejects nested env files and install hooks", () => {
   const example = validProject();
-  example.files.push({ path: ".env.example", content: "PUBLIC_API_URL=https://example.invalid\\nAPI_KEY=\\"YOUR_API_KEY_HERE\\"" });
+  example.files.push({ path: ".env.example", content: `PUBLIC_API_URL=https://example.invalid
+API_KEY="YOUR_API_KEY_HERE"` });
   assert.ok(parseCodeProjectArtifact(JSON.stringify(example)));
   const nestedEnv = validProject();
   nestedEnv.files.push({ path: "src/.env.local", content: "TOKEN=placeholder" });
