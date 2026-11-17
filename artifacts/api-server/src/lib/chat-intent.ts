@@ -31,23 +31,23 @@ function isComparisonOnlyRequest(text: string): boolean {
 type OfficeFormat = "word" | "excel" | "powerpoint";
 
 const OFFICE_EXPORT_TARGETS: Record<OfficeFormat, RegExp> = {
-  word: /\\b(?:word|docx?|document)\\b|وورد|مستند/i,
-  excel: /\\b(?:excel|xlsx|spreadsheet|workbook)\\b|إكسل|اكسيل|اكسل|شيت/i,
-  powerpoint: /\\b(?:powerpoint|power\\s*point|pptx|presentation|slide\\s*deck)\\b|عرض\\s*(?:تقديمي|بوربوينت)|بوربوينت|شرائح/i,
+  word: /\b(?:word|docx?|document)\b|وورد|مستند/i,
+  excel: /\b(?:excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل|شيت/i,
+  powerpoint: /\b(?:powerpoint|power\s*point|pptx|presentation|slide\s*deck)\b|عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|شرائح/i,
 };
 
 /** Only treat an office format as an export target when it follows an explicit export verb in the same sentence. */
 function hasExplicitOfficeFileExport(text: string, format: OfficeFormat): boolean {
-  return text.split(/[.!?؟;\\n]+/).some((clause) => {
-    const exportVerb = /\\b(?:export|download|save)\\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.test(clause);
-    const targetPhrase = /\\b(?:as|to|in)\\s+(?:a\\s+|an\\s+)?/i.test(clause) || /(?:بصيغة|كملف|بامتداد)\\s*/i.test(clause);
+  return text.split(/[.!?؟;\n]+/).some((clause) => {
+    const exportVerb = /\b(?:export|download|save)\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.test(clause);
+    const targetPhrase = /\b(?:as|to|in)\s+(?:a\s+|an\s+)?/i.test(clause) || /(?:بصيغة|كملف|بامتداد)\s*/i.test(clause);
     return exportVerb && targetPhrase && OFFICE_EXPORT_TARGETS[format].test(clause);
   });
 }
 
 function hasExplicitSourceFileExport(text: string): boolean {
-  return /\\b(?:export|download|save)\\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.test(text) &&
-    /\\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\\b/i.test(text);
+  return /\b(?:export|download|save)\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.test(text) &&
+    /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\b/i.test(text);
 }
 
 export function isExcelFileRequest(request: string): boolean {
@@ -65,10 +65,10 @@ export function isExcelFileRequest(request: string): boolean {
 export function isPowerPointFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "excel") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "powerpoint"))) return false;
-  const mentionsPresentation = /(?:powerpoint|power\\s*point|pptx|عرض\\s*(?:تقديمي|بوربوينت)|presentation|slide\\s*deck|شرائح)/i.test(text);
+  const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
   if (!mentionsPresentation) return false;
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
-  const directlyRequestsPresentation = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:لي\\s*)?(?:عرض\\s*(?:تقديمي|بوربوينت)|بوربوينت|powerpoint(?:\\s+presentation)?|presentation|pptx|slide\\s*deck)/i.test(text);
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
+  const directlyRequestsPresentation = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|powerpoint(?:\s+presentation)?|presentation|pptx|slide\s*deck)/i.test(text);
   return asksToCreate || directlyRequestsPresentation;
 }
 
@@ -76,10 +76,10 @@ export function isPowerPointFileRequest(request: string): boolean {
 export function isWordFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "excel") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "word"))) return false;
-  const mentionsWordFormat = /(?:و?ورد|\\bword\\b|\\bdocx?\\b)/i.test(text);
+  const mentionsWordFormat = /(?:و?ورد|\bword\b|\bdocx?\b)/i.test(text);
   const namesFileDeliverable = /(?:ملف|مستند|document|file|docx?)/i.test(text);
-  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\\s+لي|تعمل|تعملي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(text);
-  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\\s*(?:لي\\s*)?(?:ملف|مستند|document|file)/i.test(text);
+  const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(text);
+  const directlyRequestsFile = /(?:عايز|عاوز|محتاج|اريد|أريد)\s*(?:لي\s*)?(?:ملف|مستند|document|file)/i.test(text);
   return mentionsWordFormat && namesFileDeliverable && (asksToCreate || directlyRequestsFile);
 }
 
@@ -103,11 +103,11 @@ export function isStandaloneGreeting(request: string): boolean {
 export function isExplicitSourceCodeFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
   if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || (isComparisonOnlyRequest(text) && !hasExplicitSourceFileExport(text))) return false;
-  const hasSourceExtension = /\\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\\b/i.test(text);
-  const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
-  const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\\s*code)/i.test(text);
-  const explicitlyInline = /\\b(?:inline\\s+code|code\\s+inline|inline\\s+(?:in|within)\\s+(?:the\\s+)?chat|in\\s+(?:the\\s+)?chat|directly\\s+in\\s+(?:the\\s+)?chat|not\\s+as\\s+(?:a\\s+)?file|without\\s+(?:a\\s+)?file|no\\s+file)\\b|مش\\s+كملف|بدون\\s+ملف|داخل\\s+المحادثة|في\\s+الشات/i.test(text);
-  const explicitFileIntent = hasSourceExtension || /\\b(?:file|script|download|export|save)\\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
+  const hasSourceExtension = /\.(?:py|mjs|cjs|js|ts|tsx|jsx|css|sql|java|cpp|c|cs|go|rs|php|rb|sh|html)\b/i.test(text);
+  const asksToCreateOrExport = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|احفظ|نزّل|نزل|حمّل|حمل|صدّر|صدر|create|write|generate|make|prepare|save|download|export)/i.test(text);
+  const namesSourceFile = /(?:ملف|file|script|سكريبت|كود|code|source\s*code)/i.test(text);
+  const explicitlyInline = /\b(?:inline\s+code|code\s+inline|inline\s+(?:in|within)\s+(?:the\s+)?chat|in\s+(?:the\s+)?chat|directly\s+in\s+(?:the\s+)?chat|not\s+as\s+(?:a\s+)?file|without\s+(?:a\s+)?file|no\s+file)\b|مش\s+كملف|بدون\s+ملف|داخل\s+المحادثة|في\s+الشات/i.test(text);
+  const explicitFileIntent = hasSourceExtension || /\b(?:file|script|download|export|save)\b|ملف|سكريبت|للتحميل|احفظه|احفظ|نزّل|نزل|حمّل|حمل/i.test(text);
   return asksToCreateOrExport && (namesSourceFile || hasSourceExtension) && explicitFileIntent && !explicitlyInline;
 }
 
