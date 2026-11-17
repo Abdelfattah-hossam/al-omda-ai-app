@@ -20,7 +20,8 @@ function isSafeProjectPath(path: string): boolean {
   const parts = path.split("/");
   if (parts.some((part) => !part || part === "." || part === "..")) return false;
   if (/^(?:node_modules|\.git|dist|build)(?:\/|$)/i.test(path)) return false;
-  if (/^(?:\.env|\.env\.(?!example$))/i.test(path)) return false;
+  const baseName = parts[parts.length - 1].toLocaleLowerCase();
+  if (baseName === ".env" || (baseName.startsWith(".env.") && baseName !== ".env.example")) return false;
   if (/\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(path)) return false;
   return /^[\p{L}\p{N}._@+/-]+$/u.test(path);
 }
@@ -68,7 +69,8 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
   if (!packageJson || !packageJson.scripts || typeof packageJson.scripts !== "object" || Array.isArray(packageJson.scripts)) return null;
   const scripts = packageJson.scripts as Record<string, unknown>;
   if (typeof scripts.build !== "string" || !scripts.build.trim()) return null;
-  if (["preinstall", "install", "postinstall"].some((name) => typeof scripts[name] === "string" && /\b(?:curl|wget|powershell|rm\s+-rf|child_process|node\s+-e)\b/i.test(String(scripts[name])))) return null;
+  if (["preinstall", "install", "postinstall"].some((name) => typeof scripts[name] === "string")) return null;
+  if (scripts.build.length > 300 || /\b(?:curl|wget|powershell|rm\s+-rf|child_process|node\s+-e)\b/i.test(scripts.build)) return null;
 
   const detectedEntry = files.find((file) => /^(?:index\.html|src\/(?:main|index)\.[cm]?[jt]sx?|src\/app\/page\.[jt]sx?|app\/page\.[jt]sx?|pages\/index\.[jt]sx?)$/i.test(file.path))?.path;
   const entryPoint = typeof value.entryPoint === "string" && byPath.has(value.entryPoint.toLowerCase()) ? value.entryPoint : detectedEntry;
