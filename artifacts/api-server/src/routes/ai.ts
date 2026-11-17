@@ -3,7 +3,7 @@ import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneG
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
-import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
+import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import {
@@ -591,8 +591,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
     const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
-    const requestedSlideCountMatch = customerRequest.normalize("NFKC").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).match(/(?:^|\D)(\d{1,2})\s*(?:slides?|شرائح|شريحة)/i);
-    const requestedSlideCount = requestedSlideCountMatch ? Number(requestedSlideCountMatch[1]) : null;
+    const requestedSlideCount = getRequestedPowerPointSlideCount(customerRequest);
     const isRequestedSlideCountValid = (presentation: ReturnType<typeof parsePowerPointPresentation>) =>
       Boolean(presentation && (!requestedSlideCount || presentation.slides.length === requestedSlideCount));
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
