@@ -17,3 +17,12 @@ test("does not duplicate tool calls already present in assistant history", () =>
   ensureAssistantToolCallMessage(messages, [call]);
   assert.equal(messages.length, 1);
 });
+
+test("merges missing tool calls into the existing assistant batch", () => {
+  const first = { id: "call-1", type: "function", function: { name: "files.read", arguments: "{}" } };
+  const second = { id: "call-2", type: "function", function: { name: "files.write", arguments: "{}" } };
+  const messages: Array<Record<string, unknown>> = [{ role: "assistant", content: "", tool_calls: [first] }];
+  ensureAssistantToolCallMessage(messages, [first, second]);
+  assert.equal(messages.length, 1);
+  assert.deepEqual((messages[0].tool_calls as unknown[]).map((call) => (call as { id: string }).id), ["call-1", "call-2"]);
+});
