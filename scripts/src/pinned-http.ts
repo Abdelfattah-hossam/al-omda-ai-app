@@ -36,26 +36,28 @@ export async function fetchPinned(
   const url = input instanceof URL ? new URL(input.toString()) : new URL(input);
   if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Only HTTP and HTTPS targets are supported.");
   if (url.username || url.password) throw new Error("URL credentials are not allowed.");
+  const hostname = url.hostname.replace(/^\\[|\\]$/g, "");
   const method = (init.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("Pinned fetch supports only GET, HEAD, and OPTIONS.");
   const allowPrivate = options.allowPrivate === true;
   const maxBytes = Math.max(1, options.maxBytes ?? 150000);
   const timeoutMs = Math.max(1, options.timeoutMs ?? 12000);
   const resolver = options.resolveAddresses ?? defaultResolveAddresses;
-  const addresses = await resolveTargetAddresses(url.hostname, allowPrivate, resolver);
+  const addresses = await resolveTargetAddresses(hostname, allowPrivate, resolver);
   const pinned = addresses[0];
   const requestFn = url.protocol === "https:" ? httpsRequest : httpRequest;
   const headers = new Headers(init.headers);
   const requestOptions: RequestOptions = {
     protocol: url.protocol,
-    hostname: url.hostname,
+    hostname,
     port: url.port || (url.protocol === "https:" ? 443 : 80),
     path: url.pathname + url.search,
     method,
+    servername: url.protocol === "https:" && !isIP(hostname) ? hostname : undefined,
     headers: Object.fromEntries(headers.entries()),
     agent: false,
     lookup: ((hostname: string, lookupOptions: { all?: boolean }, callback: (error: NodeJS.ErrnoException | null, address: string | Array<{ address: string; family: number }>, family?: number) => void) => {
-      if (hostname.toLowerCase() !== url.hostname.toLowerCase()) {
+      if (hostname.toLowerCase() !== url.hostname.replace(/^\\[|\\]$/g, "").toLowerCase()) {
         callback(new Error("Unexpected hostname during pinned connection.") as NodeJS.ErrnoException, "");
         return;
       }
