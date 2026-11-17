@@ -1121,6 +1121,23 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <Icon size={17} strokeWidth={1.8}/><span>{t(item.key)}</span>
     </Link>;
   };
+  const commandNavigationMatches = useMemo(() => {
+    const needle = commandQuery.trim().toLocaleLowerCase();
+    const entries = [
+      { path:'/', ar:'لوحة التحكم', en:'Dashboard' },
+      { path:'/projects', ar:'المشاريع', en:'Projects' },
+      { path:'/pipeline', ar:'مسار العمل', en:'Pipeline' },
+      { path:'/assets', ar:'الأصول والملفات', en:'Assets and files' },
+      { path:'/workbench', ar:'مشروع جديد', en:'New project' },
+      { path:'/history', ar:'سجل المهام', en:'Task history' },
+      { path:'/ai', ar:'المحادثات', en:'Chats' },
+      { path:'/agents', ar:'شبكة الوكلاء', en:'Agent network' },
+      { path:'/ai/usage', ar:'الاستخدام والحصص', en:'Usage and quota' },
+      { path:'/profile', ar:'الإعدادات', en:'Settings' },
+      ...Object.entries(platformStatusPages).map(([path, info])=>({path,ar:info.ar,en:info.en})),
+    ];
+    return entries.filter(item=>!needle||((item.ar+' '+item.en).toLocaleLowerCase().includes(needle))).slice(0,12);
+  }, [commandQuery, isAr]);
   const commandMatches = useMemo(() => {
     const needle = commandQuery.trim().toLocaleLowerCase();
     const realTasks = tasks.filter(task=>!task.demo);
@@ -2384,7 +2401,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </section>
         <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
-          <nav className="nav-stack">{navItems.filter(item=>['/agents','/ai/usage'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+          <nav className="nav-stack">
+            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass},{path:'/ai/usage',label:isAr?'الاستخدام والحصص':'Usage & Quota',icon:Activity}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
@@ -2423,13 +2442,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </main>
     {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
       <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
-        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في المشاريع والمخرجات...':'Search projects and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
+        <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في الأقسام والمشاريع والمخرجات...':'Search sections, projects, and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>
         <div className="section-meta" style={{padding:'5px 3px 10px'}}>{isAr?'نتائج من البيانات المتاحة حاليًا':'Results from currently available workspace data'}</div>
         <div style={{display:'grid',gap:6}}>
+          {commandNavigationMatches.map(item=><Link key={item.path} href={item.path==='/workbench'?focusedHref(item.path,'request-input'):item.path==='/projects'?focusedHref(item.path,'history-list'):item.path==='/pipeline'?focusedHref(item.path,'pipeline-board'):item.path==='/assets'?focusedHref(item.path,'assets-list'):item.path==='/history'?focusedHref(item.path,'history-list'):item.path==='/profile'?focusedHref(item.path,'profile-account-card'):item.path} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:44,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
+            <span className="task-icon"><Search size={15}/></span><span className="task-main"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?'فتح القسم':'Open section'}</small></span><ArrowLeft size={14} className="muted"/>
+          </Link>)}
           {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
             <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
           </Link>)}
-          {commandMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+          {commandMatches.length===0&&commandNavigationMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
         </div>
         <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
       </section>
