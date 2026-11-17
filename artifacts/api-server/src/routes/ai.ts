@@ -628,7 +628,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "The files array must contain 3–60 objects, each exactly {path, content}. Include package.json with a safe build script, README.md with setup/build/test instructions, index.html, and a real application entry point such as src/main.tsx plus src/App.tsx. Add all required styles, components, routes, and configuration files so the project forms one coherent application.",
       "For an e-commerce or marketplace request, build distinct pages/components for the storefront, product detail, cart, checkout demo, account UI, and admin dashboard as requested. Use original branding, never copy another company's logo/trade dress, and label demo data and simulated checkout clearly. Do not claim real payment, inventory, account, or server persistence without a configured backend.",
       "Use a suitable free/open-source stack such as Vite + React + TypeScript. If a backend is requested, include its source, API routes, data schema/migrations, and a .env.example containing placeholders only. Never include real API keys, passwords, tokens, private keys, .env files, node_modules, build output, or install lifecycle scripts.",
-      "All file paths must be relative and safe. Keep the complete project within 60 files and 350 KB of text. Include working code, not TODO-only placeholders. Use only the original customer request and approved prior step outputs; do not invent real products, prices, stock, statistics, or business data. Clearly label any illustrative demo data.",
+      "All file paths must be relative and safe. Keep the complete project within 60 files and 200 KB of text. Include working code, not TODO-only placeholders. Use only the original customer request and approved prior step outputs; do not invent real products, prices, stock, statistics, or business data. Clearly label any illustrative demo data.",
       "Set entryPoint to an existing main entry file. package.json must contain a safe scripts.build command; include scripts.test when meaningful. The hosted pipeline does not execute npm install, build, or tests, so never claim they passed: the result will explicitly show buildStatus and testStatus as not_run.",
       "Original customer request: " + customerRequest,
       "Approved step: " + step.text,
@@ -791,7 +791,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     if (codeProjectStep && !validatedCodeProject) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the multi-file software project. Return ONLY valid JSON with title, framework, entryPoint, and files [{path,content}].",
-        "Include package.json with a safe build script, README.md, index.html, and a real app entry point. Use 3–60 safe relative file paths, no .env or secrets, no install lifecycle scripts, and keep total text under 350 KB.",
+        "Include package.json with a safe build script, README.md, index.html, and a real app entry point. Use 3–60 safe relative file paths, no .env or secrets, no install lifecycle scripts, and keep total text under 200 KB.",
         "Do not return a single HTML document, Word content, Markdown fences, or an explanation. Build/test have not been run; do not claim otherwise.",
         "Original customer request: " + customerRequest,
         "Approved step: " + step.text,
