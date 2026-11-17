@@ -28,3 +28,12 @@ test("returns unknown when no positive generation interval is available", () => 
   addThroughputSample(result, 0, 0);
   assert.equal(calculateTokensPerSecond(result), null);
 });
+
+test("rejects negative and non-finite usage samples", () => {
+  for (const [tokens, duration] of [[-5, 100], [10, Number.NaN], [10, Number.POSITIVE_INFINITY], [10, -1]] as const) {
+    const result = createThroughputAccumulator();
+    addThroughputSample(result, tokens, duration);
+    assert.equal(result.hasCompleteUsage, false);
+    assert.equal(calculateTokensPerSecond(result), null);
+  }
+});
