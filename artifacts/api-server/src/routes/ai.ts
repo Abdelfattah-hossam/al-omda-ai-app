@@ -19,6 +19,23 @@ const router: IRouter = Router();
 const DAILY_LIMIT = 1000;
 type ChatMessage = { role: "user" | "assistant"; content: string; image?: { mimeType: string; data: string } };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
+type ModelTokenUsage = { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+type ProviderAnswer = { text: string; model: string; usage?: ModelTokenUsage };
+
+function readModelTokenUsage(payload: any): ModelTokenUsage | undefined {
+  const usage = payload?.usage && typeof payload.usage === "object" ? payload.usage
+    : payload?.usageMetadata && typeof payload.usageMetadata === "object" ? payload.usageMetadata
+    : undefined;
+  if (!usage) return undefined;
+  const promptTokens = Number(usage.prompt_tokens ?? usage.promptTokenCount);
+  const completionTokens = Number(usage.completion_tokens ?? usage.candidatesTokenCount);
+  const totalTokens = Number(usage.total_tokens ?? usage.totalTokenCount);
+  const result: ModelTokenUsage = {};
+  if (Number.isFinite(promptTokens) && promptTokens >= 0) result.promptTokens = promptTokens;
+  if (Number.isFinite(completionTokens) && completionTokens >= 0) result.completionTokens = completionTokens;
+  if (Number.isFinite(totalTokens) && totalTokens >= 0) result.totalTokens = totalTokens;
+  return Object.keys(result).length ? result : undefined;
+}
 
 async function currentUsage(accessToken: string): Promise<Usage> {
   const response = await supabaseFetch("/rest/v1/rpc/get_ai_daily_usage", {
@@ -206,7 +223,7 @@ function chooseProviders(messages: ChatMessage[]) {
   return order.filter((provider) => configured[provider as keyof typeof configured]);
 }
 
-async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callGroq(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) throw new Error("Groq is not configured.");
 
@@ -244,10 +261,10 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
   const raw = payload?.choices?.[0]?.message?.content;
   const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
   if (!text) throw new Error("Groq returned an empty response.");
-  return { text, model: payload?.model || model };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
 }
 
-async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callGemini(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("Gemini is not configured.");
   // Every entry below is listed on Google's Standard Free Tier. Try a different
@@ -296,7 +313,7 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model };
+      return { text, model, usage: readModelTokenUsage(payload) };
     } catch (error) {
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
@@ -380,7 +397,7 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
   return [...selected, "openrouter/free"];
 }
 
-async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
+async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OpenRouter is not configured.");
   const candidates = await getOpenRouterModelOrder(messages, excludeModel);
@@ -414,7 +431,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model: payload?.model || model };
+      return { text, model: payload?.model || model, usage: readModelTokenUsage(payload) };
     } catch (error) {
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
@@ -422,7 +439,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
   throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
-async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<ProviderAnswer> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
   const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
   if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
@@ -455,7 +472,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
   return { text, model: payload?.model || model };
 }
 
-async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
+async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<ProviderAnswer> {
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
   if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
@@ -1464,6 +1481,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       });
       return;
     }
+    let qualityReviewUsage: ModelTokenUsage = {};
     if (shouldAuditChatRequest(latestCustomerRequest)) {
       try {
         const containsImages = modelConversation.some((message) => Boolean(message.image));
@@ -1484,7 +1502,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
           ];
           const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory);
           const issues = parseHostedAuditIssues(reviewAnswer.text);
-          if (!issues.length) return { answer, provider: usedProvider };
+          if (!issues.length) return { answer, provider: usedProvider, usage: reviewAnswer.usage || {} };
           const refinementMessages: ChatMessage[] = [
             ...modelConversation,
             { role: "user", content: [
@@ -1495,10 +1513,19 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
             ].join("\n") }
           ];
           const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory);
-          return refined.text.trim() ? { answer: refined, provider: reviewProvider } : { answer, provider: usedProvider };
+          return refined.text.trim() ? {
+            answer: refined,
+            provider: reviewProvider,
+            usage: {
+              promptTokens: (reviewAnswer.usage?.promptTokens || 0) + (refined.usage?.promptTokens || 0),
+              completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
+              totalTokens: (reviewAnswer.usage?.totalTokens || 0) + (refined.usage?.totalTokens || 0),
+            },
+          } : { answer, provider: usedProvider, usage: reviewAnswer.usage || {} };
         });
         answer = auditResult.answer;
         usedProvider = auditResult.provider;
+        qualityReviewUsage = auditResult.usage;
       } catch (error) {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
@@ -1523,7 +1550,12 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         console.warn("[Explicit AI memory save failed]", error instanceof Error ? error.message : "Unknown error");
       }
     }
-    res.json({ reply: memorySaveWarning ? answer.text + "\\n\\n" + memorySaveWarning : answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
+    const responseUsage = {
+      ...latestUsage,
+      ...(answer.usage ? { modelTokens: answer.usage } : {}),
+      ...(Object.keys(qualityReviewUsage).length ? { qualityReviewTokens: qualityReviewUsage } : {}),
+    };
+    res.json({ reply: memorySaveWarning ? answer.text + "\\n\\n" + memorySaveWarning : answer.text, provider: usedProvider, model: answer.model, usage: responseUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");
