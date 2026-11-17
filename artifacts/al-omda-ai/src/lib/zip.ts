@@ -35,9 +35,12 @@ export function createZipBlob(files: ZipSourceFile[]): Blob {
   for (const file of files) {
     if (!file || typeof file.path !== "string" || typeof file.content !== "string" ||
       !file.path || file.path.startsWith("/") || file.path.includes("\\") ||
-      file.path.split("/").some((part) => !part || part === "." || part === "..")) {
+      file.path.split("/").some((part) => !part || part === "." || part === ".." ||
+        ["node_modules", ".git", "dist", "build", ".env"].includes(part.toLocaleLowerCase()) ||
+        (part.toLocaleLowerCase().startsWith(".env.") && part.toLocaleLowerCase() !== ".env.example"))) {
       throw new Error("ZIP contains an unsafe file path.");
     }
+    if (/\.(?:pem|key|p12|pfx|jks|keystore)$/i.test(file.path)) throw new Error("ZIP contains a private-key file.");
     const path = file.path.normalize("NFKC");
     const key = path.toLocaleLowerCase();
     if (seen.has(key)) throw new Error("ZIP contains duplicate file paths.");
