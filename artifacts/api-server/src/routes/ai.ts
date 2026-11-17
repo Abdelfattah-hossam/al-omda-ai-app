@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
@@ -1119,7 +1119,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     const messages: ChatMessage[] = [];
     for (const item of rawMessages) {
-      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || item.content.length > 8000 || (!item.content.trim() && item.image === undefined)) {
+      if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || item.content.length > 8000 || !hasChatMessagePayload(item.content, item.image !== undefined)) {
         res.status(400).json({ error: "A chat message is invalid or too long." });
         return;
       }
