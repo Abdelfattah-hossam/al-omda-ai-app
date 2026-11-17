@@ -98,7 +98,7 @@ test("task completion RPC caps stored result payloads and charges quota atomical
 
 test("project creation validates bounded steps and writes quota in the same transaction", () => {
   const creation = functionDefinition("omda_private", "create_ai_task_with_quota");
-  assert.match(creation, /jsonb_array_length\(p_steps\) not between 3 and 5/i);
+  assert.match(creation, /jsonb_array_length\(p_steps\) not between 3 and 8/i);
   assert.match(creation, /insert into public\.ai_daily_usage[\s\S]*?on conflict/i);
   assert.match(creation, /insert into public\.tasks/i);
 });
