@@ -1,4 +1,87 @@
-create or replace function public.complete_ai_task_step(
+-- Keep privileged quota/task implementations out of the exposed public schema.
+-- The public SECURITY INVOKER wrappers preserve the existing PostgREST RPC names.
+create schema if not exists omda_private;
+revoke all on schema omda_private from public, anon;
+grant usage on schema omda_private to authenticated;
+
+create or replace function omda_private.get_ai_daily_usage()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_today date := (now() at time zone 'utc')::date;
+  v_used integer := 0;
+  v_reset timestamptz := ((v_today + 1)::timestamp at time zone 'utc');
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+  select units into v_used
+  from public.ai_daily_usage
+  where user_id = v_user and usage_date = v_today;
+  return jsonb_build_object(
+    'used', coalesce(v_used, 0),
+    'remaining', greatest(0, 1000 - coalesce(v_used, 0)),
+    'limit', 1000,
+    'resetAt', v_reset
+  );
+end;
+$$;
+
+create or replace function omda_private.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_today date := (now() at time zone 'utc')::date;
+  v_used integer := 0;
+  v_reset timestamptz := ((v_today + 1)::timestamp at time zone 'utc');
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+  if p_units is null or p_units < 1 or p_units > 5 or p_daily_limit <> 1000 then
+    raise exception 'Invalid AI quota request';
+  end if;
+
+  insert into public.ai_daily_usage (user_id, usage_date, units)
+  values (v_user, v_today, p_units)
+  on conflict (user_id, usage_date) do update
+    set units = public.ai_daily_usage.units + excluded.units,
+        updated_at = now()
+    where public.ai_daily_usage.units + excluded.units <= p_daily_limit
+  returning units into v_used;
+
+  if not found then
+    select units into v_used
+    from public.ai_daily_usage
+    where user_id = v_user and usage_date = v_today;
+    return jsonb_build_object(
+      'allowed', false,
+      'used', coalesce(v_used, 0),
+      'remaining', greatest(0, p_daily_limit - coalesce(v_used, 0)),
+      'limit', p_daily_limit,
+      'resetAt', v_reset
+    );
+  end if;
+
+  return jsonb_build_object(
+    'allowed', true,
+    'used', v_used,
+    'remaining', greatest(0, p_daily_limit - v_used),
+    'limit', p_daily_limit,
+    'resetAt', v_reset
+  );
+end;
+$$;
+
+create or replace function omda_private.complete_ai_task_step(
   p_task_id uuid,
   p_step_id text,
   p_result text,
@@ -24,8 +107,8 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
-  if p_task_id is null or p_step_id is null or char_length(p_step_id) < 1
-     or p_result is null or char_length(p_result) < 1
+  if p_task_id is null or p_step_id is null or char_length(p_step_id) not between 1 and 80
+     or p_result is null or char_length(p_result) < 1 or octet_length(p_result) > 500000
      or p_executed_at is null or p_units is null or p_units < 1
      or p_units > 5 or p_daily_limit <> 1000 then
     raise exception 'Invalid task completion request';
@@ -113,6 +196,158 @@ begin
 end;
 $$;
 
+create or replace function omda_private.create_ai_task_with_quota(
+  p_title text,
+  p_request text,
+  p_specialty text,
+  p_steps jsonb,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_today date := (now() at time zone 'utc')::date;
+  v_reset timestamptz := (((now() at time zone 'utc')::date + 1)::timestamp at time zone 'utc');
+  v_used integer := 0;
+  v_task public.tasks%rowtype;
+begin
+  if v_user is null then
+    raise exception 'Authentication required';
+  end if;
+  if p_daily_limit is distinct from 1000
+     or p_title is null or char_length(btrim(p_title)) not between 1 and 160
+     or p_request is null or char_length(btrim(p_request)) not between 1 and 10000
+     or p_specialty is null
+     or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
+     or jsonb_typeof(p_steps) is distinct from 'array'
+     or jsonb_array_length(p_steps) not between 3 and 5 then
+    raise exception 'Invalid project task request';
+  end if;
 
-revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public;
+  if exists (
+    select 1
+    from jsonb_array_elements(p_steps) as item(value)
+    where jsonb_typeof(item.value) is distinct from 'object'
+       or coalesce(char_length(item.value ->> 'id'), 0) not between 1 and 80
+       or coalesce(char_length(btrim(item.value ->> 'text')), 0) not between 1 and 1200
+       or coalesce(char_length(btrim(item.value ->> 'output')), 0) not between 1 and 1200
+       or coalesce(char_length(btrim(item.value ->> 'complete')), 0) not between 1 and 1200
+       or item.value ->> 'state' is distinct from 'pending'
+       or item.value ?| array['result', 'executedAt', 'executionStatus', 'executionError']
+  ) or (
+    select count(distinct item.value ->> 'id')
+    from jsonb_array_elements(p_steps) as item(value)
+  ) <> jsonb_array_length(p_steps) then
+    raise exception 'Invalid project task steps';
+  end if;
+
+  insert into public.ai_daily_usage (user_id, usage_date, units)
+  values (v_user, v_today, 1)
+  on conflict (user_id, usage_date) do update
+    set units = public.ai_daily_usage.units + excluded.units,
+        updated_at = now()
+    where public.ai_daily_usage.units + excluded.units <= p_daily_limit
+  returning units into v_used;
+
+  if not found then
+    select units into v_used
+    from public.ai_daily_usage
+    where user_id = v_user and usage_date = v_today;
+    return jsonb_build_object(
+      'saved', false,
+      'allowed', false,
+      'used', coalesce(v_used, 0),
+      'remaining', greatest(0, p_daily_limit - coalesce(v_used, 0)),
+      'limit', p_daily_limit,
+      'resetAt', v_reset
+    );
+  end if;
+
+  insert into public.tasks (user_id, title, request, specialty, steps, status)
+  values (v_user, btrim(p_title), btrim(p_request), p_specialty, p_steps, 'review')
+  returning * into v_task;
+
+  return jsonb_build_object(
+    'saved', true,
+    'allowed', true,
+    'task', to_jsonb(v_task),
+    'used', v_used,
+    'remaining', greatest(0, p_daily_limit - v_used),
+    'limit', p_daily_limit,
+    'resetAt', v_reset
+  );
+end;
+$$;
+
+create or replace function public.get_ai_daily_usage()
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.get_ai_daily_usage();
+$$;
+
+create or replace function public.consume_ai_units(p_units integer, p_daily_limit integer default 1000)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.consume_ai_units(p_units, p_daily_limit);
+$$;
+
+create or replace function public.complete_ai_task_step(
+  p_task_id uuid,
+  p_step_id text,
+  p_result text,
+  p_executed_at timestamptz,
+  p_units integer default 2,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.complete_ai_task_step(p_task_id, p_step_id, p_result, p_executed_at, p_units, p_daily_limit);
+$$;
+
+create or replace function public.create_ai_task_with_quota(
+  p_title text,
+  p_request text,
+  p_specialty text,
+  p_steps jsonb,
+  p_daily_limit integer default 1000
+)
+returns jsonb
+language sql
+security invoker
+set search_path = ''
+as $$
+  select omda_private.create_ai_task_with_quota(p_title, p_request, p_specialty, p_steps, p_daily_limit);
+$$;
+
+revoke all on function omda_private.get_ai_daily_usage() from public, anon;
+grant execute on function omda_private.get_ai_daily_usage() to authenticated;
+revoke all on function public.get_ai_daily_usage() from public, anon;
+grant execute on function public.get_ai_daily_usage() to authenticated;
+
+revoke all on function omda_private.consume_ai_units(integer, integer) from public, anon;
+grant execute on function omda_private.consume_ai_units(integer, integer) to authenticated;
+revoke all on function public.consume_ai_units(integer, integer) from public, anon;
+grant execute on function public.consume_ai_units(integer, integer) to authenticated;
+
+revoke all on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
+grant execute on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
+revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
 grant execute on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
+
+revoke all on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
+grant execute on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
+revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
+grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
