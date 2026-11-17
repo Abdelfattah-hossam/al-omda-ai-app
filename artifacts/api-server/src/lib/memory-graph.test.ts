@@ -28,6 +28,8 @@ test("rejects invalid node types, empty labels, oversized details, and sensitive
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { metadata: { medicalNotes: "private" } } }, userId), /credentials or sensitive/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My medical diagnosis is private" }, userId), /Sensitive personal information/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { text: "sk-abcdefghijklmnopqrstuvwxyz123456" } }, userId), /credential or access token/);
+  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "Remember sk-abcdefghijklmnopqrstuvwxyz123456" }, userId), /credential or access token/);
+  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "ﬃ".repeat(54) }, userId), /1 to 160 characters/);
 });
 
 test("validates graph edges and blocks self-links or unknown relationships", () => {
@@ -37,6 +39,7 @@ test("validates graph edges and blocks self-links or unknown relationships", () 
   assert.equal(edge.target_node_id, nodeB);
   assert.throws(() => parseMemoryEdge({ sourceNodeId: nodeA, targetNodeId: nodeA, relation: "works_on" }, userId), /cannot connect/);
   assert.throws(() => parseMemoryEdge({ sourceNodeId: nodeA, targetNodeId: nodeB, relation: "secretly_knows" }, userId), /Unsupported/);
+  assert.throws(() => parseMemoryEdge({ sourceNodeId: "------------------------------------", targetNodeId: nodeB, relation: "works_on" }, userId), /valid source node ID/);
 });
 
 test("stores only explicit, non-sensitive memory requests", () => {
@@ -74,4 +77,6 @@ test("captures explicit corrections without storing sensitive personal data", ()
   assert.equal(extractUserCorrectionNode("التصحيح هو عدم تغيير حركة الشات")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("لا، ده غلط: لازم نحافظ على حركة الشات")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
+  assert.equal(extractUserCorrectionNode("Correction: do not save this in memory: I work at Acme"), null);
+  assert.equal(extractUserCorrectionNode("التصحيح: لا تحفظ ده في الذاكرة: أعمل في شركة كذا"), null);
 });
