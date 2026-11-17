@@ -1243,16 +1243,17 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
         await saveAgentState(id, state);
         continue;
       }
+      let result: unknown;
       try {
-        const result = await runTool(call, onProgress, state.pendingMcpTools);
-        recordAgentToolResultFailure(state, call, result);
-        appendMcpToolResult(state.messages, call, result, imageQueue);
-        await saveAgentState(id, state);
+        result = await runTool(call, onProgress, state.pendingMcpTools);
       } catch (error) {
         recordAgentToolFailure(state, call, error);
-        state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ error: error instanceof Error ? error.message : "Tool failed." }) });
-        await saveAgentState(id, state);
+        result = { error: error instanceof Error ? error.message : "Tool failed." };
       }
+      recordAgentToolResultFailure(state, call, result);
+      appendMcpToolResult(state.messages, call, result, imageQueue);
+      // Checkpoint failures must propagate; they are not failures of the tool itself.
+      await saveAgentState(id, state);
     }
     delete state.pendingMcpTools;
     appendMcpImageObservations(state.messages, imageQueue);
