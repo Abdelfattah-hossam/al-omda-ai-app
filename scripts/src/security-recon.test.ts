@@ -113,3 +113,17 @@ test("evaluates element and attribute specific inline policy overrides", () => {
   assert.ok(attributeOverride.findings.some((item) => item.issue.includes("unsafe-inline")));
   assert.ok(!restrictiveElementOverride.findings.some((item) => item.issue.includes("unsafe-inline")));
 });
+
+test("accepts CSP nonce values by grammar without imposing decoded-length rules", () => {
+  const nonce = analyzeSecurityHeaders({ "content-security-policy": "script-src 'nonce-abcdefghijklmnopqrstuvwxyzabcdefg' 'unsafe-inline'" });
+  assert.ok(!nonce.findings.some((item) => item.issue.includes("unsafe-inline")));
+  const illegal = analyzeSecurityHeaders({ "content-security-policy": "script-src 'nonce-abc!def' 'unsafe-inline'" });
+  assert.ok(illegal.findings.some((item) => item.issue.includes("unsafe-inline")));
+});
+
+test("applies strict-dynamic only to script inline policies", () => {
+  const scriptAttribute = analyzeSecurityHeaders({ "content-security-policy": "script-src 'none'; script-src-attr 'unsafe-inline' 'strict-dynamic'" });
+  const styleControl = analyzeSecurityHeaders({ "content-security-policy": "style-src-attr 'unsafe-inline' 'strict-dynamic'" });
+  assert.ok(!scriptAttribute.findings.some((item) => item.issue.includes("unsafe-inline")));
+  assert.ok(styleControl.findings.some((item) => item.issue.includes("unsafe-inline")));
+});
