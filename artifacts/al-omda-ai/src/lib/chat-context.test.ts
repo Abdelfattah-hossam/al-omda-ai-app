@@ -66,10 +66,9 @@ test("skips whitespace-only fragments at the aggregate context boundary", () => 
 
 test("chat sync detects changed deliverables but ignores per-device blob URLs", async () => {
   const { getChatMessageSyncSignature } = await import("./chat-context");
-  const local = [{
+  const shared = {
     role: "assistant" as const,
     content: "The workbook is ready.",
-    attachment: { name: "report.xlsx", url: "blob:local-device-url" },
     spreadsheetData: { title: "Report", columns: ["Amount"], rows: [[10]] },
     documentData: { title: "Doc", paragraphs: ["A"], columns: [], rows: [] },
     presentationData: { title: "Slides", slides: [{ title: "Intro", bullets: ["A"] }] },
@@ -77,19 +76,9 @@ test("chat sync detects changed deliverables but ignores per-device blob URLs", 
     appData: { title: "App", html: "<main/>" },
     taskId: "task-1",
     taskTitle: "Build app",
-    documentData: { title: "Doc", paragraphs: ["A"], columns: [], rows: [] },
-    presentationData: { title: "Slides", slides: [{ title: "Intro", bullets: ["A"] }] },
-    sourceData: { title: "Source", name: "main.ts", language: "ts", code: "export {}" },
-    appData: { title: "App", html: "<main/>" },
-    taskId: "task-1",
-    taskTitle: "Build app",
-  }];
-  const remote = [{
-    role: "assistant" as const,
-    content: "The workbook is ready.",
-    attachment: { name: "report.xlsx", url: "blob:other-device-url" },
-    spreadsheetData: { title: "Report", columns: ["Amount"], rows: [[10]] },
-  }];
+  };
+  const local = [{ ...shared, attachment: { name: "report.xlsx", url: "blob:local-device-url" } }];
+  const remote = [{ ...shared, attachment: { name: "report.xlsx", url: "blob:other-device-url" } }];
   const signature = (items: typeof local) => getChatMessageSyncSignature(items);
   assert.equal(signature(local), signature(remote));
   const transientRemote = { ...remote[0], provider: "different model", agentPending: { pending: true }, spreadsheetData: { rows: [[10]], columns: ["Amount"], title: "Report" } };
