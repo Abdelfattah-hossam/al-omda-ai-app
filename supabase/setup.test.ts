@@ -28,7 +28,7 @@ test("privileged quota implementations are isolated in the non-exposed schema", 
     const definition = functionDefinition("omda_private", name);
     assert.match(definition, /security definer/i, name);
     assert.match(definition, /set search_path = ''/i, name);
-    assert.match(sql, new RegExp("grant execute on function omda_private\\." + name + "[\\s\\S]*?to authenticated", "i"));
+    assert.match(sql, new RegExp("grant execute on function omda_private\\." + name + "[\s\S]*?to authenticated", "i"));
   }
 });
 
@@ -43,14 +43,14 @@ test("private user tables and storage buckets retain ownership RLS", () => {
 test("memory graph is bounded and prevents cross-user relationships", () => {
   const nodes = sql.slice(sql.indexOf("create table if not exists public.ai_memory_nodes"), sql.indexOf("create table if not exists public.ai_memory_edges"));
   const edges = sql.slice(sql.indexOf("create table if not exists public.ai_memory_edges"), sql.indexOf("-- Independent private conversations"));
-  assert.match(nodes, /details jsonb[\\s\\S]*?pg_column_size\(details\) <= 8192/i);
+  assert.match(nodes, /details jsonb[\s\S]*?pg_column_size\(details\) <= 8192/i);
   assert.match(nodes, /unique \(id, user_id\)/i);
-  assert.match(nodes, /ai_memory_nodes_user_all[\\s\\S]*?auth\.uid\(\)/i);
+  assert.match(nodes, /ai_memory_nodes_user_all[\s\S]*?auth\.uid\(\)/i);
   assert.match(edges, /pg_column_size\(details\) <= 4096/i);
-  assert.match(edges, /foreign key \(source_node_id, user_id\)[\\s\\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
-  assert.match(edges, /foreign key \(target_node_id, user_id\)[\\s\\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
+  assert.match(edges, /foreign key \(source_node_id, user_id\)[\s\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
+  assert.match(edges, /foreign key \(target_node_id, user_id\)[\s\S]*?references public\.ai_memory_nodes\(id, user_id\)/i);
   assert.match(edges, /check \(source_node_id <> target_node_id\)/i);
-  assert.match(edges, /ai_memory_edges_user_all[\\s\\S]*?auth\.uid\(\)/i);
+  assert.match(edges, /ai_memory_edges_user_all[\s\S]*?auth\.uid\(\)/i);
 });
 
 test("task completion RPC caps stored result payloads and charges quota atomically", () => {
