@@ -55,3 +55,17 @@ test("orders purpose-specific providers before global providers and uses priorit
   assert.deepEqual(orderModelProvidersByPurpose(providers, "coding").map((p) => p.name), ["coding-early", "coding-late", "global"]);
   assert.deepEqual(orderModelProvidersByPurpose(providers, "all").map((p) => p.name), ["global", "coding-early", "coding-late"]);
 });
+
+test("supports separate provider pools for legal, engineering, medical, finance, and business work", () => {
+  const providers = parseModelProviderConfig([
+    { name: "legal", baseUrl: "https://legal.example/v1", model: "legal-model", purposes: ["legal"], priority: 1 },
+    { name: "engineering", baseUrl: "https://engineering.example/v1", model: "engineering-model", purposes: ["engineering"], priority: 1 },
+    { name: "medical", baseUrl: "https://medical.example/v1", model: "medical-model", purposes: ["medical"], priority: 1 },
+    { name: "finance", baseUrl: "https://finance.example/v1", model: "finance-model", purposes: ["finance"], priority: 1 },
+    { name: "business", baseUrl: "https://business.example/v1", model: "business-model", purposes: ["business"], priority: 1 },
+    { name: "global", baseUrl: "https://global.example/v1", model: "global-model", purposes: ["all"], priority: 99 },
+  ], {});
+  for (const purpose of ["legal", "engineering", "medical", "finance", "business"] as const) {
+    assert.deepEqual(orderModelProvidersByPurpose(providers, purpose).map((item) => item.name), [purpose, "global"]);
+  }
+});
