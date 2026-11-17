@@ -250,6 +250,7 @@ describe("source-code artifact intent", () => {
       "لا تنشئ ملف Python",
       "Write Python code inline, not as a file",
       "Explain python async",
+      "Create a PDF file of this report",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), false, "unexpected source file intent: " + request);
     }
@@ -265,7 +266,6 @@ describe("source-code artifact intent", () => {
       "Create a comparison of sorting algorithms and export Python code as compare.py",
       "Create a file named inline.css",
       "Create a Python script",
-      "Create a PDF file of this report",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), true, "missed source file intent: " + request);
     }
