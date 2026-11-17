@@ -14,7 +14,7 @@ type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]
 type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string> }> };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
 
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
@@ -790,8 +790,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
         }
       }) as any;
       const pending = Array.isArray(data.pending) ? data.pending : [];
-      const toolWarning = buildAgentToolWarning(data.toolFailures, ar);
-      const reply = (typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.")) + toolWarning;
+      const toolFailures = Array.isArray(data.toolFailures) ? data.toolFailures.slice(0, 5) : [];
+      const reply = typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.");
       const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\n\nتمت الموافقة على الإجراءات المطلوبة." : "\n\nRequested actions were approved.") : (ar ? "\n\nتم رفض الإجراءات المطلوبة." : "\n\nRequested actions were denied.")) } : item);
       const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || target.agentPending.sessionId, calls: pending } } : {}) };
       const completed = [...updated, resultMessage].slice(-100); setMessages(completed); await saveHistory(completed);
@@ -888,7 +888,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           }
         }) as any;
         const pending = Array.isArray(data.pending) ? data.pending : [];
-      const toolWarning = buildAgentToolWarning(data.toolFailures, ar);
+        const toolFailures = Array.isArray(data.toolFailures) ? data.toolFailures.slice(0, 5) : [];
         const statusReply = data.status === "approval_required"
           ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.")
           : data.status === "limit_reached"
@@ -896,8 +896,8 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
             : data.status === "cancelled"
               ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.")
               : "";
-        const reply = (statusReply || (typeof data.message === "string" && data.message ? data.message : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished."))) + toolWarning;
-        const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
+        const reply = statusReply || (typeof data.message === "string" && data.message ? data.message : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished."));
+        const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(toolFailures.length ? { toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
         setInput((current) => current === submittedDraft ? "" : current);
@@ -1286,6 +1286,7 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
+            {message.toolFailures?.length ? <div className="notice-bar" style={{whiteSpace:"pre-wrap",marginTop:8}}>{buildAgentToolWarning(message.toolFailures, ar).trim()}</div> : null}
             {message.agentPending && <div style={{display:"grid",gap:8,width:"100%",padding:12,border:"1px solid var(--border,#343a44)",borderRadius:10}}><strong>{ar ? "موافقة مطلوبة (" + message.agentPending.calls.length + ")" : "Approval required (" + message.agentPending.calls.length + ")"}</strong>{message.agentPending.calls.map((call)=><div key={call.id} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{call.tool}</b><pre style={{whiteSpace:"pre-wrap",margin:"4px 0",color:"var(--muted,#9aa3af)"}}>{JSON.stringify(call.arguments,null,2)}</pre></div>)}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="button button-primary button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,true)}>{ar ? "موافقة وتنفيذ" : "Approve & execute"}</button><button type="button" className="button button-quiet button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,false)}>{ar ? "رفض الإجراءات" : "Deny actions"}</button></div></div>}
             {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId+"?focus=task-plan")} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
             {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.sourceData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
