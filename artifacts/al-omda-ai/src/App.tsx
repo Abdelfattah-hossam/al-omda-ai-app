@@ -1609,7 +1609,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               <linearGradient id="dashboard-global-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d5dce0"/><stop offset="1" stopColor="#8998a1"/></linearGradient>
             </defs>
             <rect width="1200" height="560" fill="#111a25"/>
-            <g transform={\`translate(\${globalMapPan.x} \${globalMapPan.y}) translate(600 280) scale(\${globalMapZoom}) translate(-600 -280)\`}>
+            <g transform={`translate(${globalMapPan.x} ${globalMapPan.y}) translate(600 280) scale(${globalMapZoom}) translate(-600 -280)`}>
               <rect width="1200" height="560" fill="url(#dashboard-global-map-grid)"/>
               <g fill="url(#dashboard-global-land)" stroke="#edf2f4" strokeOpacity=".68" strokeWidth="2.2" strokeLinejoin="round" opacity=".88">
                 <path d="M110 130l45-40 56-10 34 16 30-7 45 25 17 38-23 28-5 36-29 28-13 45-31 25-17 51-28 22-19-18-7-42-26-34-8-49-29-35-12-48-27-31z"/>
