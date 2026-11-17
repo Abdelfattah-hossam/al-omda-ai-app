@@ -12,9 +12,8 @@ import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web
 import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
-import { isBlockedNetworkAddress } from "./network-safety.js";
-import { fetchPinned } from "./pinned-http.js";
-import { terminateChildProcess } from "./supervisor-process.js";
+import { isBlockedNetworkAddress, isLocalLabTargetOverrideEnabled } from "./network-safety.js";
+import { requestPinnedHttpWithFallback, type PinnedAddress } from "./pinned-http.js";
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
@@ -40,7 +39,7 @@ const ALLOWED_HOSTS = new Set((process.env.OMDA_AGENT_ALLOWED_HOSTS || "").split
 const SEARCH_BASE_URL = process.env.OMDA_AGENT_SEARCH_BASE_URL?.trim() || "";
 const SEARCH_API_KEY = process.env.OMDA_AGENT_SEARCH_API_KEY?.trim() || "";
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.OMDA_AGENT_APP_ORIGINS);
-const ALLOW_LOCAL_LAB_TARGETS = process.env.OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS === "true";
+const ALLOW_LOCAL_LAB_TARGETS = isLocalLabTargetOverrideEnabled(process.env);
 const ALLOWED_COMMANDS = new Set(["git", "pnpm", "npm", "pytest", "python", "python3", "ruff", "tsc", "vite", "wrangler"]);
 
 let workspaceRoot = "";
@@ -125,19 +124,34 @@ function authenticated(req: IncomingMessage): boolean {
   const b = Buffer.from(TOKEN);
   return a.length === b.length && timingSafeEqual(a, b);
 }
-async function assertAllowedTarget(rawUrl: string): Promise<URL> {
-  const url = new URL(rawUrl);
-  if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
-  const hostname = url.hostname.toLowerCase();
-  if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
-  if (isIP(hostname) && isBlockedNetworkAddress(hostname) && !ALLOW_LOCAL_LAB_TARGETS) throw new Error("Private and loopback targets are blocked.");
-  if (!isIP(hostname)) {
-    const addresses = await lookup(hostname, { all: true, verbatim: true });
-    if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) throw new Error("Target resolves to a private or local network address.");
+async function resolveAllowedTarget(rawUrl: string): Promise<{ url: URL; addresses: PinnedAddress[] }> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Provide a valid absolute HTTP(S) URL.");
   }
-  return url;
+  if ((url.protocol !== "https:" && !(ALLOW_LOCAL_LAB_TARGETS && url.protocol === "http:")) || url.username || url.password) throw new Error("Only HTTPS targets are allowed; HTTP is available only in explicit local-lab mode.");
+  const rawHostname = url.hostname.toLowerCase();
+  const hostname = rawHostname.startsWith("[") && rawHostname.endsWith("]") ? rawHostname.slice(1, -1) : rawHostname;
+  if (!ALLOWED_HOSTS.has(hostname)) throw new Error("Target host is not in OMDA_AGENT_ALLOWED_HOSTS. Add only assets you own or are authorized to test.");
+  const literalFamily = isIP(hostname);
+  const addresses = literalFamily ? [{ address: hostname, family: literalFamily }] : await lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length || (!ALLOW_LOCAL_LAB_TARGETS && addresses.some((entry) => isBlockedNetworkAddress(entry.address)))) {
+    throw new Error("Target resolves to a private or local network address.");
+  }
+  // Keep every validated candidate so an unreachable IPv6/IPv4 route does
+  // not prevent trying another already-validated address for the same host.
+  const validatedAddresses: PinnedAddress[] = addresses.map((entry) => ({
+    address: entry.address,
+    family: entry.family as 4 | 6,
+  }));
+  return { url, addresses: validatedAddresses };
 }
-async function readLimitedResponse(response: Response, limit: number): Promise<{ text: string; truncated: boolean }> {
+async function assertAllowedTarget(rawUrl: string): Promise<URL> {
+  return (await resolveAllowedTarget(rawUrl)).url;
+}
+async function readLimitedResponse(response: { body: ReadableStream<Uint8Array> | null }, limit: number): Promise<{ text: string; truncated: boolean }> {
   if (!response.body) return { text: "", truncated: false };
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -166,7 +180,10 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
   const startedAt = Date.now();
   const method = String(body.method || "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) throw new Error("This first runtime release only permits GET, HEAD, and OPTIONS requests.");
-  let url = await assertAllowedTarget(String(body.url || ""));
+  const rawUrl = typeof body.url === "string" ? body.url.trim() : "";
+  if (!rawUrl || rawUrl.length > 2048) throw new Error("Provide a valid HTTP(S) URL no longer than 2048 characters.");
+  let target = await resolveAllowedTarget(rawUrl);
+  let url = target.url;
   const inputHeaders = body.headers && typeof body.headers === "object" ? body.headers as Record<string, unknown> : {};
   const headers = new Headers();
   for (const [key, value] of Object.entries(inputHeaders)) {
@@ -174,16 +191,19 @@ async function httpRequest(body: Json, allowCredentialHeaders = false): Promise<
     headers.set(key, value);
   }
   headers.set("user-agent", "AL-OMDA-Agent/0.1 (authorized-security-research)");
-  let response: Response | null = null;
+  // Connect to the exact address validated against the allowlist and private
+  // network policy. Native fetch would perform a second DNS lookup.
+  let response: Awaited<ReturnType<typeof requestPinnedHttpWithFallback>> | null = null;
   for (let hop = 0; hop < 4; hop++) {
-    response = await fetchPinned(url, { method, headers, redirect: "manual", signal: AbortSignal.timeout(12000) }, { allowPrivate: ALLOW_LOCAL_LAB_TARGETS, maxBytes: 50000, timeoutMs: 12000 });
+    response = await requestPinnedHttpWithFallback(url, target.addresses, method, headers, 12000);
     if (![301, 302, 303, 307, 308].includes(response.status)) break;
     const location = response.headers.get("location");
     if (!location) break;
     await response.body?.cancel();
-    const nextUrl = await assertAllowedTarget(new URL(location, url).toString());
-    assertCredentialRedirectAllowed(url, nextUrl, allowCredentialHeaders);
-    url = nextUrl;
+    const nextTarget = await resolveAllowedTarget(new URL(location, url).toString());
+    assertCredentialRedirectAllowed(url, nextTarget.url, allowCredentialHeaders);
+    target = nextTarget;
+    url = nextTarget.url;
   }
   if (!response) throw new Error("No HTTP response was received.");
   const responseHeaders: Record<string, string> = {};
@@ -290,8 +310,15 @@ async function searchWeb(body: Json): Promise<Json> {
   const market = typeof body.market === "string" ? body.market : undefined;
   const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
-  await assertAllowedTarget(url.toString());
-  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, (input, init) => fetchPinned(input instanceof Request ? input.url : input, init ?? {}, { allowPrivate: false, maxBytes: 150000, timeoutMs: 12000 }));
+  const target = await resolveAllowedTarget(url.toString());
+  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, async (_input, init) => {
+    const response = await requestPinnedHttpWithFallback(target.url, target.addresses, "GET", new Headers(init?.headers), 12000);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  });
   return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
 }
 
@@ -429,12 +456,10 @@ async function executeCommand(body: Json): Promise<Json> {
     image, command, ...(args as string[]),
   ] : args as string[];
   const commandEnv = buildCommandEnvironment(process.env);
-  const processGroup = process.platform !== "win32";
   return await new Promise((resolveResult) => {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
       shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      detached: processGroup,
       env: commandEnv,
     });
     let stdout = "";
@@ -444,12 +469,10 @@ async function executeCommand(body: Json): Promise<Json> {
     let capped = false;
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
-    let killTimer: NodeJS.Timeout | null = null;
     const finish = (result: Json) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (killTimer && !processGroup) clearTimeout(killTimer);
       resolveResult({ ...result, durationMs: Date.now() - started });
     };
     const collect = (target: "stdout" | "stderr") => (chunk: Buffer) => {
@@ -457,17 +480,11 @@ async function executeCommand(body: Json): Promise<Json> {
       const remaining = Math.max(0, OUTPUT_LIMIT - Buffer.byteLength(stdout) - Buffer.byteLength(stderr));
       const text = chunk.toString("utf8").slice(0, remaining);
       if (target === "stdout") stdout += text; else stderr += text;
-      if (outputBytes > OUTPUT_LIMIT && !capped) {
-        capped = true;
-        killTimer = terminateChildProcess(child, 2000, processGroup);
-      }
+      if (outputBytes > OUTPUT_LIMIT && !capped) { capped = true; child.kill("SIGTERM"); }
     };
     child.stdout.on("data", collect("stdout"));
     child.stderr.on("data", collect("stderr"));
-    timer = setTimeout(() => {
-      timedOut = true;
-      killTimer = killTimer ?? terminateChildProcess(child, 2000, processGroup);
-    }, COMMAND_TIMEOUT_MS);
+    timer = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, COMMAND_TIMEOUT_MS);
     child.on("error", (error) => finish({ ok: false, error: useContainer ? "Docker execution could not start: " + error.message : error.message, stdout, stderr }));
     child.on("close", (code, signal) => finish({
       ok: code === 0 && !timedOut && !capped,
