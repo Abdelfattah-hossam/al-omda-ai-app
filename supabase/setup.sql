@@ -415,11 +415,11 @@ revoke all on function omda_private.complete_ai_task_step(uuid, text, text, time
 grant execute on function omda_private.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
 
 
-revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public;
+revoke all on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) from public, anon;
 grant execute on function public.complete_ai_task_step(uuid, text, text, timestamptz, integer, integer) to authenticated;
 
-revoke all on function public.get_ai_daily_usage() from public;
-revoke all on function public.consume_ai_units(integer, integer) from public;
+revoke all on function public.get_ai_daily_usage() from public, anon;
+revoke all on function public.consume_ai_units(integer, integer) from public, anon;
 grant execute on function public.get_ai_daily_usage() to authenticated;
 grant execute on function public.consume_ai_units(integer, integer) to authenticated;
 
@@ -631,7 +631,7 @@ revoke all on function omda_private.create_ai_task_with_quota(text, text, text, 
 grant execute on function omda_private.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
 
 
-revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public;
+revoke all on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) from public, anon;
 grant execute on function public.create_ai_task_with_quota(text, text, text, jsonb, integer) to authenticated;
 
 -- Private workspace files and project attachments.
