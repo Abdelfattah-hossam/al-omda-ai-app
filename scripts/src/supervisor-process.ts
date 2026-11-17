@@ -1,5 +1,18 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import type { SpawnOptions } from "node:child_process";
+
+export function terminateChildProcess(child: ChildProcess, graceMs = 3000, processGroup = false): NodeJS.Timeout {
+  const sendSignal = (signal: NodeJS.Signals) => {
+    if (processGroup && process.platform !== "win32" && child.pid) {
+      try { process.kill(-child.pid, signal); return; } catch { /* Fall back to the direct child. */ }
+    }
+    if (child.exitCode === null && child.signalCode === null) child.kill(signal);
+  };
+  sendSignal("SIGTERM");
+  const timer = setTimeout(() => sendSignal("SIGKILL"), Math.max(1, graceMs));
+  timer.unref();
+  return timer;
+}
 
 export type SupervisedCommandOptions = {
   cwd: string;
@@ -39,10 +52,7 @@ export function runSupervisedCommand(command: string, args: string[], options: S
 
     timeoutTimer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGTERM");
-      killTimer = setTimeout(() => {
-        if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-      }, killGraceMs);
+      killTimer = terminateChildProcess(child, killGraceMs);
     }, timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer) => { stdout = append(stdout, chunk); });
