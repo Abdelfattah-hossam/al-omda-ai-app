@@ -503,7 +503,13 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const remoteConversations = Array.isArray(listData.conversations) ? listData.conversations as Conversation[] : [];
         if (hasConversationListChanged(conversationsRef.current, remoteConversations)) setConversations(remoteConversations);
         const activeSummary = remoteConversations.find((item) => item?.id === activeConversationId);
-        const listedUpdatedAt = typeof activeSummary?.updated_at === "string" ? activeSummary.updated_at : "";
+        if (!activeSummary) {
+          lastSyncedConversationUpdatedAtRef.current = "";
+          if (remoteConversations.length) await loadConversation(remoteConversations[0].id);
+          else await createConversation();
+          return;
+        }
+        const listedUpdatedAt = typeof activeSummary.updated_at === "string" ? activeSummary.updated_at : "";
         if (!hasConversationUpdatedAtChanged(listedUpdatedAt, lastSyncedConversationUpdatedAtRef.current)) return;
         const conversationResponse = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin", cache: "no-store" });
         if (!conversationResponse.ok) return;
