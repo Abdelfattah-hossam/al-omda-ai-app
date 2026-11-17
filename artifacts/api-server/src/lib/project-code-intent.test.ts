@@ -17,5 +17,8 @@ test("keeps explicit one-file HTML and small utilities on the standalone path", 
   assert.equal(isStandaloneHtmlRequest("اعمل ملف HTML واحد فقط"), true);
   assert.equal(isMultiFileProjectRequest("Create a desktop clock"), false);
   assert.equal(isMultiFileProjectRequest("Build a simple calculator app"), false);
+  assert.equal(isMultiFileProjectRequest("Build an e-commerce website with a countdown timer and user accounts"), true);
+  assert.equal(isMultiFileProjectRequest("Build a store"), true);
+  assert.equal(isMultiFileProjectRequest("Create an online store"), true);
   assert.equal(isMultiFileProjectRequest("Build a website as a single HTML file"), false);
 });
