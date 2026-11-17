@@ -4,6 +4,7 @@ import {
   readSupabaseJson,
   reportSupabaseError,
   requireSameOrigin,
+  requireSameOriginRead,
   resolveSession,
   supabaseFetch,
 } from "../lib/supabase";
@@ -69,7 +70,7 @@ router.delete("/ai/memory", requireSameOrigin, async (req, res): Promise<void> =
 });
 
 
-router.get("/ai/memory/graph", requireSameOrigin, async (req, res): Promise<void> => {
+router.get("/ai/memory/graph", requireSameOriginRead, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
     if (!session) {
