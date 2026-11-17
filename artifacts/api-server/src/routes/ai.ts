@@ -1165,7 +1165,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestCustomerRequest = getLatestUserRequest(messages);
-    const responseLanguage = /[\\u0600-\\u06FF]/.test(latestCustomerRequest) ? "ar" : "en";
+    const responseLanguage = /[\u0600-\u06FF]/.test(latestCustomerRequest) ? "ar" : "en";
     const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
