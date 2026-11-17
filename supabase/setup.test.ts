@@ -5,6 +5,7 @@ import test from "node:test";
 
 const sql = readFileSync(resolve(process.cwd(), "../supabase/setup.sql"), "utf8");
 const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117123000_require_previous_project_stage_results.sql"), "utf8");
+const sequenceMigration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117150000_require_successful_prior_project_stages.sql"), "utf8");
 const legacyQuota = readFileSync(resolve(process.cwd(), "../supabase/ai_quota.sql"), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
@@ -68,6 +69,15 @@ test("pending database migration secures every quota RPC without changing public
   assert.match(completion, /p_units is distinct from 2/i);
 });
 
+test("sequential completion migration requires successful prior stage execution", () => {
+  const start = sequenceMigration.indexOf("create or replace function omda_private.complete_ai_task_step(");
+  const end = sequenceMigration.indexOf("\n$$;", start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const completion = sequenceMigration.slice(start, end + 4);
+  assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
+  assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
+});
 test("private user tables and storage buckets retain ownership RLS", () => {
   for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_memory_nodes", "ai_memory_edges", "ai_conversations"]) {
     assert.match(sql, new RegExp("alter table public\\." + table + " enable row level security", "i"), table);
@@ -93,6 +103,7 @@ test("task completion RPC caps stored result payloads and charges quota atomical
   const completion = functionDefinition("omda_private", "complete_ai_task_step");
   assert.match(completion, /octet_length\(p_result\) > 500000/i);
   assert.match(completion, /for update/i);
+  assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
   assert.match(completion, /insert into public\.ai_daily_usage[\s\S]*?on conflict/i);
   assert.match(completion, /update public\.tasks[\s\S]*?set steps = v_updated_steps/i);
 });

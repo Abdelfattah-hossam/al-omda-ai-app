@@ -341,6 +341,7 @@ begin
        where item.ordinality < v_step_index
          and (
            item.value ->> 'state' is distinct from 'approved'
+           or item.value ->> 'executionStatus' is distinct from 'succeeded'
            or nullif(btrim(item.value ->> 'result'), '') is null
          )
      ) then
