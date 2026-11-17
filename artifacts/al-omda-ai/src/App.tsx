@@ -1308,6 +1308,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                    </details>)}
                  </div>
                  <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskCodeProject(getTaskCodeProject(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل حزمة المشروع.":"Could not save or download the project ZIP.")))}><Code2 size={14}/>{isAr?'حفظ وتنزيل المشروع كاملًا (.zip)':'Save & download full project (.zip)'}</button></div>
+                 <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'أمر البناء: ':'Build command: '}{getTaskCodeProject(step.result)!.buildCommand}{getTaskCodeProject(step.result)!.testCommand ? ' · ' + (isAr?'الاختبار: ':'Test: ') + getTaskCodeProject(step.result)!.testCommand : ''}</small>
                  <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'تم تجهيز ملفات المصدر. لم يتم تشغيل البناء أو الاختبارات داخل الخادم؛ راجع README وشغّل الأوامر في بيئة تطوير آمنة.':'Source files are packaged. The hosted pipeline has not run build or tests; review README and run the commands in a trusted development environment.'}</small>
                </div> : getTaskHtmlApp(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
