@@ -1,6 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from "./office-ooxml.js";
+async function readStoredZip(blob: Blob): Promise<Record<string, string>> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const decoder = new TextDecoder();
+  const entries: Record<string, string> = {};
+  let offset = 0;
+  while (offset + 30 <= bytes.length && view.getUint32(offset, true) === 0x04034b50) {
+    const method = view.getUint16(offset + 8, true);
+    const size = view.getUint32(offset + 18, true);
+    const nameLength = view.getUint16(offset + 26, true);
+    const extraLength = view.getUint16(offset + 28, true);
+    assert.equal(method, 0);
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const name = decoder.decode(bytes.subarray(nameStart, nameStart + nameLength));
+    entries[name] = decoder.decode(bytes.subarray(dataStart, dataStart + size));
+    offset = dataStart + size;
+  }
+  return entries;
+}
+
 
 test("creates a real DOCX with Arabic text and a multi-column table", async () => {
   const blob = createDocxBlob({
