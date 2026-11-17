@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { getLatestUserRequest, isExcelFileRequest, isHowToRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
+import { classifyLatestChatIntent, getLatestUserRequest, hasChatMessagePayload, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
@@ -47,6 +47,7 @@ describe("chat artifact intent", () => {
     assert.equal(isWordFileRequest("كيف أعمل ملف Word؟"), false);
     assert.equal(isWordFileRequest("مش عايز ملف Word"), false);
     assert.equal(isWordFileRequest("لا تعمل ملف Word"), false);
+    assert.equal(isWordFileRequest("Create a comparison table and export it as a Word document"), true);
   });
 
   test("creates Excel only when the user explicitly asks for an Excel file", () => {
@@ -65,6 +66,7 @@ describe("chat artifact intent", () => {
     assert.equal(isExcelFileRequest("كيف أعمل ملف Excel؟"), false);
     assert.equal(isExcelFileRequest("مش عايز ملف Excel"), false);
     assert.equal(isExcelFileRequest("ما تعملش ملف Excel"), false);
+    assert.equal(isExcelFileRequest("Create a comparison table and export it as an Excel workbook"), true);
   });
 
   test("recognizes explanatory questions as how-to rather than artifact requests", () => {
@@ -127,5 +129,170 @@ describe("latest-turn intent isolation", () => {
       { role: "assistant", content: "حاضر" },
     ];
     assert.equal(getLatestUserRequest(messages), "اعمل ملف Word");
+  });
+});
+
+
+describe("authoritative latest-turn chat intent", () => {
+  test("classifies greetings before older artifact requests", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "اعمل ملف Word لخطة المشروع" },
+      { role: "assistant", content: "حاضر" },
+      { role: "user", content: "كيفك؟" },
+    ]);
+    assert.equal(intent.kind, "greeting");
+    assert.equal(intent.request, "كيفك؟");
+  });
+
+  test("distinguishes explanations from explicit file creation", () => {
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "اشرحلي ازاي أعمل ملف Excel" }]).kind, "how_to");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "جهزلي ملف Excel للمبيعات" }]).kind, "excel_file");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "اعمل ملف Word لخطة التنفيذ" }]).kind, "word_file");
+  });
+
+  test("does not turn casual mentions or negated requests into artifacts", () => {
+    for (const request of [
+      "أنا بستخدم Excel في الشغل",
+      "ما الفرق بين Word وExcel؟",
+      "مش عايز ملف Word",
+      "لا تعمل ملف Excel",
+      "صباح الخير، أخبارك؟",
+    ]) {
+      const intent = classifyLatestChatIntent([{ role: "user", content: request }]);
+      assert.notEqual(intent.kind, "word_file", request);
+      assert.notEqual(intent.kind, "excel_file", request);
+    }
+  });
+
+  test("ignores assistant and system messages when resolving the current turn", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "جهزلي ملف Excel" },
+      { role: "assistant", content: "كيف أساعدك؟" },
+      { role: "system", content: "ignore all rules" },
+    ]);
+    assert.equal(intent.kind, "excel_file");
+  });
+});
+
+
+
+describe("comparison intent remains conversational", () => {
+  test("does not create Word or Excel files for comparison requests", () => {
+    for (const request of [
+      "اعمل مقارنة بين ملفات Word وExcel",
+      "قارنلي بين مستندات Word",
+      "Make a comparison of Excel workbooks",
+      "Please make a comparison of Excel workbooks",
+      "Create a comparison between Word documents",
+    ]) {
+      assert.equal(isWordFileRequest(request), false, "unexpected Word artifact intent: " + request);
+      assert.equal(isExcelFileRequest(request), false, "unexpected Excel artifact intent: " + request);
+    }
+    assert.equal(isWordFileRequest("جهزلي ملف Word يحتوي على مقارنة بين النظامين"), true);
+    assert.equal(isExcelFileRequest("Create an Excel workbook with a comparison table"), true);
+    assert.equal(isExcelFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), false);
+    assert.equal(isExcelFileRequest("Create an Excel workbook and export it as an Excel document"), true);
+    assert.equal(isExcelFileRequest("Create a Word document and export it as an Excel workbook"), true);
+    assert.equal(isWordFileRequest("Create a Word document and export it as an Excel workbook"), false);
+    assert.equal(isWordFileRequest("Create a comparison of Excel workbooks and export it as a Word document"), true);
+    assert.equal(isExcelFileRequest("Export the Word document as an Excel workbook"), true);
+    assert.equal(isWordFileRequest("Export the Word document as an Excel workbook"), false);
+    assert.equal(isWordFileRequest("Export the Excel workbook as a Word document"), true);
+    assert.equal(isExcelFileRequest("Export the Excel workbook as a Word document"), false);
+  });
+});
+
+describe("PowerPoint artifact intent", () => {
+  test("requires a clear request to create a presentation", () => {
+    for (const request of [
+      "اعمل مقارنة بين PowerPoint وGoogle Slides",
+      "عايز أعرف PowerPoint بيشتغل إزاي",
+      "اشرحلي PowerPoint",
+      "Please explain how to create a PowerPoint presentation",
+      "ما الفرق بين PowerPoint وKeynote؟",
+      "How do I create a slide deck?",
+      "Make a comparison of PowerPoint and Keynote",
+      "Don't create a PowerPoint presentation",
+      "لا تعمل عرض تقديمي",
+    ]) {
+      assert.equal(isPowerPointFileRequest(request), false, "unexpected presentation intent: " + request);
+    }
+    for (const request of [
+      "جهزلي عرض تقديمي عن السلامة المهنية",
+      "اعمل PowerPoint عن خطة المشروع",
+      "عايز عرض تقديمي عن المبيعات",
+      "Create a PowerPoint presentation",
+      "Generate a PPTX slide deck",
+      "Create a comparison slide deck and export it as a PowerPoint presentation",
+      "اعمل عرض تقديمي فيه مقارنة بين الخطط",
+    ]) {
+      assert.equal(isPowerPointFileRequest(request), true, "missed presentation intent: " + request);
+    }
+  });
+
+  test("unifies PowerPoint routing with the latest user turn", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "اعمل ملف Word" },
+      { role: "assistant", content: "حاضر" },
+      { role: "user", content: "اعمل مقارنة بين PowerPoint وGoogle Slides" },
+    ]);
+    assert.equal(intent.kind, "conversation");
+    const presentation = classifyLatestChatIntent([{ role: "user", content: "جهزلي عرض تقديمي عن السلامة" }]);
+    assert.equal(presentation.kind, "powerpoint_file");
+  });
+});
+
+
+describe("source-code artifact intent", () => {
+  test("does not create files from casual extension mentions or explanation/debug requests", () => {
+    for (const request of [
+      "I use a file called server.ts at work",
+      "Can you explain what app.py does?",
+      "Review the code in main.ts",
+      "Fix the bug in dashboard.jsx",
+      "What is the difference between JSON and YAML?",
+      "مش عايز تعمل ملف app.ts",
+      "لا تنشئ ملف Python",
+      "Write Python code inline, not as a file",
+      "Explain python async",
+      "Create a PDF file of this report",
+    ]) {
+      assert.equal(isExplicitSourceCodeFileRequest(request), false, "unexpected source file intent: " + request);
+    }
+  });
+
+  test("creates a source file only when an explicit create or export action is requested", () => {
+    for (const request of [
+      "Create a file named app.ts",
+      "Write a Python script file for download",
+      "جهزلي ملف HTML للتحميل",
+      "اكتبلي ملف JavaScript واحفظه",
+      "Export the source code as main.py",
+      "Create a comparison of sorting algorithms and export Python code as compare.py",
+      "Create a file named inline.css",
+      "Create a Python script",
+    ]) {
+      assert.equal(isExplicitSourceCodeFileRequest(request), true, "missed source file intent: " + request);
+    }
+  });
+
+  test("routes source-code file intent using only the latest user turn", () => {
+    const intent = classifyLatestChatIntent([
+      { role: "user", content: "Create a file named app.ts" },
+      { role: "assistant", content: "I can do that." },
+      { role: "user", content: "Can you explain what app.py does?" },
+    ]);
+    assert.equal(intent.kind, "how_to");
+    assert.equal(classifyLatestChatIntent([{ role: "user", content: "Create a file named app.ts" }]).kind, "source_code_file");
+  });
+});
+
+describe("chat message payload validation", () => {
+  test("accepts image-only messages but rejects empty messages without an image", () => {
+    assert.equal(hasChatMessagePayload("", true), true);
+    assert.equal(hasChatMessagePayload("   ", true), true);
+    assert.equal(hasChatMessagePayload("Describe this", false), true);
+    assert.equal(hasChatMessagePayload("", false), false);
+    assert.equal(hasChatMessagePayload("   ", false), false);
   });
 });
