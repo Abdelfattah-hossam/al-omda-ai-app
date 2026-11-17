@@ -47,7 +47,7 @@ export async function fetchPinned(
   const pinned = addresses[0];
   const requestFn = url.protocol === "https:" ? httpsRequest : httpRequest;
   const headers = new Headers(init.headers);
-  const requestOptions: RequestOptions = {
+  const requestOptions: HttpsRequestOptions = {
     protocol: url.protocol,
     hostname,
     port: url.port || (url.protocol === "https:" ? 443 : 80),
