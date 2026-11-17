@@ -25,7 +25,7 @@ function isNegatedFileCreationRequest(text: string): boolean {
 }
 
 function isComparisonOnlyRequest(text: string): boolean {
-  return /^(?:(?:ممكن|لو سمحت|من فضلك)\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|جهز|جهزلي|قارن|قارنلي|make|create|write|give|show)\s+(?:لي\s*)?(?:a\s+)?(?:مقارنة|مقارنات|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
+  return /^(?:(?:please|kindly)\s+)?(?:(?:ممكن|لو سمحت|من فضلك)\s*)?(?:اعمل|اعملي|اعمللي|اعمل\s+لي|اكتب|اكتبلي|جهز|جهزلي|قارن|قارنلي|make|create|write|give|show)\s+(?:لي\s*)?(?:a\s+)?(?:مقارنة|مقارنات|compare|comparison)(?:$|[\s،,.?!])/i.test(text);
 }
 
 type OfficeFormat = "word" | "excel" | "powerpoint";
@@ -42,8 +42,10 @@ function hasExplicitOfficeFileExport(text: string, format: OfficeFormat): boolea
     const exportMatch = /\b(?:export|download|save)\b|صدّر|صدر|نزّل|نزل|حمّل|حمل/i.exec(clause);
     if (!exportMatch || exportMatch.index === undefined) return false;
     const targetText = clause.slice(exportMatch.index + exportMatch[0].length);
-    const targetPhrase = /\b(?:as|to|in)\s+(?:a\s+|an\s+)?/i.test(targetText) || /(?:بصيغة|كملف|بامتداد)\s*/i.test(targetText);
-    return targetPhrase && OFFICE_EXPORT_TARGETS[format].test(targetText);
+    const targetMatch = /\b(?:as|to|in)\s+(?:a\s+|an\s+)?|(?:بصيغة|كملف|بامتداد)\s*/i.exec(targetText);
+    if (!targetMatch || targetMatch.index === undefined) return false;
+    const outputTarget = targetText.slice(targetMatch.index + targetMatch[0].length).split(/[,.!?؟;]+/, 1)[0] ?? "";
+    return OFFICE_EXPORT_TARGETS[format].test(outputTarget);
   });
 }
 
@@ -102,7 +104,6 @@ export function isStandaloneGreeting(request: string): boolean {
 
 
 
-/** Detect source-code file deliverables, not ordinary requests for inline explanations or code snippets. */
 /** Detect source-code file deliverables, not ordinary requests for inline explanations or generic documents. */
 export function isExplicitSourceCodeFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
