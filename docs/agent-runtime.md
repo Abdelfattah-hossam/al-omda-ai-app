@@ -57,7 +57,7 @@ Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add
 
 The agent exposes `web.search` to the lead agent and read-only specialists. It accepts `query`, optional `count` (clamped to 1–10), optional locale `market` (for example `en-US`), and `safeSearch` (`Strict` by default). Results are normalized to title, URL, snippet, and optional publication date.
 
-Security controls: HTTPS only, exact hostname allowlisting, DNS resolution checks that reject private/local/reserved answers, and socket-level DNS pinning so the checked address is the address actually contacted. Search redirects are rejected; HTTP redirects are handled manually with full host, DNS, and credential-forwarding checks on every hop. Requests have a 12-second timeout, a 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
+Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.
 
 
 ### Local CTF analysis helpers
@@ -253,7 +253,7 @@ The runtime listens only on `127.0.0.1:4318`. For browser access, set `OMDA_AGEN
 
 HTTPFlow audit summaries are stored in `.omda/httpflow-history.json` inside the configured workspace, capped at 100 records, and written with restrictive permissions and atomic replacement. They retain the target origin/path, method, role names, status codes, timings, body lengths, and names of changed headers; URL query strings/fragments, response bodies, and header values are not persisted. The Agents workspace can export the summaries as JSON or clear them. All history endpoints require the bearer token.
 
-All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` is an explicit exception for isolated local CTF labs; exact allowlisting is still required. Redirects are revalidated.
+All file paths are relative to the configured workspace. File tools reject paths and symlinks that escape it. HTTP research requires exact hostnames in `OMDA_AGENT_ALLOWED_HOSTS`. Private/local DNS results and non-HTTPS targets are rejected by default. The local-lab exception applies only when both `OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS=true` and `OMDA_AGENT_ENVIRONMENT=development` are set; exact host allowlisting is still required. Redirects are revalidated. When a hostname has multiple validated A/AAAA records, the runtime may try another validated address after a connection failure within the same request deadline, without resolving the hostname again.
 
 ## Local CTF lab mode
 
@@ -262,6 +262,7 @@ Keep local targets disabled for normal browsing and bug-bounty work. Only when r
 ```sh
 export OMDA_AGENT_ALLOWED_HOSTS="127.0.0.1,localhost"
 export OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS="true"
+export OMDA_AGENT_ENVIRONMENT="development"
 ```
 
 Do not add broad private-network ranges or enable this mode when testing ordinary public targets.

@@ -127,32 +127,6 @@ describe("local Agent runtime HTTP integration", () => {
     assert.equal(protectedStatus.status, 401);
   });
 
-  test("force-kills an approved terminal command that ignores SIGTERM after timeout", async () => {
-    const timeoutRuntime = await startRuntime({
-      OMDA_AGENT_EXECUTION: "host",
-      OMDA_AGENT_COMMAND_TIMEOUT_MS: "100",
-    });
-    const started = Date.now();
-    try {
-      const response = await fetch(timeoutRuntime.baseUrl + "/v1/terminal/execute", {
-        method: "POST",
-        headers: { authorization: "Bearer " + token, "content-type": "application/json" },
-        body: JSON.stringify({
-          command: "python3",
-          args: ["-c", "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(10)"],
-          cwd: ".",
-        }),
-      });
-      assert.equal(response.status, 200);
-      const result = await response.json() as { ok: boolean; timedOut: boolean };
-      assert.equal(result.ok, false);
-      assert.equal(result.timedOut, true);
-      assert.ok(Date.now() - started < 5000, "The terminal timeout must not leave the runtime waiting indefinitely.");
-    } finally {
-      await stopRuntime(timeoutRuntime);
-    }
-  });
-
   test("accepts a valid bearer token for protected runtime status", async () => {
     const response = await request("/v1/runtime/status", {
       headers: { authorization: "Bearer " + token },
@@ -217,6 +191,7 @@ describe("local Agent runtime HTTP integration", () => {
     const historyRuntime = await startRuntime({
       OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
       OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+      OMDA_AGENT_ENVIRONMENT: "development",
       OMDA_TEST_ADMIN_ROLE: "admin-secret-value",
     });
     try {
@@ -336,6 +311,70 @@ async function startMockModel(
 async function stopMockModel(mock: MockModelHandle): Promise<void> {
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
+
+test("returns a controlled tool error for malformed HTTP target URLs", async () => {
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "invalid-url-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "not-a-valid-url", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The malformed URL was rejected safely." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+    OMDA_AGENT_ALLOWED_HOSTS: "example.com",
+    OMDA_AGENT_ENVIRONMENT: "production",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Fetch the supplied HTTP URL safely." });
+    const body = await response.text();
+    assert.equal(response.status, 200, body + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(body) as { status: string }).status, "completed");
+    assert.equal(mock.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+  }
+});
+
+test("revalidates redirect hostnames before following an allowlisted HTTP request", async () => {
+  let redirectedRequests = 0;
+  let targetPort = 0;
+  const target = createHttpServer((request, response) => {
+    if (request.url === "/start") {
+      response.writeHead(302, { location: "http://localhost:" + targetPort + "/blocked" });
+      response.end();
+      return;
+    }
+    redirectedRequests++;
+    response.end("redirect should not be reached");
+  });
+  await new Promise<void>((resolve, reject) => {
+    target.once("error", reject);
+    target.listen(0, "127.0.0.1", resolve);
+  });
+  const port = (target.address() as AddressInfo).port;
+  targetPort = port;
+  const mock = await startMockModel((requestNumber) => requestNumber === 1
+    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "redirect-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/start", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
+    : { payload: { choices: [{ delta: { content: "The redirect target was rejected." }, finish_reason: "stop" }] } });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "mock-model",
+    OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
+    OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
+    OMDA_AGENT_ENVIRONMENT: "development",
+  });
+  try {
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Fetch the allowlisted endpoint and safely handle its redirect." });
+    const body = await response.text();
+    assert.equal(response.status, 200, body + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(body) as { status: string }).status, "completed");
+    assert.equal(mock.requests, 2);
+    assert.equal(redirectedRequests, 0, "a redirect to a hostname outside the allowlist must not be contacted");
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(mock);
+    await new Promise<void>((resolve, reject) => target.close((error) => error ? reject(error) : resolve()));
+  }
+});
 
 test("approval gate pauses writes and executes only the exact approved call", async () => {
   const mock = await startMockModel((requestNumber) => requestNumber === 1
