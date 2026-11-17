@@ -840,7 +840,6 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       onProgress?.({ type: "status", status: "provider_skipped", provider: provider.name, cooldownMs: cooldownRemaining });
       continue;
     }
-    const started = Date.now();
     let emitted = false;
     let responseStatus: number | null = null;
     let retryAfter: string | null = null;
