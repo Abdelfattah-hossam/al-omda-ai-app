@@ -88,6 +88,11 @@ test("does not create file tasks for questions that only mention Office formats"
     "عايز ملف",
     "I need a file",
     "I need a document",
+    "write a report",
+    "prepare a report",
+    "اعمل ملف",
+    "اكتبلي تقرير",
+    "جهزلي عرض تقديمي",
   ]) {
     assert.equal(detectProjectSpecialty(request), null, "misclassified Office question: " + request);
   }
