@@ -10,8 +10,10 @@ function isLoopback(hostname: string): boolean {
 export function normalizeModelProviderBase(baseValue: string, name = "provider"): string {
   let url: URL;
   try { url = new URL(baseValue); } catch { throw new Error("Invalid baseUrl for model provider " + name + "."); }
-  if (url.username || url.password || url.search || url.hash || !(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
-    throw new Error("Model provider " + name + " must use HTTPS or an explicit loopback HTTP endpoint, without credentials or query parameters.");
+  if (url.username || url.password) throw new Error("Model provider " + name + " must not embed credentials in its baseUrl.");
+  if (url.search || url.hash) throw new Error("Model provider " + name + " must not include query parameters or fragments in its baseUrl.");
+  if (!(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
+    throw new Error("Model provider " + name + " must use HTTPS or an explicit loopback HTTP endpoint.");
   }
   return url.toString().replace(/\/+$/, "");
 }
@@ -31,9 +33,6 @@ export function parseModelProviderConfig(value: unknown, env: Record<string, str
     const priority = entry.priority === undefined ? 100 + index : entry.priority;
     const rawPurposes = entry.purposes === undefined ? ["all"] : entry.purposes;
     if (!/^[a-zA-Z0-9_-]{1,48}$/.test(name)) throw new Error("Invalid model provider name at index " + index + ".");
-    const nameKey = name.toLowerCase();
-    if (seenNames.has(nameKey)) throw new Error("Duplicate or reserved model provider name: " + name + ".");
-    seenNames.add(nameKey);
     if (!model || model.length > 200) throw new Error("Invalid model name for provider " + name + ".");
     if (apiKeyEnv && !/^[A-Z_][A-Z0-9_]{0,100}$/.test(apiKeyEnv)) throw new Error("Invalid API key environment variable name for provider " + name + ".");
     if (!Number.isInteger(priority) || (priority as number) < 1 || (priority as number) > 999) throw new Error("Provider priority for " + name + " must be an integer from 1 to 999.");
@@ -43,6 +42,9 @@ export function parseModelProviderConfig(value: unknown, env: Record<string, str
       throw new Error("Invalid purposes for model provider " + name + ".");
     }
     if (apiKeyEnv && !env[apiKeyEnv]?.trim()) continue;
+    const nameKey = name.toLowerCase();
+    if (seenNames.has(nameKey)) throw new Error("Duplicate or reserved model provider name: " + name + ".");
+    seenNames.add(nameKey);
     const base = normalizeModelProviderBase(baseValue, name);
     result.push({ name, base, model, key: apiKeyEnv ? env[apiKeyEnv]!.trim() : "", purposes: [...rawPurposes] as Array<ModelPurpose | "all">, priority: priority as number });
   }
