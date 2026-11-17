@@ -78,6 +78,15 @@ test("sequential completion migration requires successful prior stage execution"
   assert.match(completion, /item\.value ->> 'executionStatus' is distinct from 'succeeded'/i);
   assert.match(completion, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is null/i);
 });
+test("legacy approved project results are backfilled without overriding explicit execution states", () => {
+  const migration = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261117160000_backfill_legacy_project_stage_status.sql"), "utf8");
+  assert.match(migration, /item\.value ->> 'state' = 'approved'/i);
+  assert.match(migration, /nullif\(btrim\(item\.value ->> 'result'\), ''\) is not null/i);
+  assert.match(migration, /nullif\(btrim\(item\.value ->> 'executionStatus'\), ''\) is null/i);
+  assert.match(migration, /jsonb_build_object\('executionStatus', 'succeeded'\)/i);
+  assert.match(migration, /where jsonb_typeof\(task\.steps\) = 'array'/i);
+});
+
 test("private user tables and storage buckets retain ownership RLS", () => {
   for (const table of ["profiles", "tasks", "ai_daily_usage", "ai_chat_history", "ai_user_memory", "ai_memory_nodes", "ai_memory_edges", "ai_conversations"]) {
     assert.match(sql, new RegExp("alter table public\\." + table + " enable row level security", "i"), table);
