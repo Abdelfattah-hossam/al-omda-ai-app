@@ -1,6 +1,7 @@
 export type ProjectStagePrerequisite = {
   state: string;
   result?: string | null;
+  executionStatus?: string | null;
 };
 
 /**
@@ -13,6 +14,6 @@ export function hasCompletedPriorProjectStages(
 ): boolean {
   if (!Number.isInteger(stepIndex) || stepIndex < 0 || stepIndex >= steps.length) return false;
   return steps.slice(0, stepIndex).every(
-    (step) => step.state === "approved" && typeof step.result === "string" && step.result.trim().length > 0,
+    (step) => step.state === "approved" && step.executionStatus === "succeeded" && typeof step.result === "string" && step.result.trim().length > 0,
   );
 }
