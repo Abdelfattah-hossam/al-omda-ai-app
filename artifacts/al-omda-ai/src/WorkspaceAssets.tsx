@@ -128,7 +128,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   return <div className="page-enter" id="assets-list">
     <div className="page-heading">
       <div><div className="eyebrow">{ar ? "مساحة العمل" : "WORKSPACE ASSETS"}</div><h1 className="page-title">{ar ? "الأصول والملفات" : "Assets & files"}</h1><p className="page-subtitle">{ar ? "ملفاتك الخاصة محفوظة بأمان ويمكن تنزيلها أو حذفها من هنا." : "Your private files are securely stored and can be downloaded or deleted here."}</p></div>
-      <label className="button button-primary" style={{cursor:uploading?"wait":"pointer",opacity:uploading?.65:1}}>
+      <label className="button button-primary" style={{cursor:uploading?"wait":"pointer",opacity:uploading ? 0.65 : 1}}>
         {uploading ? <LoaderCircle size={14} className="animate-spin"/> : <Upload size={14}/>}
         {uploading ? (ar ? "جارٍ الرفع..." : "Uploading...") : (ar ? "رفع ملفات" : "Upload files")}
         <input type="file" multiple hidden disabled={uploading} accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json,.html,.xml,.zip,.png,.jpg,.jpeg,.webp,.gif" onChange={uploadFiles}/>
