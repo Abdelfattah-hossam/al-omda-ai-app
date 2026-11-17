@@ -47,7 +47,7 @@ function getTaskPresentation(result?: string): TaskPresentation | null {
     return value as TaskPresentation;
   } catch { return null; }
 }
-async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
+async function downloadTaskPowerPoint(data: TaskPresentation, projectId?: string): Promise<void> {
   const primary = "https://esm.sh/pptxgenjs@3.12.0";
   const fallback = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
   let imported: any;
@@ -71,11 +71,8 @@ async function downloadTaskPowerPoint(data: TaskPresentation): Promise<void> {
   const blob = await pptx.write({ outputType: "blob" }) as Blob;
   const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
   if (blob.size < 1000 || signature[0] !== 0x50 || signature[1] !== 0x4b) throw new Error("The generated PowerPoint file is invalid.");
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx";
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const filename = safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx";
+  await saveAndDownloadTaskArtifact(blob, filename, "application/vnd.openxmlformats-officedocument.presentationml.presentation", projectId);
 }
 type TaskSpreadsheet = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?:Record<string,string>; sheets?:Array<{name:string;columns:string[];rows:Array<Array<string|number|boolean>>;formulas?:Record<string,string>}> };
 function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
@@ -88,7 +85,7 @@ function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
     return value as TaskSpreadsheet;
   } catch { return null; }
 }
-async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
+async function downloadTaskExcel(data: TaskSpreadsheet, projectId?: string): Promise<void> {
   const primary = "https://esm.sh/xlsx@0.18.5";
   const fallback = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
   let module: any;
@@ -97,11 +94,7 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
     try { module = await import(/* @vite-ignore */ fallback); }
     catch {
       const blob = createXlsxBlob(data);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx";
-      document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-workbook") + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", projectId);
       return;
     }
   }
@@ -120,11 +113,8 @@ async function downloadTaskExcel(data: TaskSpreadsheet): Promise<void> {
   }
   const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const safeName = (data.title || "AL-OMDA-workbook").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-workbook";
-  const link = document.createElement("a");
-  link.href = url; link.download = safeName + ".xlsx"; document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const safeName = safeArtifactName(data.title, "AL-OMDA-workbook");
+  await saveAndDownloadTaskArtifact(blob, safeName + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", projectId);
 }
 
 
@@ -146,15 +136,38 @@ function getTaskHtmlApp(result?: string): string | null {
 function safeArtifactName(value: string, fallback: string): string {
   return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
 }
-function downloadTaskHtml(data: { title: string; html: string }): void {
-  const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
+async function persistTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+  if (!projectId) return;
+  const params = new URLSearchParams({ filename, projectId });
+  const response = await fetch("/api/storage/assets?" + params.toString(), {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: { "content-type": mimeType },
+    body: blob,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : "Could not save the generated file to project assets.");
+}
+function triggerArtifactDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
+  link.href = url; link.download = filename;
   document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
-async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
+async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+  let saveError: unknown = null;
+  try { await persistTaskArtifact(blob, filename, mimeType, projectId); }
+  catch (error) { saveError = error; }
+  triggerArtifactDownload(blob, filename);
+  if (saveError) throw saveError;
+}
+async function downloadTaskHtml(data: { title: string; html: string }, projectId?: string): Promise<void> {
+  const filename = safeArtifactName(data.title, "AL-OMDA-app") + ".html";
+  const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
+  await saveAndDownloadTaskArtifact(blob, filename, "text/html", projectId);
+}
+async function downloadTaskWord(data: TaskWordDocument, projectId?: string): Promise<void> {
   const primary = "https://esm.sh/docx@9.5.1";
   const fallback = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
   let lib: any;
@@ -168,11 +181,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
       const table = data.columns.length ? "<table><thead><tr>" + data.columns.map((item) => "<th>" + escapeHtml(item) + "</th>").join("") + "</tr></thead><tbody>" + data.rows.map((row) => "<tr>" + data.columns.map((_, index) => "<td>" + escapeHtml(String(row[index] ?? "")) + "</td>").join("") + "</tr>").join("") + "</tbody></table>" : "";
       const html = "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:Arial,sans-serif;direction:" + (rtl ? "rtl" : "ltr") + ";line-height:1.8}h1{text-align:center}table{width:100%;border-collapse:collapse;margin-top:18px}td,th{border:1px solid #888;padding:7px;text-align:start}th{background:#e8edf5}</style></head><body><h1>" + escapeHtml(data.title) + "</h1>" + paragraphs + table + "</body></html>";
       const blob = createDocxBlob(data, rtl);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".docx";
-      document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
       return;
     }
   }
@@ -192,11 +201,7 @@ async function downloadTaskWord(data: TaskWordDocument): Promise<void> {
     children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: data.columns.map(() => Math.floor(9000 / data.columns.length)), borders, rows }));
   }
   const blob = await Packer.toBlob(new Document({ sections: [{ properties: { page: { margin: { top: 900, right: 800, bottom: 900, left: 800 } } }, children }] }));
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url; link.download = safeArtifactName(data.title, "AL-OMDA-document") + ".docx";
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  await saveAndDownloadTaskArtifact(blob, safeArtifactName(data.title, "AL-OMDA-document") + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", projectId);
 }
 
 const translations = {
@@ -1249,7 +1254,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
                {getTaskPresentation(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskPresentation(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر إنشاء ملف PowerPoint.":"Could not generate the PowerPoint file.")))}><FileText size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskPowerPoint(getTaskPresentation(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف PowerPoint.":"Could not save or download the PowerPoint file.")))}><FileText size={14}/>{isAr?'تحميل عرض PowerPoint (.pptx)':'Download PowerPoint (.pptx)'}</button></div>
                  <div style={{display:'grid',gap:8}}>
                    {getTaskPresentation(step.result)!.slides.map((slide,index)=><article key={index} style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
                      <strong style={{display:'block',marginBottom:8}}>{index+1}. {slide.title}</strong>
@@ -1262,18 +1267,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
                    <iframe title={task.title} sandbox="allow-scripts" srcDoc={getTaskHtmlApp(step.result)!} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
                  </div>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>downloadTaskHtml({title:task.title,html:getTaskHtmlApp(step.result)!})}><FileText size={14}/>{isAr?'تحميل التطبيق HTML':'Download app (.html)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskHtml({title:task.title,html:getTaskHtmlApp(step.result)!},task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف الموقع.":"Could not save or download the website file.")))}><FileText size={14}/>{isAr?'تحميل التطبيق HTML':'Download app (.html)'}</button></div>
                  <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملف HTML مستقل يعمل في المتصفح.':'A standalone HTML file that runs in a browser.'}</small>
                </div> : getTaskSpreadsheet(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskSpreadsheet(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!)}><FileText size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskExcel(getTaskSpreadsheet(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف Excel.":"Could not save or download the Excel file.")))}><FileText size={14}/>{isAr?'تحميل ملف Excel (.xlsx)':'Download Excel (.xlsx)'}</button></div>
                  <div style={{overflowX:'auto',maxWidth:'100%'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:560,width:'100%',fontSize:12}}>
                    <thead><tr>{getTaskSpreadsheet(step.result)!.columns.map((column,index)=><th key={index} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead>
                    <tbody>{getTaskSpreadsheet(step.result)!.rows.map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,cellIndex)=><td key={cellIndex} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody>
                  </table></div>
                </div> : getTaskWordDocument(step.result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{getTaskWordDocument(step.result)!.title}</strong>
-                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(step.result)!)}><FileText size={14}/>{isAr?'تحميل مستند Word (.docx)':'Download Word (.docx)'}</button></div>
+                 <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(step.result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف Word.":"Could not save or download the Word file.")))}><FileText size={14}/>{isAr?'تحميل مستند Word (.docx)':'Download Word (.docx)'}</button></div>
                  <div style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
                    {getTaskWordDocument(step.result)!.paragraphs.map((p,i)=><p key={i} style={{margin:'5px 0',lineHeight:1.8}}>{p}</p>)}
                    <div style={{overflowX:'auto'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:480,width:'100%',fontSize:12}}><thead><tr>{getTaskWordDocument(step.result)!.columns.map((column,i)=><th key={i} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead><tbody>{getTaskWordDocument(step.result)!.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody></table></div>
