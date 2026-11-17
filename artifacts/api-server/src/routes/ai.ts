@@ -826,7 +826,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       limit: completion.limit,
       resetAt: completion.resetAt,
     };
-    res.json({ taskId, stepId, result: presentation ? "ALOMDA_PPTX_JSON:" : result, ...(spreadsheet ? { spreadsheet } : {}), ...(presentation ? { presentation } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
+    res.json({ taskId, stepId, result, ...(spreadsheet ? { spreadsheet } : {}), ...(presentation ? { presentation } : {}), executedAt, provider, model: answer.model, usage: chargedUsage });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not execute this project step.");
   }
@@ -1119,7 +1119,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         }
       }
       if (!validatedWordDocument) {
-        res.status(502).json({ error: "تعذر إنشاء المستند بعد محاولات الإصلاح التلقائية. لم يتم خصم وحداتك. حاول بعد قليل، ولن تحتاج إلى إعادة كتابة طلبك." });
+        res.status(502).json({ error: "تعذر إنشاء مستند Word صالح بعد محاولات الإصلاح وتجربة مزود آخر. لم يتم خصم وحداتك؛ حاول مرة أخرى بعد قليل." });
         return;
       }
     }
