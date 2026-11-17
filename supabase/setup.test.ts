@@ -4,6 +4,7 @@ import test from "node:test";
 
 const sql = await readFile(new URL("./setup.sql", import.meta.url), "utf8");
 const migration = await readFile(new URL("./migrations/20261117123000_require_previous_project_stage_results.sql", import.meta.url), "utf8");
+const legacyQuota = await readFile(new URL("./ai_quota.sql", import.meta.url), "utf8");
 
 function functionDefinition(schema: string, name: string): string {
   const start = sql.indexOf("create or replace function " + schema + "." + name + "(");
@@ -31,6 +32,12 @@ test("privileged quota implementations are isolated in the non-exposed schema", 
     assert.match(definition, /set search_path = ''/i, name);
     assert.match(sql, new RegExp("grant execute on function omda_private\\." + name + "[\s\S]*?to authenticated", "i"));
   }
+});
+
+test("legacy quota SQL cannot restore exposed SECURITY DEFINER functions", () => {
+  assert.match(legacyQuota, /deprecated legacy script/i);
+  assert.doesNotMatch(legacyQuota, /create or replace function public\./i);
+  assert.match(legacyQuota, /setup\.sql/i);
 });
 
 test("pending database migration secures every quota RPC without changing public RPC names", () => {
