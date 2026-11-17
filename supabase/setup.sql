@@ -307,10 +307,12 @@ begin
   if v_user is null then
     raise exception 'Authentication required';
   end if;
-  if p_task_id is null or p_step_id is null or char_length(p_step_id) not between 1 and 80
-     or p_result is null or char_length(p_result) < 1 or octet_length(p_result) > 500000
-     or p_executed_at is null or p_units is null or p_units < 1
-     or p_units > 5 or p_daily_limit <> 1000 then
+  if p_task_id is null
+     or p_step_id is null or char_length(p_step_id) not between 1 and 80
+     or p_result is null or char_length(btrim(p_result)) < 1 or octet_length(p_result) > 500000
+     or p_executed_at is null
+     or p_units is distinct from 2
+     or p_daily_limit is distinct from 1000 then
     raise exception 'Invalid task completion request';
   end if;
 
