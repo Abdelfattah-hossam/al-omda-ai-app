@@ -56,6 +56,7 @@ export function createXlsxBlob(data: XlsxData): Blob {
     for (const [address, rawFormula] of Object.entries(sheet.formulas ?? {})) {
       const formula = String(rawFormula).trim().replace(/^=/, "");
       if (!formula || /\b(?:WEBSERVICE|HYPERLINK|DDE|CALL|EXEC|REGISTER|RTD|INDIRECT)\s*\(/i.test(formula) || /[\[\]]/.test(formula)) {
+        throw new Error("Unsafe Excel formula rejected at " + address + ".");
       }
     }
     const rows = [sheet.columns, ...sheet.rows];
