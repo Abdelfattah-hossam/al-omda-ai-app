@@ -26,6 +26,13 @@ test("accepts a bounded multi-file project with build instructions", () => {
   assert.equal(project.testStatus, "not_run");
 });
 
+test("normalizes a case-insensitive requested entry point to its actual file path", () => {
+  const value = validProject();
+  value.entryPoint = "SRC/MAIN.TSX";
+  const project = parseCodeProjectArtifact(JSON.stringify(value));
+  assert.equal(project?.entryPoint, "src/main.tsx");
+});
+
 test("rejects path traversal, absolute paths, duplicate paths, and environment secrets", () => {
   for (const path of ["../secret.txt", "/etc/passwd", "src/../../secret.txt", ".env", "keys/private.pem"]) {
     const value = validProject();
