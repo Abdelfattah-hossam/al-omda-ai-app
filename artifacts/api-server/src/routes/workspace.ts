@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import {
   UpdateProfileResponse,
@@ -262,13 +263,8 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
     return;
   }
   const plan = parsed.data;
-  if (
-    plan.status !== "review" ||
-    plan.steps.length === 0 ||
-    plan.steps.some((step) => step.state !== "pending" || Boolean(step.result || step.executedAt || step.executionStatus || step.executionError)) ||
-    new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length
-  ) {
-    res.status(400).json({ error: "New plans must start with every step awaiting your review." });
+  if (!isValidNewTaskPlan(plan)) {
+    res.status(400).json({ error: "Invalid new plan: provide 3–8 pending steps, each with non-empty text, output, and completion criteria of at most 1,200 characters." });
     return;
   }
   try {
