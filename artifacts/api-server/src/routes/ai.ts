@@ -141,6 +141,18 @@ function systemPrompt(coding: boolean, memory = ""): string {
   return base + operatingRules + professionalStandards + " You are also a senior software engineering assistant. For programming requests: identify the language and environment; provide complete, runnable code when enough context exists; use fenced Markdown code blocks with the correct language; include only essential usage notes unless the user asks for explanation; preserve existing architecture and styling unless asked to change them; never invent test results. For debugging, apply the smallest safe fix and provide the corrected code or patch. If essential context is missing, ask one focused question instead of guessing. Prefer secure defaults and never expose secrets." + executionStyle + memoryContext;
 }
 
+const FINAL_AUDIT_DEADLINE_MS = 45_000;
+
+function withFinalAuditDeadline<T>(work: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Final audit deadline exceeded.")), FINAL_AUDIT_DEADLINE_MS);
+  });
+  return Promise.race([work(), deadline]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
+
 async function loadUserMemory(accessToken: string, userId: string): Promise<string> {
   const query = new URLSearchParams({ select: "memory_text", user_id: "eq." + userId, limit: "1" });
   const response = await supabaseFetch("/rest/v1/ai_user_memory?" + query.toString(), {}, accessToken);
@@ -159,14 +171,13 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
       order: "created_at.desc",
       limit: "120",
     });
-    const [nodesResponse, edgesResponse] = await Promise.all([
-      supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, accessToken),
-      supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, accessToken),
-    ]);
-    const [nodes, edges] = await Promise.all([
-      readSupabaseJson<Array<{ id: string; node_type: string; label: string; details?: Record<string, unknown>; source?: string; confidence?: number }>>(nodesResponse),
-      readSupabaseJson<Array<{ source_node_id: string; target_node_id: string; relation: string }>>(edgesResponse),
-    ]);
+    const nodesResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, accessToken);
+    const nodes = await readSupabaseJson<Array<{ id: string; node_type: string; label: string; details?: Record<string, unknown>; source?: string; confidence?: number }>>(nodesResponse);
+    let edges: Array<{ source_node_id: string; target_node_id: string; relation: string }> = [];
+    if (nodes.length > 0) {
+      const edgesResponse = await supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, accessToken);
+      edges = await readSupabaseJson<Array<{ source_node_id: string; target_node_id: string; relation: string }>>(edgesResponse);
+    }
     const labels = new Map(nodes.map((node) => [node.id, node.label]));
     const facts = nodes.map((node) => {
       const detail = node.details && Object.keys(node.details).length ? " — " + JSON.stringify(node.details).slice(0, 500) : "";
@@ -1455,29 +1466,39 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     }
     if (shouldAuditChatRequest(latestCustomerRequest)) {
       try {
-        const reviewProvider = providers.find((candidate) => candidate !== usedProvider) || usedProvider;
-        const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
-          role: "user",
-          content: [
-            "You are AL OMDA's independent final quality auditor. Check the draft against the exact request and supplied evidence for unsupported facts, fabricated citations, arithmetic/unit errors, legal or professional risk, contradictions, security issues, and missing requirements.",
-            "Do not reveal private reasoning. Do not invent sources or facts. Reply exactly PASS if there is no concrete material defect. Otherwise return only concise actionable lines beginning ISSUE:.",
-            "Original user request: " + latestCustomerRequest,
-            "Draft answer: " + answer.text
-          ].join("\n")
-        }], userMemory);
-        const issues = parseHostedAuditIssues(reviewAnswer.text);
-        if (issues.length) {
-          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
-            role: "user",
-            content: [
-              "Correct only the concrete defects listed below. Preserve all supported facts and the user's exact requirements. Do not invent sources, legal authorities, standards, calculations, or test results. If a fact cannot be verified, state the limitation. Return only the complete corrected answer.",
-              "Original user request: " + latestCustomerRequest,
+        const containsImages = modelConversation.some((message) => Boolean(message.image));
+        const reviewProvider = providers.find((candidate) => candidate !== usedProvider && (!containsImages || candidate !== "cloudflare"))
+          || (containsImages && usedProvider === "cloudflare" ? providers.find((candidate) => candidate !== "cloudflare") : usedProvider);
+        if (!reviewProvider || (containsImages && reviewProvider === "cloudflare")) {
+          throw new Error("No image-capable provider is available for evidence-aware final review.");
+        }
+        const auditResult = await withFinalAuditDeadline(async () => {
+          const reviewMessages: ChatMessage[] = [
+            ...modelConversation,
+            { role: "user", content: [
+              "You are AL OMDA's independent final quality auditor. Check the draft against the complete conversation and all supplied evidence, including images, for unsupported facts, fabricated citations, arithmetic/unit errors, professional risk, contradictions, security issues, and missing requirements.",
+              "Do not reveal private reasoning. Do not invent sources or facts. Reply exactly PASS if there is no concrete material defect. Otherwise return only concise actionable lines beginning ISSUE:.",
+              "Latest user request: " + latestCustomerRequest,
+              "Draft answer: " + answer.text
+            ].join("\n") }
+          ];
+          const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory);
+          const issues = parseHostedAuditIssues(reviewAnswer.text);
+          if (!issues.length) return { answer, provider: usedProvider };
+          const refinementMessages: ChatMessage[] = [
+            ...modelConversation,
+            { role: "user", content: [
+              "Correct only the concrete defects listed below. Preserve all supported facts and the user's exact requirements and supplied evidence, including earlier conversation details and images. Do not invent sources, legal authorities, standards, calculations, or test results. If a fact cannot be verified, state the limitation. Return only the complete corrected answer.",
+              "Latest user request: " + latestCustomerRequest,
               "Draft answer: " + answer.text,
               "Required corrections: " + issues.join("; ")
-            ].join("\n")
-          }], userMemory);
-          if (refined.text.trim()) answer = refined;
-        }
+            ].join("\n") }
+          ];
+          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory);
+          return refined.text.trim() ? { answer: refined, provider: reviewProvider } : { answer, provider: usedProvider };
+        });
+        answer = auditResult.answer;
+        usedProvider = auditResult.provider;
       } catch (error) {
         console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
       }
