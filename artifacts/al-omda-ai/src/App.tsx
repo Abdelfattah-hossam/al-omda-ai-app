@@ -1381,23 +1381,23 @@ pnpm --filter @workspace/scripts agent:runtime`;
               <g fill="none" stroke="#46a9ff" strokeOpacity=".26" strokeWidth="2" strokeDasharray="7 9">
                 <path d="M195 205Q595 5 970 210"/><path d="M340 375Q625 520 870 210"/><path d="M620 160Q820 330 1030 360"/><path d="M195 205Q440 80 650 330"/>
               </g>
-              <g fill="#31a9ff" filter="url(#global-map-glow)">
+              {!authUser && <g fill="#31a9ff" filter="url(#global-map-glow)">
                 <circle cx="190" cy="210" r="6"/><circle cx="265" cy="230" r="5"/><circle cx="330" cy="185" r="6"/>
                 <circle cx="560" cy="190" r="6"/><circle cx="650" cy="230" r="5"/><circle cx="730" cy="190" r="6"/>
                 <circle cx="850" cy="210" r="6"/><circle cx="940" cy="245" r="5"/><circle cx="1020" cy="365" r="6"/>
                 <circle cx="610" cy="350" r="5"/><circle cx="680" cy="315" r="5"/>
-              </g>
-              <g transform="translate(680 315)" filter="url(#global-map-glow)">
+              </g>}
+              {!authUser && <g transform="translate(680 315)" filter="url(#global-map-glow)">
                 <circle r="24" fill="#20a5ff" opacity=".16"><animate attributeName="r" values="17;31;17" dur="2.4s" repeatCount="indefinite"/></circle>
                 <circle r="12" fill="#168cff" stroke="#eaf7ff" strokeWidth="3"/>
                 <circle r="4" fill="#fff"/>
-              </g>
-              <g transform="translate(710 292)"><rect x="0" y="0" width="145" height="34" rx="8" fill="#0c1724" stroke="#3b9fe8"/><text x="72" y="22" textAnchor="middle" fill="#e9f6ff" fontSize="14" fontWeight="600">{isAr?'العين · موقع تقريبي':'Al Ain · Approx.'}</text></g>
+              </g>}
+              {!authUser && <g transform="translate(710 292)"><rect x="0" y="0" width="145" height="34" rx="8" fill="#0c1724" stroke="#3b9fe8"/><text x="72" y="22" textAnchor="middle" fill="#e9f6ff" fontSize="14" fontWeight="600">{isAr?'العين · موقع تقريبي':'Al Ain · Approx.'}</text></g>}
             </g>
-            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{isAr?'نقاط النشاط توضيحية وليست مواقع مستخدمين مباشرة':'Activity dots are illustrative, not live user locations'}</text>
+            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{authUser ? (isAr?'لا يتم جمع أو عرض مواقع المستخدمين الجغرافية':'User geolocations are not collected or displayed') : (isAr?'نقاط عرض توضيحية وليست مواقع مستخدمين مباشرة':'Illustrative guest-preview dots, not live user locations')}</text>
           </svg>
         </div>
-        <div className="global-map-legend"><span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span><span><i className="global-legend-user"/>{isAr?'موقعك التقريبي: العين، الإمارات':'Your approximate location: Al Ain, UAE'}</span></div>
+        <div className="global-map-legend">{!authUser && <span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span>}<span>{authUser ? (isAr?'لا توجد بيانات مواقع محفوظة':'No location data stored') : (isAr?'معاينة زائر':'Guest preview')}</span></div>
         <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
       {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
