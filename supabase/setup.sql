@@ -308,7 +308,10 @@ begin
        select 1
        from jsonb_array_elements(v_steps) with ordinality as item(value, ordinality)
        where item.ordinality < v_step_index
-         and item.value ->> 'state' is distinct from 'approved'
+         and (
+           item.value ->> 'state' is distinct from 'approved'
+           or nullif(btrim(item.value ->> 'result'), '') is null
+         )
      ) then
     return jsonb_build_object('saved', false, 'conflict', true);
   end if;
