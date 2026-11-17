@@ -55,6 +55,38 @@ To enable MCP servers, set `OMDA_AGENT_MCP_COMMANDS` to an exact comma-separated
 
 Set `OMDA_AGENT_SEARCH_BASE_URL` to the provider's HTTPS search endpoint and add only that endpoint hostname to `OMDA_AGENT_ALLOWED_HOSTS`. If the provider uses the standard Bing Web Search authentication header, set `OMDA_AGENT_SEARCH_API_KEY`; the key is read only by the local runtime and is never included in model prompts or tool output.
 
+### Private user knowledge graph
+
+The hosted chat API can read a private per-user graph of confirmed memory nodes and relationships. Supported nodes include preferences, projects, decisions, constraints, corrections, people, organizations, tools, and other non-sensitive facts. Edges express relationships such as works_on, prefers, decided, uses, and corrected. The graph is protected by Supabase RLS and composite ownership foreign keys so a relationship cannot connect nodes owned by different users.
+
+The chat service records facts only when the user explicitly asks AL OMDA to remember them, or clearly states a correction in a supported correction format. It does not automatically retain every conversation. Credential-like values and common sensitive personal-data fields are rejected. The graph is added to later chat context alongside the existing private text memory. Authenticated graph APIs support listing, upserting, and clearing the user's graph.
+
+### Hosted chat API configuration
+
+The Cloudflare-hosted chat API now selects temperature from the latest user request:
+- Legal, engineering, medical, finance, software, and security work: **0.2** by default.
+- Research and business analysis: **0.3**.
+- General conversation: **0.4**.
+
+Set the Worker environment variable OMDA_PRECISE_TEMPERATURE to a value from 0.1 to 0.3 to override the hosted precision-task default. Invalid values fall back to 0.2. This setting changes sampling behavior only; it does not guarantee factual accuracy.
+
+Hosted chat currently uses provider text-generation APIs and does not expose terminal execution or arbitrary local file access. Function Calling with actual tools is enabled in the separate local Agent Runtime described below. It advertises built-in search, workspace file tools, terminal execution, and MCP functions when available; writes, terminal commands, and MCP actions still require explicit approval. Keep the local runtime connected for computer/file execution. Do not interpret hosted-chat availability as permission to run commands on the Cloudflare Worker.
+
+### Model temperature and function calling
+
+The runtime explicitly enables OpenAI-compatible Function Calling on model requests whenever tools are available (tools plus tool_choice auto). This includes built-in web search, workspace file access, approved terminal execution, configured MCP tools, and delegated specialists. Write operations, terminal commands, and MCP actions remain behind their existing approval gates. When no tools are supplied (for example, the internal quality auditor), tool calling is omitted.
+
+Temperature is selected by task purpose instead of being hardcoded:
+- Legal, engineering, medical, finance, software/coding, review, and proposal tasks use a low default of **0.2**.
+- Research and business analysis use **0.3**.
+- Finance, cash-flow, ROI, and other precision financial calculations use **0.2**, even when phrased as business analysis.
+- General conversation uses **0.4**.
+- Set OMDA_AGENT_PRECISE_TEMPERATURE to a value from **0.1 to 0.3** to override the default for precision tasks. Invalid or out-of-range values are ignored and fall back to 0.2.
+
+Provider purpose routing now recognizes legal, engineering, medical, finance, business, research, coding, proposal, and review work. Add those purpose names to a provider's purposes list in .omda/models.json when you want it selected for a profession-specific task.
+
+High-impact legal, engineering, medical, finance, software, security, and strategic deliverables receive an internal critic/fixer pass. The auditor checks for concrete defects and the fixer is called only when actionable issues are identified. This is an additional model review, not a substitute for source verification, professional review, or deterministic test execution; if the auditor provider is unavailable, the original draft is preserved and the runtime reports the review limitation.
+
 The agent exposes `web.search` to the lead agent and read-only specialists. It accepts `query`, optional `count` (clamped to 1–10), optional locale `market` (for example `en-US`), and `safeSearch` (`Strict` by default). Results are normalized to title, URL, snippet, and optional publication date.
 
 Security controls: HTTPS only, exact hostname allowlisting, DNS checks that reject private/local resolutions, redirects disabled, 12-second timeout, 150 KB response cap, and at most 10 returned results. For authorized HTTP role comparisons, credential-like request headers are accepted only from the local role configuration, and authenticated requests fail closed on cross-origin redirects so role credentials cannot be forwarded to another allowlisted host. The provider must implement the Bing Web Search response shape (`webPages.value`) or the documented compatible `results`/`value` arrays. Other provider-specific authentication headers are not inferred; use a compatible gateway that accepts the standard Bing subscription header or adapt the local integration deliberately.

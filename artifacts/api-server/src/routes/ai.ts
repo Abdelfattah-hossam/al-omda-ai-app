@@ -5,6 +5,8 @@ import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-wor
 import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
+import { getHostedModelTemperature, parseHostedAuditIssues, shouldAuditChatRequest } from "../lib/ai-model-policy.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -17,6 +19,34 @@ const router: IRouter = Router();
 const DAILY_LIMIT = 1000;
 type ChatMessage = { role: "user" | "assistant"; content: string; image?: { mimeType: string; data: string } };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
+type ModelTokenUsage = { promptTokens?: number; completionTokens?: number; totalTokens?: number };
+type ProviderAnswer = { text: string; model: string; usage?: ModelTokenUsage; finishReason?: string };
+
+function readModelTokenUsage(payload: unknown): ModelTokenUsage | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const root = payload as Record<string, unknown>;
+  const rawUsage = root.usage && typeof root.usage === "object" ? root.usage
+    : root.usageMetadata && typeof root.usageMetadata === "object" ? root.usageMetadata
+    : undefined;
+  if (!rawUsage || typeof rawUsage !== "object") return undefined;
+  const usage = rawUsage as Record<string, unknown>;
+  const readCount = (value: unknown): number | undefined => {
+    const count = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
+    return Number.isFinite(count) && count >= 0 ? count : undefined;
+  };
+  const result: ModelTokenUsage = {};
+  const promptTokens = readCount(usage.prompt_tokens ?? usage.promptTokenCount);
+  const completionTokens = readCount(usage.completion_tokens ?? usage.candidatesTokenCount);
+  const totalTokens = readCount(usage.total_tokens ?? usage.totalTokenCount);
+  if (promptTokens !== undefined) result.promptTokens = promptTokens;
+  if (completionTokens !== undefined) result.completionTokens = completionTokens;
+  if (totalTokens !== undefined) result.totalTokens = totalTokens;
+  return Object.keys(result).length ? result : undefined;
+}
+
+function isIncompleteProviderAnswer(answer: ProviderAnswer): boolean {
+  return /^(?:length|max_tokens|max_tokens_reached)$/i.test(answer.finishReason || "");
+}
 
 async function currentUsage(accessToken: string): Promise<Usage> {
   const response = await supabaseFetch("/rest/v1/rpc/get_ai_daily_usage", {
@@ -139,11 +169,55 @@ function systemPrompt(coding: boolean, memory = ""): string {
   return base + operatingRules + professionalStandards + " You are also a senior software engineering assistant. For programming requests: identify the language and environment; provide complete, runnable code when enough context exists; use fenced Markdown code blocks with the correct language; include only essential usage notes unless the user asks for explanation; preserve existing architecture and styling unless asked to change them; never invent test results. For debugging, apply the smallest safe fix and provide the corrected code or patch. If essential context is missing, ask one focused question instead of guessing. Prefer secure defaults and never expose secrets." + executionStyle + memoryContext;
 }
 
+const FINAL_AUDIT_DEADLINE_MS = 45_000;
+
+function withFinalAuditDeadline<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("Final audit deadline exceeded.")), FINAL_AUDIT_DEADLINE_MS);
+  return work(controller.signal).finally(() => clearTimeout(timer));
+}
+
 async function loadUserMemory(accessToken: string, userId: string): Promise<string> {
   const query = new URLSearchParams({ select: "memory_text", user_id: "eq." + userId, limit: "1" });
   const response = await supabaseFetch("/rest/v1/ai_user_memory?" + query.toString(), {}, accessToken);
   const rows = await readSupabaseJson<Array<{ memory_text?: string }>>(response);
-  return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  const memoryText = typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
+  try {
+    const nodesQuery = new URLSearchParams({
+      select: "id,node_type,label,normalized_label,details,source,confidence",
+      user_id: "eq." + userId,
+      order: "updated_at.desc",
+      limit: "80",
+    });
+    const edgesQuery = new URLSearchParams({
+      select: "source_node_id,target_node_id,relation",
+      user_id: "eq." + userId,
+      order: "created_at.desc",
+      limit: "120",
+    });
+    const nodesResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + nodesQuery.toString(), {}, accessToken);
+    const nodes = await readSupabaseJson<Array<{ id: string; node_type: string; label: string; details?: Record<string, unknown>; source?: string; confidence?: number }>>(nodesResponse);
+    let edges: Array<{ source_node_id: string; target_node_id: string; relation: string }> = [];
+    if (nodes.length > 0) {
+      const edgesResponse = await supabaseFetch("/rest/v1/ai_memory_edges?" + edgesQuery.toString(), {}, accessToken);
+      edges = await readSupabaseJson<Array<{ source_node_id: string; target_node_id: string; relation: string }>>(edgesResponse);
+    }
+    const labels = new Map(nodes.map((node) => [node.id, node.label]));
+    const facts = nodes.map((node) => {
+      const detail = node.details && Object.keys(node.details).length ? " — " + JSON.stringify(node.details).slice(0, 500) : "";
+      return "- [" + node.node_type + "] " + node.label + detail;
+    });
+    const relationships = edges.flatMap((edge) => {
+      const from = labels.get(edge.source_node_id);
+      const to = labels.get(edge.target_node_id);
+      return from && to ? ["- " + from + " --" + edge.relation + "--> " + to] : [];
+    });
+    const graph = [...facts, ...relationships].join("\n").slice(0, 6000);
+    return [memoryText, graph ? "CONFIRMED PRIVATE USER KNOWLEDGE GRAPH:\n" + graph : ""].filter(Boolean).join("\n\n").slice(0, 12000);
+  } catch (error) {
+    console.warn("[AI memory graph unavailable] Using saved text memory only.", error instanceof Error ? error.message : "Unknown error");
+    return memoryText;
+  }
 }
 
 function chooseProviders(messages: ChatMessage[]) {
@@ -156,7 +230,7 @@ function chooseProviders(messages: ChatMessage[]) {
   return order.filter((provider) => configured[provider as keyof typeof configured]);
 }
 
-async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callGroq(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) throw new Error("Groq is not configured.");
 
@@ -177,13 +251,13 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    signal: AbortSignal.timeout(12000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12000)]) : AbortSignal.timeout(12000),
     headers: { authorization: "Bearer " + key, "content-type": "application/json" },
     body: JSON.stringify({
       model,
       messages: groqMessages,
       max_completion_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800,
-      ...(hasImage ? { temperature: 0.7 } : {}),
+      temperature: getHostedModelTemperature(getLatestUserRequest(messages)),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -194,10 +268,10 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
   const raw = payload?.choices?.[0]?.message?.content;
   const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
   if (!text) throw new Error("Groq returned an empty response.");
-  return { text, model: payload?.model || model };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
-async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callGemini(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) throw new Error("Gemini is not configured.");
   // Every entry below is listed on Google's Standard Free Tier. Try a different
@@ -225,12 +299,12 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
         method: "POST",
-        signal: AbortSignal.timeout(25000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25000)]) : AbortSignal.timeout(25000),
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt(isCodingRequest(messages), memory) }] },
           contents,
-          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 },
+          generationConfig: { maxOutputTokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: getHostedModelTemperature(getLatestUserRequest(messages)) },
         }),
       });
       const payload = await response.json().catch(() => null) as any;
@@ -246,8 +320,9 @@ async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text:
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model };
+      return { text, model, usage: readModelTokenUsage(payload), finishReason: payload?.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "length" : typeof payload?.candidates?.[0]?.finishReason === "string" ? payload.candidates[0].finishReason : undefined };
     } catch (error) {
+      if (signal?.aborted) throw error;
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
   }
@@ -330,7 +405,7 @@ async function getOpenRouterModelOrder(messages: ChatMessage[], excludeModel = "
   return [...selected, "openrouter/free"];
 }
 
-async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
+async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OpenRouter is not configured.");
   const candidates = await getOpenRouterModelOrder(messages, excludeModel);
@@ -339,7 +414,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
-        signal: AbortSignal.timeout(15000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
         headers: { authorization: "Bearer " + key, "content-type": "application/json", "HTTP-Referer": "https://al-omda-ai-app.abdelfattahhossam1.workers.dev", "X-Title": "AL OMDA AI" },
         body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt(isCodingRequest(messages), memory) }, ...messages.map((message) => message.image ? {
           role: message.role,
@@ -347,7 +422,7 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
             { type: "text", text: message.content },
             { type: "image_url", image_url: { url: `data:${message.image.mimeType};base64,${message.image.data}` } },
           ],
-        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: 0.4 }),
+        } : message)], max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800, temperature: getHostedModelTemperature(getLatestUserRequest(messages)) }),
       });
       const payload = await response.json().catch(() => null) as any;
       if (!response.ok) {
@@ -364,15 +439,16 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
         failures.push(model + ": empty response");
         continue;
       }
-      return { text, model: payload?.model || model };
+      return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
     } catch (error) {
+      if (signal?.aborted) throw error;
       failures.push(model + ": " + (error instanceof Error ? error.message : "request failed"));
     }
   }
   throw new Error("All selected OpenRouter free models failed. " + failures.slice(0, 4).join(" | ").slice(0, 700));
 }
 
-async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
+async function callCloudflare(messages: ChatMessage[], memory = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
   const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
   if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
@@ -382,7 +458,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
   const model = "@cf/meta/llama-3.1-8b-instruct-fast";
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`, {
     method: "POST",
-    signal: AbortSignal.timeout(18000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(18000)]) : AbortSignal.timeout(18000),
     headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
     body: JSON.stringify({
       model,
@@ -391,7 +467,7 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
         ...messages.map((message) => ({ role: message.role, content: message.content })),
       ],
       max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
-      temperature: 0.4,
+      temperature: getHostedModelTemperature(getLatestUserRequest(messages)),
     }),
   });
   const payload = await response.json().catch(() => null) as any;
@@ -402,21 +478,22 @@ async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ t
   const raw = payload?.choices?.[0]?.message?.content ?? payload?.result?.response;
   const text = (typeof raw === "string" ? raw : "").trim();
   if (!text) throw new Error("Cloudflare Workers AI returned an empty response.");
-  return { text, model: payload?.model || model };
+  return { text, model: payload?.model || model, usage: readModelTokenUsage(payload), finishReason: typeof payload?.choices?.[0]?.finish_reason === "string" ? payload.choices[0].finish_reason : undefined };
 }
 
-async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = ""): Promise<{ text: string; model: string }> {
+async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" | "cloudflare", messages: ChatMessage[], memory = "", excludeModel = "", signal?: AbortSignal): Promise<ProviderAnswer> {
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
-  if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
-  if (provider === "groq") return callGroq(messages, memory);
-  if (provider === "cloudflare") return callCloudflare(messages, memory);
+  if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel, signal);
+  if (provider === "groq") return callGroq(messages, memory, signal);
+  if (provider === "cloudflare") return callCloudflare(messages, memory, signal);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await callGemini(messages, memory);
+      return await callGemini(messages, memory, signal);
     } catch (error) {
       lastError = error;
+      if (signal?.aborted) throw error;
       const message = error instanceof Error ? error.message : String(error);
       // A 429 quota/rate-limit response is not helped by immediately repeating
       // the same request; let the next configured provider handle the fallback.
@@ -456,7 +533,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
     const failures: string[] = [];
-    let answer: { text: string; model: string } | null = null;
+    let answer: ProviderAnswer | null = null;
     let provider = "";
     for (const candidate of providers) {
       try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory); provider = candidate; break; }
@@ -1088,6 +1165,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestCustomerRequest = getLatestUserRequest(messages);
+    const responseLanguage = /[\u0600-\u06FF]/.test(latestCustomerRequest) ? "ar" : "en";
     const standaloneGreeting = isStandaloneGreeting(latestCustomerRequest);
     // A greeting is a fresh conversational turn; do not let an old file request in
     // the transcript steer the provider into producing an unrelated attachment.
@@ -1161,7 +1239,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
 
-    let answer: { text: string; model: string } | null = null;
+    let answer: ProviderAnswer | null = null;
     let usedProvider = "";
     const failures: string[] = [];
     for (const provider of providers) {
@@ -1414,7 +1492,92 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       });
       return;
     }
-    res.json({ reply: answer.text, provider: usedProvider, model: answer.model, usage: latestUsage });
+    if (!answer) throw new Error("No AI answer was generated.");
+    let finalAnswer: ProviderAnswer = answer;
+    const initialAnswerUsage = answer.usage;
+    let qualityReviewUsage: ModelTokenUsage = {};
+    let qualityReviewWarning = "";
+    if (shouldAuditChatRequest(latestCustomerRequest)) {
+      try {
+        const containsImages = modelConversation.some((message) => Boolean(message.image));
+        const reviewProvider = providers.find((candidate) => candidate !== usedProvider && (!containsImages || candidate !== "cloudflare"))
+          || (containsImages && usedProvider === "cloudflare" ? providers.find((candidate) => candidate !== "cloudflare") : usedProvider);
+        if (!reviewProvider || (containsImages && reviewProvider === "cloudflare")) {
+          throw new Error("No image-capable provider is available for evidence-aware final review.");
+        }
+        const auditResult = await withFinalAuditDeadline(async (auditSignal) => {
+          const reviewMessages: ChatMessage[] = [
+            ...modelConversation,
+            { role: "user", content: [
+              "You are AL OMDA's independent final quality auditor. Check the draft against the complete conversation and all supplied evidence, including images, for unsupported facts, fabricated citations, arithmetic/unit errors, professional risk, contradictions, security issues, and missing requirements.",
+              "Do not reveal private reasoning. Do not invent sources or facts. Reply exactly PASS if there is no concrete material defect. Otherwise return only concise actionable lines beginning ISSUE:.",
+              "Latest user request: " + latestCustomerRequest,
+              "Draft answer: " + finalAnswer.text
+            ].join("\n") }
+          ];
+          const reviewAnswer = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", reviewMessages, userMemory, "", auditSignal);
+          if (isIncompleteProviderAnswer(reviewAnswer)) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: true };
+          const issues = parseHostedAuditIssues(reviewAnswer.text);
+          if (!issues.length) return { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: false };
+          const refinementMessages: ChatMessage[] = [
+            ...modelConversation,
+            { role: "user", content: [
+              "Correct only the concrete defects listed below. Preserve all supported facts and the user's exact requirements and supplied evidence, including earlier conversation details and images. Do not invent sources, legal authorities, standards, calculations, or test results. If a fact cannot be verified, state the limitation. Return only the complete corrected answer.",
+              "Latest user request: " + latestCustomerRequest,
+              "Draft answer: " + finalAnswer.text,
+              "Required corrections: " + issues.join("; ")
+            ].join("\n") }
+          ];
+          const refined = await callProviderWithRetry(reviewProvider as "gemini" | "openrouter" | "groq" | "cloudflare", refinementMessages, userMemory, "", auditSignal);
+          const reviewUsage = {
+            promptTokens: (reviewAnswer.usage?.promptTokens || 0) + (refined.usage?.promptTokens || 0),
+            completionTokens: (reviewAnswer.usage?.completionTokens || 0) + (refined.usage?.completionTokens || 0),
+            totalTokens: (reviewAnswer.usage?.totalTokens || 0) + (refined.usage?.totalTokens || 0),
+          };
+          if (isIncompleteProviderAnswer(refined)) return { answer: finalAnswer, provider: usedProvider, usage: reviewUsage, incomplete: true };
+          return refined.text.trim() ? {
+            answer: refined,
+            provider: reviewProvider,
+            usage: reviewUsage,
+            incomplete: false,
+          } : { answer: finalAnswer, provider: usedProvider, usage: reviewAnswer.usage || {}, incomplete: false };
+        });
+        finalAnswer = auditResult.answer;
+        usedProvider = auditResult.provider;
+        qualityReviewUsage = auditResult.usage;
+        if (auditResult.incomplete) qualityReviewWarning = responseLanguage === "ar"
+          ? "لم تكتمل مراجعة الجودة؛ احتفظت بالإجابة الكاملة بدل استبدالها بتصحيح ناقص."
+          : "The quality review did not finish; the complete original answer was retained.";
+      } catch (error) {
+        console.warn("[AI final quality audit unavailable] Retaining the original answer.", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
+    let memorySaveWarning = "";
+    const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
+    if (shouldWarnExplicitMemoryNotSaved(latestCustomerRequest, explicitMemory)) {
+      memorySaveWarning = "لم أتمكن من حفظ المعلومة في الذاكرة؛ لم يتم تسجيلها.";
+    }
+    if (explicitMemory) {
+      try {
+        const memoryNode = { ...parseMemoryNode(explicitMemory, session.user.id), updated_at: new Date().toISOString() };
+        const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?on_conflict=user_id,node_type,normalized_label", {
+          method: "POST",
+          headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(memoryNode),
+        }, accessToken);
+        await readSupabaseJson<unknown>(memoryResponse);
+      } catch (error) {
+        memorySaveWarning = "لم أتمكن من تأكيد حفظ المعلومة في الذاكرة بسبب خطأ في التخزين. لم أعتبرها محفوظة.";
+        console.warn("[Explicit AI memory save failed]", error instanceof Error ? error.message : "Unknown error");
+      }
+    }
+    const responseUsage = {
+      ...latestUsage,
+      ...(initialAnswerUsage ? { modelTokens: initialAnswerUsage } : {}),
+      ...(Object.keys(qualityReviewUsage).length ? { qualityReviewTokens: qualityReviewUsage } : {}),
+    };
+    const notices = [memorySaveWarning, qualityReviewWarning].filter(Boolean);
+    res.json({ reply: [finalAnswer.text, ...notices].join("\n\n"), provider: usedProvider, model: finalAnswer.model, usage: responseUsage });
   } catch (error) {
 
     reportSupabaseError(req, res, error, "The AI request could not be completed.");

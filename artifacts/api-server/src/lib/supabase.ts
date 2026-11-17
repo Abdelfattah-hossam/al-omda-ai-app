@@ -202,6 +202,44 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+export function requireSameOriginRead(req: Request, res: Response, next: NextFunction): void {
+  if (req.method !== "GET") {
+    requireSameOrigin(req, res, next);
+    return;
+  }
+  const host = req.get("host") ?? "";
+  if (!host) {
+    res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+    return;
+  }
+  const origin = req.get("origin");
+  if (origin) {
+    requireSameOrigin(req, res, next);
+    return;
+  }
+  const fetchSite = req.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite === "same-origin" || fetchSite === "none") {
+    next();
+    return;
+  }
+  if (fetchSite === "cross-site" || fetchSite === "same-site") {
+    res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+    return;
+  }
+  const referer = req.get("referer");
+  if (referer) {
+    try {
+      if (new URL(referer).host.toLowerCase() === host.toLowerCase()) {
+        next();
+        return;
+      }
+    } catch {
+      // Reject malformed referrers below.
+    }
+  }
+  res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+}
+
 export function reportSupabaseError(
   req: Request,
   res: Response,
