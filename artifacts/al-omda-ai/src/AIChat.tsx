@@ -6,6 +6,7 @@ import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, M
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
+import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
 import { previewOfficeDocument } from "./lib/office-preview";
 
@@ -14,7 +15,7 @@ type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]
 type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string> }> };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
   if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
@@ -152,7 +153,8 @@ function excelColumnName(index: number): string {
   while (value > 0) { const remainder = (value - 1) % 26; result = String.fromCharCode(65 + remainder) + result; value = Math.floor((value - 1) / 26); }
   return result;
 }
-type Conversation = { id: string; title: string; created_at: string; updated_at: string };
+type Conversation = { id: string; title: string; created_at: string; updated_at: string; messages?: ChatMessage[] };
+type ConversationResponse = { conversation: Conversation; error?: string };
 type Usage = {
   used: number;
   remaining: number;
@@ -246,6 +248,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const lastSyncedConversationUpdatedAtRef = useRef("");
   const agentStreamControllerRef = useRef<AbortController | null>(null);
   const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
   useEffect(() => () => {
@@ -318,13 +321,18 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
   };
 
-  const loadConversation = async (id: string) => {
+  const loadConversation = async (id: string, preloadedData?: ConversationResponse) => {
     setHistoryLoading(true);
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin" });
-      const data = await response.json();
-      if (!response.ok || !data.conversation) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
+      let data = preloadedData;
+      if (!data) {
+        const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin", cache: "no-store" });
+        data = await response.json() as ConversationResponse;
+        if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
+      }
+      if (!data?.conversation) throw new Error(data?.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       setActiveConversationId(id);
+      lastSyncedConversationUpdatedAtRef.current = typeof data.conversation.updated_at === "string" ? data.conversation.updated_at : "";
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
       const withFiles = await Promise.all(restored.map(async (item) => {
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
@@ -367,7 +375,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       if (!response.ok || !data.conversation?.id) throw new Error(data.error || (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation."));
       const item = data.conversation as Conversation;
       setConversations((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
-      setActiveConversationId(item.id); setMessages([]); setInput(""); setError(""); setShowConversationList(false);
+      setActiveConversationId(item.id); lastSyncedConversationUpdatedAtRef.current = typeof item.updated_at === "string" ? item.updated_at : ""; setMessages([]); setInput(""); setError(""); setShowConversationList(false);
       return item.id;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر إنشاء محادثة جديدة." : "Could not create a new conversation.")); return ""; }
   };
@@ -389,10 +397,13 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, presentationData, sourceData, appData, taskId, taskTitle }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(sourceData ? { sourceData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, presentationData, sourceData, appData, taskId, taskTitle, toolExecutionStatus, toolFailures }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(sourceData ? { sourceData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}), ...(toolExecutionStatus ? { toolExecutionStatus } : {}), ...(toolFailures ? { toolFailures } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
-      if (data.conversation) setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
+      if (data.conversation) {
+        if (conversationId === activeConversationId && typeof data.conversation.updated_at === "string") lastSyncedConversationUpdatedAtRef.current = data.conversation.updated_at;
+        setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, ...data.conversation } : item).sort((x,y) => Date.parse(y.updated_at)-Date.parse(x.updated_at)));
+      }
       return true;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ المحادثة." : "Could not save conversation.")); return false; }
   };
