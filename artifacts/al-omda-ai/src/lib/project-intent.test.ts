@@ -58,3 +58,76 @@ test("does not create project tasks for negated build requests", () => {
     assert.equal(detectProjectSpecialty(request), null, "misclassified negated request: " + request);
   }
 });
+
+test("logs explicit Office and file-creation requests as project tasks", () => {
+  for (const request of [
+    "اعمللي ملف Excel لمتابعة المصروفات",
+    "جهز لي مستند Word بعقد عمل",
+    "اعمل عرض PowerPoint للمشروع",
+    "I need an Excel spreadsheet for inventory",
+    "Create a Word document with a seven-column table",
+    "Prepare a PowerPoint presentation for the launch",
+    "Create a source code file for the app",
+  ]) {
+    assert.ok(detectProjectSpecialty(request), "missed file deliverable request: " + request);
+  }
+});
+
+test("does not create file tasks for questions that only mention Office formats", () => {
+  for (const request of [
+    "إزاي أعمل ملف Excel؟",
+    "ممكن تشرحلي Word؟",
+    "What is an Excel spreadsheet?",
+    "How do I create a Word document?",
+    "Can you explain PowerPoint?",
+    "اعمل عرض أسعار للعميل",
+    "عايز عرض أسعار للمشروع",
+    "عايز أعرف معنى كلمة ملف",
+    "اعمل جدول مواعيد",
+    "عايز جدول مواعيد",
+    "عايز ملف",
+    "I need a file",
+    "I need a document",
+    "write a report",
+    "prepare a report",
+    "اعمل ملف",
+    "اكتبلي تقرير",
+    "جهزلي عرض تقديمي",
+  ]) {
+    assert.equal(detectProjectSpecialty(request), null, "misclassified Office question: " + request);
+  }
+});
+
+test("does not turn vague bare report nouns into full projects", () => {
+  assert.equal(detectProjectSpecialty("report"), null);
+  assert.equal(detectProjectSpecialty("عايز تقرير"), null);
+  assert.equal(detectProjectSpecialty("I need a report"), null);
+  assert.equal(detectProjectSpecialty("Please write a report"), null);
+  assert.notEqual(detectProjectSpecialty("عايز تقرير عن التسويق"), null);
+});
+
+
+test("routes explicit Office artifacts to the assistant specialty", () => {
+  for (const request of [
+    "اعمللي ملف Excel لمتابعة المصروفات",
+    "جهز لي مستند Word بعقد عمل",
+    "اعمل عرض PowerPoint للمشروع",
+    "I need an Excel spreadsheet for inventory",
+    "Create a Word document with a seven-column table",
+    "Prepare a PowerPoint presentation for the launch",
+  ]) {
+    assert.equal(detectProjectSpecialty(request), "assistant", "Office request should use the assistant specialty: " + request);
+  }
+  assert.equal(detectProjectSpecialty("Create a source code file for the app"), "development");
+});
+
+test("keeps useful details after the file type actionable", () => {
+  for (const request of [
+    "اكتب تقريرًا عن سوق الهواتف في الإمارات",
+    "جهزلي ملف Excel لمتابعة المبيعات",
+    "Create a report about quarterly sales",
+    "Write a Word document with a seven-column table",
+  ]) {
+    assert.ok(detectProjectSpecialty(request), "missed detailed deliverable request: " + request);
+  }
+});
