@@ -15,3 +15,11 @@ export function getHostedModelTemperature(request: string, hasImage = false): nu
   }
   return hasImage ? 0.3 : purpose === "research" ? 0.25 : 0.2;
 }
+
+export function getHostedProviderOrder(purpose: HostedModelPurpose, coding = false, hasImage = false): string[] {
+  if (hasImage) return ["groq", "gemini", "openrouter"];
+  if (coding) return ["groq", "cloudflare", "gemini", "openrouter"];
+  if (purpose === "precision") return ["groq", "gemini", "openrouter", "cloudflare"];
+  if (purpose === "research") return ["openrouter", "groq", "cloudflare", "gemini"];
+  return ["groq", "cloudflare", "openrouter", "gemini"];
+}

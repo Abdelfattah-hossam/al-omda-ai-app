@@ -7,7 +7,7 @@ import { getRequestedPowerPointSlideCount, parsePowerPointPresentation } from ".
 import { parseHtmlAppArtifact } from "../lib/html-app-artifact.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
-import { getHostedModelTemperature } from "../lib/ai-model-policy.js";
+import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -133,18 +133,21 @@ async function loadUserMemory(accessToken: string, userId: string): Promise<stri
   return typeof rows[0]?.memory_text === "string" ? rows[0].memory_text.slice(0, 6000) : "";
 }
 
+function hasLatestUserImage(messages: ChatMessage[]): boolean {
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+  return Boolean(latestUserMessage?.image);
+}
 function requestTemperature(messages: ChatMessage[]): number {
-  return getHostedModelTemperature(getLatestUserRequest(messages), messages.some((message) => Boolean(message.image)));
+  return getHostedModelTemperature(getLatestUserRequest(messages), hasLatestUserImage(messages));
 }
 
 function chooseProviders(messages: ChatMessage[]) {
   const coding = isCodingRequest(messages);
+  const hasImage = hasLatestUserImage(messages);
+  const purpose = inferHostedModelPurpose(getLatestUserRequest(messages));
   const configured = getProviders();
-  // Prefer the fast providers first; every configured free provider remains an automatic fallback.
-  const order = coding
-    ? ["groq", "cloudflare", "gemini", "openrouter"]
-    : ["groq", "cloudflare", "openrouter", "gemini"];
-  return order.filter((provider) => configured[provider as keyof typeof configured]);
+  // Choose the strongest configured free provider pool for the latest request purpose.
+  return getHostedProviderOrder(purpose, coding, hasImage).filter((provider) => configured[provider as keyof typeof configured]);
 }
 
 async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
