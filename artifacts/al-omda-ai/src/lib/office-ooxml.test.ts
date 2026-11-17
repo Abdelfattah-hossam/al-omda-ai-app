@@ -56,9 +56,9 @@ test("creates a real XLSX workbook with multiple sheets and formulas", async () 
 });
 
 test("removes XML 1.0 control characters from Office text", async () => {
-  const blob = createDocxBlob({ title: "Report\\u0000", paragraphs: ["Safe\\u0001text"], columns: [], rows: [] });
+  const blob = createDocxBlob({ title: "Report\u0000", paragraphs: ["Safe\u0001text"], columns: [], rows: [] });
   const entries = await readStoredZip(blob);
-  assert.doesNotMatch(entries["word/document.xml"], /[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/);
+  assert.doesNotMatch(entries["word/document.xml"], /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
   assert.match(entries["word/document.xml"], /Report/);
 });
 
