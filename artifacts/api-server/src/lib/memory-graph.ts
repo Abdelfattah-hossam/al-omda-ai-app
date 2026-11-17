@@ -78,7 +78,7 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   if (typeof value.label !== "string" || !value.label.trim()) throw new Error("Memory node label must contain 1 to 160 characters.");
   const label = value.label.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (label.length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
-  if (BLOCKED_SECRET_VALUE.test(label)) throw new Error("Memory node label appears to contain a credential or access token."); throw new Error("Personal contact details or precise location must not be stored in AI memory.");
+  if (BLOCKED_SECRET_VALUE.test(label)) throw new Error("Memory node label appears to contain a credential or access token.");
   if (BLOCKED_CONTACT_TEXT.test(label)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
   if (BLOCKED_SENSITIVE_TEXT.test(label)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   const normalizedLabel = label.toLocaleLowerCase().replace(/[؟?!.,،؛;:]+/g, "").replace(/\s+/g, " ");
