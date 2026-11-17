@@ -8,7 +8,7 @@ function normalizeRequest(request: string): string {
 
 export function isHowToRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  return /^(?:كيف|ازاي|ازاى|ما هو|ما هي|شرح|طريقة|what is|how to|how do i|how can i|can i|could i|explain|teach me)(?:\s|$)/i.test(text) ||
+  return /^(?:(?:please|kindly)\s+)?(?:كيف|ازاي|ازاى|ما هو|ما هي|شرح|طريقة|what is|how to|how do i|how can i|can i|could i|explain|teach me)(?:\s|$)/i.test(text) ||
     /^(?:اشرح|تشرح)(?:لي|لى)?(?:\s|$)/i.test(text) ||
     /^(?:ممكن|لو سمحت|من فضلك)?\s*(?:تشرح|اشرح)(?:لي|لى)?(?:\s|$)/i.test(text) ||
     /^(?:ممكن|لو سمحت|من فضلك)?\s*(?:علمني|علّمْني)(?:\s|$)/i.test(text) ||
