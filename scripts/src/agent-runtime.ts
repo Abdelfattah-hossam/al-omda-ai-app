@@ -290,7 +290,7 @@ async function searchWeb(body: Json): Promise<Json> {
   const safeSearch = typeof body.safeSearch === "string" ? body.safeSearch : "Strict";
   const url = buildBingCompatibleSearchUrl(SEARCH_BASE_URL, query, count, market, safeSearch);
   await assertAllowedTarget(url.toString());
-  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, (input, init) => fetchPinned(input, init, { allowPrivate: false, maxBytes: 150000, timeoutMs: 12000 }));
+  const parsed = await requestBingCompatibleSearch(url, SEARCH_API_KEY, (input, init) => fetchPinned(input instanceof Request ? input.url : input, init ?? {}, { allowPrivate: false, maxBytes: 150000, timeoutMs: 12000 }));
   return { provider: "Bing-compatible", query: query.trim(), totalEstimatedMatches: parsed.totalEstimatedMatches, results: parsed.results };
 }
 
