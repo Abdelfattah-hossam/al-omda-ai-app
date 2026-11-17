@@ -85,7 +85,7 @@ function isDesktopAppRequest(request: string): boolean {
     /\b(?:i want|i need|i'd like|please build|please create|build me|create me)\s+(?:(?:a|an|the)\s+)?(?:website|web app|web application|app|application|software|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|project|system)\b/i.test(normalized);
   const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
   if (planningOnly && !directBuild && !directAppRequest) return false;
-  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|سوق\s*إلكتروني|متجر|marketplace|dashboard|portal|ساعة|clock/i.test(normalized);
+  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|سوق\s*إلكتروني|متجر|marketplace|dashboard|portal|ساعة|clock|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter/i.test(normalized);
   return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
 }
 const parseHtmlApp = parseHtmlAppArtifact;
