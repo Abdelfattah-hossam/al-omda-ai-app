@@ -127,6 +127,32 @@ describe("local Agent runtime HTTP integration", () => {
     assert.equal(protectedStatus.status, 401);
   });
 
+  test("force-kills an approved terminal command that ignores SIGTERM after timeout", async () => {
+    const timeoutRuntime = await startRuntime({
+      OMDA_AGENT_EXECUTION: "host",
+      OMDA_AGENT_COMMAND_TIMEOUT_MS: "100",
+    });
+    const started = Date.now();
+    try {
+      const response = await fetch(timeoutRuntime.baseUrl + "/v1/terminal/execute", {
+        method: "POST",
+        headers: { authorization: "Bearer " + token, "content-type": "application/json" },
+        body: JSON.stringify({
+          command: "python3",
+          args: ["-c", "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(10)"],
+          cwd: ".",
+        }),
+      });
+      assert.equal(response.status, 200);
+      const result = await response.json() as { ok: boolean; timedOut: boolean };
+      assert.equal(result.ok, false);
+      assert.equal(result.timedOut, true);
+      assert.ok(Date.now() - started < 5000, "The terminal timeout must not leave the runtime waiting indefinitely.");
+    } finally {
+      await stopRuntime(timeoutRuntime);
+    }
+  });
+
   test("accepts a valid bearer token for protected runtime status", async () => {
     const response = await request("/v1/runtime/status", {
       headers: { authorization: "Bearer " + token },
