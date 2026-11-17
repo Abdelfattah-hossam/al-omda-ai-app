@@ -381,10 +381,10 @@ components:
           maxLength: 2000
         output:
           type: string
-          maxLength: 2000
+          maxLength: 1200
         complete:
           type: string
-          maxLength: 2000
+          maxLength: 1200
         result:
           type: string
           maxLength: 12000
@@ -411,6 +411,27 @@ components:
           type: string
           enum: [pending, approved, rejected]
       required: [id, text, state]
+    TaskCreateStep:
+      allOf:
+        - $ref: "#/components/schemas/PlanStep"
+        - type: object
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            output:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            complete:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            state:
+              type: string
+              enum: [pending]
+          required: [output, complete, state]
     Specialty:
       type: string
       enum: [business, development, design, marketing, research, assistant]
@@ -432,27 +453,78 @@ components:
           $ref: "#/components/schemas/Specialty"
         steps:
           type: array
+          minItems: 3
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/TaskCreateStep"
+        status:
+          type: string
+          enum: [review]
+      required: [title, request, specialty, steps, status]
+    TaskUpdateStep:
+      allOf:
+        - $ref: "#/components/schemas/PlanStep"
+        - type: object
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            output:
+              type: string
+              minLength: 1
+              maxLength: 1200
+            complete:
+              type: string
+              minLength: 1
+              maxLength: 1200
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        request:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        specialty:
+          $ref: "#/components/schemas/Specialty"
+        steps:
+          type: array
           minItems: 1
           maxItems: 20
+          items:
+            $ref: "#/components/schemas/TaskUpdateStep"
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+      required: [title, request, specialty, steps, status]
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        request:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        specialty:
+          $ref: "#/components/schemas/Specialty"
+        steps:
+          type: array
           items:
             $ref: "#/components/schemas/PlanStep"
         status:
           $ref: "#/components/schemas/TaskStatus"
-      required: [title, request, specialty, steps, status]
-    TaskUpdate:
-      allOf:
-        - $ref: "#/components/schemas/TaskCreate"
-    Task:
-      allOf:
-        - $ref: "#/components/schemas/TaskCreate"
-        - type: object
-          properties:
-            id:
-              type: string
-              format: uuid
-            createdAt:
-              type: string
-          required: [id, createdAt]
+        createdAt:
+          type: string
+      required: [id, title, request, specialty, steps, status, createdAt]
     Workspace:
       type: object
       properties:

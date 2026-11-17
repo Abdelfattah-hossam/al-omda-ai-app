@@ -44,6 +44,8 @@ jobs:
         run: pnpm --filter @workspace/scripts test
       - name: Test chat intent classification
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/chat-intent.test.ts
+      - name: Test new task plan validation
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/task-plan-validation.test.ts
       - name: Test hosted model quality and temperature policy
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/ai-model-policy.test.ts
       - name: Test chat history artifact and warning persistence
