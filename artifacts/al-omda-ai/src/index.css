@@ -98,3 +98,33 @@ button,input,textarea,select { font:inherit; } button { cursor:pointer; } ::sele
 @media (max-width:1100px) { .content-wrap { padding-inline:28px; }.topbar { padding-inline:28px; }.market-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:850px) { .sidebar { width:218px; }.main-area { margin-inline-start:218px; }[dir="rtl"] .main-area { margin-inline-end:218px; }.dashboard-grid,.workbench-layout,.profile-grid,.history-detail { grid-template-columns:1fr; }.stats-grid { grid-template-columns:repeat(2,1fr); }.hero-side { width:90px;height:90px; } }
 @media (max-width:650px) { .sidebar { display:none; }.main-area,[dir="rtl"] .main-area { margin:0;padding-bottom:72px; }.topbar { height:60px;padding-inline:18px; }.content-wrap { padding:25px 17px 36px; }.page-heading { align-items:flex-start;flex-direction:column;gap:15px;margin-bottom:20px; }.dashboard-hero { grid-template-columns:1fr;padding:22px; }.hero-side { display:none; }.stats-grid { gap:8px;margin:12px 0 19px; }.stat-card { min-height:86px;padding:13px; }.stat-value { font-size:22px; }.dashboard-grid { gap:11px; }.market-grid { grid-template-columns:1fr; }.agent-card { min-height:unset; }.select-grid { grid-template-columns:repeat(2,1fr); }.request-card,.plan-card { padding:16px; }.mobile-nav { display:flex;position:fixed;z-index:30;inset-inline:0;bottom:0;justify-content:space-around;padding:9px 6px calc(9px + env(safe-area-inset-bottom));background:rgba(17,20,26,.96);border-top:1px solid #30353c; }.mobile-nav a { display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 8px;color:#838991;text-decoration:none;font-size:8px; }.mobile-nav a.active { color:#d8b875; }.mobile-nav svg { width:17px;height:17px; }.top-actions { gap:6px; } }
+
+
+/* Keep chat settings and media dialogs centered after the visual rollback.
+   Blur remains disabled to preserve the restored non-glass appearance. */
+.ai-chat-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 14px !important;
+  background: rgba(0, 0, 0, .82) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.ai-chat-settings-modal,
+.ai-chat-canvas-modal,
+.ai-chat-live-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 560px);
+  max-height: 92dvh;
+  overflow: hidden;
+  border: 1px solid #343b45;
+  border-radius: 18px;
+  background: #171b22;
+  color: var(--foreground, #f0f2f6);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .5);
+}
