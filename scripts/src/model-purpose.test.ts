@@ -14,6 +14,9 @@ test("routes requests to profession-specific model pools", () => {
   assert.equal(inferModelPurpose("Analyze cash flow and ROI"), "finance");
   assert.equal(inferModelPurpose("Create a marketing strategy"), "business");
   assert.equal(inferModelPurpose("Research and compare model providers"), "research");
+  assert.equal(inferModelPurpose("Summarize this document"), "research");
+  assert.equal(inferModelPurpose("ابحث عن أفضل الممارسات"), "research");
+  assert.equal(inferModelPurpose("Refactor the software architecture"), "coding");
   assert.equal(inferModelPurpose("Hello, how are you?"), "general");
 });
 
