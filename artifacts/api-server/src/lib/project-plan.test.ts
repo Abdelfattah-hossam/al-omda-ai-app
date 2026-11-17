@@ -41,3 +41,7 @@ test("rejects malformed, oversized, or incorrectly typed plan data", () => {
   assert.equal(parseProjectPlan(JSON.stringify({ ...valid, title: 42 })), null);
   assert.equal(parseProjectPlan(JSON.stringify({ title: "Invalid step", steps: [step(1), step(2), null] })), null);
 });
+
+test("rejects oversized raw plan payloads before JSON parsing", () => {
+  assert.equal(parseProjectPlan(" ".repeat(100_001)), null);
+});
