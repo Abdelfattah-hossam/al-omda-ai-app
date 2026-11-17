@@ -82,4 +82,5 @@ test("accepts a JSON marker or fenced JSON and rejects oversized manifests", () 
   const tooMany = validProject();
   tooMany.files = Array.from({ length: 61 }, (_, index) => ({ path: "src/file" + index + ".ts", content: "x" }));
   assert.equal(parseCodeProjectArtifact(JSON.stringify(tooMany)), null);
+  assert.equal(parseCodeProjectArtifact(" ".repeat(500001)), null);
 });
