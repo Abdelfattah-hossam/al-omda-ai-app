@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
+import { isRevisionHistoryUnchanged } from "../lib/task-history.js";
 import {
   UpdateProfileResponse,
   UpdateProfileBody,
@@ -108,7 +109,10 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   const commentsOnly = previous.steps.every((step,index) => {
     const before = step.comments ?? [];
     const after = next.steps[index].comments ?? [];
-    return after.length >= before.length && before.every((note,noteIndex) => JSON.stringify(note) === JSON.stringify(after[noteIndex])) && after.slice(before.length).every(note => note.author === "user" && note.text.trim().length > 0);
+    return after.length >= before.length &&
+      before.every((note,noteIndex) => JSON.stringify(note) === JSON.stringify(after[noteIndex])) &&
+      after.slice(before.length).every(note => note.author === "user" && note.text.trim().length > 0) &&
+      isRevisionHistoryUnchanged(step.revisionHistory, next.steps[index].revisionHistory);
   });
   if (!commentsOnly) return false;
   if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || step.executedAt !== next.steps[index]?.executedAt || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
