@@ -40,6 +40,7 @@ export function parseCodeProjectArtifact(raw: string): CodeProjectArtifact | nul
   const marker = "ALOMDA_CODE_PROJECT_JSON:";
   if (source.startsWith(marker)) source = source.slice(marker.length).trim();
   source = source.replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}\s*$/, "");
+  if (source.length > 500000) return null;
   const value = parseJsonObject(source);
   if (!value || typeof value.title !== "string" || !value.title.trim() || value.title.length > 160 ||
     typeof value.framework !== "string" || !value.framework.trim() || value.framework.length > 80 ||
