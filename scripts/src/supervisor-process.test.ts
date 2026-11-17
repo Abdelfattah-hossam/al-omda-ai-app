@@ -31,9 +31,13 @@ test("escalates termination for a detached command process group", async (t) => 
     t.skip("Detached POSIX process groups are unavailable on Windows.");
     return;
   }
-  const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)"], {
+  const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{}); process.stdout.write('ready'); setInterval(()=>{},1000)"], {
     detached: true,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  await new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.stdout?.once("data", () => resolve());
   });
   const closed = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
     child.once("close", (code, signal) => resolve({ code, signal }));
