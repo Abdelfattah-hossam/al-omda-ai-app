@@ -9,7 +9,7 @@ function streamResponse(events: unknown[]): Response {
       const encoder = new TextEncoder();
       for (const event of events) {
         controller.enqueue(encoder.encode("data: " + JSON.stringify(event) + "\n\n"));
-        await new Promise((resolve) => setTimeout(resolve, 3));
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
@@ -76,4 +76,15 @@ test("measures tool-call-only throughput between first and last tool deltas", as
   assert.ok(Array.isArray(result.message.tool_calls));
   assert.ok(result.generationDurationMs > 0);
   assert.ok(result.tokensPerSecond !== null && result.tokensPerSecond > 0);
+});
+
+test("uses one timestamp when an event contains both content and tool calls", async () => {
+  const result = await consumeOpenAIChatStream(streamResponse([
+    { choices: [{ delta: { content: "text", tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "files.read", arguments: "{}" } }] } }], usage: { prompt_tokens: 10, completion_tokens: 5 } },
+  ]), () => {
+    const start = performance.now();
+    while (performance.now() - start < 20) { /* simulate a slow UI callback */ }
+  });
+  assert.equal(result.generationDurationMs, 0);
+  assert.equal(result.tokensPerSecond, null);
 });
