@@ -47,6 +47,7 @@ describe("chat artifact intent", () => {
     assert.equal(isWordFileRequest("كيف أعمل ملف Word؟"), false);
     assert.equal(isWordFileRequest("مش عايز ملف Word"), false);
     assert.equal(isWordFileRequest("لا تعمل ملف Word"), false);
+    assert.equal(isWordFileRequest("Create a comparison table and export it as a Word document"), true);
   });
 
   test("creates Excel only when the user explicitly asks for an Excel file", () => {
@@ -65,6 +66,7 @@ describe("chat artifact intent", () => {
     assert.equal(isExcelFileRequest("كيف أعمل ملف Excel؟"), false);
     assert.equal(isExcelFileRequest("مش عايز ملف Excel"), false);
     assert.equal(isExcelFileRequest("ما تعملش ملف Excel"), false);
+    assert.equal(isExcelFileRequest("Create a comparison table and export it as an Excel workbook"), true);
   });
 
   test("recognizes explanatory questions as how-to rather than artifact requests", () => {
@@ -196,6 +198,7 @@ describe("PowerPoint artifact intent", () => {
       "اعمل مقارنة بين PowerPoint وGoogle Slides",
       "عايز أعرف PowerPoint بيشتغل إزاي",
       "اشرحلي PowerPoint",
+      "Please explain how to create a PowerPoint presentation",
       "ما الفرق بين PowerPoint وKeynote؟",
       "How do I create a slide deck?",
       "Make a comparison of PowerPoint and Keynote",
@@ -210,6 +213,7 @@ describe("PowerPoint artifact intent", () => {
       "عايز عرض تقديمي عن المبيعات",
       "Create a PowerPoint presentation",
       "Generate a PPTX slide deck",
+      "Create a comparison slide deck and export it as a PowerPoint presentation",
     ]) {
       assert.equal(isPowerPointFileRequest(request), true, "missed presentation intent: " + request);
     }
@@ -238,6 +242,7 @@ describe("source-code artifact intent", () => {
       "What is the difference between JSON and YAML?",
       "مش عايز تعمل ملف app.ts",
       "لا تنشئ ملف Python",
+      "Write Python code inline, not as a file",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), false, "unexpected source file intent: " + request);
     }
