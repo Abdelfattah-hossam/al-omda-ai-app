@@ -812,7 +812,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       const pending = Array.isArray(data.pending) ? data.pending : [];
       const reply = typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.");
       const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\n\nتمت الموافقة على الإجراءات المطلوبة." : "\n\nRequested actions were approved.") : (ar ? "\n\nتم رفض الإجراءات المطلوبة." : "\n\nRequested actions were denied.")) } : item);
-      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || sessionId, calls: pending } } : {}) };
+      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(Array.isArray(data.toolFailures) && data.toolFailures.length ? { toolFailures: data.toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId || sessionId, calls: pending } } : {}) };
       const completed = [...updated, resultMessage].slice(-100); setMessages(completed); await saveHistory(completed);
       if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
     } catch (err) {
@@ -919,7 +919,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         }) as any;
         const pending = Array.isArray(data.pending) ? data.pending : [];
         const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : data.status === "cancelled" ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
-        const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
+        const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(Array.isArray(data.toolFailures) && data.toolFailures.length ? { toolFailures: data.toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
         setInput((current) => current === submittedDraft ? "" : current);
@@ -930,7 +930,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(fileForRequest ? -8 : -12).map((message, index, list) => ({
+        body: JSON.stringify({ messages: buildBoundedChatContext(next, { maxMessages: fileForRequest ? 8 : 12, maxMessageChars: 8000, maxTotalChars: 30000 }).map((message, index, list) => ({
           role: message.role,
           content: index === list.length - 1 ? requestText : fileForRequest ? message.content.slice(-2500) : message.content,
           ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
@@ -1005,9 +1005,21 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           });
           const taskData = await taskResponse.json().catch(() => ({}));
           if (!taskResponse.ok || !taskData.id) throw new Error(taskData.error || "تعذر حفظ المشروع في سجل المهام.");
+          const planSummary = plan.steps.map((step: { text?: unknown; output?: unknown; complete?: unknown }, index: number) => [
+            (index + 1) + ". " + String(step.text || "").slice(0, 240),
+            (ar ? "   المخرج: " : "   Deliverable: ") + String(step.output || "").slice(0, 160),
+            (ar ? "   معيار الإنجاز: " : "   Acceptance: ") + String(step.complete || "").slice(0, 160),
+          ].join("\n")).join("\n\n");
+          const planContent =
+            (ar
+              ? "\n\n**خطة التنفيذ المقترحة — " + taskData.title + " (بانتظار موافقتك):**\n"
+              : "\n\n**Proposed execution plan — " + taskData.title + " (awaiting your approval):**\n") +
+            planSummary +
+            (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام**." : "\n\nThis project was automatically added to **Task History**.");
+          const combinedContent = combineReplyAndPlan(assistantMessage.content, planContent, 7800);
           assistantMessage = {
             ...assistantMessage,
-            content: assistantMessage.content + (ar ? "\n\nتم تسجيل المشروع تلقائيًا في **سجل المهام** بعنوان: " : "\n\nThis project was automatically added to **Task History**: ") + taskData.title,
+            content: combinedContent,
             taskId: taskData.id,
             taskTitle: taskData.title,
           };
@@ -1281,6 +1293,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : `AL OMDA AI${message.provider ? " · " + message.provider : ""}`}</strong>
             <MessageContent content={message.content} />
+            {message.toolFailures?.length ? <div role="status" style={{display:"grid",gap:6,width:"100%",padding:10,marginTop:8,border:"1px solid rgba(210,160,80,.4)",borderRadius:10,background:"rgba(210,160,80,.07)"}}>
+              <strong style={{fontSize:12}}>{ar ? "تنبيه: بعض الأدوات لم تكتمل" : "Some tools did not complete"}</strong>
+              {message.toolFailures.slice(0,6).map((failure,index)=><div key={failure.callId || index} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{failure.tool}</b>: {failure.message}</div>)}
+            </div> : null}
             {message.agentPending && <div style={{display:"grid",gap:8,width:"100%",padding:12,border:"1px solid var(--border,#343a44)",borderRadius:10}}><strong>{ar ? "موافقة مطلوبة (" + message.agentPending.calls.length + ")" : "Approval required (" + message.agentPending.calls.length + ")"}</strong>{message.agentPending.calls.map((call)=><div key={call.id} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{call.tool}</b><pre style={{whiteSpace:"pre-wrap",margin:"4px 0",color:"var(--muted,#9aa3af)"}}>{JSON.stringify(call.arguments,null,2)}</pre></div>)}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="button button-primary button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,true)}>{ar ? "موافقة وتنفيذ" : "Approve & execute"}</button><button type="button" className="button button-quiet button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,false)}>{ar ? "رفض الإجراءات" : "Deny actions"}</button></div></div>}
             {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId+"?focus=task-plan")} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
             {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.sourceData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
