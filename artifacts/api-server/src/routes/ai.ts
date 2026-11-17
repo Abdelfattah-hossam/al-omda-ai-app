@@ -585,7 +585,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
-    const codeProjectStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest) && isMultiFileProjectRequest(customerRequest);
+    const codeProjectStep = isFinalDeliverableStep && !excelStep && !wordStep && !isHowToRequest(customerRequest) && isMultiFileProjectRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && !codeProjectStep && isDesktopAppRequest(customerRequest);
     const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !codeProjectStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
     const requestedSlideCount = getRequestedPowerPointSlideCount(customerRequest);
