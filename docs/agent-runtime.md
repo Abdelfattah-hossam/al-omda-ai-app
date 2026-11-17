@@ -289,3 +289,10 @@ These capabilities will be added as separately testable modules rather than simu
 ### Browser tool argument inspection limits
 
 Browser MCP tool arguments are inspected recursively for URL-bearing fields before navigation or browser actions are allowed. To keep inspection bounded and fail closed rather than silently skipping uninspected values, each argument tree is limited to a maximum nesting depth of 8 and at most 100 entries per array or object. A call exceeding either limit is rejected even if the oversized part appears unrelated to URLs. Keep browser tool payloads compact; split large operations into smaller calls.
+
+
+## Private user memory graph
+
+The signed-in account can maintain a private graph of confirmed facts, preferences, decisions, constraints, and project context. The API exposes \`GET /api/ai/memory/graph\`, \`POST /api/ai/memory/graph/nodes\`, \`POST /api/ai/memory/graph/edges\`, and \`DELETE /api/ai/memory/graph\`. Row-level security scopes every node and edge to the authenticated \`user_id\`; composite foreign keys prevent edges from linking another account's nodes.
+
+The hosted chat reads only the current account's graph and uses it as private context. It saves a node only when the user explicitly asks to remember something or gives a supported correction. It does not silently turn every conversation into memory. Credentials, access tokens, health and other sensitive traits, personal contact details, and precise home/location data are rejected. If a requested item cannot be saved, the response explains that instead of pretending it was stored.
