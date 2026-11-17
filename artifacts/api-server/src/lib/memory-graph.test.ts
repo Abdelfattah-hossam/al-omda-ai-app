@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryEdge, parseMemoryNode } from "./memory-graph.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryEdge, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "./memory-graph.js";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 const nodeA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -79,4 +79,11 @@ test("captures explicit corrections without storing sensitive personal data", ()
   assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
   assert.equal(extractUserCorrectionNode("Correction: do not save this in memory: I work at Acme"), null);
   assert.equal(extractUserCorrectionNode("التصحيح: لا تحفظ ده في الذاكرة: أعمل في شركة كذا"), null);
+});
+
+test("warns when an explicit memory request could not be extracted, but not for opt-outs", () => {
+  assert.equal(shouldWarnExplicitMemoryNotSaved("Remember this fact", null), true);
+  assert.equal(shouldWarnExplicitMemoryNotSaved("احفظ هذه المعلومة", null), true);
+  assert.equal(shouldWarnExplicitMemoryNotSaved("Remember this fact", extractExplicitMemoryNode("Remember this fact")), false);
+  assert.equal(shouldWarnExplicitMemoryNotSaved("Remember, do not save this", null), false);
 });
