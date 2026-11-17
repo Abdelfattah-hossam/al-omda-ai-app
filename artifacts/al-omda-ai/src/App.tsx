@@ -26,7 +26,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, LocateFixed, RotateCcw, type LucideIcon,
+  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 
 type Language = 'ar' | 'en';
