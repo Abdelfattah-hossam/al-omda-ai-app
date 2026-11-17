@@ -31,7 +31,9 @@ test("privileged quota implementations are isolated in the non-exposed schema", 
     const definition = functionDefinition("omda_private", name);
     assert.match(definition, /security definer/i, name);
     assert.match(definition, /set search_path = ''/i, name);
-    assert.match(sql, new RegExp("grant execute on function omda_private\\." + name + "[\s\S]*?to authenticated", "i"));
+    const helperGrantStart = sql.indexOf("grant execute on function omda_private." + name);
+    assert.notEqual(helperGrantStart, -1, name + " private grant");
+    assert.ok(sql.indexOf("to authenticated", helperGrantStart) > helperGrantStart, name + " private grant role");
   }
 });
 
