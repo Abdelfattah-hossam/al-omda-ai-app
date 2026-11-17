@@ -468,21 +468,23 @@ test("cancelling during a running read-only tool prevents later tools in the sam
     res.writeHead(200, { "content-type": "text/plain" });
     res.end("ok");
   });
+  let model: Awaited<ReturnType<typeof startMockModel>> | undefined;
+  let isolated: Awaited<ReturnType<typeof startRuntime>> | undefined;
+  try {
   await new Promise<void>((resolve, reject) => { target.once("error", reject); target.listen(0, "127.0.0.1", resolve); });
   const port = (target.address() as AddressInfo).port;
-  const model = await startMockModel(() => ({
+  model = await startMockModel(() => ({
     payload: { choices: [{ delta: { tool_calls: [
       { index: 0, id: "slow-read", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/slow", method: "GET" }) } },
       { index: 1, id: "later-read", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "http://127.0.0.1:" + port + "/must-not-run", method: "GET" }) } },
     ] }, finish_reason: "tool_calls" }] },
   }));
-  const isolated = await startRuntime({
+  isolated = await startRuntime({
     OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
     OMDA_AGENT_MODEL_NAME: "cancel-tools-test-model",
     OMDA_AGENT_ALLOWED_HOSTS: "127.0.0.1",
     OMDA_AGENT_ALLOW_LOCAL_LAB_TARGETS: "true",
   });
-  try {
     const running = postTo(isolated, "/v1/agent/run", { sessionId: "cancel-tools-session", goal: "Check both authorized local endpoints." });
     const deadline = Date.now() + 3000;
     while (!slowStarted && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
@@ -497,8 +499,9 @@ test("cancelling during a running read-only tool prevents later tools in the sam
     assert.equal(laterToolCalls, 0, "A later tool call must not start after cancellation.");
     assert.equal(model.requests, 1);
   } finally {
-    await stopRuntime(isolated);
-    await stopMockModel(model);
+    if (isolated) await stopRuntime(isolated);
+    if (model) await stopMockModel(model);
+    target.closeAllConnections();
     await new Promise<void>((resolve) => target.close(() => resolve()));
   }
 });
