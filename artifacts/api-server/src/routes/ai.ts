@@ -6,7 +6,7 @@ import { parsePowerPointPresentation } from "../lib/powerpoint-presentation.js";
 import { parseWordDocument } from "../lib/word-document.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { getHostedModelTemperature, parseHostedAuditIssues, shouldAuditChatRequest } from "../lib/ai-model-policy.js";
-import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode } from "../lib/memory-graph.js";
+import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import {
   readSupabaseJson,
   reportSupabaseError,
@@ -1533,10 +1533,10 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       }
     }
     let memorySaveWarning = "";
-    const explicitMemoryIntent = /^(?:please\s+)?(?:remember|save|store|keep in memory)\b|^(?:افتكر|احفظ|سجل في الذاكرة|سجل عندك|ثبت عندك)/i.test(latestCustomerRequest);
     const explicitMemory = extractExplicitMemoryNode(latestCustomerRequest) || extractUserCorrectionNode(latestCustomerRequest);
-    if (!explicitMemory && explicitMemoryIntent && latestCustomerRequest.length > 400) {
-      memorySaveWarning = "لم يتم حفظ طلب الذاكرة لأنه تجاوز الحد المسموح لطول المعلومة.";
+    if (shouldWarnExplicitMemoryNotSaved(latestCustomerRequest, explicitMemory)) {
+      memorySaveWarning = "لم أتمكن من حفظ المعلومة في الذاكرة؛ لم يتم تسجيلها."; 
+    }
     }
     if (explicitMemory) {
       try {
