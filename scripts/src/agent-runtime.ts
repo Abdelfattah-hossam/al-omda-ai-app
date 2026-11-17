@@ -433,7 +433,7 @@ async function executeCommand(body: Json): Promise<Json> {
     const child = spawn(runner, runnerArgs, {
       ...(useContainer ? {} : { cwd }),
       shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      detached: process.platform !== "win32",
+      detached: processGroup,
       env: commandEnv,
     });
     let stdout = "";
@@ -444,11 +444,12 @@ async function executeCommand(body: Json): Promise<Json> {
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
     let killTimer: NodeJS.Timeout | null = null;
+    const processGroup = process.platform !== "win32";
     const finish = (result: Json) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (killTimer) clearTimeout(killTimer);
+      if (killTimer && !processGroup) clearTimeout(killTimer);
       resolveResult({ ...result, durationMs: Date.now() - started });
     };
     const collect = (target: "stdout" | "stderr") => (chunk: Buffer) => {
@@ -458,7 +459,7 @@ async function executeCommand(body: Json): Promise<Json> {
       if (target === "stdout") stdout += text; else stderr += text;
       if (outputBytes > OUTPUT_LIMIT && !capped) {
         capped = true;
-        killTimer = terminateChildProcess(child, 2000, process.platform !== "win32");
+        killTimer = terminateChildProcess(child, 2000, processGroup);
       }
     };
     child.stdout.on("data", collect("stdout"));
