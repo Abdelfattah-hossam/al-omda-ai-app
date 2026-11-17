@@ -67,6 +67,19 @@ test("stores only explicit, non-sensitive memory requests", () => {
   assert.equal(extractExplicitMemoryNode("Remember my medical diagnosis"), null);
   assert.equal(extractExplicitMemoryNode("افتكر إن الشات مايتغيرش")?.nodeType, "constraint");
   assert.equal(extractExplicitMemoryNode("احفظ أني أفضّل الرد بالعربية")?.nodeType, "preference");
+  for (const request of [
+    "Remember that I am Christian",
+    "Remember that I am Muslim",
+    "Remember that I support the XYZ political party",
+    "Remember that I am gay",
+    "Remember that I have epilepsy",
+    "افتكر أني مسلم",
+    "احفظ أني مسيحي",
+    "احفظ أني أنتمي إلى حزب سياسي",
+    "احفظ ميولي الجنسية",
+  ]) {
+    assert.equal(extractExplicitMemoryNode(request), null, request);
+  }
 });
 
 test("canonical setup SQL and the deployed migration define the same private graph protections", async () => {
@@ -94,6 +107,8 @@ test("captures explicit corrections without storing sensitive personal data", ()
   assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
   assert.equal(extractUserCorrectionNode("Correction: do not save this in memory: I work at Acme"), null);
   assert.equal(extractUserCorrectionNode("التصحيح: لا تحفظ ده في الذاكرة: أعمل في شركة كذا"), null);
+  assert.equal(extractUserCorrectionNode("Correction: I am Christian"), null);
+  assert.equal(extractUserCorrectionNode("التصحيح: أنا مسلم"), null);
 });
 
 test("warns when an explicit memory request could not be extracted, but not for opt-outs", () => {
