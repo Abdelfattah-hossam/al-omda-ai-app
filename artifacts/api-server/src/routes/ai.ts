@@ -1220,10 +1220,6 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
     if (powerPointRequest) {
-      if (!validatedPresentation) {
-        res.status(502).json({ error: language === "ar" ? "لم يكتمل إنشاء عرض PowerPoint صالح. لم يتم خصم وحداتك؛ حاول مرة أخرى." : "A valid PowerPoint presentation could not be created. No units were charged; please retry." });
-        return;
-      }
       res.json({
         reply: language === "ar" ? "تم إنشاء محتوى عرض PowerPoint وتجهيز ملف PPTX قابل للتحميل والمعاينة." : "Your PowerPoint presentation is ready to preview and download as a PPTX file.",
         presentation: validatedPresentation,
