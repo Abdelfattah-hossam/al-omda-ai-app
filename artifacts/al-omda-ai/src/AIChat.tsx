@@ -493,34 +493,31 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     let stopped = false;
     let syncing = false;
     const sync = async () => {
-      // Never poll while a send or conversation restore is in progress. Keep the
-      // polling effect stable instead of restarting it for every loading-state change.
       if (stopped || syncing || document.visibilityState !== "visible" || loadingRef.current || historyLoadingRef.current) return;
       syncing = true;
       try {
-        const [listResponse, conversationResponse] = await Promise.all([
-          fetch("/api/ai/conversations", { credentials: "same-origin" }),
-          fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin" }),
-        ]);
-        if (!listResponse.ok || !conversationResponse.ok) return;
-        const [listData, conversationData] = await Promise.all([listResponse.json(), conversationResponse.json()]);
-        // A send may have started while the network requests were in flight.
-        // Never let a stale poll overwrite the active draft/transcript mid-send.
+        const listResponse = await fetch("/api/ai/conversations", { credentials: "same-origin", cache: "no-store" });
+        if (!listResponse.ok) return;
+        const listData = await listResponse.json();
         if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current) return;
-        if (Array.isArray(listData.conversations) && JSON.stringify(conversationsRef.current) !== JSON.stringify(listData.conversations)) {
-          setConversations(listData.conversations);
-        }
-        // Compare only visible content; metadata-only differences must never reload the transcript.
-        const remote = Array.isArray(conversationData.conversation?.messages)
-          ? conversationData.conversation.messages
-              .filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
-              .slice(-100)
-              .map((item: any) => ({ role: item.role, content: item.content }))
+        const remoteConversations = Array.isArray(listData.conversations) ? listData.conversations as Conversation[] : [];
+        if (hasConversationListChanged(conversationsRef.current, remoteConversations)) setConversations(remoteConversations);
+        const activeSummary = remoteConversations.find((item) => item?.id === activeConversationId);
+        const listedUpdatedAt = typeof activeSummary?.updated_at === "string" ? activeSummary.updated_at : "";
+        if (!hasConversationUpdatedAtChanged(listedUpdatedAt, lastSyncedConversationUpdatedAtRef.current)) return;
+        const conversationResponse = await fetch("/api/ai/conversations/" + encodeURIComponent(activeConversationId), { credentials: "same-origin", cache: "no-store" });
+        if (!conversationResponse.ok) return;
+        const conversationData = await conversationResponse.json();
+        if (stopped || sendingRef.current || loadingRef.current || historyLoadingRef.current || !conversationData.conversation) return;
+        const remote: ChatMessage[] = Array.isArray(conversationData.conversation.messages)
+          ? conversationData.conversation.messages.filter((item: unknown): item is ChatMessage => item !== null && typeof item === "object" && ((item as ChatMessage).role === "user" || (item as ChatMessage).role === "assistant") && typeof (item as ChatMessage).content === "string").slice(-100)
           : [];
-        const local = messagesRef.current.map(({ role, content }) => ({ role, content }));
-        if (JSON.stringify(remote) !== JSON.stringify(local) && !loadingRef.current && !historyLoadingRef.current) {
+        const local = messagesRef.current;
+        const remoteUpdatedAt = typeof conversationData.conversation.updated_at === "string" ? conversationData.conversation.updated_at : listedUpdatedAt;
+        lastSyncedConversationUpdatedAtRef.current = remoteUpdatedAt;
+        if (getChatMessageSyncSignature(remote) !== getChatMessageSyncSignature(local)) {
           shouldAutoScrollRef.current = false;
-          await loadConversation(activeConversationId);
+          await loadConversation(activeConversationId, conversationData as ConversationResponse);
         }
       } catch {
         // A temporary sync failure must not interrupt the current conversation.
