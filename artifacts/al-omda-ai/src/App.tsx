@@ -985,6 +985,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (stepIndex !== firstOpen) return;
+    if (task.steps.slice(0, stepIndex).some((step) => !step.result?.trim())) {
+      setExecutionError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before the next stage can be approved.');
+      return;
+    }
     approvalLockRef.current = true;
     const steps = task.steps.map((step) => step.id === stepId ? { ...step, state:'approved' as StepState } : step);
     const approvedStep = steps[stepIndex];
