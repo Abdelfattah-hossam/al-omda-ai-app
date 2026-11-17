@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { NextFunction, Request, Response } from "express";
 import { requireSameOriginRead } from "../../artifacts/api-server/src/lib/supabase.js";
 
 function invoke(headers: Record<string, string>, method = "GET") {
@@ -12,7 +11,7 @@ function invoke(headers: Record<string, string>, method = "GET") {
     get(name: string) {
       return headers[name.toLowerCase()];
     },
-  } as unknown as Request;
+  } as unknown as Parameters<typeof requireSameOriginRead>[0];
   const res = {
     status(code: number) {
       statusCode = code;
@@ -22,8 +21,8 @@ function invoke(headers: Record<string, string>, method = "GET") {
       payload = value;
       return this;
     },
-  } as unknown as Response;
-  requireSameOriginRead(req, res, (() => { nextCalled = true; }) as NextFunction);
+  } as unknown as Parameters<typeof requireSameOriginRead>[1];
+  requireSameOriginRead(req, res, (() => { nextCalled = true; }) as Parameters<typeof requireSameOriginRead>[2]);
   return { statusCode, payload, nextCalled };
 }
 
