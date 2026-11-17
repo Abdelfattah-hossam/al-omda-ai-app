@@ -381,11 +381,9 @@ components:
           maxLength: 1200
         output:
           type: string
-          minLength: 1
           maxLength: 1200
         complete:
           type: string
-          minLength: 1
           maxLength: 1200
         result:
           type: string
