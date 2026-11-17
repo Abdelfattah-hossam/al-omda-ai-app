@@ -152,7 +152,8 @@ function excelColumnName(index: number): string {
   while (value > 0) { const remainder = (value - 1) % 26; result = String.fromCharCode(65 + remainder) + result; value = Math.floor((value - 1) / 26); }
   return result;
 }
-type Conversation = { id: string; title: string; created_at: string; updated_at: string };
+type Conversation = { id: string; title: string; created_at: string; updated_at: string; messages?: ChatMessage[] };
+type ConversationResponse = { conversation: Conversation; error?: string };
 type Usage = {
   used: number;
   remaining: number;
@@ -308,13 +309,13 @@ export default function AIChatPage({ language, signedIn, view = "chat" }: { lang
     reset: ar ? "يتجدد الرصيد عند" : "Allowance resets at",
   };
 
-  const loadConversation = async (id: string, preloadedData?: any) => {
+  const loadConversation = async (id: string, preloadedData?: ConversationResponse) => {
     setHistoryLoading(true);
     try {
       let data = preloadedData;
       if (!data) {
         const response = await fetch("/api/ai/conversations/" + encodeURIComponent(id), { credentials: "same-origin", cache: "no-store" });
-        data = await response.json();
+        data = await response.json() as ConversationResponse;
         if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
       }
       if (!data?.conversation) throw new Error(data?.error || (ar ? "تعذر تحميل المحادثة." : "Could not load conversation."));
