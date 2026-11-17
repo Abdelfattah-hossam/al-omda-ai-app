@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent,
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import WorkspaceAssets from './WorkspaceAssets';
-import { createDocxBlob, createXlsxBlob } from './lib/office-ooxml';
+import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
   createTask as apiCreateTask,
@@ -48,32 +48,15 @@ function getTaskPresentation(result?: string): TaskPresentation | null {
   } catch { return null; }
 }
 async function downloadTaskPowerPoint(data: TaskPresentation, projectId?: string): Promise<void> {
-  const primary = "https://esm.sh/pptxgenjs@3.12.0";
-  const fallback = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
-  let imported: any;
-  try { imported = await import(/* @vite-ignore */ primary); }
-  catch { imported = await import(/* @vite-ignore */ fallback); }
-  const PptxGenJS = imported.default ?? imported;
-  const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_WIDE";
-  pptx.author = "AL OMDA AI";
-  pptx.title = data.title;
-  pptx.lang = /[\u0590-\u08ff]/.test(data.title + data.slides.map((slide) => slide.title + slide.bullets.join(" ")).join(" ")) ? "ar-SA" : "en-US";
-  pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: pptx.lang };
-  for (const item of data.slides) {
-    const slide = pptx.addSlide();
-    slide.background = { color: "101722" };
-    slide.addText(item.title, { x: 0.55, y: 0.45, w: 12.2, h: 0.85, fontFace: "Arial", fontSize: 26, bold: true, color: "D8B978", align: pptx.lang === "ar-SA" ? "right" : "left", rtlMode: pptx.lang === "ar-SA", margin: 0.08, fit: "shrink" });
-    slide.addText(item.bullets.map((value) => ({ text: value, options: { bullet: { indent: 18 }, hanging: 4, breakLine: true } })), { x: 0.75, y: 1.65, w: 11.8, h: 5.15, fontFace: "Arial", fontSize: 18, color: "F1F5F9", paraSpaceAfterPt: 16, valign: "mid", align: pptx.lang === "ar-SA" ? "right" : "left", rtlMode: pptx.lang === "ar-SA", margin: 0.12, fit: "shrink" });
-    if (item.notes) slide.addNotes(item.notes);
-    slide.addText("AL OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
-  }
-  const blob = await pptx.write({ outputType: "blob" }) as Blob;
-  const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
-  if (blob.size < 1000 || signature[0] !== 0x50 || signature[1] !== 0x4b) throw new Error("The generated PowerPoint file is invalid.");
-  const filename = safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx";
-  await saveAndDownloadTaskArtifact(blob, filename, "application/vnd.openxmlformats-officedocument.presentationml.presentation", projectId);
+  const blob = createPptxBlob(data);
+  await saveAndDownloadTaskArtifact(
+    blob,
+    safeArtifactName(data.title, "AL-OMDA-presentation") + ".pptx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    projectId,
+  );
 }
+
 type TaskSpreadsheet = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?:Record<string,string>; sheets?:Array<{name:string;columns:string[];rows:Array<Array<string|number|boolean>>;formulas?:Record<string,string>}> };
 function getTaskSpreadsheet(result?: string): TaskSpreadsheet | null {
   if (!result?.startsWith("ALOMDA_XLSX_JSON:")) return null;
