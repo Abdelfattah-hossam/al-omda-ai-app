@@ -264,6 +264,8 @@ describe("source-code artifact intent", () => {
       "Export the source code as main.py",
       "Create a comparison of sorting algorithms and export Python code as compare.py",
       "Create a file named inline.css",
+      "Create a Python script",
+      "Create a PDF file of this report",
     ]) {
       assert.equal(isExplicitSourceCodeFileRequest(request), true, "missed source file intent: " + request);
     }
