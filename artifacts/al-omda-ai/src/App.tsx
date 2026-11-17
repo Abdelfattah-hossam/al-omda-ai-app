@@ -451,7 +451,7 @@ function buildLocalPlan(request:string, specialty:Specialty, language:Language):
 }
 
 const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
-  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/ai', key:'aiChat', icon:Bot }, { path:'/agents', key:'agentNetwork', icon:Compass },
+  { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
 type DashboardShortcut = { path:string; ar:string; en:string; subtitleAr:string; subtitleEn:string; icon:LucideIcon };
@@ -462,7 +462,6 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
     {path:'/assets',ar:'الأصول والملفات',en:'Assets',subtitleAr:'ملفات ومخرجات المشاريع',subtitleEn:'Project files and deliverables',icon:FileText},
     {path:'/workbench',ar:'مشروع جديد',en:'New Project',subtitleAr:'ابدأ مشروعًا أو مهمة',subtitleEn:'Start a project or task',icon:Plus},
     {path:'/history',ar:'سجل المهام',en:'Task History',subtitleAr:'النتائج وسجل التنفيذ',subtitleEn:'Results and execution history',icon:History},
-    {path:'/ai',ar:'الشات الذكي',en:'AI Chat',subtitleAr:'محادثة مباشرة مع العمدة',subtitleEn:'Chat with AL OMDA',icon:Bot},
     {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
   ]},
   { id:'analytics', titleAr:'المالية والتحليلات', titleEn:'FINANCE & ANALYTICS', subtitleAr:'لوحات المتابعة والبيانات المتصلة', subtitleEn:'Dashboards and connected data', items:[
