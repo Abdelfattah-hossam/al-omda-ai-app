@@ -923,9 +923,10 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       completion = await modelCompletion(state.messages, AGENT_TOOLS, onProgress, purpose, signal);
     } catch (error) {
       if (!signal?.aborted) throw error;
+      const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
-      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; the latest checkpoint is available to resume.", ...agentExecutionWarnings(state), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; the latest checkpoint is available to resume.", ...executionWarnings, turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     totalDurationMs += completion.durationMs;
     lastProvider = completion.provider;
@@ -934,8 +935,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     state.messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (!calls.length) {
+      const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", ...agentExecutionWarnings(state), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", ...executionWarnings, turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
@@ -944,9 +946,10 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ cancelled: true, message: "The user cancelled this run before the tool was started. Do not retry it." }) });
       }
       appendMcpImageObservations(state.messages, imageQueue);
+      const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
       onProgress?.({ type: "status", status: "cancelled" });
-      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; remaining tools were not started and the latest checkpoint is available to resume.", ...agentExecutionWarnings(state), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "cancelled", sessionId: id, message: "The agent run was cancelled. Any tool action already in progress was allowed to finish; remaining tools were not started and the latest checkpoint is available to resume.", ...executionWarnings, turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     };
     if (signal?.aborted) return await finishCancelled(calls);
     const approvalCalls = calls.filter((call) => ["files.write", "terminal.execute", "mcp.call_tool", "http.compare_roles"].includes(call.function?.name || "") || (call.function?.name || "").startsWith("mcp_tool_"));
@@ -976,8 +979,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       if (Object.keys(pendingMcpTools).length) state.pendingMcpTools = pendingMcpTools;
       else delete state.pendingMcpTools;
       state.pendingToolCalls = approvalCalls;
+      const executionWarnings = agentExecutionWarnings(state);
       await saveAgentState(id, state);
-      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", ...agentExecutionWarnings(state), pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", ...executionWarnings, pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (let index = 0; index < calls.length; index += 1) {
       if (signal?.aborted) return await finishCancelled(calls.slice(index));
@@ -994,8 +998,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     appendMcpImageObservations(state.messages, imageQueue);
     await saveAgentState(id, state);
   }
+      const executionWarnings = agentExecutionWarnings(state);
   await saveAgentState(id, state);
-  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", ...agentExecutionWarnings(state), turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+  return { status: "limit_reached", sessionId: id, message: "The agent reached the 10-turn safety limit. Continue this session to proceed.", ...executionWarnings, turns: 10, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
 }
 const AGENT_OPERATING_RULES = `
 
@@ -1214,7 +1219,24 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
     // lock also prevents resume and continue requests from mutating the same checkpoint.
     delete state.pendingToolCalls;
     await saveAgentState(id, state);
-    for (const call of pending) {
+    for (let index = 0; index < pending.length; index += 1) {
+      const call = pending[index];
+      if (signal.aborted) {
+        for (const remaining of pending.slice(index)) {
+          if (approved.has(remaining.id)) {
+            appendMcpToolResult(state.messages, remaining, { cancelled: true, message: "The user cancelled this approval batch before this tool was started. Do not retry it." }, imageQueue);
+          } else {
+            state.messages.push({ role: "tool", tool_call_id: remaining.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user did not approve this action and cancelled the batch." }) });
+          }
+        }
+        delete state.pendingMcpTools;
+        appendMcpImageObservations(state.messages, imageQueue);
+        state.status = "cancelled";
+        const executionWarnings = agentExecutionWarnings(state);
+        await saveAgentState(id, state);
+        onProgress?.({ type: "status", status: "cancelled" });
+        return { status: "cancelled", sessionId: id, message: "The approval batch was cancelled. The current tool was allowed to finish; remaining approved tools were not started.", ...executionWarnings };
+      }
       if (!approved.has(call.id)) {
         state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, message: "The user did not approve this action. Do not retry it." }) });
         continue;
