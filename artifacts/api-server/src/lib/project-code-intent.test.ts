@@ -4,6 +4,7 @@ import { isMultiFileProjectRequest, isStandaloneHtmlRequest } from "./project-co
 
 test("routes full websites and business systems to multi-file project artifacts", () => {
   assert.equal(isMultiFileProjectRequest("Build a website like Amazon"), true);
+  assert.equal(isMultiFileProjectRequest("I want a website like Amazon"), true);
   assert.equal(isMultiFileProjectRequest("Create an online store"), true);
   assert.equal(isMultiFileProjectRequest("Build a full application"), true);
   assert.equal(isMultiFileProjectRequest("Create an e-commerce marketplace with checkout and admin dashboard"), true);
