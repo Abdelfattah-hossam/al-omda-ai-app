@@ -18,6 +18,7 @@ const MAX_STEP_FIELD_LENGTH = 1200;
  * than shown as an approved-looking project plan.
  */
 export function parseProjectPlan(raw: string): ProjectPlan | null {
+  if (typeof raw !== "string" || raw.length > 100_000) return null;
   try {
     let jsonText = raw.trim();
     if (jsonText.startsWith("```")) {
