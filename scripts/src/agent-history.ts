@@ -19,7 +19,13 @@ export function ensureAssistantToolCallMessage(
     }
   }
   const missing = calls.filter((call) => !recordedIds.has(call.id));
-  if (missing.length) {
+  if (!missing.length) return;
+  const lastAssistantToolMessage = [...messages].reverse().find((message) =>
+    message.role === "assistant" && Array.isArray(message.tool_calls)
+  );
+  if (lastAssistantToolMessage) {
+    lastAssistantToolMessage.tool_calls = [...lastAssistantToolMessage.tool_calls as AgentHistoryToolCall[], ...missing];
+  } else {
     messages.push({ role: "assistant", content: "", tool_calls: missing });
   }
 }
