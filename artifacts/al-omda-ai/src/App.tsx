@@ -412,6 +412,18 @@ const mobileNavItems: typeof navItems = [
   { path:'/history', key:'history', icon:History },
   { path:'/profile', key:'profile', icon:UserRound },
 ];
+const platformStatusPages = {
+  '/finance/sales-overview': { ar:'نظرة عامة على المبيعات', en:'Sales Overview', sourceAr:'مصدر بيانات المبيعات غير مربوط', sourceEn:'Sales data source is not connected', detailAr:'لن تظهر إيرادات أو مصروفات أو أرباح تقديرية. ستظهر الأرقام بعد ربط مصدر مبيعات حقيقي.', detailEn:'Revenue, expenses, and profit are intentionally hidden until a real sales source is connected.' },
+  '/finance/sales-distribution': { ar:'توزيع المبيعات', en:'Sales Distribution', sourceAr:'قنوات المبيعات غير مربوطة', sourceEn:'Sales channels are not connected', detailAr:'لن يتم توزيع المبيعات على الموقع أو التطبيق أو السوق أو الوكلاء دون بيانات معاملات فعلية.', detailEn:'Sales will not be attributed to web, mobile, marketplace, or agents without actual transaction data.' },
+  '/finance/payment-gateways': { ar:'بوابات الدفع', en:'Payment Gateways', sourceAr:'لا توجد بوابة دفع متصلة', sourceEn:'No payment gateway is connected', detailAr:'لا توجد معاملات أو مفاتيح ربط مؤكدة لعرضها. لا تُدخل مفاتيح سرية في المحادثة؛ استخدم إعدادات الربط الآمنة عند تجهيز التكامل.', detailEn:'There are no verified payment connections or transactions to display. Never paste secret keys into chat; use secure integration settings when available.' },
+  '/finance/active-users': { ar:'المستخدمون النشطون والخريطة', en:'Active Users & Global Map', sourceAr:'تحليلات المستخدمين غير مفعّلة', sourceEn:'User analytics are not enabled', detailAr:'لن يتم عرض أعداد مستخدمين أو مواقع جغرافية تخمينية. يلزم مصدر تحليلات حقيقي ومصرّح به.', detailEn:'No estimated user counts or guessed locations are shown. A real, authorized analytics source is required.' },
+  '/collaboration/contacts': { ar:'جهات الاتصال', en:'Contacts', sourceAr:'دفتر جهات الاتصال غير مربوط', sourceEn:'Contacts provider is not connected', detailAr:'اربط مصدر جهات الاتصال أولًا حتى لا تظهر أسماء أو بيانات أشخاص وهمية.', detailEn:'Connect a contacts source before displaying people or contact details.' },
+  '/collaboration/calendar': { ar:'التقويم', en:'Calendar', sourceAr:'التقويم الخارجي غير مربوط', sourceEn:'External calendar is not connected', detailAr:'لا توجد مواعيد خارجية متاحة حاليًا. لن ننشئ أحداثًا أو اجتماعات غير محفوظة.', detailEn:'No external events are available. The app will not invent or imply saved meetings.' },
+  '/collaboration/email': { ar:'البريد الإلكتروني', en:'Email', sourceAr:'حساب البريد غير مربوط', sourceEn:'Email account is not connected', detailAr:'لن يتم عرض رسائل أو الادعاء بإرسال بريد قبل ربط حساب بريد فعلي ومنح الإذن.', detailEn:'Messages are not displayed and emails are not claimed as sent until a real mailbox is connected and authorized.' },
+  '/collaboration/tickets': { ar:'التذاكر والدعم', en:'Tickets & Support', sourceAr:'نظام التذاكر غير مربوط', sourceEn:'Ticketing system is not connected', detailAr:'لا توجد تذاكر فعلية متاحة. يلزم ربط نظام دعم أو تفعيل تخزين التذاكر قبل استخدامها.', detailEn:'There are no real tickets available. Connect a support system or enable ticket storage before using this area.' },
+  '/system/security': { ar:'الأمان والسجلات', en:'Security & Logs', sourceAr:'مصدر سجلات التدقيق غير مربوط', sourceEn:'Audit log source is not connected', detailAr:'لا نعرض سجلات أمنية مصطنعة. يلزم تفعيل سجل أحداث موثوق قبل عرض التنبيهات والتغييرات.', detailEn:'Synthetic security events are not shown. A trusted audit-event source must be enabled before displaying alerts or changes.' },
+} as const;
+
 const STORE_KEY = 'al-omda-demo-v1';
 const workspaceCacheKey = (userId:string) => `${STORE_KEY}:workspace:${userId}`;
 function readWorkspaceTaskCache(userId:string): Task[] {
@@ -1125,6 +1137,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && Boolean(step.result)).length;
 
   const pageHeading = (eyebrow:string, title:string, subtitle:string, action?:ReactNode) => <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1 className="page-title">{title}</h1><p className="page-subtitle">{subtitle}</p></div>{action}</div>;
+  const platformStatusPage = (route:string) => {
+    const info = platformStatusPages[route as keyof typeof platformStatusPages];
+    if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
+    return <div className="page-enter">
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'قسم جاهز للربط بمصدر بيانات حقيقي.':'A workspace area awaiting a real data connection.')}
+      <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+        <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
+        <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
+        <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض العمدة أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: AL OMDA will not display invented figures, records, or locations without a connected source.'}</span></div>
+      </section>
+    </div>;
+  };
+
   const taskIcon = (id:Specialty, size=17) => {
     const Icon = specialties.find((item) => item.id === id)?.icon ?? Bot;
     return <Icon size={size} strokeWidth={1.7}/>;
@@ -2297,6 +2322,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/projects') page = projectsPage();
   else if (path === '/pipeline') page = pipelinePage();
   else if (path === '/assets') page = assetsPage();
+  else if (path in platformStatusPages) page = platformStatusPage(path);
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
   else if (path === '/') page = dashboardPage();
@@ -2307,7 +2333,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
   const pageTitleKey = path === '/ai/usage' ? 'usage' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
-  const pageTitle = path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
+  const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
+  const pageTitle = platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
@@ -2317,19 +2344,47 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <div className="sidebar-scroll">
         <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-        <section className="sidebar-nav-group" aria-label={isAr?'التنقل العام':'General navigation'}>
+        <section className="sidebar-nav-group" aria-label={isAr?'مساحة العمل':'Workspace'}>
           <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
-          <nav className="nav-stack">{navItems.filter(item=>['/','/ai','/history'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
-        </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'إدارة مساحة العمل':'Workspace management'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'إدارة العمل':'WORK MANAGEMENT'}</div>
           <nav className="nav-stack">
-            {[{path:'/projects',label:isAr?'المشاريع':'Projects',icon:BriefcaseBusiness},{path:'/pipeline',label:isAr?'مسار العمل':'Pipeline',icon:Activity},{path:'/assets',label:isAr?'الأصول والملفات':'Assets',icon:FileText}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={focusedHref(item.path,item.path==='/projects'?'history-list':item.path==='/pipeline'?'pipeline-board':'assets-list')} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined} data-testid={'link-platform-'+item.path.slice(1)}><Icon size={17} strokeWidth={1.8}/><span>{item.label}</span></Link>;})}
+            {[{path:'/',label:isAr?'لوحة التحكم':'Dashboard',icon:LayoutDashboard,target:'dashboard-overview'},{path:'/projects',label:isAr?'المشاريع':'Projects',icon:BriefcaseBusiness,target:'history-list'},{path:'/pipeline',label:isAr?'مسار العمل':'Pipeline',icon:Activity,target:'pipeline-board'},{path:'/assets',label:isAr?'الأصول والملفات':'Assets',icon:FileText,target:'assets-list'},{path:'/workbench',label:isAr?'مشروع جديد':'New Project',icon:Plus,target:'request-input'},{path:'/history',label:isAr?'سجل المهام':'Task History',icon:History,target:'history-list'}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/'?path==='/':path===item.path;return <Link key={item.path} href={focusedHref(item.path,item.target)} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17} strokeWidth={1.8}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Systems and tools'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'الأدوات المتخصصة':'SPECIALISTS & TOOLS'}</div>
-          <nav className="nav-stack">{navItems.filter(item=>['/agents','/workbench'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
+        <section className="sidebar-nav-group" aria-label={isAr?'المالية والتحليلات':'Finance and analytics'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'المالية والتحليلات':'FINANCE & ANALYTICS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
+              {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
+              {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة':'Active Users & Global Map',icon:UserRound},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'التعاون والتطبيقات':'Collaboration and apps'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'التعاون والتطبيقات':'COLLABORATION & APPS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/collaboration/contacts',label:isAr?'جهات الاتصال':'Contacts',icon:UserRound},
+              {path:'/ai',label:isAr?'المحادثات':'Chats',icon:MessageSquareText},
+              {path:'/collaboration/calendar',label:isAr?'التقويم':'Calendar',icon:History},
+              {path:'/collaboration/email',label:isAr?'البريد الإلكتروني':'Email',icon:Send},
+              {path:'/collaboration/tickets',label:isAr?'التذاكر والدعم':'Tickets',icon:FileText},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/ai'?path==='/ai':path===item.path;return <Link key={item.path} href={item.path==='/ai'?navigationHref('/ai'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'النظام والإعدادات':'System and settings'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'النظام والإعدادات':'SYSTEM & SETTINGS'}</div>
+          <nav className="nav-stack">
+            {[
+              {path:'/system/security',label:isAr?'الأمان والسجلات':'Security & Logs',icon:ShieldCheck},
+              {path:'/profile',label:isAr?'الإعدادات':'Settings',icon:Settings2},
+            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path==='/profile'?focusedHref('/profile','profile-account-card'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+          </nav>
+        </section>
+        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
+          <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
+          <nav className="nav-stack">{navItems.filter(item=>['/agents','/ai/usage'].includes(item.path)&&(!sidebarSearch.trim()||t(item.key).toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))).map(item=>navLink(item))}</nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
