@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildCommandEnvironment } from "./command-env.js";
 import { decideSafeUpdate } from "./update-policy.js";
+import { runSupervisedCommand } from "./supervisor-process.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const token = process.env.OMDA_AGENT_TOKEN?.trim() || "";
@@ -20,22 +21,10 @@ let initialUpdateTimer: NodeJS.Timeout | null = null;
 let updateIntervalTimer: NodeJS.Timeout | null = null;
 
 function runCommand(command: string, args: string[], timeoutMs = 120000): Promise<string> {
-  return new Promise((resolveResult, reject) => {
-    const child = spawn(command, args, {
-      cwd: repoRoot, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
-      env: buildCommandEnvironment(process.env),
-    });
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => child.kill("SIGTERM"), timeoutMs);
-    child.stdout?.on("data", (chunk: Buffer) => { if (stdout.length < 100000) stdout += chunk.toString("utf8").slice(0, 100000 - stdout.length); });
-    child.stderr?.on("data", (chunk: Buffer) => { if (stderr.length < 100000) stderr += chunk.toString("utf8").slice(0, 100000 - stderr.length); });
-    child.on("error", (error) => { clearTimeout(timer); reject(error); });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) resolveResult(stdout.trim());
-      else reject(new Error((stderr || stdout || command + " failed").slice(0, 1200)));
-    });
+  return runSupervisedCommand(command, args, {
+    cwd: repoRoot,
+    env: buildCommandEnvironment(process.env),
+    timeoutMs,
   });
 }
 
