@@ -590,6 +590,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
     const htmlAppStep = isFinalDeliverableStep && !excelStep && !wordStep && isDesktopAppRequest(customerRequest);
+    const powerPointStep = isFinalDeliverableStep && !excelStep && !wordStep && !htmlAppStep && isPowerPointRequest([{ role: "user", content: customerRequest }]);
     const wordTaskMessages: ChatMessage[] = [{ role: "user", content: customerRequest }];
     const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
     const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
@@ -625,6 +626,16 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "For a desktop clock, build a working live clock that updates every second, with clear readable time and useful controls if appropriate. Do not return a tutorial or PowerShell instructions.",
       "Original customer request: " + customerRequest,
       "Approved step: " + step.text,
+      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+    ].join("\n") : powerPointStep ? [
+      "You are AL OMDA. Create the actual PowerPoint presentation content for this approved project. Return ONLY valid JSON, no Markdown.",
+      'Schema: {"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point"],"notes":"optional speaker notes"}]}',
+      "Create 3 to 30 complete slides. Preserve any exact slide count requested by the customer. Each slide needs a clear title and 1 to 8 meaningful bullets. Use concise, presentation-ready Arabic or English according to the request. Add speaker notes when useful.",
+      "Use only facts from the original request and approved prior stage outputs. Never invent statistics, customer data, citations, or unsupported claims. Mark missing inputs clearly.",
+      "Original request: " + customerRequest,
+      "Approved step: " + step.text,
+      "Expected deliverable: " + (step.output || "A complete editable .pptx presentation"),
+      "Acceptance check: " + (step.complete || "Every requested slide is present and ready to present."),
       "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
     ].join("\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
@@ -662,6 +673,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
     let validatedSpreadsheet = excelStep ? parseExcelWorkbook(answer.text) : null;
     let validatedHtmlApp = htmlAppStep ? parseHtmlApp(answer.text) : null;
+    let validatedPowerPoint = powerPointStep ? parsePowerPointPresentation(answer.text) : null;
     if (wordStep && !validatedWordDocument) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
         "Repair the Word deliverable. Return ONLY valid JSON with title, paragraphs, columns, and rows.",
@@ -772,6 +784,41 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
     }
+    if (powerPointStep && !validatedPowerPoint) {
+      const repairRequest: ChatMessage[] = [{ role: "user", content: [
+        "Repair the PowerPoint presentation. Return ONLY valid JSON with title and slides. Each slide needs a non-empty title and 1 to 8 non-empty bullets; 3 to 30 slides total.",
+        "Preserve the exact slide count requested by the original customer. Do not invent facts, statistics, citations, or sample data.",
+        "Original request: " + customerRequest,
+        "Approved step: " + step.text,
+        "Invalid output: " + answer.text.slice(0, 12000)
+      ].join("\n") }];
+      try { answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, memory); }
+      catch (error) { console.warn("[PowerPoint task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
+      validatedPowerPoint = parsePowerPointPresentation(answer.text);
+      if (!validatedPowerPoint) {
+        const alternateProvider = providers.find((candidate) => candidate !== provider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{
+              role: "user",
+              content: [
+                "Create a valid PowerPoint presentation. Return ONLY JSON with title and slides, each slide having title and 1 to 8 bullets.",
+                "Preserve the exact slide count and all requirements from the original request. Do not invent facts or data.",
+                "Original request: " + customerRequest,
+                "Approved step: " + step.text
+              ].join("\n")
+            }], memory);
+            const alternatePresentation = parsePowerPointPresentation(alternateAnswer.text);
+            if (alternatePresentation) { answer = alternateAnswer; validatedPowerPoint = alternatePresentation; provider = alternateProvider; }
+          } catch (error) { console.warn("[Alternate PowerPoint task engine failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
+      if (!validatedPowerPoint) {
+        await saveExecutionFailure("PowerPoint presentation failed structural validation after repair attempts.");
+        res.status(502).json({ error: "تعذر اعتماد عرض PowerPoint بعد محاولات الإصلاح. لم يتم خصم وحدات؛ أعد تنفيذ المرحلة." });
+        return;
+      }
+    }
     let spreadsheet: ReturnType<typeof parseExcelWorkbook> = null;
     let result = answer.text.trim().slice(0, 12000);
     if (htmlAppStep) {
@@ -798,6 +845,13 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         return;
       }
       result = "ALOMDA_XLSX_JSON:" + JSON.stringify(spreadsheet);
+    } else if (powerPointStep) {
+      if (!validatedPowerPoint) {
+        await saveExecutionFailure("The AI did not return a valid structured PowerPoint presentation.");
+        res.status(502).json({ error: "تعذر إنشاء عرض PowerPoint منظم. أعد تنفيذ المرحلة." });
+        return;
+      }
+      result = "ALOMDA_PPTX_JSON:" + JSON.stringify(validatedPowerPoint);
     }
     if (!result) {
       await saveExecutionFailure("The AI returned an empty deliverable.");
