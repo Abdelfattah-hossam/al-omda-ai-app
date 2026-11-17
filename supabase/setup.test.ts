@@ -70,7 +70,7 @@ test("pending database migration secures every quota RPC without changing public
 });
 
 test("sequential completion migration requires successful prior stage execution", () => {
-  const start = sequenceMigration.indexOf("create or replace function omda_private.complete_ai_task_step(");
+  const end = sequenceMigration.indexOf("\n$$;", start);
   const end = sequenceMigration.indexOf("\n$;", start);
   assert.notEqual(start, -1);
   assert.notEqual(end, -1);
