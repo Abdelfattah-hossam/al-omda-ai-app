@@ -9,6 +9,7 @@ import {
   GLOBAL_MAP_MIN_ZOOM,
   GLOBAL_MAP_TILE_URL,
   GLOBAL_MAP_ZOOM_STEP,
+  isValidGlobalMapZoom,
 } from "./global-map-config";
 
 type GlobalMapProps = {
@@ -53,10 +54,13 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         detectRetina: true,
       },
     );
-    tileLayer.on("tileerror", () => { setTilesError(true); setTilesLoaded(false); });
+    tileLayer.on("tileerror", () => setTilesError(true));
     tileLayer.on("tileload", () => { setTilesLoaded(true); setTilesError(false); });
     tileLayer.addTo(map);
     tileLayerRef.current = tileLayer;
+    const handleViewStart = () => { setTilesLoaded(false); setTilesError(false); };
+    map.on("movestart", handleViewStart);
+    map.on("zoomstart", handleViewStart);
 
     L.control.scale({ imperial: false, metric: true, position: "bottomleft" }).addTo(map);
     mapRef.current = map;
@@ -67,6 +71,8 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
 
     return () => {
       cancelAnimationFrame(resizeFrameId);
+      map.off("movestart", handleViewStart);
+      map.off("zoomstart", handleViewStart);
       resizeObserver.disconnect();
       mapRef.current = null;
       tileLayerRef.current = null;
@@ -74,8 +80,14 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     };
   }, []);
 
-  const zoomIn = useCallback(() => mapRef.current?.zoomIn(GLOBAL_MAP_ZOOM_STEP), []);
-  const zoomOut = useCallback(() => mapRef.current?.zoomOut(GLOBAL_MAP_ZOOM_STEP), []);
+  const zoomIn = useCallback(() => {
+    const map = mapRef.current;
+    if (map && isValidGlobalMapZoom(Math.min(GLOBAL_MAP_MAX_ZOOM, map.getZoom() + GLOBAL_MAP_ZOOM_STEP))) map.zoomIn(GLOBAL_MAP_ZOOM_STEP);
+  }, []);
+  const zoomOut = useCallback(() => {
+    const map = mapRef.current;
+    if (map && isValidGlobalMapZoom(Math.max(GLOBAL_MAP_MIN_ZOOM, map.getZoom() - GLOBAL_MAP_ZOOM_STEP))) map.zoomOut(GLOBAL_MAP_ZOOM_STEP);
+  }, []);
   const reset = useCallback(() => mapRef.current?.setView(GLOBAL_MAP_CENTER, GLOBAL_MAP_DEFAULT_ZOOM, { animate: true }), []);
   const retryTiles = useCallback(() => {
     setTilesError(false);
@@ -86,7 +98,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
   return (
     <div className="global-map-canvas">
       <div ref={elementRef} className="global-map-leaflet" role="region" aria-label={isAr ? "خريطة عالمية تفاعلية واقعية" : "Interactive realistic world map"} />
-      <div className="global-map-floating-controls" aria-label={isAr ? "أدوات الخريطة" : "Map controls"}>
+      <div className="global-map-floating-controls" role="group" aria-label={isAr ? "أدوات الخريطة" : "Map controls"}>
         <button type="button" onClick={zoomIn} aria-label={isAr ? "تكبير الخريطة" : "Zoom in"}>+</button>
         <button type="button" onClick={zoomOut} aria-label={isAr ? "تصغير الخريطة" : "Zoom out"}>−</button>
         <button type="button" onClick={reset} aria-label={isAr ? "إعادة ضبط الخريطة" : "Reset map"} title={isAr ? "إعادة ضبط" : "Reset"}>⌖</button>
