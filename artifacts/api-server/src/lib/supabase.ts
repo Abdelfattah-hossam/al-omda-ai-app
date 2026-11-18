@@ -62,6 +62,45 @@ export function supabaseFetch(
   return fetch(`${config.url}${path}`, { ...init, headers });
 }
 
+
+export function requireInstalledMemoryGeneration(candidate: string, insertedRows: Array<{ generation?: string }>): string {
+  if (insertedRows[0]?.generation !== candidate) {
+    throw new Error("AI memory generation initialization lost a concurrent update. Retry the memory operation.");
+  }
+  return candidate;
+}
+
+export async function getOrCreateMemoryGeneration(userId: string, accessToken: string): Promise<string> {
+  const query = new URLSearchParams({ select: "generation", user_id: "eq." + userId, limit: "1" });
+  const readCurrent = async () => {
+    const response = await supabaseFetch("/rest/v1/ai_memory_state?" + query.toString(), {}, accessToken);
+    const rows = await readSupabaseJson<Array<{ generation?: string }>>(response);
+    return typeof rows[0]?.generation === "string" ? rows[0].generation : null;
+  };
+  const existing = await readCurrent();
+  if (existing) return existing;
+
+  const candidate = crypto.randomUUID();
+  const createResponse = await supabaseFetch("/rest/v1/ai_memory_state?on_conflict=user_id&select=generation", {
+    method: "POST",
+    headers: { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" },
+    body: JSON.stringify({ user_id: userId, generation: candidate, updated_at: new Date().toISOString() }),
+  }, accessToken);
+  const insertedRows = await readSupabaseJson<Array<{ generation?: string }>>(createResponse);
+  return requireInstalledMemoryGeneration(candidate, insertedRows);
+}
+
+export async function advanceMemoryGeneration(userId: string, accessToken: string): Promise<string> {
+  const generation = crypto.randomUUID();
+  const response = await supabaseFetch("/rest/v1/ai_memory_state?on_conflict=user_id", {
+    method: "POST",
+    headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ user_id: userId, generation, updated_at: new Date().toISOString() }),
+  }, accessToken);
+  const rows = await readSupabaseJson<Array<{ generation?: string }>>(response);
+  return typeof rows[0]?.generation === "string" ? rows[0].generation : generation;
+}
+
 export async function readSupabaseJson<T>(response: globalThis.Response): Promise<T> {
   let payload: unknown = null;
   try {
@@ -198,6 +237,29 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
   } catch {
     res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
     return;
+  }
+  next();
+}
+
+export function requireSameOriginRead(req: Request, res: Response, next: NextFunction): void {
+  const fetchSite = req.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
+    res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+    return;
+  }
+  const origin = req.get("origin");
+  if (origin) {
+    const host =
+      req.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.get("host") ?? "";
+    try {
+      if (!host || new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
+        res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+        return;
+      }
+    } catch {
+      res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+      return;
+    }
   }
   next();
 }
