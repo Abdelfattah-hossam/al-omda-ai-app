@@ -78,8 +78,14 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     });
 
     const activityMarkers: Marker[] = [];
+    let mapLoaded = false;
+    const fitWorld = () => map.fitBounds([[-180, -82], [180, 82]], {
+      padding: { top: 8, bottom: 8, left: 10, right: 10 },
+      duration: 0,
+    });
     map.on("load", () => {
-      map.fitBounds([[-180, -82], [180, 82]], { padding: { top: 8, bottom: 8, left: 10, right: 10 }, duration: 0 });
+      mapLoaded = true;
+      fitWorld();
       applyWorldOutlineStyle(map);
       // Geographic markers remain attached to their coordinates while panning and zooming.
       const markerLocations: Array<[number, number]> = [
@@ -103,7 +109,11 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       }
     });
 
-    const resizeObserver = new ResizeObserver(() => map.resize());
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+      // Refit after a real container resize so the full world and all markers remain visible.
+      if (mapLoaded) fitWorld();
+    });
     resizeObserver.observe(element);
     const resizeFrameId = requestAnimationFrame(() => map.resize());
     mapRef.current = map;
