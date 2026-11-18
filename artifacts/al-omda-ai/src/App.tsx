@@ -1604,34 +1604,34 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>
         </div>)}
       </section>
-      <section className="panel panel-pad global-users-dashboard dashboard-global-map" aria-labelledby="dashboard-global-map-title">
-        <div className="global-users-header">
+      <section className="panel panel-pad global-users-dashboard dashboard-global-map active-user-map-card" aria-labelledby="dashboard-global-map-title">
+        <div className="active-user-map-heading">
           <div>
-            <span className="eyebrow">{isAr?'تحليلات حقيقية':'LIVE ANALYTICS'}</span>
-            <h2 id="dashboard-global-map-title" className="section-title" style={{marginTop:8}}>{isAr?'الخريطة العالمية':'Global map'}</h2>
-            <p className="page-subtitle">{isAr?'نظرة جغرافية عامة دون جمع مواقع المستخدمين':'A geographic overview without collecting user locations'}</p>
+            <h2 id="dashboard-global-map-title">{isAr?'المستخدمون النشطون':'Active User'}</h2>
+            <p>{isAr?'إحصائيات النشاط خلال آخر 30 يومًا':'Account activity · last 30 days'}</p>
           </div>
-          <Link href={navigationHref('/finance/active-users')} className="button button-secondary">{isAr?'تفاصيل التحليلات':'Analytics details'} <ArrowLeft size={14}/></Link>
+          <button type="button" className="active-user-map-export" onClick={() => {
+            const value = authLoading || !authUser || !liveUserAnalytics ? '' : String(liveUserAnalytics.active_users_30d);
+            const csv = ['metric,value','active_users_last_30_days,' + value].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = 'al-omda-active-users.csv';
+            anchor.click();
+            URL.revokeObjectURL(url);
+          }} aria-label={isAr?'تصدير إحصائيات المستخدمين':'Export active user analytics'}>
+            <span aria-hidden="true">⇧</span>{isAr?'تصدير':'Export'}
+          </button>
         </div>
-        <div className="global-user-metrics">
-          <div className="global-user-metric">
-            <span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span>
-            <strong>{authLoading || !authUser || !liveUserAnalytics ? '—' : liveUserAnalytics.active_users_30d.toLocaleString()}</strong>
-            <small>{!authUser ? (isAr?'سجّل الدخول لعرض بيانات حسابك':'Sign in to view account analytics') : authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Real sign-in analytics') : (liveUserAnalyticsError || (isAr?'البيانات الحقيقية غير متاحة حاليًا':'Live analytics unavailable'))}</small>
-          </div>
-          <div className="global-user-metric">
-            <span>{isAr?'بيانات الموقع الجغرافي':'Geolocation data'}</span>
-            <strong>{isAr?'غير مُجمّعة':'Not collected'}</strong>
-            <small>{isAr?'لا نخزّن إحداثيات المستخدمين':'User coordinates are not stored'}</small>
-          </div>
-        </div>
-        <div className="global-map-toolbar">
-          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة عالمية تفاعلية':'Minimal world map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
-        </div>
-        <div className="global-map-viewport">
+        <div className="active-user-map-visual">
           <DeferredGlobalMap isAr={isAr}/>
         </div>
-        <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع. تُحمّل الخريطة المتجهية من OpenFreeMap، ولا تتطلب خدمته العامة مفتاح API أو ملفات تعريف ارتباط.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates. Vector map tiles are loaded from OpenFreeMap. Its public service does not require an API key or cookies.'}</p>
+        <div className="active-user-map-total">
+          <strong>{authLoading || !authUser || !liveUserAnalytics ? '—' : liveUserAnalytics.active_users_30d.toLocaleString()}</strong>
+          <span>{isAr?'إجمالي المستخدمين النشطين':'Total Active User'}</span>
+          <small>{!authUser ? (isAr?'سجّل الدخول لعرض الإحصائيات':'Sign in to view analytics') : authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Verified sign-in analytics') : (liveUserAnalyticsError || (isAr?'البيانات غير متاحة حاليًا':'Analytics unavailable'))}</small>
+        </div>
       </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>

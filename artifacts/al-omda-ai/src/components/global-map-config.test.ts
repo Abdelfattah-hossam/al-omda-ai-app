@@ -37,7 +37,7 @@ test("global map zoom controls stop at bounds and preserve fractional zoom steps
   assert.equal(getGlobalMapZoomTarget(GLOBAL_MAP_MAX_ZOOM, 1), null);
   assert.equal(getGlobalMapZoomTarget(2.25, 1), 2.75);
   assert.equal(getGlobalMapZoomTarget(18.75, 1), GLOBAL_MAP_MAX_ZOOM);
-  assert.equal(getGlobalMapZoomTarget(2.25, -1), GLOBAL_MAP_MIN_ZOOM);
+  assert.equal(getGlobalMapZoomTarget(GLOBAL_MAP_MIN_ZOOM + 0.25, -1), GLOBAL_MAP_MIN_ZOOM);
   assert.equal(getGlobalMapZoomTarget(18.75, -1), 18.25);
   assert.equal(getGlobalMapZoomTarget(Number.NaN, 1), null);
 });
