@@ -7487,3 +7487,41 @@ body:has(.ai-chat-page){
 
 
 .global-map-maplibre .maplibregl-marker{z-index:5}
+
+
+/* Active User map — match the supplied minimalist white reference. */
+.active-user-map-card{
+  background:#fff!important;
+  border:1px solid #f3f4f6!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+.active-user-map-heading h2{color:#111827!important;font-weight:700!important}
+.active-user-map-heading p{color:#6b7280!important}
+.active-user-map-heading p strong,
+.active-user-map-heading p .growth-value{color:#6366f1!important}
+.active-user-map-export{
+  border:1px solid #e5e7eb!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#374151!important;
+}
+.active-user-map-visual .global-map-canvas,
+.active-user-map-visual .global-map-maplibre{background:#fff!important}
+.global-map-activity-dot{
+  width:9px!important;
+  height:9px!important;
+  border:2px solid #fff!important;
+  border-radius:50%!important;
+  background:#2563eb!important;
+  box-shadow:0 0 0 5px rgba(37,99,235,.18),0 0 16px 6px rgba(37,99,235,.25)!important;
+  pointer-events:auto!important;
+  cursor:pointer!important;
+}
+.global-map-map-note{
+  background:rgba(255,255,255,.92)!important;
+  border-color:#f3f4f6!important;
+  color:#9ca3af!important;
+}
+.active-user-map-total strong{color:#111827!important}
+.active-user-map-total>span{color:#6b7280!important}
