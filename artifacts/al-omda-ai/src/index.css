@@ -7362,6 +7362,9 @@ body:has(.ai-chat-page){
 .global-map-floating-controls button:hover{background:#e9f0f5}
 .global-map-floating-controls button:last-child{font-size:21px;border-top:1px solid #e1e7eb;border-radius:0 0 8px 8px}
 .global-map-provider-label{position:absolute;z-index:400;left:12px;top:12px;padding:7px 10px;border:1px solid rgba(50,65,80,.12);border-radius:10px;background:rgba(255,255,255,.9);color:#536271;font-size:10px;box-shadow:0 2px 10px rgba(20,35,50,.08);backdrop-filter:blur(10px)}
+.global-map-tile-error{position:absolute;z-index:600;inset:50% auto auto 50%;transform:translate(-50%,-50%);display:grid;gap:8px;min-width:220px;max-width:calc(100% - 32px);padding:16px;border:1px solid rgba(50,65,80,.16);border-radius:14px;background:rgba(255,255,255,.96);color:#344454;text-align:center;box-shadow:0 8px 30px rgba(20,35,50,.2);backdrop-filter:blur(14px)}
+.global-map-tile-error span{font-size:12px;color:#647383}
+.global-map-tile-error button{justify-self:center;border:0;border-radius:9px;padding:8px 14px;background:#286a9a;color:white;font-weight:600;cursor:pointer}
 .global-map-viewport .leaflet-control-zoom{display:none}
 .global-map-legend{display:flex;gap:20px;flex-wrap:wrap;padding:13px 4px 2px;color:#9eafbe;font-size:11px}
 .global-map-legend span{display:flex;align-items:center;gap:8px}
