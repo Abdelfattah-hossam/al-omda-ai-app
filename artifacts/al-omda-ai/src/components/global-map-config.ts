@@ -1,9 +1,9 @@
 export const GLOBAL_MAP_STYLE_URL =
   "https://tiles.openfreemap.org/styles/liberty";
 
-export const GLOBAL_MAP_CENTER: [number, number] = [12, 24];
-export const GLOBAL_MAP_DEFAULT_ZOOM = 2;
-export const GLOBAL_MAP_MIN_ZOOM = 2;
+export const GLOBAL_MAP_CENTER: [number, number] = [0, 18];
+export const GLOBAL_MAP_DEFAULT_ZOOM = 0.2;
+export const GLOBAL_MAP_MIN_ZOOM = 0.1;
 export const GLOBAL_MAP_MAX_ZOOM = 19;
 export const GLOBAL_MAP_ZOOM_STEP = 0.5;
 
