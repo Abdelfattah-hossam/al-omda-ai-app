@@ -17,12 +17,19 @@ type GlobalMapProps = {
   isAr: boolean;
 };
 
+type TileStatus = "loaded" | "error";
+
+function getTileKey(coords: L.Coords): string {
+  return `${coords.z}:${coords.x}:${coords.y}`;
+}
+
 export default function GlobalMap({ isAr }: GlobalMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [tilesError, setTilesError] = useState(false);
   const [tilesLoaded, setTilesLoaded] = useState(false);
+  const [tilesLoading, setTilesLoading] = useState(true);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -37,7 +44,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       attributionControl: true,
       scrollWheelZoom: false,
       worldCopyJump: true,
-      zoomSnap: 0.25,
+      zoomSnap: GLOBAL_MAP_ZOOM_STEP,
       zoomDelta: GLOBAL_MAP_ZOOM_STEP,
       touchZoom: true,
       doubleClickZoom: true,
@@ -46,27 +53,37 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       maxBoundsViscosity: 0.75,
     });
 
-    const tileLayer = L.tileLayer(
-      GLOBAL_MAP_TILE_URL,
-      {
-        subdomains: "abcd",
-        maxZoom: GLOBAL_MAP_MAX_ZOOM,
-        attribution: GLOBAL_MAP_ATTRIBUTION,
-        detectRetina: true,
-      },
-    );
-    let successfulTiles = 0;
-    let failedTiles = 0;
+    const tileLayer = L.tileLayer(GLOBAL_MAP_TILE_URL, {
+      subdomains: "abcd",
+      maxZoom: GLOBAL_MAP_MAX_ZOOM,
+      attribution: GLOBAL_MAP_ATTRIBUTION,
+      // The URL already supports CARTO's {r} suffix. Avoid Leaflet's extra
+      // retina zoom offset, which would otherwise conflict with maxZoom.
+      detectRetina: false,
+    });
+    const tileStatuses = new Map<string, TileStatus>();
+
     tileLayer.on("loading", () => {
-      successfulTiles = 0;
-      failedTiles = 0;
+      tileStatuses.clear();
+      setTilesLoading(true);
       setTilesLoaded(false);
       setTilesError(false);
     });
-    tileLayer.on("tileload", () => { successfulTiles += 1; });
-    tileLayer.on("tileerror", () => { failedTiles += 1; });
+    tileLayer.on("tileload", (event: L.TileEvent) => {
+      tileStatuses.set(getTileKey(event.coords), "loaded");
+    });
+    tileLayer.on("tileerror", (event: L.TileEvent) => {
+      tileStatuses.set(getTileKey(event.coords), "error");
+    });
+    tileLayer.on("tileunload", (event: L.TileEvent) => {
+      tileStatuses.delete(getTileKey(event.coords));
+    });
     tileLayer.on("load", () => {
+      const statuses = [...tileStatuses.values()];
+      const successfulTiles = statuses.filter((status) => status === "loaded").length;
+      const failedTiles = statuses.filter((status) => status === "error").length;
       const tileState = getGlobalMapTileLoadState(successfulTiles, failedTiles);
+      setTilesLoading(false);
       setTilesLoaded(tileState.loaded);
       setTilesError(tileState.error);
     });
@@ -105,6 +122,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
   const retryTiles = useCallback(() => {
     setTilesError(false);
     setTilesLoaded(false);
+    setTilesLoading(true);
     tileLayerRef.current?.redraw();
   }, []);
 
@@ -116,7 +134,8 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         <button type="button" onClick={zoomOut} aria-label={isAr ? "تصغير الخريطة" : "Zoom out"}>−</button>
         <button type="button" onClick={reset} aria-label={isAr ? "إعادة ضبط الخريطة" : "Reset map"} title={isAr ? "إعادة ضبط" : "Reset"}>⌖</button>
       </div>
-      {tilesError && !tilesLoaded && <div className="global-map-tile-error" role="status"><strong>{isAr ? "تعذر تحميل الخريطة" : "Map tiles could not be loaded"}</strong><span>{isAr ? "تحقق من الاتصال وحاول مرة أخرى" : "Check your connection and retry"}</span><button type="button" onClick={retryTiles}>{isAr ? "إعادة المحاولة" : "Retry"}</button></div>}
+      {tilesLoading && <div className="global-map-tile-loading" role="status">{isAr ? "جارٍ تحميل الخريطة…" : "Loading map…"}</div>}
+      {tilesError && !tilesLoaded && !tilesLoading && <div className="global-map-tile-error" role="status"><strong>{isAr ? "تعذر تحميل الخريطة" : "Map tiles could not be loaded"}</strong><span>{isAr ? "تحقق من الاتصال وحاول مرة أخرى" : "Check your connection and retry"}</span><button type="button" onClick={retryTiles}>{isAr ? "إعادة المحاولة" : "Retry"}</button></div>}
       <div className="global-map-provider-label">{isAr ? "خرائط الشوارع · OpenStreetMap" : "Street map · OpenStreetMap"}</div>
     </div>
   );
