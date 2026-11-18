@@ -13,6 +13,8 @@ import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
 import {
+  advanceMemoryGeneration,
+  getOrCreateMemoryGeneration,
   readSupabaseJson,
   reportSupabaseError,
   requireSameOrigin,
@@ -1224,9 +1226,13 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(400).json({ error: "Keep the conversation context under 30,000 characters per request." });
       return;
     }
-    const [userMemory, usage] = await Promise.all([
+    const [userMemory, usage, memoryGeneration] = await Promise.all([
       loadUserMemory(accessToken, session.user.id),
       currentUsage(accessToken),
+      getOrCreateMemoryGeneration(session.user.id, accessToken).catch((error) => {
+        console.warn("[AI memory generation unavailable]", error instanceof Error ? error.message : "Unknown error");
+        return null;
+      }),
     ]);
     console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestIntent = classifyLatestChatIntent(messages);
@@ -1562,7 +1568,8 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     let memorySaveWarning = "";
     if (memoryCandidate) {
       try {
-        const memoryNode = parseMemoryNode(memoryCandidate, session.user.id);
+        if (!memoryGeneration) throw new Error("Private memory generation guard is unavailable.");
+        const memoryNode = { ...parseMemoryNode(memoryCandidate, session.user.id), memory_generation: memoryGeneration };
         const memoryQuery = new URLSearchParams({ on_conflict: "user_id,node_type,normalized_label" });
         const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + memoryQuery.toString(), {
           method: "POST",
