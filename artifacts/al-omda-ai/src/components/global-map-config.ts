@@ -20,3 +20,11 @@ export function getGlobalMapZoomTarget(currentZoom: number, direction: -1 | 1): 
   );
   return target === currentZoom ? null : target;
 }
+
+export function getGlobalMapTileLoadState(successfulTiles: number, failedTiles: number): {
+  loaded: boolean;
+  error: boolean;
+} {
+  if (successfulTiles > 0) return { loaded: true, error: false };
+  return { loaded: false, error: failedTiles > 0 };
+}
