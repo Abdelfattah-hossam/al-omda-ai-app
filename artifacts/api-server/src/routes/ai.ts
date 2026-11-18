@@ -1567,7 +1567,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         const memoryResponse = await supabaseFetch("/rest/v1/ai_memory_nodes?" + memoryQuery.toString(), {
           method: "POST",
           headers: { "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
-          body: JSON.stringify([memoryNode]),
+          body: JSON.stringify([{ ...memoryNode, updated_at: new Date().toISOString() }]),
         }, accessToken);
         await readSupabaseJson(memoryResponse);
       } catch (error) {
