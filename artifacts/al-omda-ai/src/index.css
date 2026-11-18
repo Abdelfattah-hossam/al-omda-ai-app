@@ -7350,9 +7350,9 @@ body:has(.ai-chat-page){
 .global-map-toolbar small{font-size:10px;color:#8c9cab}
 .global-map-live-dot{width:9px;height:9px;border-radius:50%;background:#35aaff;box-shadow:0 0 12px #35aaff}
 .global-map-controls{display:flex;gap:7px;flex:none}
-.global-map-viewport{height:clamp(390px,55vw,620px);width:100%;overflow:hidden;border:1px solid rgba(118,139,158,.32);border-radius:18px;background:#e8edf0;isolation:isolate}
-.global-map-canvas{position:relative;width:100%;height:100%;min-height:390px;background:#e8edf0}
-.global-map-maplibre{position:absolute;inset:0;width:100%;height:100%;font-family:inherit;background:#e8edf0}
+.global-map-viewport{height:clamp(300px,38vw,420px);width:100%;overflow:hidden;border:1px solid rgba(118,139,158,.2);border-radius:18px;background:#fff;isolation:isolate}
+.global-map-canvas{position:relative;width:100%;height:100%;min-height:300px;background:#fff}
+.global-map-maplibre{position:absolute;inset:0;width:100%;height:100%;font-family:inherit;background:#fff}
 .global-map-maplibre .maplibregl-canvas-container,.global-map-maplibre .maplibregl-canvas{width:100%;height:100%;font-family:inherit}
 .global-map-maplibre:focus-visible,.global-map-maplibre .maplibregl-canvas:focus-visible{outline:3px solid #286a9a;outline-offset:-3px}
 .global-map-maplibre .maplibregl-ctrl-attrib{font-size:9px;background:rgba(255,255,255,.9);color:#526171;border-radius:7px 0 0 0;padding:3px 6px;box-shadow:0 1px 5px rgba(20,35,50,.1)}
@@ -7371,7 +7371,7 @@ body:has(.ai-chat-page){
 .global-map-tile-error button{justify-self:center;border:0;border-radius:9px;padding:8px 14px;background:#286a9a;color:white;font-weight:600;cursor:pointer}
 
 .global-map-disclaimer{margin:10px 2px 0;color:#8293a3;font-size:10px;line-height:1.8}
-@media(max-width:700px){.global-user-metrics{grid-template-columns:1fr}.global-map-viewport{height:430px}.global-map-canvas{min-height:430px}.global-users-header{align-items:flex-start}.global-map-toolbar{align-items:flex-start}.global-map-toolbar>div:first-child{align-items:flex-start;flex-direction:column;gap:5px}.global-map-floating-controls{top:10px;right:10px}.global-map-floating-controls button{width:34px;height:34px}.global-map-provider-label{left:9px;top:9px;font-size:9px}}
+@media(max-width:700px){.global-user-metrics{grid-template-columns:1fr}.global-map-viewport{height:320px}.global-map-canvas{min-height:320px}.global-users-header{align-items:flex-start}.global-map-toolbar{align-items:flex-start}.global-map-toolbar>div:first-child{align-items:flex-start;flex-direction:column;gap:5px}.global-map-floating-controls{top:10px;right:10px}.global-map-floating-controls button{width:34px;height:34px}.global-map-provider-label{left:9px;top:9px;font-size:9px}}
 
 
 /* Map controls must win over the shared application button/focus theme. */
@@ -7425,5 +7425,5 @@ body:has(.ai-chat-page){
   font-size: 12px;
 }
 @media (max-width: 700px) {
-  .global-map-lazy-placeholder { min-height: 430px; }
+  .global-map-lazy-placeholder { min-height: 320px; }
 }
