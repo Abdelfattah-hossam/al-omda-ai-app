@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Map as MapLibreMap, setWorkerUrl } from "maplibre-gl";
+import { Map as MapLibreMap, Marker, setWorkerUrl } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -77,9 +77,22 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       cooperativeGestures: false,
     });
 
+    const activityMarkers: Marker[] = [];
     map.on("load", () => {
       map.fitBounds([[-180, -82], [180, 82]], { padding: { top: 8, bottom: 8, left: 10, right: 10 }, duration: 0 });
       applyWorldOutlineStyle(map);
+      // Geographic markers remain attached to their coordinates while panning and zooming.
+      const markerLocations: Array<[number, number]> = [
+        [-105, 42], [-65, -15], [20, 0], [95, 35], [135, -25],
+      ];
+      for (const coordinates of markerLocations) {
+        const markerElement = document.createElement("span");
+        markerElement.className = "global-map-activity-dot";
+        markerElement.setAttribute("aria-hidden", "true");
+        activityMarkers.push(
+          new Marker({ element: markerElement, anchor: "center" }).setLngLat(coordinates).addTo(map),
+        );
+      }
       setTilesLoading(false);
       setTilesError(false);
     });
@@ -99,6 +112,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       cancelAnimationFrame(resizeFrameId);
       resizeObserver.disconnect();
       mapRef.current = null;
+      activityMarkers.forEach((marker) => marker.remove());
       map.remove();
     };
   }, []);
@@ -111,13 +125,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         role="img"
         aria-label={isAr ? "خريطة العالم بحدود الدول" : "World map with country outlines"}
       />
-      <div className="global-map-activity-dots" role="img" aria-label={isAr ? "علامات توضيحية لا تمثل مواقع المستخدمين الفعلية" : "Illustrative markers, not actual user locations"}>
-        <span className="global-map-activity-dot dot-north-america" />
-        <span className="global-map-activity-dot dot-south-america" />
-        <span className="global-map-activity-dot dot-africa" />
-        <span className="global-map-activity-dot dot-asia" />
-        <span className="global-map-activity-dot dot-australia" />
-      </div>
+
       {tilesLoading && <div className="global-map-tile-loading" role="status">{isAr ? "جارٍ تحميل الخريطة…" : "Loading map…"}</div>}
       {tilesError && <div className="global-map-tile-error" role="status">{isAr ? "تعذر تحميل تفاصيل الخريطة" : "Map details could not be loaded"}</div>}
     </div>
