@@ -1,6 +1,13 @@
 name: Update pnpm lockfile
 
 on:
+  push:
+    branches:
+      - feat/realistic-apple-style-global-map
+    paths:
+      - "artifacts/al-omda-ai/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/update-pnpm-lock.yml"
   workflow_dispatch:
 
 permissions:
@@ -12,20 +19,18 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
+        with:
+          ref: ${{ github.ref_name }}
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.10.0
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Refresh lockfile
-        run: pnpm install --no-frozen-lockfile
-
+        run: pnpm install --lockfile-only --no-frozen-lockfile
       - name: Commit updated lockfile
         run: |
           git config user.name "github-actions[bot]"
@@ -35,5 +40,5 @@ jobs:
             echo "Lockfile is already up to date."
           else
             git commit -m "chore: refresh pnpm lockfile"
-            git push
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
