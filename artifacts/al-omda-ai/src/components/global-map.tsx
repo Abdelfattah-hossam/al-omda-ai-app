@@ -81,6 +81,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         <button type="button" onClick={zoomOut} aria-label={isAr ? "تصغير الخريطة" : "Zoom out"}>−</button>
         <button type="button" onClick={reset} aria-label={isAr ? "إعادة ضبط الخريطة" : "Reset map"} title={isAr ? "إعادة ضبط" : "Reset"}>⌖</button>
       </div>
+      {tilesError && !tilesLoaded && <div className="global-map-tile-error" role="status"><strong>{isAr ? "تعذر تحميل الخريطة" : "Map tiles could not be loaded"}</strong><span>{isAr ? "تحقق من الاتصال وحاول مرة أخرى" : "Check your connection and retry"}</span><button type="button" onClick={retryTiles}>{isAr ? "إعادة المحاولة" : "Retry"}</button></div>}
       <div className="global-map-provider-label">{isAr ? "خرائط الشوارع · OpenStreetMap" : "Street map · OpenStreetMap"}</div>
     </div>
   );
