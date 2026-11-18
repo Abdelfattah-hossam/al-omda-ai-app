@@ -23,7 +23,7 @@ export const WORKSPACE_ASSET_MIME_TYPES: Readonly<Record<string, string>> = {
   sql: "application/sql",
   sh: "text/plain",
   css: "text/css",
-  scss: "text/css",
+  scss: "text/plain",
   yaml: "text/plain",
   yml: "text/plain",
   toml: "text/plain",
