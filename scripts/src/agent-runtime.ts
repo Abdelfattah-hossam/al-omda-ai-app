@@ -993,6 +993,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       let finalContent = typeof completion.message.content === "string" ? completion.message.content : "";
       const originalRequest = state.goal ?? [...state.messages].reverse().find((message) => message.role === "user")?.content;
       const requestText = typeof originalRequest === "string" ? originalRequest : JSON.stringify(originalRequest ?? "");
+      const arabicRequest = /[\u0600-\u06FF]/.test(requestText);
+      const qualityUnavailableNote = arabicRequest ? "\n\nملاحظة: تعذرت المراجعة الآلية الثانية؛ احتفظت بالمسودة الأصلية." : "\n\nThe automated quality review was unavailable; the original draft was retained.";
+      const qualityIncompleteNote = arabicRequest ? "\n\nملاحظة: لم يكتمل التصحيح الآلي؛ احتفظت بالمسودة الأصلية." : "\n\nThe quality-review correction was incomplete, so the original complete draft was retained.";
       if (finalContent.trim() && shouldAuditFinalAnswer(requestText)) {
         onProgress?.({ type: "status", status: "quality_audit", phase: "auditing" });
         try {
@@ -1019,7 +1022,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
             if (typeof refined.usage?.prompt_tokens === "number") totalPromptTokens += refined.usage.prompt_tokens;
             if (typeof refined.usage?.completion_tokens === "number") totalCompletionTokens += refined.usage.completion_tokens;
             if (refined.message.finish_reason === "length" || typeof refined.message.content !== "string" || !refined.message.content.trim()) {
-              finalContent += "\n\nThe quality-review correction was incomplete, so the original complete draft was retained.";
+              finalContent += qualityIncompleteNote;
               state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
               onProgress?.({ type: "status", status: "quality_audit_refinement_incomplete" });
             } else {
@@ -1027,7 +1030,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
               state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
             }
           } else if (!/^PASS$/i.test(auditText)) {
-            finalContent += "\n\nThe automated quality review did not return a clear pass; the original draft was retained.";
+            finalContent += qualityUnavailableNote;
             state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
             onProgress?.({ type: "status", status: "quality_audit_unavailable" });
           }
@@ -1035,9 +1038,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
           if (signal?.aborted) {
             await saveAgentState(id, state);
             onProgress?.({ type: "status", status: "cancelled" });
-            return { status: "cancelled", sessionId: id, message: "The Agent was stopped during its final quality review. The original draft and latest checkpoint are saved.", turns: turn + 1 };
+            return { status: "cancelled", sessionId: id, message: arabicRequest ? "أوقفت تشغيل الوكيل أثناء مراجعة الجودة النهائية. تم حفظ المسودة الأصلية وآخر نقطة استعادة." : "The Agent was stopped during its final quality review. The original draft and latest checkpoint are saved.", turns: turn + 1 };
           }
-          finalContent += "\n\nThe automated quality review was unavailable; the original draft was retained.";
+          finalContent += qualityUnavailableNote;
           state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
           onProgress?.({ type: "status", status: "quality_audit_unavailable" });
         }
