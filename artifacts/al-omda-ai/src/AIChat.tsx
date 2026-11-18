@@ -275,7 +275,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       agentStreamControllerRef.current?.abort();
     };
   }, []);
-  useEffect(() => { agentConnectionCheckRef.current += 1; setAgentConnectionStatus(""); }, [agentRuntimeUrl, agentToken]);
+  useEffect(() => { agentConnectionCheckRef.current += 1; setAgentConnectionStatus(""); return () => { agentConnectionCheckRef.current += 1; }; }, [agentRuntimeUrl, agentToken]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
