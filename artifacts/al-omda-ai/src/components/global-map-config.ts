@@ -1,7 +1,7 @@
 export const GLOBAL_MAP_TILE_URL =
   "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
-export const GLOBAL_MAP_CENTER = [24, 12] as const;
+export const GLOBAL_MAP_CENTER: [number, number] = [24, 12];
 export const GLOBAL_MAP_DEFAULT_ZOOM = 2;
 export const GLOBAL_MAP_MIN_ZOOM = 2;
 export const GLOBAL_MAP_MAX_ZOOM = 19;
