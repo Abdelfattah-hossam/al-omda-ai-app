@@ -49,7 +49,7 @@ test("rejects invalid node types, empty labels, oversized details, and sensitive
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "كلمة المرور هي hunter2" }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My passport number is X12345678" }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My API key is abc123" }, userId), /credential or access token/);
-  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "Project note", details: { note: "My password\\nhunter2" } }, userId), /credential or access token/);
+  assert.throws(() => parseMemoryNode({ nodeType: "project", label: "Project note", details: { note: "My password\nhunter2" } }, userId), /credential or access token/);
   assert.doesNotThrow(() => parseMemoryNode({ nodeType: "project", label: "My project is a private web app" }, userId));
   assert.doesNotThrow(() => parseMemoryNode({ nodeType: "preference", label: "I prefer Arabic replies" }, userId));
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "ﬃ".repeat(54) }, userId), /1 to 160 characters/);
