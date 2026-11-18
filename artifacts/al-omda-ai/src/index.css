@@ -7466,3 +7466,14 @@ body:has(.ai-chat-page){
 .active-user-map-total small{color:#8a94a2!important}
 .global-map-map-note{background:rgba(255,255,255,.9)!important;border-color:rgba(120,130,140,.15)!important;color:#7a8490!important}
 .global-map-activity-dot{background:#39a9e8!important;box-shadow:0 0 0 3px rgba(57,169,232,.12),0 0 12px 3px rgba(57,169,232,.42)!important}
+
+
+/* Ensure the white Active User card wins over the dashboard's generic panel skin. */
+.app-shell:not([data-chat-active="true"]) .panel.active-user-map-card{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  border:1px solid #edf0f2!important;
+  box-shadow:0 2px 12px rgba(25,40,55,.035)!important;
+  color:#172033!important;
+}
