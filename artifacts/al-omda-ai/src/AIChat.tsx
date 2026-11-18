@@ -339,7 +339,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       setActiveConversationId(id);
       lastSyncedConversationUpdatedAtRef.current = typeof data.conversation.updated_at === "string" ? data.conversation.updated_at : "";
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
+      const existingBySignature = new Map(messagesRef.current.map((item) => [getChatMessageSyncSignature([item]), item]));
       const withFiles = await Promise.all(restored.map(async (item) => {
+        const existing = existingBySignature.get(getChatMessageSyncSignature([item]));
+        if (existing?.attachment) return { ...item, attachment: existing.attachment };
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
         if (item.presentationData) return { ...item, attachment: await createPowerPointAttachment(item.presentationData).catch(() => undefined) };
@@ -347,6 +350,11 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         if (item.appData) { const blob = new Blob([item.appData.html], { type: "text/html;charset=utf-8" }); const url = URL.createObjectURL(blob); return { ...item, attachment: { name: "AL-OMDA-app.html", url } }; }
         return item;
       }));
+      const retainedBlobUrls = new Set(withFiles.map((item) => item.attachment?.url).filter((url): url is string => typeof url === "string" && url.startsWith("blob:")));
+      for (const previous of messagesRef.current) {
+        const url = previous.attachment?.url;
+        if (typeof url === "string" && url.startsWith("blob:") && !retainedBlobUrls.has(url)) URL.revokeObjectURL(url);
+      }
       setMessages(withFiles);
       setShowConversationList(false);
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل المحادثة." : "Could not load conversation.")); }
