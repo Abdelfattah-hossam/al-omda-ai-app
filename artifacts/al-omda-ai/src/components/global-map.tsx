@@ -39,6 +39,8 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       maxZoom: GLOBAL_MAP_MAX_ZOOM,
       attributionControl: true,
       renderWorldCopies: true,
+      scrollZoom: false,
+      touchZoomRotate: true,
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
