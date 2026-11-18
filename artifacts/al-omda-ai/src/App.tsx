@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent,
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import WorkspaceAssets from './WorkspaceAssets';
+import GlobalMap from './components/global-map';
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
@@ -564,9 +565,6 @@ const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang =
 
 function App() {
   const [location, setLocation] = useLocation();
-  const [globalMapZoom,setGlobalMapZoom] = useState(1);
-  const [globalMapPan,setGlobalMapPan] = useState({x:0,y:0});
-  const globalMapDragRef = useRef<{x:number;y:number;panX:number;panY:number}|null>(null);
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -1356,53 +1354,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authLoading && !authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics && liveUserAnalytics.growth_percent !== null ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
         </div>
         <div className="global-map-toolbar">
-          <div><span className="global-map-live-dot"/><strong>{isAr?'الخريطة العالمية':'Global map'}</strong><small>{isAr?'اسحب الخريطة للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
-          <div className="global-map-controls">
-            <button type="button" className="icon-button" aria-label={isAr?'تكبير':'Zoom in'} onClick={()=>setGlobalMapZoom(value=>Math.min(2.4,value+.2))}><Plus size={16}/></button>
-            <button type="button" className="icon-button" aria-label={isAr?'تصغير':'Zoom out'} onClick={()=>setGlobalMapZoom(value=>Math.max(.8,value-.2))}><Minus size={16}/></button>
-            <button type="button" className="icon-button" aria-label={isAr?'إعادة ضبط الخريطة':'Reset map'} onClick={resetGlobalMap}><RotateCcw size={15}/></button>
-          </div>
+          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
-        <div className="global-map-viewport" onPointerDown={event=>{if(event.button!==0)return;globalMapDragRef.current={x:event.clientX,y:event.clientY,panX:globalMapPan.x,panY:globalMapPan.y};event.currentTarget.setPointerCapture(event.pointerId);}} onPointerMove={event=>{const drag=globalMapDragRef.current;if(!drag)return;setGlobalMapPan({x:drag.panX+event.clientX-drag.x,y:drag.panY+event.clientY-drag.y});}} onPointerUp={()=>{globalMapDragRef.current=null;}} onPointerCancel={()=>{globalMapDragRef.current=null;}} role="region" aria-label={isAr?'خريطة عالمية تفاعلية قابلة للتحريك':'Draggable interactive world map'}>
-          <svg viewBox="0 0 1200 560" width="100%" height="100%" aria-label={isAr?'خريطة العالم مع نقاط نشاط توضيحية وموقع تقريبي في العين':'World map with illustrative activity dots and approximate Al Ain location'} style={{display:'block',minWidth:780,touchAction:'none',userSelect:'none'}}>
-            <defs>
-              <pattern id="global-map-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="rgba(150,170,185,.12)" strokeWidth="1"/></pattern>
-              <filter id="global-map-glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <linearGradient id="global-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d5dce0"/><stop offset="1" stopColor="#8998a1"/></linearGradient>
-            </defs>
-            <rect width="1200" height="560" fill="#111a25"/>
-            <g transform={`translate(${globalMapPan.x} ${globalMapPan.y}) translate(600 280) scale(${globalMapZoom}) translate(-600 -280)`}>
-              <rect width="1200" height="560" fill="url(#global-map-grid)"/>
-              <g fill="url(#global-land)" stroke="#edf2f4" strokeOpacity=".68" strokeWidth="2.2" strokeLinejoin="round" opacity=".88">
-                <path d="M110 130l45-40 56-10 34 16 30-7 45 25 17 38-23 28-5 36-29 28-13 45-31 25-17 51-28 22-19-18-7-42-26-34-8-49-29-35-12-48-27-31z"/>
-                <path d="M285 350l36 18 25 44-8 48-22 49-16 47-24-12-11-56-25-48 10-48z"/>
-                <path d="M520 130l45-25 61 6 37 26 47-3 31 28 45 6 35 31-8 32-38 13-24 38-33 7-25 34-29-10-25-42-37-7-25-34-42-12-27-39-35-14z"/>
-                <path d="M575 310l43-14 48 17 34 42-11 52-26 47-22 57-29 22-25-33-9-56-31-42 3-52z"/>
-                <path d="M745 135l58-30 79 6 54 29 52 6 55 39-17 37-47 10-27 34-41-7-29-34-47 5-31-30-45-3-31-32z"/>
-                <path d="M955 350l46-20 57 16 28 34-14 35-44 16-49-14-32-29z"/>
-                <path d="M435 142l-23-31 8-37 26-16 26 20-7 32z"/>
-                <path d="M1090 245l30-12 23 24-12 35-28 5-20-25z"/>
-              </g>
-              <g fill="none" stroke="#46a9ff" strokeOpacity=".26" strokeWidth="2" strokeDasharray="7 9">
-                <path d="M195 205Q595 5 970 210"/><path d="M340 375Q625 520 870 210"/><path d="M620 160Q820 330 1030 360"/><path d="M195 205Q440 80 650 330"/>
-              </g>
-              {!authUser && <g fill="#31a9ff" filter="url(#global-map-glow)">
-                <circle cx="190" cy="210" r="6"/><circle cx="265" cy="230" r="5"/><circle cx="330" cy="185" r="6"/>
-                <circle cx="560" cy="190" r="6"/><circle cx="650" cy="230" r="5"/><circle cx="730" cy="190" r="6"/>
-                <circle cx="850" cy="210" r="6"/><circle cx="940" cy="245" r="5"/><circle cx="1020" cy="365" r="6"/>
-                <circle cx="610" cy="350" r="5"/><circle cx="680" cy="315" r="5"/>
-              </g>}
-              {!authUser && <g transform="translate(680 315)" filter="url(#global-map-glow)">
-                <circle r="24" fill="#20a5ff" opacity=".16"><animate attributeName="r" values="17;31;17" dur="2.4s" repeatCount="indefinite"/></circle>
-                <circle r="12" fill="#168cff" stroke="#eaf7ff" strokeWidth="3"/>
-                <circle r="4" fill="#fff"/>
-              </g>}
-              {!authUser && <g transform="translate(710 292)"><rect x="0" y="0" width="145" height="34" rx="8" fill="#0c1724" stroke="#3b9fe8"/><text x="72" y="22" textAnchor="middle" fill="#e9f6ff" fontSize="14" fontWeight="600">{isAr?'العين · موقع تقريبي':'Al Ain · Approx.'}</text></g>}
-            </g>
-            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{authUser ? (isAr?'لا يتم جمع أو عرض مواقع المستخدمين الجغرافية':'User geolocations are not collected or displayed') : (isAr?'نقاط عرض توضيحية وليست مواقع مستخدمين مباشرة':'Illustrative guest-preview dots, not live user locations')}</text>
-          </svg>
+        <div className="global-map-viewport" role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
+          <GlobalMap isAr={isAr}/>
         </div>
-        <div className="global-map-legend">{!authUser && <span><i className="global-legend-blue"/>{isAr?'مناطق نشاط توضيحية':'Illustrative activity regions'}</span>}<span>{authUser ? (isAr?'لا توجد بيانات مواقع محفوظة':'No location data stored') : (isAr?'معاينة زائر':'Guest preview')}</span></div>
         <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
       {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
