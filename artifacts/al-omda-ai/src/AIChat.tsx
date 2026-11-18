@@ -425,7 +425,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حذف المحادثة." : "Could not delete conversation.")); }
   };
   const loadMemoryGraph = async () => {
-    if (!signedIn) return false;
+    if (!signedIn || memoryGraphEdgeSaving || memorySaving) return false;
     setMemoryGraphLoading(true);
     setMemoryGraphLoadError("");
     try {
@@ -465,7 +465,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   };
 
   const addMemoryGraphEdge = async () => {
-    if (!signedIn || memoryGraphEdgeSaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource === memoryGraphEdgeTarget) return;
+    if (!signedIn || memoryGraphEdgeSaving || memoryGraphLoading || memorySaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource === memoryGraphEdgeTarget) return;
     setMemoryGraphEdgeSaving(true);
     setMemoryGraphActionError("");
     try {
@@ -1525,7 +1525,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
                       <option value="">{ar ? "اختر الحقيقة الثانية" : "Choose second fact"}</option>
                       {memoryGraphNodes.map((node)=><option key={node.id} value={node.id} disabled={node.id===memoryGraphEdgeSource}>{node.label}</option>)}
                     </select>
-                    <button type="button" className="button button-quiet button-small" onClick={()=>void addMemoryGraphEdge()} disabled={memoryGraphEdgeSaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource===memoryGraphEdgeTarget}>
+                    {memoryGraphActionError && <div className="notice-bar" role="alert"><span>{memoryGraphActionError}</span></div>}
+                    <button type="button" className="button button-quiet button-small" onClick={()=>void addMemoryGraphEdge()} disabled={memoryGraphEdgeSaving || memoryGraphLoading || memorySaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource===memoryGraphEdgeTarget}>
                       {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
                     </button>
                   </div>}
