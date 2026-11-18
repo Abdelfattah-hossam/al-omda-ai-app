@@ -114,7 +114,6 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       <div className="global-map-activity-dots" aria-hidden="true">
         <span className="global-map-activity-dot dot-north-america" />
         <span className="global-map-activity-dot dot-south-america" />
-        <span className="global-map-activity-dot dot-europe" />
         <span className="global-map-activity-dot dot-africa" />
         <span className="global-map-activity-dot dot-asia" />
         <span className="global-map-activity-dot dot-australia" />
