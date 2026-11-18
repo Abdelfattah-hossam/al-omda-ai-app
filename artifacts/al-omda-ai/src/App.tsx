@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import WorkspaceAssets from './WorkspaceAssets';
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
+import PptxGenJS from 'pptxgenjs';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
 import {
@@ -2288,8 +2289,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const exportTaskPowerPoint = async (task:Task) => {
     try {
-      const lib = await loadReportLibrary('https://esm.sh/pptxgenjs@3.12.0');
-      const PptxGenJS = lib.default ?? lib;
       const pptx = new PptxGenJS();
       pptx.layout='LAYOUT_WIDE'; pptx.author='AL OMDA AI'; pptx.subject=task.request; pptx.title=task.title;
       pptx.theme={headFontFace:'Arial',bodyFontFace:'Arial',lang:isAr?'ar-SA':'en-US'};
