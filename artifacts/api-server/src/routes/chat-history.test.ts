@@ -70,5 +70,6 @@ test("rejects malformed, oversized, or unsafe pending Agent approval data", () =
   assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "../bad", calls: [{ id: "1", tool: "files.write", arguments: {} }] } }]), null);
   assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [] } }]), null);
   assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: "not an object" }] } }]), null);
-  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(6001) } }] } }]), null);
+  assert.ok(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(12001) } }] } }]));
+  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(40001) } }] } }]), null);
 });
