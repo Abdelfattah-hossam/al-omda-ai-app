@@ -17,6 +17,33 @@ type GlobalMapProps = {
 
 setWorkerUrl(maplibreWorkerUrl);
 
+function applyMinimalWorldStyle(map: MapLibreMap) {
+  for (const layer of map.getStyle().layers ?? []) {
+    const sourceLayer = "source-layer" in layer ? layer["source-layer"] : undefined;
+    const isBackground = layer.type === "background";
+    const isBoundary = layer.type === "line" && sourceLayer === "boundary";
+    const isWaterOutline = layer.type === "line" && sourceLayer === "water";
+    const isWaterOrLand = layer.type === "fill" && (sourceLayer === "water" || sourceLayer === "landcover");
+    const visible = isBackground || isBoundary || isWaterOutline || isWaterOrLand;
+
+    map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#ffffff");
+    if (isBoundary || isWaterOutline) {
+      map.setPaintProperty(layer.id, "line-color", "#111111");
+      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.7 : 0.48);
+      map.setPaintProperty(layer.id, "line-width", [
+        "interpolate", ["linear"], ["zoom"],
+        0, 0.25, 2, 0.42, 5, 0.75, 9, 1.1,
+      ]);
+    }
+    if (isWaterOrLand) {
+      map.setPaintProperty(layer.id, "fill-color", "#ffffff");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#111111");
+      map.setPaintProperty(layer.id, "fill-opacity", 1);
+    }
+  }
+}
+
 export default function GlobalMap({ isAr }: GlobalMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -54,6 +81,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     );
 
     map.on("load", () => {
+      applyMinimalWorldStyle(map);
       mapLoadedRef.current = true;
       setTilesLoading(false);
       setTilesLoaded(true);
@@ -128,7 +156,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         ref={elementRef}
         className="global-map-maplibre"
         role="region"
-        aria-label={isAr ? "خريطة عالمية تفاعلية واقعية" : "Interactive realistic world map"}
+        aria-label={isAr ? "خريطة عالمية تفاعلية بحدود سوداء" : "Interactive minimalist world map with black outlines"}
       />
       <div className="global-map-floating-controls" role="group" aria-label={isAr ? "أدوات الخريطة" : "Map controls"}>
         <button type="button" onClick={zoomIn} aria-label={isAr ? "تكبير الخريطة" : "Zoom in"} title={isAr ? "تكبير" : "Zoom in"}>+</button>
@@ -143,7 +171,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
           <button type="button" onClick={retryTiles}>{isAr ? "إعادة المحاولة" : "Retry"}</button>
         </div>
       )}
-      <div className="global-map-provider-label">{isAr ? "خرائط متجهية · OpenFreeMap" : "Vector map · OpenFreeMap"}</div>
+      <div className="global-map-provider-label">{isAr ? "خريطة العالم · OpenFreeMap" : "World map · OpenFreeMap"}</div>
     </div>
   );
 }
