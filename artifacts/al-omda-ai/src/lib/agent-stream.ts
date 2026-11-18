@@ -3,6 +3,7 @@ export type AgentStreamEvent = {
   text?: string;
   provider?: string;
   status?: string;
+  phase?: string;
   turn?: number;
   tools?: string[];
   role?: string;

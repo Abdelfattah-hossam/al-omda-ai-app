@@ -321,3 +321,13 @@ The authenticated runtime exposes:
 In the app, open **Agents → Model providers → Test providers** to inspect each configured provider. The regular chat's **Local Agent → Check connection** action also summarizes provider health.
 
 Additional provider entries are validated before use: HTTPS is required for remote endpoints; HTTP is allowed only for explicit loopback hosts; embedded credentials, query strings, fragments, duplicate names, and reserved `primary`/`fallback` names are rejected. Providers whose optional API-key environment variable is not configured are skipped. The local runtime URL configured in chat is restricted to loopback hosts.
+
+
+### Professional quality review and history repair
+
+- The Local Agent now adds domain-specific operating guidance for legal, engineering, medical, software, finance, business, and research tasks. Delegated specialists receive the same relevant domain guidance.
+- High-risk deliverables can receive an independent second-pass quality audit. When the auditor identifies concrete `ISSUE:` items, a separate refinement call is asked to correct only those items. This uses the existing configured provider pool with the `review` purpose; it does not enable or add a paid provider, but it can consume additional tokens from whichever configured provider is selected.
+- The audit is limited to higher-risk task categories rather than ordinary conversation. If the audit/refinement provider is unavailable or does not return a clear result, the original draft is retained and the final message explicitly says the automated review did not complete. A completed audit is an additional check, not a substitute for qualified professional review or real tests.
+- Tool-call history is repaired before resuming or resolving pending approvals so every tool result has a corresponding assistant `tool_calls` message. This prevents malformed model history after interrupted sessions or cancellations.
+
+- Precision temperature is purpose-aware: legal/engineering/medical/finance/coding/review/proposal tasks use a conservative value (default 0.2, optionally `OMDA_AGENT_PRECISE_TEMPERATURE` from 0.1 to 0.3); research/business use 0.3; general tasks use 0.4.
