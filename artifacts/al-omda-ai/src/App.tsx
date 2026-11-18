@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import WorkspaceAssets from './WorkspaceAssets';
-import GlobalMap from './components/global-map';
+const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
@@ -29,6 +29,46 @@ import {
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
   X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
 } from 'lucide-react';
+
+type DeferredGlobalMapProps = { isAr: boolean };
+
+function DeferredGlobalMap({ isAr }: DeferredGlobalMapProps) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setShouldLoad(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "280px 0px" },
+    );
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
+  const loadingLabel = isAr ? "سيتم تحميل الخريطة عند الوصول إليها…" : "The map will load as you reach it…";
+  return (
+    <div ref={hostRef} className="global-map-lazy-shell">
+      {shouldLoad ? (
+        <Suspense fallback={<div className="global-map-lazy-placeholder" role="status">{isAr ? "جارٍ تجهيز الخريطة…" : "Preparing map…"}</div>}>
+          <GlobalMap isAr={isAr} />
+        </Suspense>
+      ) : (
+        <div className="global-map-lazy-placeholder" role="status">{loadingLabel}</div>
+      )}
+    </div>
+  );
+}
 
 type Language = 'ar' | 'en';
 type StepState = 'pending' | 'approved' | 'rejected';
@@ -1356,7 +1396,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
         <div className="global-map-viewport">
-          <GlobalMap isAr={isAr}/>
+          <DeferredGlobalMap isAr={isAr}/>
         </div>
         <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')} {' '}{isAr?'الخصوصية: لا يقرأ التطبيق موقعك ولا يخزن إحداثياتك. عند تحميل الخريطة، يتلقى OpenFreeMap طلبات تحميل مناطق الخريطة المعروضة. خدمته العامة لا تتطلب مفتاح API أو ملفات تعريف ارتباط.':'Privacy: the app does not read or store your location coordinates. When the map loads, OpenFreeMap receives requests for the map areas being displayed. Its public service does not require an API key or cookies.'}</p>
       </section>}
