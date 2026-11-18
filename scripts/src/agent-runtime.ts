@@ -1298,7 +1298,8 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
     if (typeof body.goal === "string" && body.goal.trim()) {
       if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
       state.messages.push({ role: "user", content: body.goal.trim() });
-      state.goal = [state.goal, "Latest instruction: " + body.goal.trim()].filter(Boolean).join("\n\n");
+      const originalGoal = state.goal ?? state.messages.find((message) => message.role === "user")?.content;
+      state.goal = [typeof originalGoal === "string" ? originalGoal : "", "Latest instruction: " + body.goal.trim()].filter(Boolean).join("\n\n");
       state.purpose = inferModelPurpose(state.goal);
     } else if (!state.pendingToolCalls?.length) {
       state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
