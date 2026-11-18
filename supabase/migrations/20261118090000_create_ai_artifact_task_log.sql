@@ -25,10 +25,10 @@ begin
 
   if p_title is null or char_length(btrim(p_title)) < 1 or char_length(p_title) > 160
      or p_request is null or char_length(p_request) < 1 or char_length(p_request) > 10000
-     or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
+     or p_specialty is null or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
      or p_filename is null or char_length(p_filename) < 1 or char_length(p_filename) > 120
-     or p_filename like '%/%' or p_filename like '%\\%'
-     or p_mime_type not in (
+     or position('/' in p_filename) > 0 or position(chr(92) in p_filename) > 0 or p_filename ~ '[[:cntrl:]]'
+     or p_mime_type is null or p_mime_type not in (
        'application/pdf',
        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -37,7 +37,8 @@ begin
        'text/html', 'application/xml', 'application/zip',
        'image/png', 'image/jpeg', 'image/webp', 'image/gif'
      )
-     or p_file_size is null or p_file_size < 1 or p_file_size > 26214400 then
+     or p_file_size is null or p_file_size < 1 or p_file_size > 26214400
+     or p_language is null or p_language not in ('ar', 'en') then
     raise exception 'Invalid generated artifact metadata' using errcode = '22023';
   end if;
 
