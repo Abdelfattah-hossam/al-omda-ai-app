@@ -20,11 +20,9 @@ export function ensureAssistantToolCallMessage(
   }
   const missing = calls.filter((call) => !recordedIds.has(call.id));
   if (!missing.length) return;
-  const lastAssistantToolMessage = [...messages].reverse().find((message) =>
-    message.role === "assistant" && Array.isArray(message.tool_calls)
-  );
-  if (lastAssistantToolMessage) {
-    lastAssistantToolMessage.tool_calls = [...lastAssistantToolMessage.tool_calls as AgentHistoryToolCall[], ...missing];
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role === "assistant" && Array.isArray(lastMessage.tool_calls)) {
+    lastMessage.tool_calls = [...lastMessage.tool_calls as AgentHistoryToolCall[], ...missing];
   } else {
     messages.push({ role: "assistant", content: "", tool_calls: missing });
   }
