@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
+import { Map as MapLibreMap, ScaleControl, setWorkerUrl } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -15,7 +15,7 @@ type GlobalMapProps = {
   isAr: boolean;
 };
 
-maplibregl.setWorkerUrl(maplibreWorkerUrl);
+setWorkerUrl(maplibreWorkerUrl);
 
 export default function GlobalMap({ isAr }: GlobalMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -29,7 +29,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     if (!element) return;
 
     let initialLoadCompleted = false;
-    const map = new maplibregl.Map({
+    const map = new MapLibreMap({
       container: element,
       style: GLOBAL_MAP_STYLE_URL,
       center: GLOBAL_MAP_CENTER,
@@ -46,7 +46,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     });
 
     map.addControl(
-      new maplibregl.ScaleControl({ maxWidth: 110, unit: "metric" }),
+      new ScaleControl({ maxWidth: 110, unit: "metric" }),
       "bottom-left",
     );
 
