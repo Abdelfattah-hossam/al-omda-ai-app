@@ -102,7 +102,7 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
 
 test("chat-generated artifact task logging is owner-scoped and does not consume task-creation quota", async () => {
   const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
-  const migrationUrl = new URL("../../supabase/migrations/20261118090000_create_ai_artifact_task_log.sql", import.meta.url);
+  const migrationUrl = new URL("../../supabase/migrations/20261118090205_create_ai_artifact_task_log.sql", import.meta.url);
   const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
   const storageAssetsUrl = new URL("../../artifacts/api-server/src/lib/storage-assets.ts", import.meta.url);
   const chatUrl = new URL("../../artifacts/al-omda-ai/src/AIChat.tsx", import.meta.url);
