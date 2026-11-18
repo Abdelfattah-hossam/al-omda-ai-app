@@ -14,9 +14,9 @@ import {
 } from "./global-map-config.js";
 
 test("global map uses a real, attributed street-tile source", () => {
-  assert.match(GLOBAL_MAP_TILE_URL, /^https:\/\/\{s\}\.basemaps\.cartocdn\.com\/rastertiles\/voyager\//);
+  assert.match(GLOBAL_MAP_TILE_URL, /^https:\/\/\{s\}\.tile\.openstreetmap\.org\//);
   assert.match(GLOBAL_MAP_ATTRIBUTION, /OpenStreetMap/);
-  assert.match(GLOBAL_MAP_ATTRIBUTION, /CARTO/);
+  assert.match(GLOBAL_MAP_ATTRIBUTION, /OpenStreetMap contributors/);
 });
 
 test("global map default camera and zoom steps stay within supported limits", () => {
