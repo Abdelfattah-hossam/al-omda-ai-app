@@ -756,7 +756,7 @@ function App() {
   const [modelHealthError, setModelHealthError] = useState("");
   const [modelHealthBusy, setModelHealthBusy] = useState(false);
   const modelProviderRequestRef = useRef(0);
-  useEffect(() => { modelProviderRequestRef.current += 1; setLocalModelProviders([]); setLocalModelHealth([]); setModelProvidersError(""); setModelHealthError(""); setModelHealthBusy(false); }, [localAgentUrl, localAgentToken]);
+  useEffect(() => { modelProviderRequestRef.current += 1; setLocalModelProviders([]); setLocalModelHealth([]); setModelProvidersError(""); setModelHealthError(""); setModelHealthBusy(false); return () => { modelProviderRequestRef.current += 1; }; }, [localAgentUrl, localAgentToken]);
   const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
   const [browserSiteInput, setBrowserSiteInput] = useState("");
   const [browserWorkspaceBusy, setBrowserWorkspaceBusy] = useState(false);
