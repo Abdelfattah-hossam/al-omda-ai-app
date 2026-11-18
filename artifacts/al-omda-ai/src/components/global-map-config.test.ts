@@ -8,6 +8,7 @@ import {
   GLOBAL_MAP_MIN_ZOOM,
   GLOBAL_MAP_TILE_URL,
   GLOBAL_MAP_ZOOM_STEP,
+  getGlobalMapTileLoadState,
   getGlobalMapZoomTarget,
   isValidGlobalMapZoom,
 } from "./global-map-config.js";
@@ -42,4 +43,11 @@ test("global map zoom controls stop at bounds and preserve fractional zoom steps
   assert.equal(getGlobalMapZoomTarget(2.25, -1), GLOBAL_MAP_MIN_ZOOM);
   assert.equal(getGlobalMapZoomTarget(18.75, -1), 18.25);
   assert.equal(getGlobalMapZoomTarget(Number.NaN, 1), null);
+});
+
+test("global map only shows a tile outage when every tile in the cycle fails", () => {
+  assert.deepEqual(getGlobalMapTileLoadState(0, 0), { loaded: false, error: false });
+  assert.deepEqual(getGlobalMapTileLoadState(8, 0), { loaded: true, error: false });
+  assert.deepEqual(getGlobalMapTileLoadState(7, 3), { loaded: true, error: false });
+  assert.deepEqual(getGlobalMapTileLoadState(0, 12), { loaded: false, error: true });
 });
