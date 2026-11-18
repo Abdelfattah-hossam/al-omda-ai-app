@@ -93,7 +93,7 @@ test("stores only explicit, non-sensitive memory requests", () => {
 test("canonical setup SQL and the deployed migration define the same private graph protections", async () => {
   const setupUrl = new URL("../../../../supabase/setup.sql", import.meta.url);
   const migrationUrl = new URL("../../../../supabase/migrations/20261116190037_create_private_ai_memory_graph.sql", import.meta.url);
-  const generationMigrationUrl = new URL("../../../../supabase/migrations/20261118080000_add_ai_memory_generation_fence.sql", import.meta.url);
+  const generationMigrationUrl = new URL("../../../../supabase/migrations/20261118084042_add_ai_memory_generation_fence.sql", import.meta.url);
   const [setup, migration, generationMigration] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
