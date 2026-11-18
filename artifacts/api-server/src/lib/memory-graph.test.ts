@@ -45,6 +45,8 @@ test("rejects invalid node types, empty labels, oversized details, and sensitive
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "x", details: { text: "sk-abcdefghijklmnopqrstuvwxyz123456" } }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "project", label: "Remember sk-abcdefghijklmnopqrstuvwxyz123456" }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My password hunter2" }, userId), /credential or access token/);
+  assert.throws(() => parseMemoryNode({ nodeType: "other", label: "كلمة المرور هي hunter2" }, userId), /credential or access token/);
+  assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My passport number is X12345678" }, userId), /credential or access token/);
   assert.throws(() => parseMemoryNode({ nodeType: "other", label: "My API key is abc123" }, userId), /credential or access token/);
   assert.doesNotThrow(() => parseMemoryNode({ nodeType: "project", label: "My project is a private web app" }, userId));
   assert.doesNotThrow(() => parseMemoryNode({ nodeType: "preference", label: "I prefer Arabic replies" }, userId));
@@ -110,6 +112,10 @@ test("captures explicit corrections without storing sensitive personal data", ()
   assert.equal(extractUserCorrectionNode("لا، ده غلط: لازم نحافظ على حركة الشات")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("Correction: my medical diagnosis is ..."), null);
   assert.equal(extractUserCorrectionNode("Correction: do not save this in memory: I work at Acme"), null);
+  assert.equal(extractUserCorrectionNode("Correction: ما تحفظش ده في الذاكرة: المشروع اسمه أوريون"), null);
+  assert.equal(extractExplicitMemoryNode("ما تحفظش ده في الذاكرة: المشروع اسمه أوريون"), null);
+  assert.equal(extractExplicitMemoryNode("احفظ أني أفضّل الرد بالعربية")?.nodeType, "preference");
+  assert.equal(extractUserCorrectionNode("Correction: keep the chat scroll position unchanged")?.nodeType, "correction");
   assert.equal(extractUserCorrectionNode("التصحيح: لا تحفظ ده في الذاكرة: أعمل في شركة كذا"), null);
   assert.equal(extractUserCorrectionNode("Correction: I am Christian"), null);
   assert.equal(extractUserCorrectionNode("التصحيح: أنا مسلم"), null);
