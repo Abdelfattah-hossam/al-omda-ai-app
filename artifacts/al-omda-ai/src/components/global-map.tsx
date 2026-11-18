@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -9,6 +9,9 @@ type GlobalMapProps = {
 export default function GlobalMap({ isAr }: GlobalMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [tilesError, setTilesError] = useState(false);
+  const [tilesLoaded, setTilesLoaded] = useState(false);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -32,7 +35,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       maxBoundsViscosity: 0.75,
     });
 
-    L.tileLayer(
+    const tileLayer = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       {
         subdomains: "abcd",
@@ -40,7 +43,11 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
         detectRetina: true,
       },
-    ).addTo(map);
+    );
+    tileLayer.on("tileerror", () => setTilesError(true));
+    tileLayer.on("tileload", () => { setTilesLoaded(true); setTilesError(false); });
+    tileLayer.addTo(map);
+    tileLayerRef.current = tileLayer;
 
     L.control.scale({ imperial: false, metric: true, position: "bottomleft" }).addTo(map);
     mapRef.current = map;
@@ -52,13 +59,19 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     return () => {
       resizeObserver.disconnect();
       mapRef.current = null;
+      tileLayerRef.current = null;
       map.remove();
     };
   }, []);
 
-  const zoomIn = () => mapRef.current?.zoomIn(0.5);
-  const zoomOut = () => mapRef.current?.zoomOut(0.5);
-  const reset = () => mapRef.current?.setView([24, 12], 2, { animate: true });
+  const zoomIn = useCallback(() => mapRef.current?.zoomIn(0.5), []);
+  const zoomOut = useCallback(() => mapRef.current?.zoomOut(0.5), []);
+  const reset = useCallback(() => mapRef.current?.setView([24, 12], 2, { animate: true }), []);
+  const retryTiles = useCallback(() => {
+    setTilesError(false);
+    setTilesLoaded(false);
+    tileLayerRef.current?.redraw();
+  }, []);
 
   return (
     <div className="global-map-canvas">
