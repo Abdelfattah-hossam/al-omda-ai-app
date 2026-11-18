@@ -114,16 +114,16 @@ test("chat-generated artifact task logging is owner-scoped and does not consume 
     readFile(chatUrl, "utf8"),
   ]);
   for (const sql of [setup, migration]) {
-    assert.match(sql, /create or replace function public\\.create_ai_artifact_task/i);
-    assert.match(sql, /security definer/i);
-    assert.match(sql, /set search_path = pg_catalog/i);
-    assert.match(sql, /auth\\.uid\\(\\)/i);
-    assert.match(sql, /revoke all on function public\\.create_ai_artifact_task\\(text, text, text, text, text, bigint, text\\) from public, anon, authenticated/i);
-    assert.match(sql, /grant execute on function public\\.create_ai_artifact_task\\(text, text, text, text, text, bigint, text\\) to authenticated/i);
+    assert.ok(sql.includes("create or replace function public.create_ai_artifact_task"));
+    assert.ok(sql.includes("security definer"));
+    assert.ok(sql.includes("set search_path = pg_catalog"));
+    assert.ok(sql.includes("auth.uid()"));
+    assert.ok(sql.includes("revoke all on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) from public, anon, authenticated"));
+    assert.ok(sql.includes("grant execute on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) to authenticated"));
   }
-  assert.match(workspaceRoute, /router\\.post\\("\\/tasks\\/artifact"/);
-  assert.match(chat, /\\/api\\/tasks\\/artifact/);
-  assert.match(chat, /\\/api\\/storage\\/assets/);
-  assert.match(storageAssets, /tsx: "text\\/plain"/);
-  assert.match(storageAssets, /js: "text\\/javascript"/);
+  assert.ok(workspaceRoute.includes('router.post("/tasks/artifact"'));
+  assert.ok(chat.includes("/api/tasks/artifact"));
+  assert.ok(chat.includes("/api/storage/assets"));
+  assert.ok(storageAssets.includes('tsx: "text/plain"'));
+  assert.ok(storageAssets.includes('js: "text/javascript"'));
 });
