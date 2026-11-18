@@ -23,10 +23,16 @@ function applyWorldOutlineStyle(map: MapLibreMap) {
     const isBoundary = layer.type === "line" && /boundary/.test(sourceLayer);
     const isCoastline = layer.type === "line" && /water/.test(sourceLayer);
     const isLand = layer.type === "fill" && /landcover|landuse/.test(sourceLayer);
+    const isWater = layer.type === "fill" && /water/.test(sourceLayer);
 
-    map.setLayoutProperty(layer.id, "visibility", isBackground || isBoundary || isCoastline || isLand ? "visible" : "none");
+    map.setLayoutProperty(layer.id, "visibility", isBackground || isBoundary || isCoastline || isLand || isWater ? "visible" : "none");
 
     if (isBackground) map.setPaintProperty(layer.id, "background-color", "#ffffff");
+    if (isWater) {
+      map.setPaintProperty(layer.id, "fill-color", "#f7f9fb");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#e2e5e8");
+      map.setPaintProperty(layer.id, "fill-opacity", 1);
+    }
     if (isLand) {
       map.setPaintProperty(layer.id, "fill-color", "#ffffff");
       map.setPaintProperty(layer.id, "fill-outline-color", "#e2e5e8");
