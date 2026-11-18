@@ -56,7 +56,7 @@ export function parseModelProviderInfo(value: unknown): ModelProviderInfo[] {
 export function providerStatusLabel(provider: ModelProviderHealth | null | undefined, ar: boolean): string {
   if (!provider) return ar ? "لم يُفحص" : "Not tested";
   if (!provider.reachable) return provider.error === "timeout" ? (ar ? "انتهت المهلة" : "Timed out") : (ar ? "غير متصل" : "Offline");
-  if (provider.endpointAvailable && provider.modelAvailable === true) return ar ? "النموذج جاهز" : "Model ready";
+  if (provider.endpointAvailable && provider.modelAvailable === true) return ar ? "النموذج ظاهر في القائمة" : "Model listed";
   if (provider.endpointAvailable && provider.modelAvailable === false) return ar ? "النموذج غير موجود" : "Model not listed";
   if (provider.endpointAvailable) return ar ? "الخادم متصل" : "Endpoint reachable";
   if (provider.error === "authentication_failed") return ar ? "المصادقة مرفوضة" : "Auth rejected";
