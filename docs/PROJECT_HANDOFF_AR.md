@@ -339,3 +339,12 @@
 - أضيفت حالة placeholder بنفس أبعاد مساحة الخريطة لتجنب قفزات التخطيط أثناء التحميل، مع fallback عند عدم دعم IntersectionObserver.
 - تم التحقق من أثر الفصل عبر Vite build: حجم حزمة التطبيق الأساسية انخفض إلى 589.20 kB (175.12 kB gzip)، بينما أصبح ملف الخريطة المنفصل 1,058.38 kB (295.00 kB gzip) وملف العامل 547.46 kB؛ يتم تنزيل هذه الأجزاء عند طلب الخريطة بدل تحميلها ضمن حزمة التطبيق الأساسية.
 - نجح TypeScript وCI الكامل والبناء الإنتاجي على الرأس fc7de69b55cb1606458cc6aa7732f0c18c3d2b0d. Workers Builds ومراجعة Robin وGemini كانت قيد التشغيل عند التسجيل؛ PR لم يُدمج ولم يُنشر.
+
+
+### نشر خريطة MapLibre على الإنتاج — 2026-11-18
+- تم دمج PR #136 بنجاح بطريقة squash في main. Merge commit: `16d447f260120aca2e55e3ecbe6ba363024e06cd`.
+- نجح CI على main بعد الدمج، كما نجح بناء Cloudflare Workers Preview قبل الدمج.
+- نجح سير عمل النشر الإنتاجي Cloudflare Worker رقم 44242171643، بما في ذلك Install dependencies وBuild application وDeploy Worker and static assets.
+- عنوان التطبيق المنشور: https://al-omda-ai-app.abdelfattahhossam1.workers.dev
+- Cloudflare Worker Version ID: `171dbee5-99f7-4111-8d12-272eda765b97`.
+- التحقق الآلي من البناء والنشر مكتمل؛ المعاينة البصرية الفعلية على جهاز iPhone وسطح المكتب ما زالت مطلوبة للتأكد من شكل Liberty النهائي وتجربة اللمس في المتصفح الحقيقي.
