@@ -16,6 +16,7 @@ test("does not duplicate tool calls already present in assistant history", () =>
   const messages: Array<Record<string, unknown>> = [{ role: "assistant", content: "", tool_calls: [call] }];
   ensureAssistantToolCallMessage(messages, [call]);
   assert.equal(messages.length, 1);
+  assert.deepEqual(messages[0].tool_calls, [call]);
 });
 
 test("merges missing tool calls into the existing assistant batch", () => {
