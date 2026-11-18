@@ -111,7 +111,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         role="img"
         aria-label={isAr ? "خريطة العالم بحدود الدول" : "World map with country outlines"}
       />
-      <div className="global-map-activity-dots" aria-hidden="true">
+      <div className="global-map-activity-dots" role="img" aria-label={isAr ? "علامات توضيحية لا تمثل مواقع المستخدمين الفعلية" : "Illustrative markers, not actual user locations"}>
         <span className="global-map-activity-dot dot-north-america" />
         <span className="global-map-activity-dot dot-south-america" />
         <span className="global-map-activity-dot dot-africa" />
@@ -120,7 +120,6 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       </div>
       {tilesLoading && <div className="global-map-tile-loading" role="status">{isAr ? "جارٍ تحميل الخريطة…" : "Loading map…"}</div>}
       {tilesError && <div className="global-map-tile-error" role="status">{isAr ? "تعذر تحميل تفاصيل الخريطة" : "Map details could not be loaded"}</div>}
-      <span className="global-map-map-note">{isAr ? "نقاط توضيحية · لا تمثل مواقع فعلية" : "Illustrative markers · not live locations"}</span>
     </div>
   );
 }
