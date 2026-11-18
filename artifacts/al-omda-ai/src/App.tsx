@@ -6,6 +6,7 @@ const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
+import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
 import {
   createTask as apiCreateTask,
   getAuthSession,
@@ -750,6 +751,10 @@ function App() {
   const [httpFlowHistoryError, setHttpFlowHistoryError] = useState("");
   const [localModelProviders, setLocalModelProviders] = useState<Array<{ name: string; model: string; kind: "local" | "remote"; hasApiKey: boolean; purposes?: string[]; priority?: number }>>([]);
   const [modelProvidersError, setModelProvidersError] = useState("");
+  const [localModelHealth, setLocalModelHealth] = useState<ModelProviderHealth[]>([]);
+  const [modelHealthError, setModelHealthError] = useState("");
+  const [modelHealthBusy, setModelHealthBusy] = useState(false);
+  const modelProviderRequestRef = useRef(0);
   const [browserWorkspace, setBrowserWorkspace] = useState<{ policy: { version: 1; allowedHosts: string[] }; configured: boolean; connected: boolean; tools: Array<{ name: string; description: string }>; connectionError: string | null } | null>(null);
   const [browserSiteInput, setBrowserSiteInput] = useState("");
   const [browserWorkspaceBusy, setBrowserWorkspaceBusy] = useState(false);
@@ -1829,11 +1834,34 @@ pnpm --filter @workspace/scripts agent:runtime`;
     setModelProvidersError("");
     try {
       const result = await callLocalAgentRuntime("/v1/models/providers");
-      const providers = Array.isArray(result.providers) ? result.providers.filter((item: any) => item && typeof item.name === "string" && typeof item.model === "string") : [];
+      const providers = parseModelProviderInfo(result.providers);
       setLocalModelProviders(providers);
       if (!providers.length) setModelProvidersError(isAr ? "لم يتم إعداد أي مزود موديلات بعد." : "No model providers are configured yet.");
     } catch (error) {
       setModelProvidersError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مزودي الموديلات." : "Could not load model providers."));
+    }
+  };
+
+  const loadLocalModelHealth = async () => {
+    const requestId = ++modelProviderRequestRef.current;
+    setModelHealthBusy(true);
+    setModelHealthError("");
+    try {
+      const [inventory, health] = await Promise.all([
+        callLocalAgentRuntime("/v1/models/providers"),
+        callLocalAgentRuntime("/v1/models/health"),
+      ]);
+      if (requestId !== modelProviderRequestRef.current) return;
+      const providers = parseModelProviderInfo(inventory.providers);
+      setLocalModelProviders(providers);
+      setLocalModelHealth(parseModelProviderHealth(health.providers));
+      if (!providers.length) setModelProvidersError(isAr ? "لم يتم إعداد أي مزود موديلات بعد." : "No model providers are configured yet.");
+      else setModelProvidersError("");
+    } catch (error) {
+      if (requestId !== modelProviderRequestRef.current) return;
+      setModelHealthError(error instanceof Error ? error.message : (isAr ? "تعذر فحص مزودي الموديلات." : "Could not inspect model providers."));
+    } finally {
+      if (requestId === modelProviderRequestRef.current) setModelHealthBusy(false);
     }
   };
 
@@ -2118,9 +2146,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>}
     </section>
     <section className="panel panel-pad" id="model-router" style={{marginBottom:20}}>
-      <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelProviders} disabled={!localAgentToken.trim()}>{isAr?'تحديث القائمة':'Refresh list'}</button></div>
+      <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelHealth} disabled={!localAgentToken.trim()||modelHealthBusy}>{modelHealthBusy?(isAr?'جارٍ الفحص…':'Checking…'):(isAr?'فحص المزودين':'Test providers')}</button></div>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
-      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=><div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{provider.kind}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p></div>)}</div>}
+      {modelHealthError&&<p className="section-meta" role="alert">{modelHealthError}</p>}
+      {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=>{const health=localModelHealth.find((item)=>item.name===provider.name);return <div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{providerStatusLabel(health,isAr)}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')} · {provider.kind}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p>{health&&<><p className="section-meta">{isAr?'زمن الاستجابة':'Latency'}: {health.latencyMs} ms · HTTP {health.status ?? '—'}</p>{health.discoveredModels.length>0&&<p className="section-meta" style={{overflowWrap:'anywhere'}}>{isAr?'النماذج المكتشفة':'Discovered models'}: {health.discoveredModels.join(', ')}</p>}</>}</div>})}</div>}
       <p className="section-meta" style={{marginTop:10}}>{isAr?'لإضافة مزود جديد، عدّل .omda/models.json وفق المثال .omda/models.example.json ثم حدّث القائمة.':'Add providers in .omda/models.json using .omda/models.example.json, then refresh this list.'}</p>
     </section>
       </div>
