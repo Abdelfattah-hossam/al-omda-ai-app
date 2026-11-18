@@ -12,6 +12,14 @@ test("keeps explicit software requests in the software domain", () => {
   assert.equal(inferAgentDomain("Write TypeScript code for an API"), "software");
 });
 
+test("classifies Arabic building-code calculations as engineering", () => {
+  assert.equal(inferAgentDomain("احسب أحمال الكمرة حسب كود البناء"), "engineering");
+});
+
+test("audits requests recognized through professional medical context", () => {
+  assert.equal(shouldAuditFinalAnswer("Can a patient take ibuprofen with warfarin?"), true);
+});
+
 
 test("audits high-risk domains but does not add an audit to ordinary conversation", () => {
   assert.equal(shouldAuditFinalAnswer("Calculate the structural beam load"), true);
