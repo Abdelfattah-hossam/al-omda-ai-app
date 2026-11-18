@@ -1689,7 +1689,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const streamLocalAgent = async (
     action: "run" | "resume" | "continue" | "delegate",
     body: Record<string, unknown>,
-    onEvent: (event: { type: string; text?: string; status?: string; role?: string; agentCount?: number }) => void,
+    onEvent: (event: { type: string; text?: string; status?: string; phase?: string; role?: string; agentCount?: number }) => void,
   ) => {
     const base = getLocalAgentOrigin(localAgentUrl, isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
     if (!localAgentToken.trim()) throw new Error(isAr ? "أدخل مفتاح الاتصال المحلي." : "Enter the local runtime token.");
