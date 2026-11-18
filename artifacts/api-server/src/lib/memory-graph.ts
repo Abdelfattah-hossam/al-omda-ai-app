@@ -47,6 +47,14 @@ function containsBlockedDetailKey(value: unknown, depth = 0): boolean {
   );
 }
 
+function collectDetailText(value: unknown, depth = 0): string[] {
+  if (depth > 8 || value === null || value === undefined) return [];
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap((item) => collectDetailText(item, depth + 1));
+  if (typeof value === "object") return Object.values(value as Record<string, unknown>).flatMap((item) => collectDetailText(item, depth + 1));
+  return [];
+}
+
 function normalizeDetails(value: unknown, maxBytes: number): Record<string, unknown> {
   if (value === undefined) return {};
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Memory details must be a JSON object.");
@@ -54,12 +62,14 @@ function normalizeDetails(value: unknown, maxBytes: number): Record<string, unkn
   if (containsBlockedDetailKey(details)) throw new Error("Memory details must not contain credentials or sensitive personal-data fields.");
   const serialized = JSON.stringify(details);
   if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("Memory details exceed the allowed size.");
-  if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
-  if (BLOCKED_CREDENTIAL_TEXT.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
-  if (BLOCKED_CONTACT_TEXT.test(serialized)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
-  if (BLOCKED_FINANCIAL_TEXT.test(serialized)) throw new Error("Personal financial information must not be stored in AI memory.");
-  if (BLOCKED_INSTRUCTION_TEXT.test(serialized)) throw new Error("Instruction-like prompt injection content must not be stored as memory.");
-  if (BLOCKED_SENSITIVE_TEXT.test(serialized)) throw new Error("Sensitive personal information must not be stored in AI memory.");
+  const textValues = collectDetailText(details);
+  const contains = (pattern: RegExp) => textValues.some((text) => pattern.test(text));
+  if (contains(BLOCKED_SECRET_VALUE)) throw new Error("Memory details appear to contain a credential or access token.");
+  if (contains(BLOCKED_CREDENTIAL_TEXT)) throw new Error("Memory details appear to contain a credential or access token.");
+  if (contains(BLOCKED_CONTACT_TEXT)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
+  if (contains(BLOCKED_FINANCIAL_TEXT)) throw new Error("Personal financial information must not be stored in AI memory.");
+  if (contains(BLOCKED_INSTRUCTION_TEXT)) throw new Error("Instruction-like prompt injection content must not be stored as memory.");
+  if (contains(BLOCKED_SENSITIVE_TEXT)) throw new Error("Sensitive personal information must not be stored in AI memory.");
   return details;
 }
 
