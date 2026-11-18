@@ -1830,18 +1830,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
     } finally { setLocalAgentBusy(false); }
   };
 
-  const loadLocalModelProviders = async () => {
-    setModelProvidersError("");
-    try {
-      const result = await callLocalAgentRuntime("/v1/models/providers");
-      const providers = parseModelProviderInfo(result.providers);
-      setLocalModelProviders(providers);
-      if (!providers.length) setModelProvidersError(isAr ? "لم يتم إعداد أي مزود موديلات بعد." : "No model providers are configured yet.");
-    } catch (error) {
-      setModelProvidersError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل مزودي الموديلات." : "Could not load model providers."));
-    }
-  };
-
   const loadLocalModelHealth = async () => {
     const requestId = ++modelProviderRequestRef.current;
     setModelHealthBusy(true);
