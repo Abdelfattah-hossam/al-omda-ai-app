@@ -98,3 +98,32 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
   assert.ok(validation.includes("new Set(plan.steps.map((step) => step.id)).size === plan.steps.length"));
   assert.ok(validation.includes('!("result" in step) && !("executedAt" in step) && !("executionStatus" in step) && !("executionError" in step)'));
 });
+
+
+test("chat-generated artifact task logging is owner-scoped and does not consume task-creation quota", async () => {
+  const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
+  const migrationUrl = new URL("../../supabase/migrations/20261118090000_create_ai_artifact_task_log.sql", import.meta.url);
+  const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
+  const storageAssetsUrl = new URL("../../artifacts/api-server/src/lib/storage-assets.ts", import.meta.url);
+  const chatUrl = new URL("../../artifacts/al-omda-ai/src/AIChat.tsx", import.meta.url);
+  const [setup, migration, workspaceRoute, storageAssets, chat] = await Promise.all([
+    readFile(setupUrl, "utf8"),
+    readFile(migrationUrl, "utf8"),
+    readFile(workspaceRouteUrl, "utf8"),
+    readFile(storageAssetsUrl, "utf8"),
+    readFile(chatUrl, "utf8"),
+  ]);
+  for (const sql of [setup, migration]) {
+    assert.match(sql, /create or replace function public\\.create_ai_artifact_task/i);
+    assert.match(sql, /security definer/i);
+    assert.match(sql, /set search_path = pg_catalog/i);
+    assert.match(sql, /auth\\.uid\\(\\)/i);
+    assert.match(sql, /revoke all on function public\\.create_ai_artifact_task\\(text, text, text, text, text, bigint, text\\) from public, anon, authenticated/i);
+    assert.match(sql, /grant execute on function public\\.create_ai_artifact_task\\(text, text, text, text, text, bigint, text\\) to authenticated/i);
+  }
+  assert.match(workspaceRoute, /router\\.post\\("\\/tasks\\/artifact"/);
+  assert.match(chat, /\\/api\\/tasks\\/artifact/);
+  assert.match(chat, /\\/api\\/storage\\/assets/);
+  assert.match(storageAssets, /tsx: "text\\/plain"/);
+  assert.match(storageAssets, /js: "text\\/javascript"/);
+});
