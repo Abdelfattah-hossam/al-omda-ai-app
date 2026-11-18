@@ -9,6 +9,7 @@ import { detectProjectSpecialty } from "./lib/project-intent";
 import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
 import { previewOfficeDocument } from "./lib/office-preview";
+import { parseModelProviderHealth, providerStatusLabel } from "./lib/model-provider-health";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -16,6 +17,13 @@ type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<str
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
+
+function getLocalAgentOrigin(value: string, errorMessage: string): string {
+  let base: URL;
+  try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
+  if (!["http:", "https:"].includes(base.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
+  return base.origin + base.pathname.replace(/\/+$/, "");
+}
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
   if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
@@ -259,6 +267,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const agentConnectionCheckRef = useRef(0);
   const lastSyncedConversationUpdatedAtRef = useRef("");
   const agentStreamControllerRef = useRef<AbortController | null>(null);
   const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
@@ -272,6 +281,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       agentStreamControllerRef.current?.abort();
     };
   }, []);
+  useEffect(() => { agentConnectionCheckRef.current += 1; setAgentConnectionStatus(""); }, [agentRuntimeUrl, agentToken]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -945,21 +955,56 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   };
 
   const checkLocalAgentConnection = async () => {
+    const requestId = ++agentConnectionCheckRef.current;
+    const runtimeUrl = agentRuntimeUrl;
+    const token = agentToken.trim();
+    const isCurrent = () => requestId === agentConnectionCheckRef.current;
     setAgentConnectionStatus(ar ? "جارٍ اختبار الاتصال..." : "Checking connection...");
     try {
-      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/health", { cache: "no-store" });
+      const origin = getLocalAgentOrigin(runtimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1.");
+      const response = await fetch(origin + "/health", { cache: "no-store" });
+      if (!isCurrent()) return;
       const data = await response.json().catch(() => ({}));
+      if (!isCurrent()) return;
       if (!response.ok || !data.ok) throw new Error(data.error || "Runtime health check failed.");
-      setAgentConnectionStatus(ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready"));
+      const runtimeLabel = ar ? "متصل — " + (data.execution || "جاهز") : "Connected — " + (data.execution || "ready");
+      if (!token) {
+        setAgentConnectionStatus(runtimeLabel + (ar ? " · أدخل رمز الاتصال لفحص النماذج المحلية." : " · Enter the access token to check configured models."));
+        return;
+      }
+      try {
+        const modelResponse = await fetch(origin + "/v1/models/health", {
+          headers: { authorization: "Bearer " + token },
+          cache: "no-store",
+        });
+        if (!isCurrent()) return;
+        const modelData = await modelResponse.json().catch(() => ({}));
+        if (!isCurrent()) return;
+        if (modelResponse.status === 401 || modelResponse.status === 403) {
+          setAgentConnectionStatus(runtimeLabel + (ar ? " · رمز اتصال Runtime مرفوض أو منتهي الصلاحية." : " · Runtime access token was rejected or has expired."));
+          return;
+        }
+        if (!modelResponse.ok || !Array.isArray(modelData.providers)) {
+          setAgentConnectionStatus(runtimeLabel + (ar ? " · Runtime متصل لكن تشخيص النماذج غير متاح." : " · Runtime is connected, but model diagnostics are unavailable."));
+          return;
+        }
+        const providers = parseModelProviderHealth(modelData.providers);
+        const summaries = providers.map((provider) => provider.name + ": " + providerStatusLabel(provider, ar) + " (" + provider.latencyMs + "ms)");
+        setAgentConnectionStatus(runtimeLabel + (summaries.length ? " · " + summaries.join(" · ") : (ar ? " · لا توجد نماذج مهيأة." : " · No model providers configured.")));
+      } catch {
+        if (!isCurrent()) return;
+        setAgentConnectionStatus(runtimeLabel + (ar ? " · Runtime متصل لكن تعذر فحص النماذج." : " · Runtime is connected, but model diagnostics could not be checked."));
+      }
     } catch (err) {
-      setAgentConnectionStatus((ar ? "غير متصل: " : "Not connected: ") + (err instanceof Error ? err.message : "connection failed"));
+      if (!isCurrent()) return;
+      setAgentConnectionStatus((ar ? "تعذر الفحص: " : "Check failed: ") + (err instanceof Error ? err.message : "connection failed"));
     }
   };
 
   const loadAgentSessions = async () => {
     if (!agentToken.trim()) { setError(ar ? "أدخل رمز الاتصال أولًا." : "Enter the access token first."); return; }
     try {
-      const response = await fetch(new URL(agentRuntimeUrl.trim()).origin + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
+      const response = await fetch(getLocalAgentOrigin(agentRuntimeUrl, ar ? "استخدم عنوان Runtime محليًا مثل localhost أو 127.0.0.1." : "Use a localhost runtime URL such as 127.0.0.1") + "/v1/agent/sessions", { headers: { authorization: "Bearer " + agentToken.trim() }, cache: "no-store" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل الجلسات." : "Could not load sessions."));
       const items = Array.isArray(data.sessions) ? data.sessions : [];
