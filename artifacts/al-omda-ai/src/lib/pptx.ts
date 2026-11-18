@@ -1,3 +1,5 @@
+import PptxGenJS from "pptxgenjs";
+
 export type PowerPointData = {
   title: string;
   slides: Array<{ title: string; body: string; bullets: string[]; speakerNotes: string }>;
@@ -57,17 +59,9 @@ export function fitPowerPointFontSize(value: string, baseSize: number, widthIn: 
 }
 
 export async function buildPowerPointBlob(data: PowerPointData): Promise<Blob> {
-  const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
-  const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/+esm";
-  let module: any;
-  try { module = await import(/* @vite-ignore */ primaryModuleUrl); }
-  catch {
-    try { module = await import(/* @vite-ignore */ fallbackModuleUrl); }
-    catch { throw new Error("The PowerPoint generator could not be loaded. No file was created. Check your connection and retry."); }
-  }
-  const PptxGenJS = module.default ?? module;
+  const Pptx = PptxGenJS;
   const rtl = isPowerPointRtl(data);
-  const pptx = new PptxGenJS();
+  const pptx = new Pptx();
   pptx.layout = "LAYOUT_WIDE";
   pptx.rtlMode = rtl;
   pptx.author = "AL OMDA AI";
