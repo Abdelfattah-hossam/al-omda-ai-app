@@ -9,7 +9,7 @@ function isLoopback(hostname: string): boolean {
 
 export function normalizeModelProviderBase(baseValue: string, name = "provider"): string {
   let url: URL;
-  try { url = new URL(baseValue); } catch { throw new Error("Invalid baseUrl for model provider " + name + "."); }
+  try { url = new URL(baseValue.trim()); } catch { throw new Error("Invalid baseUrl for model provider " + name + "."); }
   if (url.username || url.password) throw new Error("Model provider " + name + " must not embed credentials in its baseUrl.");
   if (url.search || url.hash) throw new Error("Model provider " + name + " must not include query parameters or fragments in its baseUrl.");
   if (!(url.protocol === "https:" || (url.protocol === "http:" && isLoopback(url.hostname)))) {
