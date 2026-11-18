@@ -42,7 +42,7 @@ test("provider status labels cover missing, offline, timeout, ready, missing mod
   assert.equal(providerStatusLabel(null, false), "Not tested");
   assert.equal(providerStatusLabel({ ...validHealth, reachable: false, error: "timeout" }, false), "Timed out");
   assert.equal(providerStatusLabel({ ...validHealth, reachable: false }, false), "Offline");
-  assert.equal(providerStatusLabel(validHealth, false), "Model ready");
+  assert.equal(providerStatusLabel(validHealth, false), "Model listed");
   assert.equal(providerStatusLabel({ ...validHealth, modelAvailable: false }, false), "Model not listed");
   assert.equal(providerStatusLabel({ ...validHealth, modelAvailable: null }, false), "Endpoint reachable");
   assert.equal(providerStatusLabel({ ...validHealth, endpointAvailable: false, error: "authentication_failed" }, false), "Auth rejected");
