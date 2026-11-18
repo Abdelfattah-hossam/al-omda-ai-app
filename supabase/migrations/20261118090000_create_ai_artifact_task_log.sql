@@ -33,9 +33,10 @@ begin
        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-       'text/plain', 'text/markdown', 'text/csv', 'application/json',
+       'text/plain', 'text/markdown', 'text/csv', 'application/json', 'text/javascript',
+       'text/x-python', 'application/sql', 'text/css', 'application/dxf',
        'text/html', 'application/xml', 'application/zip',
-       'image/png', 'image/jpeg', 'image/webp', 'image/gif'
+       'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'
      )
      or p_file_size is null or p_file_size < 1 or p_file_size > 26214400
      or p_language is null or p_language not in ('ar', 'en') then
