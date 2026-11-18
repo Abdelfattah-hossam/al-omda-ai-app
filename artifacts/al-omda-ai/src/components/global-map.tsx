@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import {
+  GLOBAL_MAP_ATTRIBUTION,
+  GLOBAL_MAP_CENTER,
+  GLOBAL_MAP_DEFAULT_ZOOM,
+  GLOBAL_MAP_MAX_ZOOM,
+  GLOBAL_MAP_MIN_ZOOM,
+  GLOBAL_MAP_TILE_URL,
+  GLOBAL_MAP_ZOOM_STEP,
+} from "./global-map-config";
 
 type GlobalMapProps = {
   isAr: boolean;
@@ -18,16 +27,16 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     if (!element) return;
 
     const map = L.map(element, {
-      center: [24, 12],
-      zoom: 2,
-      minZoom: 2,
-      maxZoom: 19,
+      center: GLOBAL_MAP_CENTER,
+      zoom: GLOBAL_MAP_DEFAULT_ZOOM,
+      minZoom: GLOBAL_MAP_MIN_ZOOM,
+      maxZoom: GLOBAL_MAP_MAX_ZOOM,
       zoomControl: false,
       attributionControl: true,
       scrollWheelZoom: false,
       worldCopyJump: true,
       zoomSnap: 0.25,
-      zoomDelta: 0.5,
+      zoomDelta: GLOBAL_MAP_ZOOM_STEP,
       touchZoom: true,
       doubleClickZoom: true,
       dragging: true,
@@ -36,11 +45,11 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     });
 
     const tileLayer = L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      GLOBAL_MAP_TILE_URL,
       {
         subdomains: "abcd",
         maxZoom: 20,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+        attribution: GLOBAL_MAP_ATTRIBUTION,
         detectRetina: true,
       },
     );
@@ -64,9 +73,9 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     };
   }, []);
 
-  const zoomIn = useCallback(() => mapRef.current?.zoomIn(0.5), []);
-  const zoomOut = useCallback(() => mapRef.current?.zoomOut(0.5), []);
-  const reset = useCallback(() => mapRef.current?.setView([24, 12], 2, { animate: true }), []);
+  const zoomIn = useCallback(() => mapRef.current?.zoomIn(GLOBAL_MAP_ZOOM_STEP), []);
+  const zoomOut = useCallback(() => mapRef.current?.zoomOut(GLOBAL_MAP_ZOOM_STEP), []);
+  const reset = useCallback(() => mapRef.current?.setView(GLOBAL_MAP_CENTER, GLOBAL_MAP_DEFAULT_ZOOM, { animate: true }), []);
   const retryTiles = useCallback(() => {
     setTilesError(false);
     setTilesLoaded(false);
