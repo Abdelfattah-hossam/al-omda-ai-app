@@ -9,6 +9,7 @@ import {
   GLOBAL_MAP_MIN_ZOOM,
   GLOBAL_MAP_TILE_URL,
   GLOBAL_MAP_ZOOM_STEP,
+  getGlobalMapTileLoadState,
   getGlobalMapZoomTarget,
 } from "./global-map-config";
 
@@ -65,9 +66,9 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     tileLayer.on("tileload", () => { successfulTiles += 1; });
     tileLayer.on("tileerror", () => { failedTiles += 1; });
     tileLayer.on("load", () => {
-      const allTilesFailed = successfulTiles === 0 && failedTiles > 0;
-      setTilesLoaded(successfulTiles > 0);
-      setTilesError(allTilesFailed);
+      const tileState = getGlobalMapTileLoadState(successfulTiles, failedTiles);
+      setTilesLoaded(tileState.loaded);
+      setTilesError(tileState.error);
     });
     tileLayer.addTo(map);
     tileLayerRef.current = tileLayer;
