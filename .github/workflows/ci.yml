@@ -66,6 +66,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-code-intent.test.ts
       - name: Test ZIP project packaging
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/zip.test.ts
+      - name: Test global map configuration and zoom policy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/components/global-map-config.test.ts
       - name: Test generated Office files
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-ooxml.test.ts
       - name: Test workspace asset upload MIME normalization
