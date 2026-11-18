@@ -222,6 +222,11 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [memoryGraphNodes, setMemoryGraphNodes] = useState<MemoryGraphNode[]>([]);
   const [memoryGraphEdges, setMemoryGraphEdges] = useState<MemoryGraphEdge[]>([]);
   const [memoryGraphLoadError, setMemoryGraphLoadError] = useState("");
+  const [memoryGraphActionError, setMemoryGraphActionError] = useState("");
+  const [memoryGraphEdgeSource, setMemoryGraphEdgeSource] = useState("");
+  const [memoryGraphEdgeTarget, setMemoryGraphEdgeTarget] = useState("");
+  const [memoryGraphEdgeRelation, setMemoryGraphEdgeRelation] = useState("related_to");
+  const [memoryGraphEdgeSaving, setMemoryGraphEdgeSaving] = useState(false);
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
@@ -441,6 +446,34 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الذاكرة." : "Could not load memory."));
     } finally {
       setMemoryLoading(false);
+    }
+  };
+
+  const addMemoryGraphEdge = async () => {
+    if (!signedIn || memoryGraphEdgeSaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource === memoryGraphEdgeTarget) return;
+    setMemoryGraphEdgeSaving(true);
+    setMemoryGraphActionError("");
+    try {
+      const response = await fetch("/api/ai/memory/graph/edges", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ edges: [{ sourceNodeId: memoryGraphEdgeSource, targetNodeId: memoryGraphEdgeTarget, relation: memoryGraphEdgeRelation }] }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ العلاقة." : "Could not save the relationship."));
+      const savedEdges = Array.isArray(data.edges) ? data.edges as MemoryGraphEdge[] : [];
+      setMemoryGraphEdges((current) => {
+        const byId = new Map(current.map((edge) => [edge.id, edge]));
+        savedEdges.forEach((edge) => byId.set(edge.id, edge));
+        return Array.from(byId.values());
+      });
+      setMemoryGraphEdgeSource("");
+      setMemoryGraphEdgeTarget("");
+    } catch (err) {
+      setMemoryGraphActionError(err instanceof Error ? err.message : (ar ? "تعذر حفظ العلاقة." : "Could not save the relationship."));
+    } finally {
+      setMemoryGraphEdgeSaving(false);
     }
   };
 
@@ -1452,6 +1485,32 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
                    <span className="status-chip">{node.node_type}</span><div style={{minWidth:0,flex:1}}><strong style={{fontSize:13,overflowWrap:"anywhere"}}>{node.label}</strong><small className="muted" style={{display:"block",marginTop:2}}>{node.source === "conversation_confirmed" ? (ar ? "تصحيح مؤكد" : "Confirmed correction") : (ar ? "حفظ صريح" : "Explicitly saved")}</small></div>
                  </div>)}
                  {memoryGraphEdges.length > 0 && <div style={{marginTop:4,paddingTop:8,borderTop:"1px solid var(--border)"}}><strong style={{fontSize:12}}>{ar ? "العلاقات" : "Relationships"}</strong>{memoryGraphEdges.slice(0,12).map((edge)=>{const from=memoryGraphNodes.find((node)=>node.id===edge.source_node_id)?.label;const to=memoryGraphNodes.find((node)=>node.id===edge.target_node_id)?.label;return from&&to?<p key={edge.id} className="muted" style={{fontSize:12,margin:"6px 0"}}>{from} — {edge.relation} → {to}</p>:null;})}</div>}
+                  {memoryGraphNodes.length >= 2 && <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--border)",display:"grid",gap:8}}>
+                    <strong style={{fontSize:12}}>{ar ? "إضافة علاقة بين حقيقتين" : "Connect two facts"}</strong>
+                    <select className="field" aria-label={ar ? "الحقيقة الأولى" : "First fact"} value={memoryGraphEdgeSource} onChange={(event)=>setMemoryGraphEdgeSource(event.target.value)}>
+                      <option value="">{ar ? "اختر الحقيقة الأولى" : "Choose first fact"}</option>
+                      {memoryGraphNodes.map((node)=><option key={node.id} value={node.id}>{node.label}</option>)}
+                    </select>
+                    <select className="field" aria-label={ar ? "نوع العلاقة" : "Relationship type"} value={memoryGraphEdgeRelation} onChange={(event)=>setMemoryGraphEdgeRelation(event.target.value)}>
+                      <option value="related_to">{ar ? "مرتبط بـ" : "Related to"}</option>
+                      <option value="works_on">{ar ? "يعمل على" : "Works on"}</option>
+                      <option value="uses">{ar ? "يستخدم" : "Uses"}</option>
+                      <option value="owns">{ar ? "يمتلك" : "Owns"}</option>
+                      <option value="prefers">{ar ? "يفضل" : "Prefers"}</option>
+                      <option value="decided">{ar ? "قرر" : "Decided"}</option>
+                      <option value="constrained_by">{ar ? "مقيد بـ" : "Constrained by"}</option>
+                      <option value="corrected">{ar ? "صحح" : "Corrected"}</option>
+                      <option value="member_of">{ar ? "عضو في" : "Member of"}</option>
+                      <option value="created">{ar ? "أنشأ" : "Created"}</option>
+                    </select>
+                    <select className="field" aria-label={ar ? "الحقيقة الثانية" : "Second fact"} value={memoryGraphEdgeTarget} onChange={(event)=>setMemoryGraphEdgeTarget(event.target.value)}>
+                      <option value="">{ar ? "اختر الحقيقة الثانية" : "Choose second fact"}</option>
+                      {memoryGraphNodes.map((node)=><option key={node.id} value={node.id} disabled={node.id===memoryGraphEdgeSource}>{node.label}</option>)}
+                    </select>
+                    <button type="button" className="button button-quiet button-small" onClick={()=>void addMemoryGraphEdge()} disabled={memoryGraphEdgeSaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource===memoryGraphEdgeTarget}>
+                      {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
+                    </button>
+                  </div>
                </div> : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell AL OMDA “Remember that I prefer concise replies” to add a preference."}</small>}
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
