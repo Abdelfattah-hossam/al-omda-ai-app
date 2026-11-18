@@ -1593,7 +1593,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة عالمية تفاعلية':'Minimal world map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
         <div className="global-map-viewport">
-          <GlobalMap isAr={isAr}/>
+          <DeferredGlobalMap isAr={isAr}/>
         </div>
         <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع. تُحمّل الخريطة المتجهية من OpenFreeMap، ولا تتطلب خدمته العامة مفتاح API أو ملفات تعريف ارتباط.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates. Vector map tiles are loaded from OpenFreeMap. Its public service does not require an API key or cookies.'}</p>
       </section>
