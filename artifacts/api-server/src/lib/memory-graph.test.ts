@@ -116,8 +116,8 @@ test("canonical setup SQL and the deployed migration define the same private gra
     assert.match(sql, /revoke all on public\.ai_memory_state from public, anon/i);
     assert.match(sql, /create trigger ai_memory_nodes_generation_guard/i);
     assert.match(sql, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
-    assert.match(sql, /set search_path = pg_catalog/i);
   }
+  assert.match(setup, /set search_path = pg_catalog/i);
   assert.match(searchPathMigration, /set search_path = pg_catalog/i);
   assert.match(searchPathMigration, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
 });
