@@ -334,7 +334,7 @@ router.post("/tasks/artifact", requireSameOrigin, async (req, res): Promise<void
   const filename = sanitizeWorkspaceAssetName(typeof req.body?.filename === "string" ? req.body.filename : "");
   const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType.trim().toLowerCase() : "";
   const size = Number(req.body?.size);
-  const title = typeof req.body?.title === "string" ? req.body.title.trim() : filename.replace(/\.[^.]+$/, "");
+  const title = (typeof req.body?.title === "string" ? req.body.title : filename.replace(/\.[^.]+$/, "")).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 160);
   const request = typeof req.body?.request === "string" ? req.body.request.trim() : "";
   const specialty = req.body?.specialty;
   const language = req.body?.language === "en" ? "en" : "ar";
