@@ -73,3 +73,15 @@ test("rejects malformed, oversized, or unsafe pending Agent approval data", () =
   assert.ok(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(12001) } }] } }]));
   assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(40001) } }] } }]), null);
 });
+
+
+test("persists tool warnings that do not include an optional call ID", () => {
+  const messages = validateMessages([{
+    role: "assistant",
+    content: "A tool returned a warning.",
+    toolFailures: [{ tool: "files.read", message: "Permission denied" }],
+  }]);
+  assert.ok(messages);
+  assert.equal(messages[0].toolFailures?.[0].tool, "files.read");
+  assert.equal(messages[0].toolFailures?.[0].callId, undefined);
+});
