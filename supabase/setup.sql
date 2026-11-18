@@ -831,7 +831,7 @@ create or replace function public.enforce_ai_memory_generation()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog
 as $$
 declare
   current_generation uuid;
