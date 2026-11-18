@@ -1733,6 +1733,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
           setLocalAgentMessage(streamedText + "\n\n" + (isAr ? "سرعة مباشرة تقريبية: " : "Live estimate: ") + estimated + " tok/s");
         } else if (event.type === "status" && event.status === "using_tools" && !streamedText) {
           setLocalAgentMessage(isAr ? "الوكيل يجهّز الأدوات وينفّذ الخطوات..." : "Agent is selecting tools and executing steps...");
+        } else if (event.type === "status" && event.status === "quality_audit") {
+          setLocalAgentMessage(event.phase === "refining" ? (isAr ? "ظهرت نقاط تحتاج تصحيحًا؛ الوكيل يراجع النتيجة الآن..." : "The review found concrete issues; the agent is refining the result...") : (isAr ? "الوكيل يراجع جودة النتيجة قبل التسليم..." : "Agent is reviewing output quality before delivery..."));
+        } else if (event.type === "status" && event.status === "quality_audit_unavailable") {
+          setLocalAgentMessage(isAr ? "تعذرت المراجعة الآلية الثانية؛ سيتم الاحتفاظ بالمسودة الأصلية." : "Second-pass quality review unavailable; retaining the original draft.");
+        } else if (event.type === "status" && event.status === "quality_audit_refinement_incomplete") {
+          setLocalAgentMessage(isAr ? "لم يكتمل التصحيح الآلي؛ سيتم الاحتفاظ بالمسودة الأصلية." : "Automated correction was incomplete; retaining the original draft.");
         }
       });
       setLocalAgentSessionId(String(result.sessionId || ""));
