@@ -860,7 +860,6 @@ create trigger ai_memory_nodes_generation_guard
 
 
 -- Keep the canonical setup in sync with quota-free chat artifact task logging.
--- Keep the canonical setup in sync with quota-free chat artifact task logging.
 -- Record files created directly in chat without charging a second AI task-creation unit.
 create or replace function public.create_ai_artifact_task(
   p_title text,
@@ -884,6 +883,16 @@ declare
 begin
   if v_user_id is null then
     raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  if (
+    select count(*)
+      from public.tasks
+     where user_id = v_user_id
+       and request like '%Generated artifact:%'
+       and created_at > now() - interval '1 hour'
+  ) >= 40 then
+    raise exception 'Chat artifact task log rate limit reached' using errcode = '54000';
   end if;
 
   if p_title is null or char_length(btrim(p_title)) < 1 or char_length(p_title) > 160
