@@ -860,6 +860,7 @@ create trigger ai_memory_nodes_generation_guard
 
 
 -- Keep the canonical setup in sync with quota-free chat artifact task logging.
+-- Keep the canonical setup in sync with quota-free chat artifact task logging.
 -- Record files created directly in chat without charging a second AI task-creation unit.
 create or replace function public.create_ai_artifact_task(
   p_title text,
