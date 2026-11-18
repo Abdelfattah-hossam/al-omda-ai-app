@@ -17,29 +17,62 @@ type GlobalMapProps = {
 
 setWorkerUrl(maplibreWorkerUrl);
 
-function applyMinimalWorldStyle(map: MapLibreMap) {
+function applyDarkNavigationStyle(map: MapLibreMap) {
   for (const layer of map.getStyle().layers ?? []) {
-    const sourceLayer = "source-layer" in layer ? layer["source-layer"] : undefined;
+    const sourceLayer = "source-layer" in layer ? String(layer["source-layer"] ?? "") : "";
+    const layerId = layer.id.toLowerCase();
     const isBackground = layer.type === "background";
-    const isBoundary = layer.type === "line" && sourceLayer === "boundary";
-    const isWaterOutline = layer.type === "line" && sourceLayer === "water";
-    const isWaterOrLand = layer.type === "fill" && (sourceLayer === "water" || sourceLayer === "landcover");
-    const visible = isBackground || isBoundary || isWaterOutline || isWaterOrLand;
+    const isWater = /water|ocean|sea|river|lake/.test(sourceLayer) || /water|ocean|sea|river|lake/.test(layerId);
+    const isBuilding = /building/.test(sourceLayer) || /building/.test(layerId);
+    const isPark = /park|landcover|landuse|green/.test(sourceLayer) || /park|landcover|landuse|green/.test(layerId);
+    const isRoad = /transportation|transportation_name|road|street|highway/.test(sourceLayer) ||
+      /motorway|trunk|primary|secondary|tertiary|street|road|transportation|bridge|tunnel|path|rail/.test(layerId);
+    const isBoundary = /boundary/.test(sourceLayer) || /boundary|admin/.test(layerId);
 
-    map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
-    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#080b10");
-    if (isBoundary || isWaterOutline) {
-      map.setPaintProperty(layer.id, "line-color", isBoundary ? "#aeb8c5" : "#354252");
-      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.82 : 0.72);
-      map.setPaintProperty(layer.id, "line-width", [
-        "interpolate", ["linear"], ["zoom"],
-        0, 0.25, 2, 0.42, 5, 0.75, 9, 1.1,
-      ]);
+    if (isBackground) {
+      map.setPaintProperty(layer.id, "background-color", "#090d13");
+      continue;
     }
-    if (isWaterOrLand) {
-      map.setPaintProperty(layer.id, "fill-color", sourceLayer === "water" ? "#080b10" : "#111821");
-      map.setPaintProperty(layer.id, "fill-outline-color", "#354252");
-      map.setPaintProperty(layer.id, "fill-opacity", 1);
+
+    if (layer.type === "fill") {
+      if (isWater) {
+        map.setPaintProperty(layer.id, "fill-color", "#080d14");
+        map.setPaintProperty(layer.id, "fill-outline-color", "#172331");
+      } else if (isBuilding) {
+        map.setPaintProperty(layer.id, "fill-color", "#1b2531");
+        map.setPaintProperty(layer.id, "fill-outline-color", "#344252");
+        map.setPaintProperty(layer.id, "fill-opacity", 0.96);
+      } else if (isPark) {
+        map.setPaintProperty(layer.id, "fill-color", "#111c1b");
+        map.setPaintProperty(layer.id, "fill-outline-color", "#1c302e");
+      }
+    }
+
+    if (layer.type === "line") {
+      if (isRoad) {
+        const isMajor = /motorway|trunk|primary/.test(layerId);
+        const isRail = /rail/.test(layerId) || /railway/.test(sourceLayer);
+        map.setPaintProperty(layer.id, "line-color", isRail ? "#46515e" : isMajor ? "#8794a4" : "#3a4655");
+        map.setPaintProperty(layer.id, "line-opacity", isMajor ? 0.94 : 0.82);
+      } else if (isBoundary) {
+        map.setPaintProperty(layer.id, "line-color", "#667384");
+        map.setPaintProperty(layer.id, "line-opacity", 0.58);
+      } else if (isWater) {
+        map.setPaintProperty(layer.id, "line-color", "#263748");
+        map.setPaintProperty(layer.id, "line-opacity", 0.8);
+      }
+    }
+
+    if (layer.type === "symbol") {
+      // Keep place, street and POI labels: the previous minimalist filter hid them.
+      try {
+        map.setPaintProperty(layer.id, "text-color", "#d7e0eb");
+        map.setPaintProperty(layer.id, "text-halo-color", "#090d13");
+        map.setPaintProperty(layer.id, "text-halo-width", 1.25);
+        map.setPaintProperty(layer.id, "text-halo-blur", 0.35);
+      } catch {
+        // Some symbol layers contain icons only and do not define text paint.
+      }
     }
   }
 }
@@ -81,7 +114,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     );
 
     map.on("load", () => {
-      applyMinimalWorldStyle(map);
+      applyDarkNavigationStyle(map);
       mapLoadedRef.current = true;
       setTilesLoading(false);
       setTilesLoaded(true);
