@@ -93,7 +93,12 @@ test("stores only explicit, non-sensitive memory requests", () => {
 test("canonical setup SQL and the deployed migration define the same private graph protections", async () => {
   const setupUrl = new URL("../../../../supabase/setup.sql", import.meta.url);
   const migrationUrl = new URL("../../../../supabase/migrations/20261116190037_create_private_ai_memory_graph.sql", import.meta.url);
-  const [setup, migration] = await Promise.all([readFile(setupUrl, "utf8"), readFile(migrationUrl, "utf8")]);
+  const generationMigrationUrl = new URL("../../../../supabase/migrations/20261118080000_add_ai_memory_generation_fence.sql", import.meta.url);
+  const [setup, migration, generationMigration] = await Promise.all([
+    readFile(setupUrl, "utf8"),
+    readFile(migrationUrl, "utf8"),
+    readFile(generationMigrationUrl, "utf8"),
+  ]);
   for (const sql of [setup, migration]) {
     assert.match(sql, /create table if not exists public\.ai_memory_nodes/i);
     assert.match(sql, /create table if not exists public\.ai_memory_edges/i);
@@ -103,7 +108,13 @@ test("canonical setup SQL and the deployed migration define the same private gra
     assert.match(sql, /revoke all on public\.ai_memory_edges from public, anon/i);
     assert.match(sql, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
   }
-});
+  for (const sql of [setup, generationMigration]) {
+    assert.match(sql, /create table if not exists public\.ai_memory_state/i);
+    assert.match(sql, /alter table public\.ai_memory_state enable row level security/i);
+    assert.match(sql, /revoke all on public\.ai_memory_state from public, anon/i);
+    assert.match(sql, /create trigger ai_memory_nodes_generation_guard/i);
+    assert.match(sql, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
+  }
 
 test("captures explicit corrections without storing sensitive personal data", () => {
   const correction = extractUserCorrectionNode("Correction: keep the chat scroll position unchanged");
