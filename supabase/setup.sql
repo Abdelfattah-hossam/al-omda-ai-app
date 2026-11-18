@@ -919,7 +919,7 @@ begin
   values (
     v_user_id,
     btrim(p_title),
-    left(btrim(p_request) || E'\n\nGenerated artifact: ' || p_filename || ' (' || p_mime_type || ', ' || p_file_size::text || ' bytes). Logged from chat; no additional AI execution was requested.', 10000),
+    left('Generated artifact: ' || p_filename || ' (' || p_mime_type || ', ' || p_file_size::text || ' bytes). Logged from chat; no additional AI execution was requested.' || E'\n\nUser request: ' || btrim(p_request), 10000),
     p_specialty,
     jsonb_build_array(
       jsonb_build_object(
