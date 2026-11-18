@@ -309,3 +309,15 @@ The authenticated `POST /v1/agent/cancel` endpoint accepts `{ "sessionId": "<ses
 - Resume the saved session with `POST /v1/agent/resume` after reviewing the checkpoint.
 
 The web chat captures the runtime URL and access token at the beginning of each run so a later settings edit cannot redirect the stop request to a different runtime. The Stop button sends the authenticated cancellation request without prematurely closing the event stream, allowing the final checkpoint status to reach the chat.
+
+
+### Local model provider diagnostics
+
+The authenticated runtime exposes:
+
+- `GET /v1/models/providers` — configured provider inventory (provider name, model, local/remote kind, whether a key is configured, purpose routing, and priority). It never returns API-key values.
+- `GET /v1/models/health` — checks configured OpenAI-compatible `/models` endpoints in parallel with a five-second per-provider timeout. It reports endpoint reachability, HTTP status, latency, whether the configured model appears in the model list, and up to 50 discovered model IDs. This is an endpoint/listing check, not a test completion, so a listed model is not a guarantee that generation will succeed. It does not follow redirects, so credentials are not forwarded to redirect targets.
+
+In the app, open **Agents → Model providers → Test providers** to inspect each configured provider. The regular chat's **Local Agent → Check connection** action also summarizes provider health.
+
+Additional provider entries are validated before use: HTTPS is required for remote endpoints; HTTP is allowed only for explicit loopback hosts; embedded credentials, query strings, fragments, duplicate names, and reserved `primary`/`fallback` names are rejected. Providers whose optional API-key environment variable is not configured are skipped. The local runtime URL configured in chat is restricted to loopback hosts.

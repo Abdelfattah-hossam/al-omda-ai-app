@@ -20,7 +20,8 @@ import { summarizeAgentToolFailures, type AgentToolFailureSummary } from "./agen
 import { createMcpToolAlias, mcpToolDisplayName, parseMcpToolAlias } from "./mcp-tool-alias.js";
 import { assertCredentialRedirectAllowed, shouldForwardHttpHeader } from "./http-request-safety.js";
 import { buildCommandEnvironment } from "./command-env.js";
-import { orderModelProvidersByPurpose, parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
+import { normalizeModelProviderBase, orderModelProvidersByPurpose, parseModelProviderConfig, type ModelPurpose, type ModelProviderConfig } from "./model-providers.js";
+import { inspectOpenAIModelList } from "./model-provider-health.js";
 import { inferModelPurpose } from "./model-purpose.js";
 import { clearProviderCooldown, getProviderCooldownRemainingMs, recordProviderFailure } from "./provider-health.js";
 import { analyzeSecurityHeaders } from "./security-recon.js";
@@ -883,12 +884,27 @@ function isLocalModelProvider(base: string): boolean {
 
 async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Promise<ModelProviderConfig[]> {
   const configuredProviders = await loadAdditionalModelProviders();
-  const all: ModelProviderConfig[] = [
+  const candidates: ModelProviderConfig[] = [
     { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all" as const], priority: 0 },
     ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all" as const], priority: 1000 },
-  ].filter((item, index, allItems) => item.base && item.model && allItems.findIndex((other) => other.base === item.base && other.model === item.model) === index);
-  return orderModelProvidersByPurpose(all, purpose);
+  ];
+  const normalized: ModelProviderConfig[] = [];
+  for (const provider of candidates) {
+    if (!provider.base || !provider.model) continue;
+    try {
+      const base = normalizeModelProviderBase(provider.base, provider.name);
+      if (normalized.some((existing) => existing.base === base && existing.model === provider.model)) continue;
+      normalized.push({ ...provider, base });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Invalid endpoint";
+      if (provider.name === "primary" || provider.name === "fallback") {
+        throw new Error("Invalid environment model provider " + provider.name + ": " + reason);
+      }
+      console.warn("[model provider config] Skipping invalid provider", provider.name, reason);
+    }
+  }
+  return orderModelProvidersByPurpose(normalized, purpose);
 }
 
 async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general", signal?: AbortSignal): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
@@ -1359,6 +1375,55 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "GET" && url.pathname === "/v1/models/providers") {
     const providers = await getModelProviders("all");
     send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: isLocalModelProvider(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key), purposes: item.purposes, priority: item.priority })) }); return;
+  }
+  if (req.method === "GET" && url.pathname === "/v1/models/health") {
+    const providers = await getModelProviders("all");
+    const checks = await Promise.all(providers.map(async (provider) => {
+      const started = Date.now();
+      try {
+        const headers = new Headers();
+        if (provider.key) headers.set("authorization", "Bearer " + provider.key);
+        const response = await fetch(provider.base.replace(/\/+$/, "") + "/models", {
+          method: "GET",
+          headers,
+          redirect: "manual",
+          signal: AbortSignal.timeout(5000),
+        });
+        let payload: unknown = null;
+        if (response.ok) {
+          try { payload = await response.json(); }
+          catch (error) { if (!(error instanceof SyntaxError)) throw error; }
+        }
+        const inspection = inspectOpenAIModelList(payload, provider.model);
+        return {
+          name: provider.name,
+          model: provider.model,
+          kind: isLocalModelProvider(provider.base) ? "local" : "remote",
+          reachable: true,
+          endpointAvailable: response.ok,
+          status: response.status,
+          latencyMs: Date.now() - started,
+          modelAvailable: inspection.modelAvailable,
+          discoveredModels: inspection.discoveredModels,
+          ...(!response.ok ? { error: response.status === 401 || response.status === 403 ? "authentication_failed" : "endpoint_rejected" } : {}),
+        };
+      } catch (error) {
+        return {
+          name: provider.name,
+          model: provider.model,
+          kind: isLocalModelProvider(provider.base) ? "local" : "remote",
+          reachable: false,
+          endpointAvailable: false,
+          status: null,
+          latencyMs: Date.now() - started,
+          modelAvailable: null,
+          discoveredModels: [],
+          error: error instanceof Error && error.name === "TimeoutError" ? "timeout" : "connection_failed",
+        };
+      }
+    }));
+    send(res, 200, { providers: checks });
+    return;
   }
   if (req.method === "GET" && url.pathname === "/v1/runtime/status") { send(res, 200, { activeRuns: activeAgentRuns }); return; }
   if (req.method === "POST" && url.pathname === "/v1/agent/delegate") {

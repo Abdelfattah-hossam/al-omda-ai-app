@@ -1125,3 +1125,73 @@ test("cancels the remainder of an approved tool batch after the in-flight tool f
     await rm(fixture.workspace, { recursive: true, force: true });
   }
 });
+
+
+test("model health diagnostics distinguish auth, redirects, invalid JSON, and timeouts", async () => {
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+  const providerServer = createHttpServer((req, res) => {
+    const pathname = new URL(req.url || "/", "http://127.0.0.1").pathname;
+    if (pathname === "/auth/v1/models") {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+    if (pathname === "/invalid-json/v1/models") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("not-json");
+      return;
+    }
+    if (pathname === "/redirect/v1/models") {
+      res.writeHead(302, { location: "/ok/v1/models" });
+      res.end();
+      return;
+    }
+    if (pathname === "/timeout/v1/models") {
+      timeoutTimer = setTimeout(() => { res.writeHead(200); res.end(JSON.stringify({ data: [{ id: "test-model" }] })); }, 6500);
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ data: [{ id: "test-model" }] }));
+  });
+  await new Promise<void>((resolve, reject) => {
+    providerServer.once("error", reject);
+    providerServer.listen(0, "127.0.0.1", () => resolve());
+  });
+  const providerPort = (providerServer.address() as AddressInfo).port;
+  const workspace = await mkdtemp(join(tmpdir(), "omda-provider-health-test-"));
+  const healthRuntime = await startRuntime({
+    OMDA_AGENT_WORKSPACE: workspace,
+    OMDA_AGENT_MODEL_BASE_URL: "",
+    OMDA_AGENT_MODEL_NAME: "",
+    OMDA_AGENT_FALLBACK_MODEL_BASE_URL: "",
+    OMDA_AGENT_FALLBACK_MODEL_NAME: "",
+  });
+  try {
+    await mkdir(join(workspace, ".omda"), { recursive: true });
+    const names = ["ok", "auth", "invalid-json", "redirect", "timeout"];
+    await writeFile(join(workspace, ".omda", "models.json"), JSON.stringify(names.map((name) => ({
+      name,
+      baseUrl: "http://127.0.0.1:" + providerPort + "/" + name + "/v1",
+      model: "test-model",
+    }))), "utf8");
+    const response = await fetch(healthRuntime.baseUrl + "/v1/models/health", {
+      headers: { authorization: "Bearer " + token },
+    });
+    assert.equal(response.status, 200);
+    const data = await response.json() as { providers: Array<{ name: string; reachable: boolean; endpointAvailable: boolean; status: number | null; modelAvailable: boolean | null; error?: string }> };
+    const byName = new Map(data.providers.map((provider) => [provider.name, provider]));
+    assert.equal(byName.get("ok")?.modelAvailable, true);
+    assert.equal(byName.get("auth")?.error, "authentication_failed");
+    assert.equal(byName.get("invalid-json")?.endpointAvailable, true);
+    assert.equal(byName.get("invalid-json")?.modelAvailable, null);
+    assert.equal(byName.get("redirect")?.status, 302);
+    assert.equal(byName.get("redirect")?.error, "endpoint_rejected");
+    assert.equal(byName.get("timeout")?.reachable, false);
+    assert.equal(byName.get("timeout")?.error, "timeout");
+  } finally {
+    if (timeoutTimer !== undefined) clearTimeout(timeoutTimer);
+    await stopRuntime(healthRuntime);
+    providerServer.closeAllConnections();
+    await new Promise<void>((resolve) => providerServer.close(() => resolve()));
+  }
+});

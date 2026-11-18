@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { orderModelProvidersByPurpose, parseModelProviderConfig } from "./model-providers.js";
+import { normalizeModelProviderBase, orderModelProvidersByPurpose, parseModelProviderConfig } from "./model-providers.js";
 
 test("parses multiple OpenAI-compatible and local model providers without exposing keys", () => {
   const providers = parseModelProviderConfig([
@@ -20,12 +20,17 @@ test("skips providers whose configured API key is not available", () => {
     { name: "local", baseUrl: "http://127.0.0.1:1234/v1", model: "local" },
   ], {});
   assert.deepEqual(providers.map((provider) => provider.name), ["local"]);
+  const duplicateAfterSkip = parseModelProviderConfig([
+    { name: "same", baseUrl: "https://missing.example/v1", model: "first", apiKeyEnv: "MISSING_KEY" },
+    { name: "same", baseUrl: "https://available.example/v1", model: "second" },
+  ], {});
+  assert.deepEqual(duplicateAfterSkip.map((provider) => provider.model), ["second"]);
 });
 
 test("rejects insecure remote endpoints, embedded credentials, and invalid config", () => {
   assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "http://remote.example/v1", model: "x" }], {}), /HTTPS/);
-  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://user:pass@example.com/v1", model: "x" }], {}), /HTTPS/);
-  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://example.com/v1?key=secret", model: "x" }], {}), /HTTPS/);
+  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://user:pass@example.com/v1", model: "x" }], {}), /credentials/);
+  assert.throws(() => parseModelProviderConfig([{ name: "bad", baseUrl: "https://example.com/v1?key=secret", model: "x" }], {}), /query parameters/);
   assert.throws(() => parseModelProviderConfig({ name: "not-array" }, {}), /JSON array/);
 });
 
@@ -68,4 +73,19 @@ test("supports separate provider pools for legal, engineering, medical, finance,
   for (const purpose of ["legal", "engineering", "medical", "finance", "business"] as const) {
     assert.deepEqual(orderModelProvidersByPurpose(providers, purpose).map((item) => item.name), [purpose, "global"]);
   }
+});
+
+
+test("normalizes environment model endpoints and rejects insecure remote transports", () => {
+  assert.equal(normalizeModelProviderBase("http://127.0.0.1:1234/v1/"), "http://127.0.0.1:1234/v1");
+  assert.equal(normalizeModelProviderBase("https://api.example/v1/"), "https://api.example/v1");
+  assert.throws(() => normalizeModelProviderBase("http://remote.example/v1", "primary"), /HTTPS/);
+  assert.throws(() => normalizeModelProviderBase("https://user:pass@example.com/v1", "primary"), /credentials/);
+});
+
+test("rejects duplicate names case-insensitively and reserved built-in provider names", () => {
+  const entry = { name: "custom", baseUrl: "https://custom.example/v1", model: "model" };
+  assert.throws(() => parseModelProviderConfig([entry, { ...entry, name: "CUSTOM", baseUrl: "https://other.example/v1" }], {}), /Duplicate or reserved/);
+  assert.throws(() => parseModelProviderConfig([{ ...entry, name: "primary" }], {}), /Duplicate or reserved/);
+  assert.throws(() => parseModelProviderConfig([{ ...entry, name: "Fallback" }], {}), /Duplicate or reserved/);
 });
