@@ -248,6 +248,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const lastSyncedConversationUpdatedAtRef = useRef("");
   const agentStreamControllerRef = useRef<AbortController | null>(null);
   const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
   const componentMountedRef = useRef(true);
