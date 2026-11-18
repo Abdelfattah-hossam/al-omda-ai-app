@@ -79,12 +79,16 @@ async function startRuntime(extraEnv: NodeJS.ProcessEnv = {}): Promise<RuntimeHa
 
 async function stopRuntime(handle: RuntimeHandle): Promise<void> {
   if (handle.child.exitCode === null) {
+    const exited = () => new Promise<void>((resolve) => {
+      if (handle.child.exitCode !== null) resolve();
+      else handle.child.once("exit", () => resolve());
+    });
     handle.child.kill("SIGTERM");
-    await Promise.race([
-      new Promise<void>((resolve) => handle.child.once("exit", () => resolve())),
-      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-    ]);
-    if (handle.child.exitCode === null) handle.child.kill("SIGKILL");
+    await Promise.race([exited(), new Promise<void>((resolve) => setTimeout(resolve, 3000))]);
+    if (handle.child.exitCode === null) {
+      handle.child.kill("SIGKILL");
+      await Promise.race([exited(), new Promise<void>((resolve) => setTimeout(resolve, 1000))]);
+    }
   }
   await rm(handle.workspace, { recursive: true, force: true });
 }
@@ -279,7 +283,7 @@ describe("local Agent runtime HTTP integration", () => {
 
 type MockModelHandle = { server: HttpServer; baseUrl: string; requests: number };
 async function startMockModel(
-  responder: (requestNumber: number, body: Record<string, unknown>) => { status?: number; payload?: unknown },
+  responder: (requestNumber: number, body: Record<string, unknown>) => { status?: number; payload?: unknown; delayMs?: number },
 ): Promise<MockModelHandle> {
   const server = createHttpServer(async (req, res) => {
     const chunks: Buffer[] = [];
@@ -296,8 +300,15 @@ async function startMockModel(
     res.setHeader("content-type", "text/event-stream");
     res.setHeader("cache-control", "no-cache");
     const payload = response.payload || { choices: [{ delta: { content: "Mock model completed the task." }, finish_reason: "stop" }] };
-    res.write("data: " + JSON.stringify(payload) + "\n\n");
-    res.end("data: [DONE]\n\n");
+    const writeStream = () => {
+      if (res.destroyed || res.writableEnded) return;
+      res.write("data: " + JSON.stringify(payload) + "\n\n");
+      res.end("data: [DONE]\n\n");
+    };
+    if (response.delayMs) {
+      const timer = setTimeout(writeStream, response.delayMs);
+      res.once("close", () => clearTimeout(timer));
+    } else writeStream();
   });
   const mock = { server, baseUrl: "", requests: 0 };
   await new Promise<void>((resolve, reject) => {
@@ -309,6 +320,7 @@ async function startMockModel(
 }
 
 async function stopMockModel(mock: MockModelHandle): Promise<void> {
+  mock.server.closeAllConnections();
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
 
@@ -599,6 +611,7 @@ async function postTo(handle: RuntimeHandle, path: string, body: unknown): Promi
     method: "POST",
     headers: { "content-type": "application/json", authorization: "Bearer " + token },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
   });
 }
 
@@ -663,7 +676,7 @@ rl.on("line", (line) => {
 });
 
 
-async function startMcpApprovalFixture(goal: string, holdToolCall = false, toolFunctionName = "mcp.call_tool") {
+async function startMcpApprovalFixture(goal: string, holdToolCall = false, toolFunctionName = "mcp.call_tool", toolCallCount = 1) {
   const workspace = await mkdtemp(join(tmpdir(), "omda-mcp-approval-test-"));
   const scriptPath = join(workspace, "mock-mcp-server.cjs");
   const callsPath = join(workspace, "mcp-calls.txt");
@@ -695,7 +708,7 @@ async function startMcpApprovalFixture(goal: string, holdToolCall = false, toolF
     servers: [{ name: "mock", command: process.execPath, args: [scriptPath], envFrom: ["MCP_TEST_CALLS", "MCP_TEST_ARGS", ...(holdToolCall ? ["MCP_TEST_GATE"] : [])] }],
   }));
   const model = await startMockModel((requestNumber) => requestNumber === 1
-    ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "mcp-write-call", type: "function", function: { name: toolFunctionName, arguments: JSON.stringify(toolFunctionName.startsWith("mcp_tool_") ? { content: goal } : { serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } }] }, finish_reason: "tool_calls" }] } }
+    ? { payload: { choices: [{ delta: { tool_calls: Array.from({ length: toolCallCount }, (_, index) => ({ index, id: toolCallCount === 1 ? "mcp-write-call" : "mcp-write-call-" + (index + 1), type: "function", function: { name: toolFunctionName, arguments: JSON.stringify(toolFunctionName.startsWith("mcp_tool_") ? { content: goal } : { serverName: "mock", toolName: "write_note", arguments: { content: goal } }) } })) }, finish_reason: "tool_calls" }] } }
     : { payload: { choices: [{ delta: { content: "MCP approval flow completed." }, finish_reason: "stop" }] } });
   const isolated = await startRuntime({
     OMDA_AGENT_WORKSPACE: workspace,
@@ -986,5 +999,129 @@ test("sessions.save cannot follow a planted predictable temporary-file symlink",
   } finally {
     await stopRuntime(isolated);
     await rm(outside, { recursive: true, force: true });
+  }
+});
+
+
+test("cancels an active model request, saves its checkpoint, and allows resume", async () => {
+  const model = await startMockModel((requestNumber) => requestNumber === 1
+    ? {
+        delayMs: 5000,
+        payload: { choices: [{ delta: { content: "This response must not be delivered after cancellation." }, finish_reason: "stop" }] },
+      }
+    : {
+        payload: { choices: [{ delta: { content: "The saved Agent session resumed successfully." }, finish_reason: "stop" }] },
+      });
+  const isolated = await startRuntime({
+    OMDA_AGENT_MODEL_BASE_URL: model.baseUrl,
+    OMDA_AGENT_MODEL_NAME: "cancel-test-model",
+  });
+  try {
+    const running = postTo(isolated, "/v1/agent/run", { sessionId: "cancel-active-session", goal: "Wait for the model response." });
+    const deadline = Date.now() + 3000;
+    while (model.requests === 0 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(model.requests, 1, "The mock model request should be active before cancellation.");
+
+    const cancelled = await postTo(isolated, "/v1/agent/cancel", { sessionId: "cancel-active-session" });
+    const cancelBody = await cancelled.json() as { status: string };
+    assert.equal(cancelled.status, 200);
+    assert.equal(cancelBody.status, "cancelling");
+
+    const runResponse = await running;
+    const runBody = await runResponse.text();
+    assert.equal(runResponse.status, 200, runBody + "\\n" + isolated.stderr);
+    const result = JSON.parse(runBody) as { status: string; sessionId: string; message: string };
+    assert.equal(result.status, "cancelled");
+    assert.equal(result.sessionId, "cancel-active-session");
+    assert.match(result.message, /checkpoint|resume/i);
+
+    const resumed = await postTo(isolated, "/v1/agent/resume", { sessionId: "cancel-active-session" });
+    const resumedBody = await resumed.text();
+    assert.equal(resumed.status, 200, resumedBody + "\\n" + isolated.stderr);
+    assert.equal((JSON.parse(resumedBody) as { status: string }).status, "completed");
+    assert.equal(model.requests, 2);
+  } finally {
+    await stopRuntime(isolated);
+    await stopMockModel(model);
+  }
+});
+
+test("cancels pending approvals without executing them and handles idle sessions", async () => {
+  const idleRuntime = await startRuntime();
+  try {
+    const idle = await postTo(idleRuntime, "/v1/agent/cancel", { sessionId: "never-started-session" });
+    assert.equal(idle.status, 200);
+    assert.equal((await idle.json() as { status: string }).status, "not_running");
+  } finally {
+    await stopRuntime(idleRuntime);
+  }
+
+  const fixture = await startMcpApprovalFixture("cancel before approval");
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 1);
+    await assert.rejects(readFile(fixture.callsPath, "utf8"), { code: "ENOENT" });
+
+    const cancelled = await postTo(fixture.isolated, "/v1/agent/cancel", { sessionId: pending.sessionId });
+    assert.equal(cancelled.status, 200);
+    assert.equal((await cancelled.json() as { status: string }).status, "cancelled");
+    await assert.rejects(readFile(fixture.callsPath, "utf8"), { code: "ENOENT" });
+
+    const staleApproval = await postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: pending.pending.map((call) => call.id),
+    });
+    assert.equal(staleApproval.status, 400);
+    assert.match((await staleApproval.json() as { error: string }).error, /no pending approval/i);
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
+  }
+});
+
+
+test("cancels the remainder of an approved tool batch after the in-flight tool finishes", async () => {
+  const fixture = await startMcpApprovalFixture("cancel the second approved tool", true, "mcp.call_tool", 2);
+  try {
+    const started = await postTo(fixture.isolated, "/v1/agent/run", { goal: "Use the MCP note tool twice" });
+    const startedBody = await started.text();
+    assert.equal(started.status, 200, startedBody + "\n" + fixture.isolated.stderr);
+    const pending = JSON.parse(startedBody) as { status: string; sessionId: string; pending: Array<{ id: string }> };
+    assert.equal(pending.status, "approval_required");
+    assert.equal(pending.pending.length, 2);
+
+    const continuing = postTo(fixture.isolated, "/v1/agent/continue", {
+      sessionId: pending.sessionId,
+      approvedCallIds: pending.pending.map((call) => call.id),
+    });
+    const deadline = Date.now() + 4000;
+    let firstToolStarted = false;
+    while (Date.now() < deadline) {
+      try { firstToolStarted = (await readFile(fixture.callsPath, "utf8")) === "1"; }
+      catch { /* Wait for the first approved tool to reach the mock server. */ }
+      if (firstToolStarted) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.equal(firstToolStarted, true, "The first approved tool should be in flight before cancellation.");
+
+    const cancelled = await postTo(fixture.isolated, "/v1/agent/cancel", { sessionId: pending.sessionId });
+    assert.equal(cancelled.status, 200);
+    assert.equal((await cancelled.json() as { status: string }).status, "cancelling");
+    await writeFileForMcp(fixture.gatePath, "release");
+
+    const continued = await continuing;
+    const continuedBody = await continued.text();
+    assert.equal(continued.status, 200, continuedBody + "\n" + fixture.isolated.stderr);
+    assert.equal((JSON.parse(continuedBody) as { status: string }).status, "cancelled");
+    assert.equal(await readFile(fixture.callsPath, "utf8"), "1", "The in-flight tool may finish, but the second approved tool must not start.");
+  } finally {
+    await stopRuntime(fixture.isolated);
+    await stopMockModel(fixture.model);
+    await rm(fixture.workspace, { recursive: true, force: true });
   }
 });

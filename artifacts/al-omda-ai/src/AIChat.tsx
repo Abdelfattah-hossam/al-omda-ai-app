@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "re
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
 import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
 import { useLocation } from "wouter";
-import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play } from "lucide-react";
+import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play, Square } from "lucide-react";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -210,6 +210,8 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [agentRuntimeUrl, setAgentRuntimeUrl] = useState("http://127.0.0.1:4318");
   const [agentToken, setAgentToken] = useState("");
   const [agentSessionId, setAgentSessionId] = useState(() => { try { return window.localStorage.getItem("omda-agent-session") || ""; } catch { return ""; } });
+  const [agentRunSessionId, setAgentRunSessionId] = useState("");
+  const [agentCancelling, setAgentCancelling] = useState(false);
   const [agentConnectionStatus, setAgentConnectionStatus] = useState("");
   const [agentSessions, setAgentSessions] = useState<Array<{ id: string; updatedAt: string; lastMessage: string; pending: boolean }>>([]);
   const [memory, setMemory] = useState("");
@@ -244,6 +246,18 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const sendingRef = useRef(false);
+  const agentStreamControllerRef = useRef<AbortController | null>(null);
+  const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
+  const componentMountedRef = useRef(true);
+  useEffect(() => {
+    componentMountedRef.current = true;
+    return () => {
+      componentMountedRef.current = false;
+      const config = agentRunConfigRef.current;
+      if (config) void fetch(config.endpoint + "/v1/agent/cancel", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + config.token }, body: JSON.stringify({ sessionId: config.sessionId }), keepalive: true }).catch(() => undefined);
+      agentStreamControllerRef.current?.abort();
+    };
+  }, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -744,15 +758,46 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     }
   };
 
+  const cancelLocalAgent = async () => {
+    const config = agentRunConfigRef.current;
+    if (!config || config.sessionId !== agentRunSessionId || agentCancelling) return;
+    setAgentCancelling(true);
+    try {
+      const response = await fetch(config.endpoint + "/v1/agent/cancel", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + config.token },
+        body: JSON.stringify({ sessionId: config.sessionId }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || (ar ? "تعذر إلغاء المهمة." : "Could not cancel the Agent run."));
+      setAgentConnectionStatus(data.status === "cancelling"
+        ? (ar ? "جارٍ إيقاف الوكيل وحفظ نقطة الاستكمال..." : "Stopping the Agent and saving its checkpoint...")
+        : data.status === "cancelled"
+          ? (ar ? "تم إلغاء الإجراءات المعلّقة ولم يتم تنفيذها." : "Pending actions were cancelled and were not executed.")
+          : (ar ? "المهمة انتهت بالفعل ولا توجد إجراءات معلّقة." : "The run already finished; no pending actions remain."));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (ar ? "تعذر إلغاء المهمة." : "Could not cancel the Agent run."));
+    } finally {
+      setAgentCancelling(false);
+    }
+  };
+
   const continueLocalAgent = async (messageIndex: number, approve: boolean) => {
     const target = messages[messageIndex];
     if (!target?.agentPending || !agentToken.trim() || loading) return;
+    const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
+    const token = agentToken.trim();
+    const sessionId = target.agentPending.sessionId;
+    const controller = new AbortController();
+    agentStreamControllerRef.current = controller;
+    agentRunConfigRef.current = { sessionId, endpoint, token };
+    setAgentRunSessionId(sessionId);
     setLoading(true); setError("");
     try {
-      const endpoint = agentRuntimeUrl.replace(/\/+$/, "");
       let streamedText = "";
       const startedAt = Date.now();
-      const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify({ action: "continue", sessionId: target.agentPending.sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }) });
+      const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ action: "continue", sessionId, approvedCallIds: approve ? target.agentPending.calls.map((call) => call.id) : [] }), signal: controller.signal });
       const data = await readAgentEventStream(response, (event) => {
         if (event.type === "token" && event.text) {
           streamedText += event.text;
@@ -764,11 +809,17 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       const pending = Array.isArray(data.pending) ? data.pending : [];
       const reply = typeof data.message === "string" ? data.message : (ar ? "استكمل الوكيل التنفيذ." : "The agent continued.");
       const updated = messages.map((item, index) => index === messageIndex ? { ...item, agentPending: undefined, content: item.content + (approve ? (ar ? "\n\nتمت الموافقة على الإجراءات المطلوبة." : "\n\nRequested actions were approved.") : (ar ? "\n\nتم رفض الإجراءات المطلوبة." : "\n\nRequested actions were denied.")) } : item);
-      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || target.agentPending.sessionId, calls: pending } } : {}) };
+      const resultMessage: ChatMessage = { role: "assistant", content: reply + (pending.length ? (ar ? "\n\nهناك إجراءات أخرى تحتاج موافقتك." : "\n\nMore actions need your approval.") : ""), provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId || sessionId, calls: pending } } : {}) };
       const completed = [...updated, resultMessage].slice(-100); setMessages(completed); await saveHistory(completed);
       if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
-    } catch (err) { setError(err instanceof Error ? err.message : (ar ? "فشل استكمال الوكيل." : "Agent continuation failed.")); }
-    finally { setLoading(false); }
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err instanceof Error ? err.message : (ar ? "فشل استكمال الوكيل." : "Agent continuation failed."));
+    } finally {
+      if (agentStreamControllerRef.current === controller) agentStreamControllerRef.current = null;
+      if (agentRunConfigRef.current?.sessionId === sessionId) agentRunConfigRef.current = null;
+      setLoading(false);
+      setAgentRunSessionId("");
+    }
   };
 
   const checkLocalAgentConnection = async () => {
@@ -812,8 +863,11 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     // create duplicate conversations or send the same request twice.
     sendingRef.current = true;
     setLoading(true);
+    let agentController: AbortController | null = null;
+    let agentRunSessionIdForRequest = "";
     try {
       const conversationId = activeConversationId || await createConversation();
+      if (!componentMountedRef.current) return;
       if (!conversationId) return;
       // If the previous attempt failed after its user turn was persisted,
       // retry that same draft without appending a duplicate user bubble.
@@ -827,6 +881,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       setMessages(next);
       setError("");
       await saveHistory(next.slice(-100), conversationId);
+      if (!componentMountedRef.current) return;
       const officeArtifactIntent = currentMode !== null || /(?:word|docx?|excel|xlsx|spreadsheet|workbook|power\s*point|powerpoint|pptx|وورد|مستند\s*وورد|ملف\s*وورد|إكسل|اكسيل|اكسل|شيت|ملف\s*اكسل|بوربوينت|عرض\s*تقديمي)/i.test(text);
       if (agentMode && !officeArtifactIntent) {
         if (imageForRequest) throw new Error(ar ? "وضع Agent المحلي لا يستقبل الصور حاليًا. أوقف وضع Agent لتحليل الصورة." : "Local Agent mode does not accept images yet. Turn it off to analyze the image.");
@@ -835,9 +890,16 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const priorContext = next.slice(-10, -1).map((item) => item.role + ": " + item.content).join("\n\n").slice(-12000);
         const goal = [priorContext, "Current user request: " + requestText].filter(Boolean).join("\n\n");
         const action = agentSessionId ? "resume" : "run";
+        const requestSessionId = agentSessionId || (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID().replace(/-/g, "") : Date.now().toString(36) + Math.random().toString(36).slice(2));
+        agentRunSessionIdForRequest = requestSessionId;
+        setAgentRunSessionId(requestSessionId);
+        const runtimeToken = agentToken.trim();
+        agentRunConfigRef.current = { sessionId: requestSessionId, endpoint, token: runtimeToken };
+        agentController = new AbortController();
+        agentStreamControllerRef.current = agentController;
         let streamedText = "";
         const startedAt = Date.now();
-        const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + agentToken.trim() }, body: JSON.stringify(agentSessionId ? { action, sessionId: agentSessionId, goal } : { action, goal }) });
+        const response = await fetch(endpoint + "/v1/agent/stream", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + runtimeToken }, body: JSON.stringify({ action, sessionId: requestSessionId, goal }), signal: agentController.signal });
         const data = await readAgentEventStream(response, (event) => {
           if (event.type === "token" && event.text) {
             streamedText += event.text;
@@ -852,8 +914,9 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
             setMessages([...next, { role: "assistant", content: ar ? "الوكيل يختار الأدوات وينفذ الخطوات..." : "Agent is selecting tools and executing steps...", provider: "Local Agent" }]);
           }
         }) as any;
+        if (!componentMountedRef.current) return;
         const pending = Array.isArray(data.pending) ? data.pending : [];
-        const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
+        const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : data.status === "cancelled" ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
         const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
@@ -962,8 +1025,11 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       if (fileForRequest) setPendingFile((current) => current?.name === fileForRequest.name && current?.text === fileForRequest.text ? null : current);
       if (data.usage) setUsage(data.usage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
+      if (!agentController?.signal.aborted) setError(err instanceof Error ? err.message : (ar ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
     } finally {
+      if (agentController && agentStreamControllerRef.current === agentController) agentStreamControllerRef.current = null;
+      if (agentRunConfigRef.current?.sessionId === agentRunSessionIdForRequest) agentRunConfigRef.current = null;
+      if (agentRunSessionIdForRequest) setAgentRunSessionId("");
       sendingRef.current = false;
       setLoading(false);
       void loadUsage();
@@ -1308,7 +1374,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
             </div>
             <textarea ref={inputRef} id="ai-chat-input" className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
             <button type="button" className={"ai-chat-mic-button" + (listening ? " is-listening" : "")} aria-label={listening ? copy.stop : copy.mic} title={listening ? copy.stop : copy.mic} onClick={toggleVoiceInput} disabled={!signedIn || loading || historyLoading}><Mic size={17}/></button>
-            {input.trim() || pendingImage ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
+            {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
           </div>
 
           <div className="ai-composer-footer">
