@@ -33,7 +33,7 @@ begin
     raise exception 'Chat artifact task log rate limit reached' using errcode = '54000';
   end if;
 
-  if p_title is null or char_length(btrim(p_title)) < 1 or char_length(p_title) > 160
+  if p_title is null or char_length(btrim(p_title)) < 1 or char_length(p_title) > 160 or p_title ~ '[[:cntrl:]]'
      or p_request is null or char_length(p_request) < 1 or char_length(p_request) > 10000
      or p_specialty is null or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
      or p_filename is null or char_length(p_filename) < 1 or char_length(p_filename) > 120
