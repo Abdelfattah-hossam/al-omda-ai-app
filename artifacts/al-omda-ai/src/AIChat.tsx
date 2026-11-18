@@ -1154,6 +1154,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         assistantMessage.appData || assistantMessage.sourceData
       ));
       if (hasGeneratedFile && assistantMessage.attachment) {
+        let taskLogCreated = Boolean(assistantMessage.taskId);
         try {
           const attachment = assistantMessage.attachment;
           const blobResponse = await fetch(attachment.url);
@@ -1183,6 +1184,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
               throw new Error(typeof taskData.error === "string" ? taskData.error : (ar ? "تعذر إنشاء سجل دائم للملف." : "Could not create a permanent task log for this file."));
             }
             artifactTaskId = taskData.id;
+            taskLogCreated = true;
             assistantMessage = { ...assistantMessage, taskId: taskData.id, taskTitle: taskData.title };
           }
 
@@ -1205,12 +1207,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           };
         } catch (artifactError) {
           const detail = artifactError instanceof Error ? artifactError.message : (ar ? "تعذر حفظ الملف." : "Could not save the file.");
-          assistantMessage = {
-            ...assistantMessage,
-            content: assistantMessage.content + (ar
-              ? "\n\nملاحظة: الملف الناتج ما زال مرفقًا بالمحادثة، لكن تعذر تسجيله أو حفظه في أصول المشروع: " + detail
-              : "\n\nNote: The generated file is still attached to this chat, but logging or saving it to Project Assets failed: " + detail),
-          };
+          const note = taskLogCreated
+            ? (ar ? "تم تسجيل الملف في سجل المهام، لكن تعذر حفظ نسخة في أصول المشروع: " : "The file is logged in Task History, but saving a copy to Project Assets failed: ")
+            : (ar ? "تعذر تسجيل الملف في سجل المهام أو حفظه في أصول المشروع: " : "The file could not be logged in Task History or saved to Project Assets: ");
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + "\n\n" + note + detail };
         }
       }
 
