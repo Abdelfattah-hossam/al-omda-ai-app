@@ -6,6 +6,7 @@ const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
+import { getLocalAgentOrigin } from './lib/local-agent-url';
 import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
 import {
   createTask as apiCreateTask,
@@ -1671,13 +1672,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }
   };
   const callLocalAgentRuntime = async (endpoint: string, method: "GET" | "POST" | "DELETE" = "GET", body?: Record<string, unknown>) => {
-    const base = new URL(localAgentUrl.trim());
-    if (base.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) {
-      throw new Error(isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
-    }
+    const base = getLocalAgentOrigin(localAgentUrl, isAr ? "عنوان الوكيل المحلي يجب أن يكون localhost أو 127.0.0.1." : "Local runtime URL must use localhost or 127.0.0.1.");
     if (!localAgentToken.trim()) throw new Error(isAr ? "أدخل مفتاح الاتصال المحلي." : "Enter the local runtime token.");
     return withLocalRuntimeTimeout(async (signal) => {
-      const response = await fetch(base.origin + endpoint, {
+      const response = await fetch(base + endpoint, {
         method,
         headers: { authorization: "Bearer " + localAgentToken.trim(), ...(body ? { "content-type": "application/json" } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {}),
