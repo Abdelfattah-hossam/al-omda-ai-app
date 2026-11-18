@@ -1041,7 +1041,72 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : data.status === "cancelled" ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(Array.isArray(data.toolFailures) && data.toolFailures.length ? { toolFailures: data.toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
         if (data.sessionId) { setAgentSessionId(data.sessionId); try { window.localStorage.setItem("omda-agent-session", data.sessionId); } catch {} }
-        const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
+        const hasGeneratedFile = Boolean(assistantMessage.attachment && (
+        assistantMessage.documentData || assistantMessage.spreadsheetData || assistantMessage.presentationData ||
+        assistantMessage.appData || assistantMessage.sourceData
+      ));
+      if (hasGeneratedFile && assistantMessage.attachment) {
+        try {
+          const attachment = assistantMessage.attachment;
+          const blobResponse = await fetch(attachment.url);
+          if (!blobResponse.ok) throw new Error(ar ? "تعذر قراءة الملف الناتج لحفظه." : "Could not read the generated file for workspace storage.");
+          const artifactBlob = await blobResponse.blob();
+          const mimeType = artifactBlob.type.split(";")[0].trim().toLowerCase();
+          if (!mimeType) throw new Error(ar ? "نوع الملف الناتج غير معروف." : "The generated file type could not be determined.");
+
+          let artifactTaskId = assistantMessage.taskId;
+          if (!artifactTaskId) {
+            const taskResponse = await fetch("/api/tasks/artifact", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                title: attachment.name.replace(/\.[^.]+$/, "").slice(0, 160),
+                request: text.slice(0, 10000),
+                specialty: currentProjectSpecialty ?? "assistant",
+                filename: attachment.name,
+                mimeType,
+                size: artifactBlob.size,
+                language: ar ? "ar" : "en",
+              }),
+            });
+            const taskData = await taskResponse.json().catch(() => ({}));
+            if (!taskResponse.ok || typeof taskData.id !== "string") {
+              throw new Error(typeof taskData.error === "string" ? taskData.error : (ar ? "تعذر إنشاء سجل دائم للملف." : "Could not create a permanent task log for this file."));
+            }
+            artifactTaskId = taskData.id;
+            assistantMessage = { ...assistantMessage, taskId: taskData.id, taskTitle: taskData.title };
+          }
+
+          const assetParams = new URLSearchParams({ filename: attachment.name, projectId: artifactTaskId });
+          const assetResponse = await fetch("/api/storage/assets?" + assetParams.toString(), {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "content-type": mimeType },
+            body: artifactBlob,
+          });
+          const assetData = await assetResponse.json().catch(() => ({}));
+          if (!assetResponse.ok) {
+            throw new Error(typeof assetData.error === "string" ? assetData.error : (ar ? "تعذر حفظ نسخة في أصول المشروع." : "Could not save a copy to project Assets."));
+          }
+          assistantMessage = {
+            ...assistantMessage,
+            content: assistantMessage.content + (ar
+              ? "\n\nتم تسجيل الملف تلقائيًا في **سجل المهام** وحفظ نسخة في **أصول المشروع**."
+              : "\n\nThe file was automatically added to **Task History** and saved in **Project Assets**."),
+          };
+        } catch (artifactError) {
+          const detail = artifactError instanceof Error ? artifactError.message : (ar ? "تعذر حفظ الملف." : "Could not save the file.");
+          assistantMessage = {
+            ...assistantMessage,
+            content: assistantMessage.content + (ar
+              ? "\n\nملاحظة: الملف الناتج ما زال مرفقًا بالمحادثة، لكن تعذر تسجيله أو حفظه في أصول المشروع: " + detail
+              : "\n\nNote: The generated file is still attached to this chat, but logging or saving it to Project Assets failed: " + detail),
+          };
+        }
+      }
+
+      const completed = [...next, assistantMessage].slice(-100); setMessages(completed); await saveHistory(completed, conversationId);
         setInput((current) => current === submittedDraft ? "" : current);
         if (fileForRequest) setPendingFile((current) => current?.name === fileForRequest.name && current?.text === fileForRequest.text ? null : current);
         return;
