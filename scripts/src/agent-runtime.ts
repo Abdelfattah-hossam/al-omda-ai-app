@@ -1004,7 +1004,8 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
           lastProvider = audit.provider;
           if (typeof audit.usage?.prompt_tokens === "number") totalPromptTokens += audit.usage.prompt_tokens;
           if (typeof audit.usage?.completion_tokens === "number") totalCompletionTokens += audit.usage.completion_tokens;
-          const issues = parseAuditIssues(typeof audit.message.content === "string" ? audit.message.content : "");
+          const auditText = typeof audit.message.content === "string" ? audit.message.content.trim() : "";
+          const issues = parseAuditIssues(auditText);
           if (issues.length) {
             onProgress?.({ type: "status", status: "quality_audit", phase: "refining" });
             const refined = await modelCompletion([
@@ -1015,14 +1016,18 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
             lastProvider = refined.provider;
             if (typeof refined.usage?.prompt_tokens === "number") totalPromptTokens += refined.usage.prompt_tokens;
             if (typeof refined.usage?.completion_tokens === "number") totalCompletionTokens += refined.usage.completion_tokens;
-            if (refined.message.finish_reason === "length") {
+            if (refined.message.finish_reason === "length" || typeof refined.message.content !== "string" || !refined.message.content.trim()) {
               finalContent += "\n\nThe quality-review correction was incomplete, so the original complete draft was retained.";
               state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
               onProgress?.({ type: "status", status: "quality_audit_refinement_incomplete" });
-            } else if (typeof refined.message.content === "string" && refined.message.content.trim()) {
+            } else {
               finalContent = refined.message.content.trim();
               state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
             }
+          } else if (!/^PASS$/i.test(auditText)) {
+            finalContent += "\n\nThe automated quality review did not return a clear pass; the original draft was retained.";
+            state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
+            onProgress?.({ type: "status", status: "quality_audit_unavailable" });
           }
         } catch (error) {
           if (signal?.aborted) {
@@ -1030,6 +1035,8 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
             onProgress?.({ type: "status", status: "cancelled" });
             return { status: "cancelled", sessionId: id, message: "The Agent was stopped during its final quality review. The original draft and latest checkpoint are saved.", turns: turn + 1 };
           }
+          finalContent += "\n\nThe automated quality review was unavailable; the original draft was retained.";
+          state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
           onProgress?.({ type: "status", status: "quality_audit_unavailable" });
         }
       }
