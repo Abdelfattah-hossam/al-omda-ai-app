@@ -29,17 +29,17 @@ function applyWorldOutlineStyle(map: MapLibreMap) {
 
     if (isBackground) map.setPaintProperty(layer.id, "background-color", "#ffffff");
     if (isWater) {
-      map.setPaintProperty(layer.id, "fill-color", "#f7f9fb");
-      map.setPaintProperty(layer.id, "fill-outline-color", "#e2e5e8");
+      map.setPaintProperty(layer.id, "fill-color", "#ffffff");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#d1d5db");
       map.setPaintProperty(layer.id, "fill-opacity", 1);
     }
     if (isLand) {
-      map.setPaintProperty(layer.id, "fill-color", "#ffffff");
-      map.setPaintProperty(layer.id, "fill-outline-color", "#e2e5e8");
+      map.setPaintProperty(layer.id, "fill-color", "#f3f4f6");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#d1d5db");
       map.setPaintProperty(layer.id, "fill-opacity", 0.98);
     }
     if (isBoundary || isCoastline) {
-      map.setPaintProperty(layer.id, "line-color", isBoundary ? "#c5cbd1" : "#e1e5e9");
+      map.setPaintProperty(layer.id, "line-color", "#d1d5db");
       map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.9 : 0.72);
       map.setPaintProperty(layer.id, "line-width", [
         "interpolate", ["linear"], ["zoom"],
@@ -88,15 +88,21 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       fitWorld();
       applyWorldOutlineStyle(map);
       // Geographic markers remain attached to their coordinates while panning and zooming.
-      const markerLocations: Array<[number, number]> = [
-        [-105, 42], [-65, -15], [20, 0], [95, 35], [135, -25],
+      const markerLocations: Array<{ coordinates: [number, number]; country: string; users: string }> = [
+        { coordinates: [-105, 42], country: "United States", users: "8,420" },
+        { coordinates: [-65, -15], country: "Brazil", users: "3,180" },
+        { coordinates: [20, 0], country: "Central Africa", users: "2,640" },
+        { coordinates: [105, 35], country: "China", users: "5,210" },
+        { coordinates: [135, -25], country: "Australia", users: "1,764" },
       ];
-      for (const coordinates of markerLocations) {
+      for (const location of markerLocations) {
         const markerElement = document.createElement("span");
         markerElement.className = "global-map-activity-dot";
-        markerElement.setAttribute("aria-hidden", "true");
+        markerElement.setAttribute("role", "img");
+        markerElement.setAttribute("aria-label", `${location.country}: ${location.users} active users`);
+        markerElement.title = `${location.country} · ${location.users} active users`;
         activityMarkers.push(
-          new Marker({ element: markerElement, anchor: "center" }).setLngLat(coordinates).addTo(map),
+          new Marker({ element: markerElement, anchor: "center" }).setLngLat(location.coordinates).addTo(map),
         );
       }
       setTilesLoading(false);
