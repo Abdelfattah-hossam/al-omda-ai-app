@@ -26,15 +26,15 @@ function applyWorldOutlineStyle(map: MapLibreMap) {
 
     map.setLayoutProperty(layer.id, "visibility", isBackground || isBoundary || isCoastline || isLand ? "visible" : "none");
 
-    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#080d15");
+    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#ffffff");
     if (isLand) {
-      map.setPaintProperty(layer.id, "fill-color", "#101a27");
-      map.setPaintProperty(layer.id, "fill-outline-color", "#344354");
+      map.setPaintProperty(layer.id, "fill-color", "#ffffff");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#e2e5e8");
       map.setPaintProperty(layer.id, "fill-opacity", 0.98);
     }
     if (isBoundary || isCoastline) {
-      map.setPaintProperty(layer.id, "line-color", isBoundary ? "#8290a1" : "#26394d");
-      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.78 : 0.58);
+      map.setPaintProperty(layer.id, "line-color", isBoundary ? "#c5cbd1" : "#e1e5e9");
+      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.9 : 0.72);
       map.setPaintProperty(layer.id, "line-width", [
         "interpolate", ["linear"], ["zoom"],
         0, 0.28, 2, 0.42, 5, 0.72, 9, 1,
