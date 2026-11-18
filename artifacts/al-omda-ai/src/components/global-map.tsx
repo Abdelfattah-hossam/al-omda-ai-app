@@ -73,6 +73,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     });
 
     map.on("load", () => {
+      map.fitBounds([[-180, -82], [180, 82]], { padding: { top: 8, bottom: 8, left: 10, right: 10 }, duration: 0 });
       applyWorldOutlineStyle(map);
       setTilesLoading(false);
       setTilesError(false);
