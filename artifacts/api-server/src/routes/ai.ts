@@ -13,7 +13,6 @@ import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
 import {
-  advanceMemoryGeneration,
   getOrCreateMemoryGeneration,
   readSupabaseJson,
   reportSupabaseError,
