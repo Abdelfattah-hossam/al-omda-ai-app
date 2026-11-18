@@ -98,3 +98,34 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
   assert.ok(validation.includes("new Set(plan.steps.map((step) => step.id)).size === plan.steps.length"));
   assert.ok(validation.includes('!("result" in step) && !("executedAt" in step) && !("executionStatus" in step) && !("executionError" in step)'));
 });
+
+
+test("chat-generated artifact task logging is owner-scoped and does not consume task-creation quota", async () => {
+  const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
+  const migrationUrl = new URL("../../supabase/migrations/20261118090205_create_ai_artifact_task_log.sql", import.meta.url);
+  const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
+  const storageAssetsUrl = new URL("../../artifacts/api-server/src/lib/storage-assets.ts", import.meta.url);
+  const chatUrl = new URL("../../artifacts/al-omda-ai/src/AIChat.tsx", import.meta.url);
+  const [setup, migration, workspaceRoute, storageAssets, chat] = await Promise.all([
+    readFile(setupUrl, "utf8"),
+    readFile(migrationUrl, "utf8"),
+    readFile(workspaceRouteUrl, "utf8"),
+    readFile(storageAssetsUrl, "utf8"),
+    readFile(chatUrl, "utf8"),
+  ]);
+  for (const sql of [setup, migration]) {
+    assert.ok(sql.includes("create or replace function public.create_ai_artifact_task"));
+    assert.ok(sql.includes("security definer"));
+    assert.ok(sql.includes("set search_path = pg_catalog"));
+    assert.ok(sql.includes("auth.uid()"));
+    assert.ok(sql.includes("revoke all on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) from public, anon, authenticated"));
+    assert.ok(sql.includes("grant execute on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) to authenticated"));
+    assert.ok(sql.includes("request like '%Generated artifact:%'"));
+    assert.ok(sql.includes("interval '1 hour'"));
+  }
+  assert.ok(workspaceRoute.includes('router.post("/tasks/artifact"'));
+  assert.ok(chat.includes("/api/tasks/artifact"));
+  assert.ok(chat.includes("/api/storage/assets"));
+  assert.ok(storageAssets.includes('tsx: "text/plain"'));
+  assert.ok(storageAssets.includes('js: "text/javascript"'));
+});

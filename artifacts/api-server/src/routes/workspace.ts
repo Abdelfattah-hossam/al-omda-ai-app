@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { isRevisionHistoryUnchanged } from "../lib/task-history.js";
+import { getWorkspaceAssetMimeType, MAX_WORKSPACE_ASSET_BYTES, sanitizeWorkspaceAssetName } from "../lib/storage-assets.js";
 import {
   UpdateProfileResponse,
   UpdateProfileBody,
@@ -322,6 +323,53 @@ router.post("/tasks", requireSameOrigin, async (req, res): Promise<void> => {
     });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not save the task.");
+  }
+});
+
+router.post("/tasks/artifact", requireSameOrigin, async (req, res): Promise<void> => {
+  const session = await sessionOrReport(req, res);
+  if (session === false) return;
+  if (!session) { res.status(401).json({ error: "Sign in to save a chat artifact in Task History." }); return; }
+
+  const filename = sanitizeWorkspaceAssetName(typeof req.body?.filename === "string" ? req.body.filename : "");
+  const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType.trim().toLowerCase() : "";
+  const size = Number(req.body?.size);
+  const title = (typeof req.body?.title === "string" ? req.body.title : filename.replace(/\.[^.]+$/, "")).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 160);
+  const request = typeof req.body?.request === "string" ? req.body.request.trim() : "";
+  const specialty = req.body?.specialty;
+  const language = req.body?.language === "en" ? "en" : "ar";
+  const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant"];
+
+  if (!filename || getWorkspaceAssetMimeType(filename) !== mimeType ||
+      !Number.isSafeInteger(size) || size < 1 || size > MAX_WORKSPACE_ASSET_BYTES ||
+      !title || title.length > 160 || !request || request.length > 10000 ||
+      !allowedSpecialties.includes(specialty)) {
+    res.status(400).json({ error: "Generated artifact metadata is invalid." });
+    return;
+  }
+
+  try {
+    const response = await supabaseFetch(
+      "/rest/v1/rpc/create_ai_artifact_task",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          p_title: title,
+          p_request: request,
+          p_specialty: specialty,
+          p_filename: filename,
+          p_mime_type: mimeType,
+          p_file_size: size,
+          p_language: language,
+        }),
+      },
+      session.accessToken,
+    );
+    const task = await readSupabaseJson<DbTask>(response);
+    res.status(201).json(mapTask(task));
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not add the generated file to Task History.");
   }
 });
 

@@ -1084,7 +1084,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       } else {
         const sourceData = createRequestedSourceArtifact(text, data.reply);
         if (sourceData) {
-          const blob = new Blob([sourceData.code], { type: "text/plain;charset=utf-8" });
+          const blob = createSourceBlob(sourceData);
           const url = URL.createObjectURL(blob);
           assistantMessage = { ...assistantMessage, attachment: { name: sourceData.name, url }, sourceData };
         }
@@ -1149,6 +1149,69 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\n\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
         }
       }
+      const hasGeneratedFile = Boolean(assistantMessage.attachment);
+      if (hasGeneratedFile && assistantMessage.attachment) {
+        let taskLogCreated = Boolean(assistantMessage.taskId);
+        try {
+          const attachment = assistantMessage.attachment;
+          const blobResponse = await fetch(attachment.url);
+          if (!blobResponse.ok) throw new Error(ar ? "تعذر قراءة الملف الناتج لحفظه." : "Could not read the generated file for workspace storage.");
+          const artifactBlob = await blobResponse.blob();
+          const mimeType = artifactBlob.type.split(";")[0].trim().toLowerCase();
+          if (!mimeType) throw new Error(ar ? "نوع الملف الناتج غير معروف." : "The generated file type could not be determined.");
+
+          let artifactTaskId = assistantMessage.taskId;
+          if (!artifactTaskId) {
+            const taskResponse = await fetch("/api/tasks/artifact", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                title: attachment.name.replace(/\.[^.]+$/, "").slice(0, 160),
+                request: text.slice(0, 10000),
+                specialty: currentProjectSpecialty ?? "assistant",
+                filename: attachment.name,
+                mimeType,
+                size: artifactBlob.size,
+                language: ar ? "ar" : "en",
+              }),
+            });
+            const taskData = await taskResponse.json().catch(() => ({}));
+            if (!taskResponse.ok || typeof taskData.id !== "string") {
+              throw new Error(typeof taskData.error === "string" ? taskData.error : (ar ? "تعذر إنشاء سجل دائم للملف." : "Could not create a permanent task log for this file."));
+            }
+            artifactTaskId = taskData.id;
+            taskLogCreated = true;
+            assistantMessage = { ...assistantMessage, taskId: taskData.id, taskTitle: taskData.title };
+          }
+
+          if (!artifactTaskId) throw new Error(ar ? "تعذر تحديد سجل المهمة لحفظ الملف." : "Could not resolve the task record for this file.");
+          const assetParams = new URLSearchParams({ filename: attachment.name, projectId: artifactTaskId });
+          const assetResponse = await fetch("/api/storage/assets?" + assetParams.toString(), {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "content-type": mimeType },
+            body: artifactBlob,
+          });
+          const assetData = await assetResponse.json().catch(() => ({}));
+          if (!assetResponse.ok) {
+            throw new Error(typeof assetData.error === "string" ? assetData.error : (ar ? "تعذر حفظ نسخة في أصول المشروع." : "Could not save a copy to project Assets."));
+          }
+          assistantMessage = {
+            ...assistantMessage,
+            content: assistantMessage.content + (ar
+              ? "\n\nتم تسجيل الملف تلقائيًا في **سجل المهام** وحفظ نسخة في **أصول المشروع**."
+              : "\n\nThe file was automatically added to **Task History** and saved in **Project Assets**."),
+          };
+        } catch (artifactError) {
+          const detail = artifactError instanceof Error ? artifactError.message : (ar ? "تعذر حفظ الملف." : "Could not save the file.");
+          const note = taskLogCreated
+            ? (ar ? "تم تسجيل الملف في سجل المهام، لكن تعذر حفظ نسخة في أصول المشروع: " : "The file is logged in Task History, but saving a copy to Project Assets failed: ")
+            : (ar ? "تعذر تسجيل الملف في سجل المهام أو حفظه في أصول المشروع: " : "The file could not be logged in Task History or saved to Project Assets: ");
+          assistantMessage = { ...assistantMessage, content: assistantMessage.content + "\n\n" + note + detail };
+        }
+      }
+
       const completed = [...next, assistantMessage].slice(-100);
       setMessages(completed);
       if (assistantMessage.appData) setPreviewingDocument(completed.length - 1);
@@ -1418,7 +1481,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
               {message.toolFailures.slice(0,6).map((failure,index)=><div key={failure.callId || index} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{failure.tool}</b>: {failure.message}</div>)}
             </div> : null}
             {message.agentPending && <div style={{display:"grid",gap:8,width:"100%",padding:12,border:"1px solid var(--border,#343a44)",borderRadius:10}}><strong>{ar ? "موافقة مطلوبة (" + message.agentPending.calls.length + ")" : "Approval required (" + message.agentPending.calls.length + ")"}</strong>{message.agentPending.calls.map((call)=><div key={call.id} style={{fontSize:12,overflowWrap:"anywhere"}}><b>{call.tool}</b><pre style={{whiteSpace:"pre-wrap",margin:"4px 0",color:"var(--muted,#9aa3af)"}}>{JSON.stringify(call.arguments,null,2)}</pre></div>)}<div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" className="button button-primary button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,true)}>{ar ? "موافقة وتنفيذ" : "Approve & execute"}</button><button type="button" className="button button-quiet button-small" disabled={loading || !agentToken.trim()} onClick={()=>void continueLocalAgent(index,false)}>{ar ? "رفض الإجراءات" : "Deny actions"}</button></div></div>}
-            {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId+"?focus=task-plan")} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المشروع في سجل المهام" : "Open project in Task History"}</button>}
+            {message.taskId && <button type="button" className="button button-primary button-small" onClick={()=>setLocation("/history/"+message.taskId+"?focus=task-plan")} style={{display:"inline-flex",alignItems:"center",gap:8}}><BriefcaseBusiness size={14}/>{ar ? "فتح المهمة في سجل المهام" : "Open task in Task History"}</button>}
             {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.sourceData || message.appData) && <div style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
               <button type="button" className="button button-primary button-small" onClick={()=>{const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(isIOS){window.open(message.attachment!.url,"_blank","noopener,noreferrer");return;}const link=document.createElement("a");link.href=message.attachment!.url;link.download=message.attachment!.name;document.body.appendChild(link);link.click();link.remove();}} style={{display:"inline-flex",alignItems:"center",gap:8}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):message.presentationData?(ar?"تحميل PowerPoint":"Download PowerPoint"):message.sourceData?(ar?"تحميل ملف الكود":"Download source file"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
               {message.appData && <button type="button" className="button button-quiet button-small" onClick={()=>{void navigator.clipboard.writeText(message.appData!.html).then(()=>{setCopiedIndex(index);window.setTimeout(()=>setCopiedIndex((current)=>current===index?null:current),1800);}).catch(()=>setError(ar?"تعذر نسخ كود HTML.":"Could not copy HTML source."));}} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم نسخ الكود":"Code copied"):(ar?"نسخ الكود":"Copy code")}</button>}

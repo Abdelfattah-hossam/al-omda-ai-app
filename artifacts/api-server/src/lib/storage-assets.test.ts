@@ -19,6 +19,11 @@ test("allows only the supported workspace file extensions", () => {
   assert.equal(getWorkspaceAssetMimeType("slides.pptx"), "application/vnd.openxmlformats-officedocument.presentationml.presentation");
   assert.equal(getWorkspaceAssetMimeType("project.zip"), "application/zip");
   assert.equal(getWorkspaceAssetMimeType("archive.exe"), null);
+  assert.equal(getWorkspaceAssetMimeType("app.tsx"), "text/plain");
+  assert.equal(getWorkspaceAssetMimeType("app.js"), "text/javascript");
+  assert.equal(getWorkspaceAssetMimeType("script.py"), "text/x-python");
+  assert.equal(getWorkspaceAssetMimeType("styles.scss"), "text/plain");
+  assert.equal(getWorkspaceAssetMimeType("drawing.svg"), "image/svg+xml");
 });
 
 test("scopes asset paths to exactly one authenticated user and project", () => {
