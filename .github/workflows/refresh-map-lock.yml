@@ -1,0 +1,35 @@
+name: Refresh map dependency lockfile
+
+on:
+  push:
+    branches:
+      - feat/realistic-apple-style-global-map
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.10.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refresh lockfile
+        run: pnpm install --no-frozen-lockfile
+      - name: Commit updated lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Lockfile is already up to date."
+          else
+            git commit -m "chore(map): refresh Leaflet dependency lockfile"
+            git push
+          fi
