@@ -1383,7 +1383,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       try {
         const headers = new Headers();
         if (provider.key) headers.set("authorization", "Bearer " + provider.key);
-        const response = await fetch(provider.base.replace(/\\/+$/, "") + "/models", {
+        const response = await fetch(provider.base.replace(/\/+$/, "") + "/models", {
           method: "GET",
           headers,
           redirect: "manual",
