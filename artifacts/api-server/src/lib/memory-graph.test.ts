@@ -94,10 +94,12 @@ test("canonical setup SQL and the deployed migration define the same private gra
   const setupUrl = new URL("../../../../supabase/setup.sql", import.meta.url);
   const migrationUrl = new URL("../../../../supabase/migrations/20261116190037_create_private_ai_memory_graph.sql", import.meta.url);
   const generationMigrationUrl = new URL("../../../../supabase/migrations/20261118084042_add_ai_memory_generation_fence.sql", import.meta.url);
-  const [setup, migration, generationMigration] = await Promise.all([
+  const searchPathMigrationUrl = new URL("../../../../supabase/migrations/20261118084323_harden_ai_memory_generation_search_path.sql", import.meta.url);
+  const [setup, migration, generationMigration, searchPathMigration] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
     readFile(generationMigrationUrl, "utf8"),
+    readFile(searchPathMigrationUrl, "utf8"),
   ]);
   for (const sql of [setup, migration]) {
     assert.match(sql, /create table if not exists public\.ai_memory_nodes/i);
@@ -114,7 +116,10 @@ test("canonical setup SQL and the deployed migration define the same private gra
     assert.match(sql, /revoke all on public\.ai_memory_state from public, anon/i);
     assert.match(sql, /create trigger ai_memory_nodes_generation_guard/i);
     assert.match(sql, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
+    assert.match(sql, /set search_path = pg_catalog/i);
   }
+  assert.match(searchPathMigration, /set search_path = pg_catalog/i);
+  assert.match(searchPathMigration, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
 });
 
 test("captures explicit corrections without storing sensitive personal data", () => {
