@@ -37,7 +37,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       zoom: GLOBAL_MAP_DEFAULT_ZOOM,
       minZoom: GLOBAL_MAP_MIN_ZOOM,
       maxZoom: GLOBAL_MAP_MAX_ZOOM,
-      attributionControl: true,
+      attributionControl: { compact: true },
       renderWorldCopies: true,
       scrollZoom: false,
       touchZoomRotate: true,
