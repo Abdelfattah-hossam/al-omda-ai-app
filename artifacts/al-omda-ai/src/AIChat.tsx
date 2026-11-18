@@ -1084,7 +1084,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       } else {
         const sourceData = createRequestedSourceArtifact(text, data.reply);
         if (sourceData) {
-          const blob = new Blob([sourceData.code], { type: "text/plain;charset=utf-8" });
+          const blob = createSourceBlob(sourceData);
           const url = URL.createObjectURL(blob);
           assistantMessage = { ...assistantMessage, attachment: { name: sourceData.name, url }, sourceData };
         }
