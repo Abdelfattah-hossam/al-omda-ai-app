@@ -7,6 +7,7 @@ import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
+import PptxGenJS from "pptxgenjs";
 import { previewOfficeDocument } from "./lib/office-preview";
 
 type Language = "ar" | "en";
@@ -683,15 +684,6 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   };
 
   const createPowerPointAttachment = async (data: PresentationData) => {
-    const primaryModuleUrl = "https://esm.sh/pptxgenjs@3.12.0";
-    const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.es.js";
-    let imported: any;
-    try { imported = await import(/* @vite-ignore */ primaryModuleUrl); }
-    catch {
-      try { imported = await import(/* @vite-ignore */ fallbackModuleUrl); }
-      catch { throw new Error(ar ? "تعذر تحميل مكتبة إنشاء PowerPoint المجانية. تحقق من الاتصال ثم أعد المحاولة." : "Could not load the free PowerPoint generator. Check your connection and retry."); }
-    }
-    const PptxGenJS = imported.default ?? imported;
     const pptx = new PptxGenJS();
     pptx.layout = "LAYOUT_WIDE";
     pptx.author = "AL OMDA AI";
