@@ -1185,6 +1185,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
             assistantMessage = { ...assistantMessage, taskId: taskData.id, taskTitle: taskData.title };
           }
 
+          if (!artifactTaskId) throw new Error(ar ? "تعذر تحديد سجل المهمة لحفظ الملف." : "Could not resolve the task record for this file.");
           const assetParams = new URLSearchParams({ filename: attachment.name, projectId: artifactTaskId });
           const assetResponse = await fetch("/api/storage/assets?" + assetParams.toString(), {
             method: "PUT",
