@@ -53,7 +53,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         detectRetina: true,
       },
     );
-    tileLayer.on("tileerror", () => setTilesError(true));
+    tileLayer.on("tileerror", () => { setTilesError(true); setTilesLoaded(false); });
     tileLayer.on("tileload", () => { setTilesLoaded(true); setTilesError(false); });
     tileLayer.addTo(map);
     tileLayerRef.current = tileLayer;
@@ -63,9 +63,10 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
 
     const resizeObserver = new ResizeObserver(() => map.invalidateSize({ pan: false }));
     resizeObserver.observe(element);
-    requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    const resizeFrameId = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
 
     return () => {
+      cancelAnimationFrame(resizeFrameId);
       resizeObserver.disconnect();
       mapRef.current = null;
       tileLayerRef.current = null;
@@ -84,7 +85,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
 
   return (
     <div className="global-map-canvas">
-      <div ref={elementRef} className="global-map-leaflet" role="application" aria-label={isAr ? "خريطة عالمية تفاعلية واقعية" : "Interactive realistic world map"} />
+      <div ref={elementRef} className="global-map-leaflet" role="region" aria-label={isAr ? "خريطة عالمية تفاعلية واقعية" : "Interactive realistic world map"} />
       <div className="global-map-floating-controls" aria-label={isAr ? "أدوات الخريطة" : "Map controls"}>
         <button type="button" onClick={zoomIn} aria-label={isAr ? "تكبير الخريطة" : "Zoom in"}>+</button>
         <button type="button" onClick={zoomOut} aria-label={isAr ? "تصغير الخريطة" : "Zoom out"}>−</button>
