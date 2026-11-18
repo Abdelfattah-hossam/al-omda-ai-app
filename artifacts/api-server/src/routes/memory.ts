@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { parseMemoryEdge, parseMemoryNode, type MemoryEdgeInput, type MemoryNodeInput } from "../lib/memory-graph.js";
 import {
+  advanceMemoryGeneration,
+  getOrCreateMemoryGeneration,
   readSupabaseJson,
   reportSupabaseError,
   requireSameOrigin,
@@ -58,6 +60,7 @@ router.delete("/ai/memory", requireSameOrigin, async (req, res): Promise<void> =
       res.status(401).json({ error: "Sign in to clear your private AI memory." });
       return;
     }
+    await advanceMemoryGeneration(session.user.id, session.accessToken);
     const response = await supabaseFetch("/rest/v1/ai_user_memory?user_id=eq." + encodeURIComponent(session.user.id), {
       method: "DELETE",
       headers: { Prefer: "return=minimal" },
@@ -116,7 +119,8 @@ router.post("/ai/memory/graph/nodes", requireSameOrigin, async (req, res): Promi
     }
     let nodes: MemoryNodeInput[];
     try {
-      const parsed = input.map((item: unknown) => ({ ...parseMemoryNode(item, session.user.id), updated_at: new Date().toISOString() }));
+      const memoryGeneration = await getOrCreateMemoryGeneration(session.user.id, session.accessToken);
+      const parsed = input.map((item: unknown) => ({ ...parseMemoryNode(item, session.user.id), memory_generation: memoryGeneration, updated_at: new Date().toISOString() }));
       nodes = [...new Map(parsed.map((node) => [node.node_type + ":" + node.normalized_label, node])).values()];
     } catch (error) {
       res.status(400).json({ error: error instanceof Error ? error.message : "Invalid memory node." });
@@ -176,6 +180,7 @@ router.delete("/ai/memory/graph", requireSameOrigin, async (req, res): Promise<v
       res.status(401).json({ error: "Sign in to clear your private knowledge graph." });
       return;
     }
+    await advanceMemoryGeneration(session.user.id, session.accessToken);
     const response = await supabaseFetch("/rest/v1/ai_memory_nodes?user_id=eq." + encodeURIComponent(session.user.id), {
       method: "DELETE",
       headers: { Prefer: "return=minimal" },
