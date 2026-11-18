@@ -1393,7 +1393,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authLoading && !authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics && liveUserAnalytics.growth_percent !== null ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
         </div>
         <div className="global-map-toolbar">
-          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
+          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة عالمية تفاعلية':'Minimal world map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
         <div className="global-map-viewport">
           <DeferredGlobalMap isAr={isAr}/>
