@@ -127,10 +127,10 @@ export function validateMessages(raw: unknown): ChatMessage[] | null {
           typeof call.tool !== "string" || !call.tool.trim() || call.tool.length > 120 ||
           !call.arguments || typeof call.arguments !== "object" || Array.isArray(call.arguments)) return null;
         const argumentsText = JSON.stringify(call.arguments);
-        if (argumentsText.length > 6000) return null;
+        if (argumentsText.length > 40000) return null;
         calls.push({ id: call.id, tool: call.tool, arguments: call.arguments as Record<string, unknown> });
       }
-      if (JSON.stringify(calls).length > 30000) return null;
+      if (JSON.stringify(calls).length > 200000) return null;
       saved.agentPending = { sessionId: pending.sessionId, calls };
     }
 
