@@ -1552,7 +1552,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="global-map-toolbar">
           <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
-        <div className="global-map-viewport" role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
+        <div className="global-map-viewport">
           <GlobalMap isAr={isAr}/>
         </div>
         <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع. تُحمّل بلاطات الخريطة من CARTO، وقد يتلقى مزودها عنوان IP وطلبات المناطق المعروضة.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates. Map tiles are loaded from CARTO, which may receive your IP address and requested map areas.'}</p>
