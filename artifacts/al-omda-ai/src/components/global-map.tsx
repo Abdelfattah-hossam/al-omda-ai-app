@@ -23,7 +23,11 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       attributionControl: true,
       scrollWheelZoom: false,
       worldCopyJump: true,
-      zoomSnap: 0.5,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+      touchZoom: true,
+      doubleClickZoom: true,
+      dragging: true,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 0.75,
     });
@@ -52,8 +56,8 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     };
   }, []);
 
-  const zoomIn = () => mapRef.current?.zoomIn();
-  const zoomOut = () => mapRef.current?.zoomOut();
+  const zoomIn = () => mapRef.current?.zoomIn(0.5);
+  const zoomOut = () => mapRef.current?.zoomOut(0.5);
   const reset = () => mapRef.current?.setView([24, 12], 2, { animate: true });
 
   return (
