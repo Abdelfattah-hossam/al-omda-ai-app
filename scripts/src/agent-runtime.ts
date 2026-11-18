@@ -1013,6 +1013,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       else delete state.pendingMcpTools;
       state.pendingToolCalls = approvalCalls;
       await saveAgentState(id, state);
+      if (signal?.aborted) return await finishCancelled(approvalCalls);
       return { status: "approval_required", sessionId: id, message: "The agent is requesting permission to change files, run a terminal command, call an MCP tool, or compare authenticated HTTP roles.", pending: approvalCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
     }
     for (let index = 0; index < calls.length; index += 1) {
@@ -1241,6 +1242,15 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
     if (state.pendingToolCalls?.length) {
+      if (signal.aborted) {
+        const cancelledCalls = state.pendingToolCalls;
+        delete state.pendingToolCalls;
+        delete state.pendingMcpTools;
+        for (const call of cancelledCalls) state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ cancelled: true, message: "This pending action was cancelled before approval and was not executed." }) });
+        await saveAgentState(id, state);
+        onProgress?.({ type: "status", status: "cancelled" });
+        return { status: "cancelled", sessionId: id, message: "Pending approvals were cancelled and no actions were executed." };
+      }
       return { status: "approval_required", sessionId: id, message: "This saved session has actions waiting for your approval.", pending: state.pendingToolCalls.map((call) => ({ id: call.id, tool: pendingToolDisplayName(call, state), arguments: JSON.parse(call.function.arguments || "{}") })), ...summarizeAgentToolFailures(state.toolFailures || []) };
     }
     state.toolFailures = [];
