@@ -1040,8 +1040,27 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
               state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
               onProgress?.({ type: "status", status: "quality_audit_refinement_incomplete" });
             } else {
-              finalContent = refined.message.content.trim();
-              state.messages[state.messages.length - 1] = { ...completion.message, content: finalContent };
+              const refinedContent = refined.message.content.trim();
+              const finalMessageIndex = state.messages.length - 1;
+              const candidateMessages = state.messages.map((message, index) =>
+                index === finalMessageIndex ? { ...completion.message, content: refinedContent } : message,
+              );
+              const candidateState = { ...state, messages: candidateMessages };
+              const candidateSize = JSON.stringify({ id, updatedAt: new Date().toISOString(), state: candidateState }).length;
+              if (candidateSize > 2 * 1024 * 1024) {
+                finalContent += qualityIncompleteNote;
+                const fallbackMessages = state.messages.map((message, index) =>
+                  index === finalMessageIndex ? { ...completion.message, content: finalContent } : message,
+                );
+                const fallbackState = { ...state, messages: fallbackMessages };
+                if (JSON.stringify({ id, updatedAt: new Date().toISOString(), state: fallbackState }).length <= 2 * 1024 * 1024) {
+                  state.messages = fallbackMessages;
+                }
+                onProgress?.({ type: "status", status: "quality_audit_refinement_incomplete" });
+              } else {
+                finalContent = refinedContent;
+                state.messages = candidateMessages;
+              }
             }
           } else if (!auditFinished || !/^PASS$/i.test(auditText)) {
             finalContent += qualityUnavailableNote;
