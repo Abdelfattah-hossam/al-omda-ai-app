@@ -50,3 +50,38 @@ test("preserves numeric spreadsheet cells, formulas, and multiple sheets", () =>
   assert.equal(messages[0].spreadsheetData?.formulas?.B3, "=SUM(B1:B2)");
   assert.equal(messages[0].spreadsheetData?.sheets?.[0].name, "Summary");
 });
+
+
+test("persists bounded pending Agent approvals for cross-device conversation sync", () => {
+  const messages = validateMessages([{
+    role: "assistant",
+    content: "Approval required.",
+    agentPending: {
+      sessionId: "session-123",
+      calls: [{ id: "call-1", tool: "files.write", arguments: { path: "report.txt", content: "approved draft" } }],
+    },
+  }]);
+  assert.ok(messages);
+  assert.equal(messages[0].agentPending?.sessionId, "session-123");
+  assert.equal(messages[0].agentPending?.calls[0].tool, "files.write");
+});
+
+test("rejects malformed, oversized, or unsafe pending Agent approval data", () => {
+  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "../bad", calls: [{ id: "1", tool: "files.write", arguments: {} }] } }]), null);
+  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [] } }]), null);
+  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: "not an object" }] } }]), null);
+  assert.ok(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(12001) } }] } }]));
+  assert.equal(validateMessages([{ role: "assistant", content: "pending", agentPending: { sessionId: "valid", calls: [{ id: "1", tool: "files.write", arguments: { content: "x".repeat(40001) } }] } }]), null);
+});
+
+
+test("persists tool warnings that do not include an optional call ID", () => {
+  const messages = validateMessages([{
+    role: "assistant",
+    content: "A tool returned a warning.",
+    toolFailures: [{ tool: "files.read", message: "Permission denied" }],
+  }]);
+  assert.ok(messages);
+  assert.equal(messages[0].toolFailures?.[0].tool, "files.read");
+  assert.equal(messages[0].toolFailures?.[0].callId, undefined);
+});

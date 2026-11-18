@@ -13,8 +13,10 @@ type SavedSpreadsheet = { title: string; columns: string[]; rows: Array<Array<st
 type SavedPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SavedSourceData = { title: string; name: string; language: string; code: string };
 type SavedAppData = { title: string; html: string };
-type SavedToolFailure = { callId: string; tool: string; message: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
+type SavedToolFailure = { callId?: string; tool: string; message: string };
+type SavedPendingCall = { id: string; tool: string; arguments: Record<string, unknown> };
+type SavedAgentPending = { sessionId: string; calls: SavedPendingCall[] };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: SavedAgentPending; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -113,7 +115,25 @@ export function validateMessages(raw: unknown): ChatMessage[] | null {
     if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 8000) return null;
     total += item.content.length;
     if (total > 200000) return null;
-    const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };
+    const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };    if (item.agentPending !== undefined) {
+      const pending = item.agentPending;
+      if (!pending || typeof pending !== "object" || Array.isArray(pending) ||
+        typeof pending.sessionId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(pending.sessionId) ||
+        !Array.isArray(pending.calls) || pending.calls.length < 1 || pending.calls.length > 20) return null;
+      const calls: SavedPendingCall[] = [];
+      for (const call of pending.calls) {
+        if (!call || typeof call !== "object" || Array.isArray(call) ||
+          typeof call.id !== "string" || !call.id.trim() || call.id.length > 120 ||
+          typeof call.tool !== "string" || !call.tool.trim() || call.tool.length > 120 ||
+          !call.arguments || typeof call.arguments !== "object" || Array.isArray(call.arguments)) return null;
+        const argumentsText = JSON.stringify(call.arguments);
+        if (argumentsText.length > 40000) return null;
+        calls.push({ id: call.id, tool: call.tool, arguments: call.arguments as Record<string, unknown> });
+      }
+      if (JSON.stringify(calls).length > 200000) return null;
+      saved.agentPending = { sessionId: pending.sessionId, calls };
+    }
+
     if (item.toolExecutionStatus !== undefined) {
       if (item.toolExecutionStatus !== "with_warnings" && item.toolExecutionStatus !== "no_tool_errors") return null;
       saved.toolExecutionStatus = item.toolExecutionStatus;
@@ -122,10 +142,10 @@ export function validateMessages(raw: unknown): ChatMessage[] | null {
       if (!Array.isArray(item.toolFailures) || item.toolFailures.length > 20) return null;
       const failures: SavedToolFailure[] = [];
       for (const failure of item.toolFailures) {
-        if (!failure || typeof failure.callId !== "string" || !failure.callId.trim() || failure.callId.length > 120 ||
+        if (!failure || (failure.callId !== undefined && (typeof failure.callId !== "string" || !failure.callId.trim() || failure.callId.length > 120)) ||
           typeof failure.tool !== "string" || !failure.tool.trim() || failure.tool.length > 120 ||
           typeof failure.message !== "string" || failure.message.length > 1000) return null;
-        failures.push({ callId: failure.callId, tool: failure.tool, message: failure.message });
+        failures.push({ ...(typeof failure.callId === "string" ? { callId: failure.callId } : {}), tool: failure.tool, message: failure.message });
       }
       if (JSON.stringify(failures).length > 30000) return null;
       saved.toolFailures = failures;
