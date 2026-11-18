@@ -222,6 +222,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [memoryGraphNodes, setMemoryGraphNodes] = useState<MemoryGraphNode[]>([]);
   const [memoryGraphEdges, setMemoryGraphEdges] = useState<MemoryGraphEdge[]>([]);
   const [memoryGraphLoadError, setMemoryGraphLoadError] = useState("");
+  const [memoryGraphLoading, setMemoryGraphLoading] = useState(false);
   const [memoryGraphActionError, setMemoryGraphActionError] = useState("");
   const [memoryGraphEdgeSource, setMemoryGraphEdgeSource] = useState("");
   const [memoryGraphEdgeTarget, setMemoryGraphEdgeTarget] = useState("");
@@ -423,26 +424,39 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       if (activeConversationId === id) { if (rest.length) await loadConversation(rest[0].id); else await createConversation(); }
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر حذف المحادثة." : "Could not delete conversation.")); }
   };
+  const loadMemoryGraph = async () => {
+    if (!signedIn) return false;
+    setMemoryGraphLoading(true);
+    setMemoryGraphLoadError("");
+    try {
+      const graphResponse = await fetch("/api/ai/memory/graph", { credentials: "same-origin", cache: "no-store" });
+      const graphData = await graphResponse.json().catch(() => null);
+      if (!graphResponse.ok || !graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.edges)) {
+        throw new Error(typeof graphData?.error === "string" ? graphData.error : (ar ? "تعذر تحميل سجل الحقائق. أعد المحاولة." : "Could not load confirmed memory. Please retry."));
+      }
+      setMemoryGraphNodes(graphData.nodes);
+      setMemoryGraphEdges(graphData.edges);
+      return true;
+    } catch (err) {
+      setMemoryGraphLoadError(err instanceof Error ? err.message : (ar ? "تعذر تحميل سجل الحقائق. أعد المحاولة." : "Could not load confirmed memory. Please retry."));
+      return false;
+    } finally {
+      setMemoryGraphLoading(false);
+    }
+  };
+
   const loadMemory = async () => {
     if (!signedIn) return;
     setMemoryLoading(true);
     setMemoryGraphActionError("");
     try {
-      const [response, graphResponse] = await Promise.all([
+      const [response] = await Promise.all([
         fetch("/api/ai/memory", { credentials: "same-origin", cache: "no-store" }),
-        fetch("/api/ai/memory/graph", { credentials: "same-origin", cache: "no-store" }),
+        loadMemoryGraph(),
       ]);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || (ar ? "تعذر تحميل ذاكرة العمدة." : "Could not load AI memory."));
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) throw new Error(data?.error || (ar ? "تعذر تحميل ذاكرة العمدة." : "Could not load AI memory."));
       setMemory(typeof data.memory === "string" ? data.memory : "");
-      const graphData = await graphResponse.json().catch(() => null);
-      if (graphResponse.ok && graphData && Array.isArray(graphData.nodes) && Array.isArray(graphData.edges)) {
-        setMemoryGraphNodes(graphData.nodes);
-        setMemoryGraphEdges(graphData.edges);
-        setMemoryGraphLoadError("");
-      } else {
-        setMemoryGraphLoadError(typeof graphData?.error === "string" ? graphData.error : (ar ? "تعذر تحميل سجل الحقائق. أعد المحاولة." : "Could not load confirmed memory. Please retry."));
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الذاكرة." : "Could not load memory."));
     } finally {
@@ -1478,12 +1492,12 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
              <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "ذاكرة العمدة الخاصة بك" : "Your AL OMDA memory"}</strong><span>{memory.length}/6000</span></div>
                <p>{ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة. الذاكرة محفوظة في حسابك." : "Save preferences, projects, and important decisions to your account memory."}</p>
                <textarea className="field ai-chat-memory-field" rows={4} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} disabled={memoryLoading || memorySaving} placeholder={ar ? "اكتب هنا ما تريد أن يتذكره العمدة..." : "What should AL OMDA remember?"}/>
-               <div className="ai-chat-settings-actions"><small>{memoryLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : ""}</small><button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || memoryGraphEdgeSaving || (!memory.trim() && memoryGraphNodes.length === 0 && !memoryGraphLoadError)}>{ar ? "حذف الذاكرة" : "Delete memory"}</button><button type="button" className="button button-primary button-small" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{ar ? "حفظ الذاكرة" : "Save memory"}</button></div>
+               <div className="ai-chat-settings-actions"><small>{memoryLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : ""}</small><button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || memoryGraphLoading || memoryGraphEdgeSaving || (!memory.trim() && memoryGraphNodes.length === 0 && !memoryGraphLoadError)}>{ar ? "حذف الذاكرة" : "Delete memory"}</button><button type="button" className="button button-primary button-small" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{ar ? "حفظ الذاكرة" : "Save memory"}</button></div>
              </section>
              <section className="ai-chat-settings-section">
                <div className="ai-chat-settings-section-title"><strong>{ar ? "الحقائق والتفضيلات المؤكدة" : "Confirmed memory graph"}</strong><span>{memoryGraphNodes.length} {ar ? "حقيقة" : "facts"} · {memoryGraphEdges.length} {ar ? "علاقة" : "relations"}</span></div>
                <p>{ar ? "يضيف العمدة هنا فقط ما تطلب صراحةً حفظه أو تصحيحاتك الواضحة. تُرفض كلمات المرور وبيانات الاتصال والمعلومات الشخصية الحساسة." : "Only facts you explicitly ask AL OMDA to remember or supported corrections are stored here. Passwords, contact details, and sensitive personal information are rejected."}</p>
-               {memoryGraphLoadError && <div className="notice-bar" role="alert" style={{marginBottom:10}}><span>{memoryGraphLoadError}</span><button type="button" className="button button-quiet button-small" onClick={()=>void loadMemory()} disabled={memoryLoading || memorySaving}>{ar ? "إعادة المحاولة" : "Retry"}</button></div>}
+               {memoryGraphLoadError && <div className="notice-bar" role="alert" style={{marginBottom:10}}><span>{memoryGraphLoadError}</span><button type="button" className="button button-quiet button-small" onClick={()=>void loadMemoryGraph()} disabled={memoryLoading || memoryGraphLoading || memorySaving}>{memoryGraphLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : (ar ? "إعادة المحاولة" : "Retry")}</button></div>}
                {memoryLoading ? <small className="muted">{ar ? "جارٍ تحميل سجل الذاكرة..." : "Loading confirmed memory..."}</small> : memoryGraphLoadError ? <small className="muted">{ar ? "لم يتم تحميل السجل؛ البيانات السابقة لم تُعتبر فارغة." : "The graph was not loaded; previous data has not been treated as empty."}</small> : memoryGraphNodes.length ? <div style={{display:"grid",gap:8}}>
                  {memoryGraphNodes.slice(0,30).map((node)=><div key={node.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:10}}>
                    <span className="status-chip">{node.node_type}</span><div style={{minWidth:0,flex:1}}><strong style={{fontSize:13,overflowWrap:"anywhere"}}>{node.label}</strong><small className="muted" style={{display:"block",marginTop:2}}>{node.source === "conversation_confirmed" ? (ar ? "تصحيح مؤكد" : "Confirmed correction") : (ar ? "حفظ صريح" : "Explicitly saved")}</small></div>
@@ -1515,7 +1529,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
                       {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
                     </button>
                   </div>}
-               </div> : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell AL OMDA “Remember that I prefer concise replies” to add a preference."}</small>}
+               </div> : memoryGraphLoadError ? null : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell AL OMDA “Remember that I prefer concise replies” to add a preference."}</small>}
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
           </div>
