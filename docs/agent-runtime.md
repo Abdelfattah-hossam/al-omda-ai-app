@@ -316,7 +316,7 @@ The web chat captures the runtime URL and access token at the beginning of each 
 The authenticated runtime exposes:
 
 - `GET /v1/models/providers` — configured provider inventory (provider name, model, local/remote kind, whether a key is configured, purpose routing, and priority). It never returns API-key values.
-- `GET /v1/models/health` — checks configured OpenAI-compatible `/models` endpoints in parallel with a five-second per-provider timeout. It reports endpoint reachability, HTTP status, latency, whether the configured model appears in the model list, and up to 50 discovered model IDs. It does not follow redirects, so credentials are not forwarded to redirect targets.
+- `GET /v1/models/health` — checks configured OpenAI-compatible `/models` endpoints in parallel with a five-second per-provider timeout. It reports endpoint reachability, HTTP status, latency, whether the configured model appears in the model list, and up to 50 discovered model IDs. This is an endpoint/listing check, not a test completion, so a listed model is not a guarantee that generation will succeed. It does not follow redirects, so credentials are not forwarded to redirect targets.
 
 In the app, open **Agents → Model providers → Test providers** to inspect each configured provider. The regular chat's **Local Agent → Check connection** action also summarizes provider health.
 
