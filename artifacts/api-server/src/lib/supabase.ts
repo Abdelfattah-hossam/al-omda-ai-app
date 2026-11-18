@@ -63,6 +63,13 @@ export function supabaseFetch(
 }
 
 
+export function requireInstalledMemoryGeneration(candidate: string, insertedRows: Array<{ generation?: string }>): string {
+  if (insertedRows[0]?.generation !== candidate) {
+    throw new Error("AI memory generation initialization lost a concurrent update. Retry the memory operation.");
+  }
+  return candidate;
+}
+
 export async function getOrCreateMemoryGeneration(userId: string, accessToken: string): Promise<string> {
   const query = new URLSearchParams({ select: "generation", user_id: "eq." + userId, limit: "1" });
   const readCurrent = async () => {
@@ -74,13 +81,13 @@ export async function getOrCreateMemoryGeneration(userId: string, accessToken: s
   if (existing) return existing;
 
   const candidate = crypto.randomUUID();
-  const createResponse = await supabaseFetch("/rest/v1/ai_memory_state?on_conflict=user_id", {
+  const createResponse = await supabaseFetch("/rest/v1/ai_memory_state?on_conflict=user_id&select=generation", {
     method: "POST",
-    headers: { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=minimal" },
+    headers: { "content-type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation" },
     body: JSON.stringify({ user_id: userId, generation: candidate, updated_at: new Date().toISOString() }),
   }, accessToken);
-  await readSupabaseJson<unknown>(createResponse);
-  return (await readCurrent()) ?? candidate;
+  const insertedRows = await readSupabaseJson<Array<{ generation?: string }>>(createResponse);
+  return requireInstalledMemoryGeneration(candidate, insertedRows);
 }
 
 export async function advanceMemoryGeneration(userId: string, accessToken: string): Promise<string> {
