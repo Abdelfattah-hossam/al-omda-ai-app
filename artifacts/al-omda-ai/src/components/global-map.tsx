@@ -9,7 +9,7 @@ import {
   GLOBAL_MAP_MIN_ZOOM,
   GLOBAL_MAP_TILE_URL,
   GLOBAL_MAP_ZOOM_STEP,
-  isValidGlobalMapZoom,
+  getGlobalMapZoomTarget,
 } from "./global-map-config";
 
 type GlobalMapProps = {
@@ -41,7 +41,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       touchZoom: true,
       doubleClickZoom: true,
       dragging: true,
-      maxBounds: [[-85, -180], [85, 180]],
+      maxBounds: [[-85, -540], [85, 540]],
       maxBoundsViscosity: 0.75,
     });
 
@@ -49,18 +49,28 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       GLOBAL_MAP_TILE_URL,
       {
         subdomains: "abcd",
-        maxZoom: 20,
+        maxZoom: GLOBAL_MAP_MAX_ZOOM,
         attribution: GLOBAL_MAP_ATTRIBUTION,
         detectRetina: true,
       },
     );
-    tileLayer.on("tileerror", () => setTilesError(true));
-    tileLayer.on("tileload", () => { setTilesLoaded(true); setTilesError(false); });
+    let successfulTiles = 0;
+    let failedTiles = 0;
+    tileLayer.on("loading", () => {
+      successfulTiles = 0;
+      failedTiles = 0;
+      setTilesLoaded(false);
+      setTilesError(false);
+    });
+    tileLayer.on("tileload", () => { successfulTiles += 1; });
+    tileLayer.on("tileerror", () => { failedTiles += 1; });
+    tileLayer.on("load", () => {
+      const allTilesFailed = successfulTiles === 0 && failedTiles > 0;
+      setTilesLoaded(successfulTiles > 0);
+      setTilesError(allTilesFailed);
+    });
     tileLayer.addTo(map);
     tileLayerRef.current = tileLayer;
-    const handleViewStart = () => { setTilesLoaded(false); setTilesError(false); };
-    map.on("movestart", handleViewStart);
-    map.on("zoomstart", handleViewStart);
 
     L.control.scale({ imperial: false, metric: true, position: "bottomleft" }).addTo(map);
     mapRef.current = map;
@@ -71,8 +81,6 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
 
     return () => {
       cancelAnimationFrame(resizeFrameId);
-      map.off("movestart", handleViewStart);
-      map.off("zoomstart", handleViewStart);
       resizeObserver.disconnect();
       mapRef.current = null;
       tileLayerRef.current = null;
@@ -82,11 +90,15 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
 
   const zoomIn = useCallback(() => {
     const map = mapRef.current;
-    if (map && isValidGlobalMapZoom(Math.min(GLOBAL_MAP_MAX_ZOOM, map.getZoom() + GLOBAL_MAP_ZOOM_STEP))) map.zoomIn(GLOBAL_MAP_ZOOM_STEP);
+    if (!map) return;
+    const target = getGlobalMapZoomTarget(map.getZoom(), 1);
+    if (target !== null) map.setZoom(target);
   }, []);
   const zoomOut = useCallback(() => {
     const map = mapRef.current;
-    if (map && isValidGlobalMapZoom(Math.max(GLOBAL_MAP_MIN_ZOOM, map.getZoom() - GLOBAL_MAP_ZOOM_STEP))) map.zoomOut(GLOBAL_MAP_ZOOM_STEP);
+    if (!map) return;
+    const target = getGlobalMapZoomTarget(map.getZoom(), -1);
+    if (target !== null) map.setZoom(target);
   }, []);
   const reset = useCallback(() => mapRef.current?.setView(GLOBAL_MAP_CENTER, GLOBAL_MAP_DEFAULT_ZOOM, { animate: true }), []);
   const retryTiles = useCallback(() => {
