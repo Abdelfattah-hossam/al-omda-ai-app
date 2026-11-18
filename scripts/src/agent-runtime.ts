@@ -986,6 +986,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     if (typeof completion.usage?.completion_tokens === "number") totalCompletionTokens += completion.usage.completion_tokens;
     state.messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
+    if (calls.length) ensureAssistantToolCallMessage(state.messages, calls);
     if (!calls.length) {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
@@ -1258,6 +1259,7 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
     if (state.pendingToolCalls?.length) {
+      ensureAssistantToolCallMessage(state.messages, state.pendingToolCalls);
       if (signal.aborted) {
         const cancelledCalls = state.pendingToolCalls;
         delete state.pendingToolCalls;
@@ -1281,6 +1283,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
     state.toolFailures = [];
     const pending = state.pendingToolCalls || [];
     if (!pending.length) throw new Error("This agent session has no pending approval request.");
+    ensureAssistantToolCallMessage(state.messages, pending);
     const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
     const imageQueue: McpImageObservation[] = [];
     // Persist the approval claim before performing side effects. The per-session
@@ -1343,6 +1346,7 @@ async function cancelAgent(body: Json): Promise<Json> {
     }
     const pending = state.pendingToolCalls || [];
     if (!pending.length) return { status: "not_running", sessionId: id, message: "No active run or pending approval exists for this session." };
+    ensureAssistantToolCallMessage(state.messages, pending);
     delete state.pendingToolCalls;
     delete state.pendingMcpTools;
     for (const call of pending) state.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify({ denied: true, cancelled: true, message: "The user cancelled this pending action. Do not retry it." }) });
