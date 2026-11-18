@@ -120,6 +120,8 @@ test("chat-generated artifact task logging is owner-scoped and does not consume 
     assert.ok(sql.includes("auth.uid()"));
     assert.ok(sql.includes("revoke all on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) from public, anon, authenticated"));
     assert.ok(sql.includes("grant execute on function public.create_ai_artifact_task(text, text, text, text, text, bigint, text) to authenticated"));
+    assert.ok(sql.includes("request like '%Generated artifact:%'"));
+    assert.ok(sql.includes("interval '1 hour'"));
   }
   assert.ok(workspaceRoute.includes('router.post("/tasks/artifact"'));
   assert.ok(chat.includes("/api/tasks/artifact"));
