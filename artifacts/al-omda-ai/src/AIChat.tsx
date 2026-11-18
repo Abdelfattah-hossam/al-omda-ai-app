@@ -1149,10 +1149,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\n\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
         }
       }
-      const hasGeneratedFile = Boolean(assistantMessage.attachment && (
-        assistantMessage.documentData || assistantMessage.spreadsheetData || assistantMessage.presentationData ||
-        assistantMessage.appData || assistantMessage.sourceData
-      ));
+      const hasGeneratedFile = Boolean(assistantMessage.attachment);
       if (hasGeneratedFile && assistantMessage.attachment) {
         let taskLogCreated = Boolean(assistantMessage.taskId);
         try {
