@@ -115,6 +115,7 @@ test("canonical setup SQL and the deployed migration define the same private gra
     assert.match(sql, /create trigger ai_memory_nodes_generation_guard/i);
     assert.match(sql, /revoke all on function public\.enforce_ai_memory_generation\(\) from public, anon, authenticated/i);
   }
+});
 
 test("captures explicit corrections without storing sensitive personal data", () => {
   const correction = extractUserCorrectionNode("Correction: keep the chat scroll position unchanged");
