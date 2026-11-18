@@ -30,6 +30,8 @@ import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpF
 import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
 import { getDelegationRunStatus, type DelegationTaskStatus } from "./agent-delegation-status.js";
+import { ensureAssistantToolCallMessage } from "./agent-history.js";
+import { buildToolCallingOptions, getModelTemperature, parseAuditIssues, shouldAuditFinalAnswer, inferAgentDomain, getProfessionalOperatingGuidance } from "./agent-quality.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
