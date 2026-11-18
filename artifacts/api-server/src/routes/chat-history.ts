@@ -13,7 +13,7 @@ type SavedSpreadsheet = { title: string; columns: string[]; rows: Array<Array<st
 type SavedPresentation = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SavedSourceData = { title: string; name: string; language: string; code: string };
 type SavedAppData = { title: string; html: string };
-type SavedToolFailure = { callId: string; tool: string; message: string };
+type SavedToolFailure = { callId?: string; tool: string; message: string };
 type SavedPendingCall = { id: string; tool: string; arguments: Record<string, unknown> };
 type SavedAgentPending = { sessionId: string; calls: SavedPendingCall[] };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: SavedAgentPending; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
@@ -142,10 +142,10 @@ export function validateMessages(raw: unknown): ChatMessage[] | null {
       if (!Array.isArray(item.toolFailures) || item.toolFailures.length > 20) return null;
       const failures: SavedToolFailure[] = [];
       for (const failure of item.toolFailures) {
-        if (!failure || typeof failure.callId !== "string" || !failure.callId.trim() || failure.callId.length > 120 ||
+        if (!failure || (failure.callId !== undefined && (typeof failure.callId !== "string" || !failure.callId.trim() || failure.callId.length > 120)) ||
           typeof failure.tool !== "string" || !failure.tool.trim() || failure.tool.length > 120 ||
           typeof failure.message !== "string" || failure.message.length > 1000) return null;
-        failures.push({ callId: failure.callId, tool: failure.tool, message: failure.message });
+        failures.push({ ...(typeof failure.callId === "string" ? { callId: failure.callId } : {}), tool: failure.tool, message: failure.message });
       }
       if (JSON.stringify(failures).length > 30000) return null;
       saved.toolFailures = failures;
