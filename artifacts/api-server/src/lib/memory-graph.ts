@@ -32,6 +32,7 @@ export type MemoryEdgeInput = {
 
 const BLOCKED_DETAIL_KEYS = /password|secret|token|api.?key|access.?key|credit.?card|bank.?account|passport|national.?id|ssn|medical|diagnos|health|religion|politic|sexual|ethnic|race|salary|income|bank.?account|account.?number|credit.?card|debit.?card|tax.?id|financial.?account|email|phone|mobile|home.?address|street.?address|date.?of.?birth|\bdob\b|gps|coordinates|latitude|longitude/i;
 const BLOCKED_SECRET_VALUE = /(?:sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{25,}|Bearer\s+[A-Za-z0-9._~-]{20,})/i;
+const BLOCKED_CREDENTIAL_TEXT = /\b(?:my\s+)?(?:password|passcode|api.?key|access.?token|bearer(?:\s+token)?)\s*(?:is\s+|[:=]\s*|\s+)\S+/i;
 const BLOCKED_CONTACT_TEXT = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:i live at|our home is|my home is|my home address is|my street address is|my phone(?: number)? is|my mobile is|my email is|my address is|my exact location is|my precise location is|my location is)\s*[:=]?\s*[^,;.!?]{3,120}|(?:عنواني|رقم هاتفي|تليفوني|موبايلي|بريدي الإلكتروني|بريدي الالكتروني|إيميلي|ايميلي|موقعي الدقيق)\s*[:=]?\s*[^،,؛;.!؟?]{3,120}/iu;
 const BLOCKED_FINANCIAL_TEXT = /(?:i earn|my salary|my income|salary is|income is|bank account|account number|credit card|debit card|tax id|financial account|wallet|راتبي|دخلي|حسابي البنكي|رقم حسابي|بطاقتي البنكية|بطاقة ائتمان)\s*[:=]?\s*[^,;.!?]{2,120}/iu;
 const BLOCKED_INSTRUCTION_TEXT = /ignore (?:all )?(?:previous|prior|system|developer) instructions|reveal (?:the )?(?:system|developer) prompt|bypass (?:safety|security|authentication|authorization)|disable authentication|remove access controls|exfiltrate|steal credentials|execute arbitrary shell commands/i;
@@ -54,6 +55,7 @@ function normalizeDetails(value: unknown, maxBytes: number): Record<string, unkn
   const serialized = JSON.stringify(details);
   if (new TextEncoder().encode(serialized).byteLength > maxBytes) throw new Error("Memory details exceed the allowed size.");
   if (BLOCKED_SECRET_VALUE.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
+  if (BLOCKED_CREDENTIAL_TEXT.test(serialized)) throw new Error("Memory details appear to contain a credential or access token.");
   if (BLOCKED_CONTACT_TEXT.test(serialized)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
   if (BLOCKED_FINANCIAL_TEXT.test(serialized)) throw new Error("Personal financial information must not be stored in AI memory.");
   if (BLOCKED_INSTRUCTION_TEXT.test(serialized)) throw new Error("Instruction-like prompt injection content must not be stored as memory.");
@@ -83,6 +85,7 @@ export function parseMemoryNode(input: unknown, userId: string): MemoryNodeInput
   const label = value.label.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (label.length > 160) throw new Error("Memory node label must contain 1 to 160 characters.");
   if (BLOCKED_SECRET_VALUE.test(label)) throw new Error("Memory node label appears to contain a credential or access token.");
+  if (BLOCKED_CREDENTIAL_TEXT.test(label)) throw new Error("Memory node label appears to contain a credential or access token.");
   if (BLOCKED_CONTACT_TEXT.test(label)) throw new Error("Personal contact details or precise location must not be stored in AI memory.");
   if (BLOCKED_FINANCIAL_TEXT.test(label)) throw new Error("Personal financial information must not be stored in AI memory.");
   if (BLOCKED_INSTRUCTION_TEXT.test(label)) throw new Error("Instruction-like prompt injection content must not be stored as memory.");
