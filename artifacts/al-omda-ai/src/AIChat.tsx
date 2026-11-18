@@ -10,6 +10,7 @@ import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignatu
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
 import { previewOfficeDocument } from "./lib/office-preview";
 import { parseModelProviderHealth, providerStatusLabel } from "./lib/model-provider-health";
+import { getLocalAgentOrigin } from "./lib/local-agent-url";
 
 type Language = "ar" | "en";
 type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]; rows: string[][] };
@@ -17,13 +18,6 @@ type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<str
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
 type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
-
-function getLocalAgentOrigin(value: string, errorMessage: string): string {
-  let base: URL;
-  try { base = new URL(value.trim()); } catch { throw new Error(errorMessage); }
-  if (!["http:", "https:"].includes(base.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(base.hostname)) throw new Error(errorMessage);
-  return base.origin + base.pathname.replace(/\/+$/, "");
-}
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
   if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
