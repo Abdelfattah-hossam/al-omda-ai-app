@@ -27,18 +27,18 @@ function applyMinimalWorldStyle(map: MapLibreMap) {
     const visible = isBackground || isBoundary || isWaterOutline || isWaterOrLand;
 
     map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
-    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#ffffff");
+    if (isBackground) map.setPaintProperty(layer.id, "background-color", "#080b10");
     if (isBoundary || isWaterOutline) {
-      map.setPaintProperty(layer.id, "line-color", "#111111");
-      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.7 : 0.48);
+      map.setPaintProperty(layer.id, "line-color", isBoundary ? "#aeb8c5" : "#354252");
+      map.setPaintProperty(layer.id, "line-opacity", isBoundary ? 0.82 : 0.72);
       map.setPaintProperty(layer.id, "line-width", [
         "interpolate", ["linear"], ["zoom"],
         0, 0.25, 2, 0.42, 5, 0.75, 9, 1.1,
       ]);
     }
     if (isWaterOrLand) {
-      map.setPaintProperty(layer.id, "fill-color", "#ffffff");
-      map.setPaintProperty(layer.id, "fill-outline-color", "#111111");
+      map.setPaintProperty(layer.id, "fill-color", sourceLayer === "water" ? "#080b10" : "#111821");
+      map.setPaintProperty(layer.id, "fill-outline-color", "#354252");
       map.setPaintProperty(layer.id, "fill-opacity", 1);
     }
   }
