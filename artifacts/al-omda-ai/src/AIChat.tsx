@@ -251,10 +251,15 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const lastSyncedConversationUpdatedAtRef = useRef("");
   const agentStreamControllerRef = useRef<AbortController | null>(null);
   const agentRunConfigRef = useRef<{ sessionId: string; endpoint: string; token: string } | null>(null);
-  useEffect(() => () => {
-    const config = agentRunConfigRef.current;
-    if (config) void fetch(config.endpoint + "/v1/agent/cancel", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + config.token }, body: JSON.stringify({ sessionId: config.sessionId }), keepalive: true }).catch(() => undefined);
-    agentStreamControllerRef.current?.abort();
+  const componentMountedRef = useRef(true);
+  useEffect(() => {
+    componentMountedRef.current = true;
+    return () => {
+      componentMountedRef.current = false;
+      const config = agentRunConfigRef.current;
+      if (config) void fetch(config.endpoint + "/v1/agent/cancel", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + config.token }, body: JSON.stringify({ sessionId: config.sessionId }), keepalive: true }).catch(() => undefined);
+      agentStreamControllerRef.current?.abort();
+    };
   }, []);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -876,6 +881,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
     let agentRunSessionIdForRequest = "";
     try {
       const conversationId = activeConversationId || await createConversation();
+      if (!componentMountedRef.current) return;
       if (!conversationId) return;
       // If the previous attempt failed after its user turn was persisted,
       // retry that same draft without appending a duplicate user bubble.
@@ -889,6 +895,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       setMessages(next);
       setError("");
       await saveHistory(next.slice(-100), conversationId);
+      if (!componentMountedRef.current) return;
       const officeArtifactIntent = currentMode !== null || /(?:word|docx?|excel|xlsx|spreadsheet|workbook|power\s*point|powerpoint|pptx|وورد|مستند\s*وورد|ملف\s*وورد|إكسل|اكسيل|اكسل|شيت|ملف\s*اكسل|بوربوينت|عرض\s*تقديمي)/i.test(text);
       if (agentMode && !officeArtifactIntent) {
         if (imageForRequest) throw new Error(ar ? "وضع Agent المحلي لا يستقبل الصور حاليًا. أوقف وضع Agent لتحليل الصورة." : "Local Agent mode does not accept images yet. Turn it off to analyze the image.");
@@ -900,8 +907,6 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const requestSessionId = agentSessionId || (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID().replace(/-/g, "") : Date.now().toString(36) + Math.random().toString(36).slice(2));
         agentRunSessionIdForRequest = requestSessionId;
         setAgentRunSessionId(requestSessionId);
-        setAgentSessionId(requestSessionId);
-        try { window.localStorage.setItem("omda-agent-session", requestSessionId); } catch {}
         const runtimeToken = agentToken.trim();
         agentRunConfigRef.current = { sessionId: requestSessionId, endpoint, token: runtimeToken };
         agentController = new AbortController();
@@ -923,6 +928,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
             setMessages([...next, { role: "assistant", content: ar ? "الوكيل يختار الأدوات وينفذ الخطوات..." : "Agent is selecting tools and executing steps...", provider: "Local Agent" }]);
           }
         }) as any;
+        if (!componentMountedRef.current) return;
         const pending = Array.isArray(data.pending) ? data.pending : [];
         const reply = typeof data.message === "string" && data.message ? data.message : data.status === "approval_required" ? (ar ? "الوكيل يحتاج موافقتك قبل تنفيذ بعض الإجراءات." : "The agent needs your approval before taking some actions.") : data.status === "limit_reached" ? (ar ? "وصل الوكيل إلى حد خطوات الأمان. أرسل متابعة لاستكمال الجلسة." : "The agent reached its safety turn limit. Send a follow-up to continue.") : data.status === "cancelled" ? (ar ? "تم إيقاف الوكيل وحفظ آخر نقطة وصل إليها. يمكنك استكمال الجلسة لاحقًا." : "The Agent was stopped and its last checkpoint was saved. You can resume this session later.") : (ar ? "انتهى تنفيذ الوكيل." : "The agent run finished.");
         const assistantMessage: ChatMessage = { role: "assistant", content: reply, provider: "Local Agent", ...(data.toolExecutionStatus ? { toolExecutionStatus: data.toolExecutionStatus } : {}), ...(Array.isArray(data.toolFailures) && data.toolFailures.length ? { toolFailures: data.toolFailures } : {}), ...(pending.length ? { agentPending: { sessionId: data.sessionId, calls: pending } } : {}) };
