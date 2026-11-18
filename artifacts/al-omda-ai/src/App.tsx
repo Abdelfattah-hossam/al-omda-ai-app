@@ -1612,7 +1612,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>
           <button type="button" className="active-user-map-export" onClick={() => {
             const value = authLoading || !authUser || !liveUserAnalytics ? '' : String(liveUserAnalytics.active_users_30d);
-            const csv = ['metric,value','active_users_last_30_days,' + value].join('\\n');
+            const csv = ['metric,value','active_users_last_30_days,' + value].join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
