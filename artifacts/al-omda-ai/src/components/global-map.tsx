@@ -54,7 +54,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     });
 
     const tileLayer = L.tileLayer(GLOBAL_MAP_TILE_URL, {
-      subdomains: "abcd",
+      subdomains: "abc",
       maxZoom: GLOBAL_MAP_MAX_ZOOM,
       attribution: GLOBAL_MAP_ATTRIBUTION,
       // The URL already supports CARTO's {r} suffix. Avoid Leaflet's extra
@@ -123,7 +123,14 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     setTilesError(false);
     setTilesLoaded(false);
     setTilesLoading(true);
-    tileLayerRef.current?.redraw();
+    const layer = tileLayerRef.current;
+    const map = mapRef.current;
+    if (layer && map) {
+      // Re-adding runs Leaflet's normal view initialization, which rounds
+      // fractional camera zoom to an integer tile zoom before requesting tiles.
+      layer.remove();
+      layer.addTo(map);
+    }
   }, []);
 
   return (
