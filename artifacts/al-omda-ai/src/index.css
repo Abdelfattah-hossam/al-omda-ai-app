@@ -7477,3 +7477,11 @@ body:has(.ai-chat-page){
   box-shadow:0 2px 12px rgba(25,40,55,.035)!important;
   color:#172033!important;
 }
+
+
+/* Five marker positions and spacing follow the supplied Active User reference. */
+.dot-north-america{left:27%;top:39%}
+.dot-south-america{left:36%;top:74%}
+.dot-africa{left:56%;top:64%}
+.dot-asia{left:70%;top:40%}
+.dot-australia{left:82%;top:80%}
