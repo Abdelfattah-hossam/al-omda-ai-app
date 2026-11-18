@@ -126,6 +126,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
         aria-label={isAr ? "خريطة العالم بحدود الدول" : "World map with country outlines"}
       />
 
+      <span className="global-map-map-note">{isAr ? "علامات توضيحية — لا تمثل مواقع المستخدمين الفعلية" : "Illustrative markers — not actual user locations"}</span>
       {tilesLoading && <div className="global-map-tile-loading" role="status">{isAr ? "جارٍ تحميل الخريطة…" : "Loading map…"}</div>}
       {tilesError && <div className="global-map-tile-error" role="status">{isAr ? "تعذر تحميل تفاصيل الخريطة" : "Map details could not be loaded"}</div>}
     </div>
