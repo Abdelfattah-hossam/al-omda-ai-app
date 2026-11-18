@@ -1295,6 +1295,7 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
   return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal) => {
     const state = await loadAgentState(id);
+    if (state.pendingToolCalls?.length) ensureAssistantToolCallMessage(state.messages, state.pendingToolCalls);
     if (typeof body.goal === "string" && body.goal.trim()) {
       if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
       state.messages.push({ role: "user", content: body.goal.trim() });
@@ -1309,7 +1310,6 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
     if (state.pendingToolCalls?.length) {
-      ensureAssistantToolCallMessage(state.messages, state.pendingToolCalls);
       if (signal.aborted) {
         const cancelledCalls = state.pendingToolCalls;
         delete state.pendingToolCalls;
