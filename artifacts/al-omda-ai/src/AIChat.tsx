@@ -339,9 +339,18 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
       setActiveConversationId(id);
       lastSyncedConversationUpdatedAtRef.current = typeof data.conversation.updated_at === "string" ? data.conversation.updated_at : "";
       const restored = Array.isArray(data.conversation.messages) ? data.conversation.messages.filter((item: any) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-100) as ChatMessage[] : [];
-      const existingBySignature = new Map(messagesRef.current.map((item) => [getChatMessageSyncSignature([item]), item]));
+      const existingBySignature = new Map<string, ChatMessage[]>();
+      if (id === activeConversationId) {
+        for (const item of messagesRef.current) {
+          const signature = getChatMessageSyncSignature([item]);
+          const matches = existingBySignature.get(signature) || [];
+          matches.push(item);
+          existingBySignature.set(signature, matches);
+        }
+      }
       const withFiles = await Promise.all(restored.map(async (item) => {
-        const existing = existingBySignature.get(getChatMessageSyncSignature([item]));
+        const matches = existingBySignature.get(getChatMessageSyncSignature([item]));
+        const existing = matches?.shift();
         if (existing?.attachment) return { ...item, attachment: existing.attachment };
         if (item.documentData) return { ...item, attachment: await createWordAttachment(item.documentData).catch(() => undefined) };
         if (item.spreadsheetData) return { ...item, attachment: await createExcelAttachment(item.spreadsheetData).catch(() => undefined) };
