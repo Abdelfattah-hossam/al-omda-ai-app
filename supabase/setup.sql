@@ -499,6 +499,7 @@ create table if not exists public.ai_memory_nodes (
 create index if not exists ai_memory_nodes_user_type_updated_idx
   on public.ai_memory_nodes (user_id, node_type, updated_at desc);
 alter table public.ai_memory_nodes enable row level security;
+revoke all on public.ai_memory_nodes from public, anon;
 grant select, insert, update, delete on public.ai_memory_nodes to authenticated;
 drop policy if exists "ai_memory_nodes_user_all" on public.ai_memory_nodes;
 create policy "ai_memory_nodes_user_all" on public.ai_memory_nodes
@@ -530,6 +531,7 @@ create index if not exists ai_memory_edges_source_fk_idx
 create index if not exists ai_memory_edges_target_fk_idx
   on public.ai_memory_edges (target_node_id, user_id);
 alter table public.ai_memory_edges enable row level security;
+revoke all on public.ai_memory_edges from public, anon;
 grant select, insert, update, delete on public.ai_memory_edges to authenticated;
 drop policy if exists "ai_memory_edges_user_all" on public.ai_memory_edges;
 create policy "ai_memory_edges_user_all" on public.ai_memory_edges
