@@ -69,7 +69,6 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
       touchPitch: false,
       maxPitch: 0,
       cooperativeGestures: false,
-      preserveDrawingBuffer: true,
     });
 
     map.on("load", () => {
