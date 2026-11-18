@@ -1329,7 +1329,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
     const isGlobalMap = route === '/finance/active-users';
-    const resetGlobalMap = () => { setGlobalMapZoom(1); setGlobalMapPan({x:0,y:0}); };
     const exportActiveUsers = () => {
       const isLive = Boolean(!authLoading && authUser && liveUserAnalytics);
       const rows = [
@@ -1551,35 +1550,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>
         </div>
         <div className="global-map-toolbar">
-          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة العالم':'World map'}</strong><small>{isAr?'اسحب للتحريك واستخدم الأزرار للتكبير':'Drag to pan · use controls to zoom'}</small></div>
-          <div className="global-map-controls">
-            <button type="button" className="icon-button" aria-label={isAr?'تكبير':'Zoom in'} onClick={()=>setGlobalMapZoom(value=>Math.min(2.4,value+.2))}><Plus size={16}/></button>
-            <button type="button" className="icon-button" aria-label={isAr?'تصغير':'Zoom out'} onClick={()=>setGlobalMapZoom(value=>Math.max(.8,value-.2))}><Minus size={16}/></button>
-            <button type="button" className="icon-button" aria-label={isAr?'إعادة ضبط الخريطة':'Reset map'} onClick={()=>{setGlobalMapZoom(1);setGlobalMapPan({x:0,y:0});}}><RotateCcw size={15}/></button>
-          </div>
+          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
-        <div className="global-map-viewport" onPointerDown={event=>{if(event.button!==0)return;globalMapDragRef.current={x:event.clientX,y:event.clientY,panX:globalMapPan.x,panY:globalMapPan.y};event.currentTarget.setPointerCapture(event.pointerId);}} onPointerMove={event=>{const drag=globalMapDragRef.current;if(!drag)return;setGlobalMapPan({x:drag.panX+event.clientX-drag.x,y:drag.panY+event.clientY-drag.y});}} onPointerUp={()=>{globalMapDragRef.current=null;}} onPointerCancel={()=>{globalMapDragRef.current=null;}} role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
-          <svg viewBox="0 0 1200 560" width="100%" height="100%" aria-label={isAr?'خريطة العالم دون مواقع مستخدمين':'World map without user-location markers'} style={{display:'block',minWidth:780,touchAction:'none',userSelect:'none'}}>
-            <defs>
-              <pattern id="dashboard-global-map-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="rgba(150,170,185,.12)" strokeWidth="1"/></pattern>
-              <linearGradient id="dashboard-global-land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d5dce0"/><stop offset="1" stopColor="#8998a1"/></linearGradient>
-            </defs>
-            <rect width="1200" height="560" fill="#111a25"/>
-            <g transform={`translate(${globalMapPan.x} ${globalMapPan.y}) translate(600 280) scale(${globalMapZoom}) translate(-600 -280)`}>
-              <rect width="1200" height="560" fill="url(#dashboard-global-map-grid)"/>
-              <g fill="url(#dashboard-global-land)" stroke="#edf2f4" strokeOpacity=".68" strokeWidth="2.2" strokeLinejoin="round" opacity=".88">
-                <path d="M110 130l45-40 56-10 34 16 30-7 45 25 17 38-23 28-5 36-29 28-13 45-31 25-17 51-28 22-19-18-7-42-26-34-8-49-29-35-12-48-27-31z"/>
-                <path d="M285 350l36 18 25 44-8 48-22 49-16 47-24-12-11-56-25-48 10-48z"/>
-                <path d="M520 130l45-25 61 6 37 26 47-3 31 28 45 6 35 31-8 32-38 13-24 38-33 7-25 34-29-10-25-42-37-7-25-34-42-12-27-39-35-14z"/>
-                <path d="M575 310l43-14 48 17 34 42-11 52-26 47-22 57-29 22-25-33-9-56-31-42 3-52z"/>
-                <path d="M745 135l58-30 79 6 54 29 52 6 55 39-17 37-47 10-27 34-41-7-29-34-47 5-31-30-45-3-31-32z"/>
-                <path d="M955 350l46-20 57 16 28 34-14 35-44 16-49-14-32-29z"/>
-                <path d="M435 142l-23-31 8-37 26-16 26 20-7 32z"/>
-                <path d="M1090 245l30-12 23 24-12 35-28 5-20-25z"/>
-              </g>
-            </g>
-            <text x="600" y="535" textAnchor="middle" fill="#8da2b4" fontSize="13">{isAr?'لا يتم جمع أو عرض مواقع المستخدمين الجغرافية':'User geolocations are not collected or displayed'}</text>
-          </svg>
+        <div className="global-map-viewport" role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
+          <GlobalMap isAr={isAr}/>
         </div>
         <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates.'}</p>
       </section>
