@@ -1514,7 +1514,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
                     <button type="button" className="button button-quiet button-small" onClick={()=>void addMemoryGraphEdge()} disabled={memoryGraphEdgeSaving || !memoryGraphEdgeSource || !memoryGraphEdgeTarget || memoryGraphEdgeSource===memoryGraphEdgeTarget}>
                       {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
                     </button>
-                  </div>
+                  </div>}
                </div> : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell AL OMDA “Remember that I prefer concise replies” to add a preference."}</small>}
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
