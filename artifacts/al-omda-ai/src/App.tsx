@@ -27,7 +27,7 @@ import {
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
-  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
+  X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, CircleHelp, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
 } from 'lucide-react';
 
 type DeferredGlobalMapProps = { isAr: boolean };
@@ -603,11 +603,39 @@ const specialtyDesc = (id:Specialty): TranslationKey => `desc_${id}` as Translat
 const specialtyLabel = (id:Specialty): TranslationKey => `label_${id}` as TranslationKey;
 const dateLabel = (date:string, lang:Language) => new Intl.DateTimeFormat(lang === 'ar' ? 'ar' : 'en', { month:'short', day:'numeric' }).format(new Date(date));
 
+const PAGE_GUIDANCE: Record<string, { ar: string; en: string }> = {
+  "/": { ar: "ابدأ من هنا لمتابعة المشاريع والمهام وحالة مساحة العمل. أرقام الزوار التجريبية تظهر للضيف فقط؛ بعد تسجيل الدخول نعرض البيانات الحقيقية المتاحة دون تخمين.", en: "Use this page to monitor projects, tasks, and workspace status. Sample visitor figures are guest-only; signed-in users see available real data, never guessed values." },
+  "/workbench": { ar: "اكتب المطلوب والنتيجة التي تريدها. راجع الخطة والمخرجات المتوقعة أولًا، ثم اعتمد التنفيذ. يمكنك بدء مشروع جديد دون إيقاف مشروع آخر.", en: "Describe the outcome you need. Review the plan and expected deliverables before approving execution. You can start a new project without stopping another." },
+  "/projects": { ar: "هنا تظهر المشاريع المحفوظة وحالة كل مشروع. افتح المشروع لمراجعة مراحله ومخرجاته، أو ابدأ مشروعًا جديدًا من زر مشروع جديد.", en: "Find saved projects and their status here. Open a project to review its stages and deliverables, or start another with New Project." },
+  "/pipeline": { ar: "تابع انتقال المشاريع بين المراجعة والتنفيذ والاكتمال. لا تنتقل مرحلة إلى التنفيذ قبل اعتمادها وحفظ نتيجة المرحلة السابقة.", en: "Track projects through review, execution, and completion. A stage cannot run until it is approved and the previous stage's result is saved." },
+  "/assets": { ar: "هذه مساحة الملفات الناتجة عن المشاريع. افتح المعاينة قبل التنزيل، وتأكد من أن حالة الملف مكتملة؛ لا تعتبر نص المحادثة ملفًا قابلًا للتنزيل.", en: "This is the workspace for project files. Preview before downloading and check that the file is complete; chat text alone is not a downloadable file." },
+  "/history": { ar: "استخدم السجل للعثور على المهام السابقة ومراجعة نتائجها وتصدير البيانات المتاحة. المشروع المتوقف يحتفظ بآخر نقطة تنفيذ محفوظة.", en: "Use history to find previous tasks, review their results, and export available data. A stopped project retains its last saved execution checkpoint." },
+  "/agents": { ar: "اختر التخصص أو الوكيل المناسب للمهمة. الأدوات الخارجية والعمليات المؤثرة تحتاج موافقتك، والوكلاء لا يدّعون نجاح خطوة لم تُنفذ.", en: "Choose the specialist suited to the task. External tools and consequential actions require your approval; agents must not claim a step succeeded unless it ran." },
+  "/ai": { ar: "المحادثة للأسئلة والشرح والطلبات المباشرة. آخر رسالة منك هي التي تحدد المقصود؛ التحية أو السؤال العادي لا ينشئ ملفًا. اطلب حفظ معلومة صراحةً إذا أردت إضافتها إلى الذاكرة.", en: "Use chat for questions, explanations, and direct requests. Your latest message determines intent; a greeting or ordinary question does not create a file. Explicitly ask to save a fact if you want it in memory." },
+  "/ai/usage": { ar: "راجع الاستهلاك والحدود والذاكرة من هذه الصفحة. إذا لم تتوفر بيانات الحساب، يجب أن تظهر غير متاحة بدل اختراع رقم.", en: "Review usage, limits, and memory here. If account data is unavailable, it should be shown as unavailable rather than replaced with an invented number." },
+  "/profile": { ar: "عدّل بيانات الحساب واللغة والمظهر وإعدادات الخصوصية. لا تضع مفاتيح API أو كلمات المرور داخل المحادثة؛ استخدم حقول الربط الآمنة عند توفرها.", en: "Manage account details, language, appearance, and privacy settings. Never paste API keys or passwords into chat; use secure connection settings when available." },
+  "/finance/sales-overview": { ar: "تعرض هذه الصفحة مؤشرات المبيعات عند ربط مصدر معاملات حقيقي. لا تُعرض إيرادات أو أرباح تجريبية على أنها أرقام فعلية.", en: "This page displays sales metrics only after a real transaction source is connected. Sample revenue or profit must never appear as real data." },
+  "/finance/sales-distribution": { ar: "يتطلب توزيع المبيعات بيانات معاملات وقنوات موثقة. عند عدم وجود مصدر متصل، تظل الصفحة موضحة لحالة عدم الربط.", en: "Sales distribution requires verified transaction and channel data. When no source is connected, the page remains clearly marked as not connected." },
+  "/finance/payment-gateways": { ar: "لا تظهر بوابة دفع كمتصلة إلا بعد إعداد مصادقة صحيحة واختبارها. لا تشارك المفاتيح السرية في الشات.", en: "A payment gateway is connected only after valid authentication and verification. Do not share secret keys in chat." },
+  "/finance/active-users": { ar: "تعرض الأرقام الحقيقية من نشاط الحسابات المصرح به. الخريطة توضح النطاق الجغرافي فقط؛ التطبيق لا يجمع إحداثيات المستخدمين ولا يخترع علامات مواقع.", en: "Real figures come from authorized account activity. The map is geographic context only; the app does not collect user coordinates or invent location markers." },
+  "/collaboration/contacts": { ar: "تظهر جهات الاتصال بعد ربط دفتر عناوين حقيقي ومنح الإذن. لا تُنشأ أسماء أو أرقام أشخاص افتراضيين.", en: "Contacts appear only after a real address book is connected and authorized. No fictional names or phone numbers are created." },
+  "/collaboration/calendar": { ar: "تظهر المواعيد بعد ربط تقويم فعلي. لن يتم الادعاء بحفظ اجتماع أو إرساله ما لم يؤكد مزود التقويم ذلك.", en: "Events appear after a real calendar is connected. A meeting is not claimed as saved or sent unless the calendar provider confirms it." },
+  "/collaboration/email": { ar: "تحتاج قراءة الرسائل وإرسالها إلى ربط صندوق بريد ومنح الصلاحيات. لا يتم الادعاء بإرسال رسالة دون تأكيد المزود.", en: "Reading and sending email requires a connected mailbox and granted permissions. No message is claimed as sent without provider confirmation." },
+  "/collaboration/tickets": { ar: "تحتاج التذاكر إلى نظام دعم متصل أو تخزين فعلي داخل التطبيق. لا تعرض الصفحة تذاكر تجريبية على أنها حقيقية.", en: "Tickets require a connected support system or real in-app storage. Sample tickets are never presented as real." },
+  "/system/security": { ar: "تعرض الصفحة سجلات التدقيق من مصدر موثوق فقط. عند عدم تفعيل المصدر، ستظهر حالة عدم الربط بدل تنبيهات مصطنعة.", en: "Audit logs appear only from a trusted source. If no source is enabled, the page shows not connected instead of synthetic alerts." },
+};
+function getPageGuidance(route: string, isAr: boolean): string {
+  const key = route.startsWith("/history/") ? "/history" : route;
+  const guide = PAGE_GUIDANCE[key] ?? PAGE_GUIDANCE["/"];
+  return isAr ? guide.ar : guide.en;
+}
+
 function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
   const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
@@ -685,6 +713,7 @@ function App() {
     const status = new URLSearchParams(window.location.search).get('status');
     setHistoryStatusFilter(status === 'review' || status === 'approved' || status === 'stopped' ? status : 'all');
   }, [location]);
+  useEffect(() => { setPageHelpOpen(false); }, [location]);
   const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
@@ -2709,6 +2738,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>}
         <div className="top-actions">
           {showWorkspaceHeader && <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>}
+          <button type="button" className="icon-button" onClick={()=>setPageHelpOpen(value=>!value)} aria-label={isAr?"مساعدة الصفحة":"Page help"} title={isAr?"مساعدة الصفحة":"Page help"} aria-expanded={pageHelpOpen} data-testid="button-page-help"><CircleHelp size={16}/></button>
           {showWorkspaceHeader && <div className="topbar-quick-actions">
             <Link href={navigationHref("/ai")} className="button button-quiet topbar-quick-link" aria-label={t('aiChat')}><Bot size={14}/><span>{t('aiChat')}</span></Link>
             <Link href={focusedHref("/workbench","request-input")} className="button button-primary topbar-quick-link" aria-label={t('newRequest')}><Plus size={14}/><span>{t('newRequest')}</span></Link>
@@ -2716,6 +2746,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
           <Link href={focusedHref("/profile","profile-account-card")} className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
         </div></header>
+      {pageHelpOpen && <section className="panel panel-pad" role="region" aria-label={isAr?"مساعدة الصفحة الحالية":"Current page help"} style={{margin:"12px 20px 0",display:"grid",gap:8}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><strong>{isAr?"كيف تستخدم هذه الصفحة؟":"How to use this page"}</strong><button type="button" className="icon-button" onClick={()=>setPageHelpOpen(false)} aria-label={isAr?"إغلاق المساعدة":"Close help"}><X size={15}/></button></div><p style={{margin:0,lineHeight:1.8,color:"var(--text-secondary)"}}>{getPageGuidance(path,isAr)}</p></section>}
       <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
     </main>
     {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
