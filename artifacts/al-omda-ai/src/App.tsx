@@ -1355,10 +1355,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="global-map-toolbar">
           <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة شوارع تفاعلية':'Interactive street map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
         </div>
-        <div className="global-map-viewport" role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
+        <div className="global-map-viewport">
           <GlobalMap isAr={isAr}/>
         </div>
-        <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
+        <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع. تُحمّل بلاطات الطرق من CARTO باستخدام بيانات OpenStreetMap، وقد يتلقى مزود الخرائط عنوان IP وطلبات المناطق المعروضة.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected. Road-map tiles are loaded from CARTO using OpenStreetMap data; the tile provider may receive your IP address and requested map areas.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
       {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
@@ -1555,7 +1555,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="global-map-viewport" role="region" aria-label={isAr?'خريطة العالم التفاعلية':'Interactive world map'}>
           <GlobalMap isAr={isAr}/>
         </div>
-        <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates.'}</p>
+        <p className="global-map-disclaimer">{isAr?'الخريطة لعرض النطاق الجغرافي فقط. لا توجد علامات أو مواقع مستخدمين لأن التطبيق لا يجمع إحداثيات الموقع. تُحمّل بلاطات الخريطة من CARTO، وقد يتلقى مزودها عنوان IP وطلبات المناطق المعروضة.':'This map provides geographic context only. No user markers are shown because the app does not collect location coordinates. Map tiles are loaded from CARTO, which may receive your IP address and requested map areas.'}</p>
       </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
