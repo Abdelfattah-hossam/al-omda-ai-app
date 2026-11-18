@@ -202,6 +202,29 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+export function requireSameOriginRead(req: Request, res: Response, next: NextFunction): void {
+  const fetchSite = req.get("sec-fetch-site")?.toLowerCase();
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
+    res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+    return;
+  }
+  const origin = req.get("origin");
+  if (origin) {
+    const host =
+      req.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.get("host") ?? "";
+    try {
+      if (!host || new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
+        res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+        return;
+      }
+    } catch {
+      res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+      return;
+    }
+  }
+  next();
+}
+
 export function reportSupabaseError(
   req: Request,
   res: Response,
