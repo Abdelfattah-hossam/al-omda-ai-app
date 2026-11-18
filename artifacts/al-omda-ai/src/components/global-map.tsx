@@ -20,6 +20,7 @@ setWorkerUrl(maplibreWorkerUrl);
 export default function GlobalMap({ isAr }: GlobalMapProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const mapLoadedRef = useRef(false);
   const [tilesError, setTilesError] = useState(false);
   const [tilesLoaded, setTilesLoaded] = useState(false);
   const [tilesLoading, setTilesLoading] = useState(true);
@@ -28,7 +29,7 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     const element = elementRef.current;
     if (!element) return;
 
-    let initialLoadCompleted = false;
+    mapLoadedRef.current = false;
     const map = new MapLibreMap({
       container: element,
       style: GLOBAL_MAP_STYLE_URL,
@@ -51,13 +52,13 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
     );
 
     map.on("load", () => {
-      initialLoadCompleted = true;
+      mapLoadedRef.current = true;
       setTilesLoading(false);
       setTilesLoaded(true);
       setTilesError(false);
     });
     map.on("error", () => {
-      if (!initialLoadCompleted) {
+      if (!mapLoadedRef.current) {
         setTilesLoading(false);
         setTilesLoaded(false);
         setTilesError(true);
@@ -104,11 +105,13 @@ export default function GlobalMap({ isAr }: GlobalMapProps) {
   const retryTiles = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
+    mapLoadedRef.current = false;
     setTilesError(false);
     setTilesLoaded(false);
     setTilesLoading(true);
     map.once("style.load", () => {
       map.once("idle", () => {
+        mapLoadedRef.current = true;
         setTilesLoading(false);
         setTilesLoaded(true);
         setTilesError(false);
