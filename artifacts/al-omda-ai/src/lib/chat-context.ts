@@ -76,6 +76,9 @@ export type SyncableChatMessage = {
   appData?: unknown;
   taskId?: string;
   taskTitle?: string;
+  agentPending?: unknown;
+  toolExecutionStatus?: string;
+  toolFailures?: Array<{ callId?: string; tool?: string; message?: string }>;
 };
 
 function stableJsonValue(value: unknown): unknown {
@@ -99,6 +102,9 @@ export function getChatMessageSyncSignature(messages: readonly SyncableChatMessa
     ...(message.appData ? { appData: stableJsonValue(message.appData) } : {}),
     ...(message.taskId ? { taskId: message.taskId } : {}),
     ...(message.taskTitle ? { taskTitle: message.taskTitle } : {}),
+    ...(message.agentPending ? { agentPending: stableJsonValue(message.agentPending) } : {}),
+    ...(message.toolExecutionStatus ? { toolExecutionStatus: message.toolExecutionStatus } : {}),
+    ...(message.toolFailures ? { toolFailures: stableJsonValue(message.toolFailures) } : {}),
   })));
 }
 
@@ -114,4 +120,25 @@ export function combineReplyAndPlan(reply: string, plan: string, maxChars = 7800
   const visiblePlan = truncateTextWithEllipsis(planText, planBudget);
   const visibleReply = truncateTextWithEllipsis(replyText, Math.max(0, limit - visiblePlan.length));
   return visibleReply + visiblePlan;
+}
+
+
+/** Only fetch large persisted message payloads when the server revision changes. */
+export function hasConversationUpdatedAtChanged(remoteUpdatedAt: string, lastSyncedUpdatedAt: string): boolean {
+  if (!remoteUpdatedAt) return lastSyncedUpdatedAt !== "";
+  return remoteUpdatedAt !== lastSyncedUpdatedAt;
+}
+
+export type ConversationSyncSummary = { id: string; title: string; updated_at?: string | null };
+
+/** Compare only fields that drive the conversation list; avoid serializing large message payloads on every poll. */
+export function hasConversationListChanged(
+  current: readonly ConversationSyncSummary[],
+  remote: readonly ConversationSyncSummary[],
+): boolean {
+  if (current.length !== remote.length) return true;
+  return remote.some((item, index) => {
+    const existing = current[index];
+    return !existing || existing.id !== item.id || existing.title !== item.title || (existing.updated_at || "") !== (item.updated_at || "");
+  });
 }
