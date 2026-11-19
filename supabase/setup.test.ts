@@ -186,4 +186,10 @@ test("collaboration audit log is owner-readable and database-written only", () =
   assert.match(cascade, /if not exists \(select 1 from auth\.users where id = target_user_id\)/i);
   assert.match(cascade, /return old/i);
   assert.match(cascade, /return new/i);
+  const hardened = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015255_harden_collaboration_audit_trigger.sql"), "utf8");
+  assert.match(hardened, /target_user_id := old\.user_id/i);
+  assert.match(hardened, /target_kind := old\.kind/i);
+  assert.match(hardened, /prevent_collaboration_record_identity_change/i);
+  assert.match(hardened, /new\.user_id is distinct from old\.user_id/i);
+  assert.match(hardened, /new\.kind is distinct from old\.kind/i);
 });
