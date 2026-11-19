@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm dlx wrangler@4.161.0 preview --config artifacts/al-omda-ai/wrangler.jsonc --name "$PREVIEW_NAME" --message "Preview for PR #${{ github.event.pull_request.number }}" 2>&1 | tee /tmp/preview.log
-          mapfile -t preview_urls < <(sed -nE "s|^Preview URL: (https://\${PREVIEW_NAME}-\${WORKER_NAME}[.][A-Za-z0-9-]+[.]workers[.]dev)$|\\1|p" /tmp/preview.log | sort -u)
+          mapfile -t preview_urls < <(sed -nE "s|^Preview URL: (https://${PREVIEW_NAME}-${WORKER_NAME}[.][A-Za-z0-9-]+[.]workers[.]dev)$|\\1|p" /tmp/preview.log | sort -u)
           if [ "${#preview_urls[@]}" -ne 1 ]; then
             echo "Expected exactly one workers.dev Preview URL containing $PREVIEW_NAME; found ${#preview_urls[@]}."
             exit 1
@@ -99,7 +99,7 @@ jobs:
               '',
               'This is an isolated Cloudflare Worker Preview. It does not replace the production Worker.',
               'Preview settings do not inherit production variables or secrets. API-backed features remain unavailable until Preview-specific secrets and test resources are configured.'
-            ].join('\\n');
+            ].join(String.fromCharCode(10))
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
