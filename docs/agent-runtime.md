@@ -150,7 +150,7 @@ The local Agent loads project Skills from both supported locations:
 - `.agents/skills/<skill-name>/SKILL.md` — standard cross-agent Agent Skills layout used by the added frontend-design, webapp-testing, Vercel React, and Supabase Postgres guidance.
 - `.omda/skills/<skill-name>/SKILL.md` — AL OMDA's existing project-local skill layout.
 
-The runtime reads up to 30 skill files, each up to 24 KB. If the same skill name exists in both locations, the local `.omda/skills` copy takes precedence. Skills are added to the Agent's system guidance for the run and can also be discovered through `skills.list`. Their instructions are guidance, not extra permissions: file writes, terminal commands, and MCP actions still require the normal approval gate, and runtime safety rules take precedence.
+The runtime reads up to 30 skill files, each up to 24 KB. If the same skill name exists in both locations, the local `.omda/skills` copy takes precedence. Skills are added to the lead Agent and delegated specialists' system guidance for the run and can also be discovered through `skills.list`. Their instructions are guidance, not extra permissions: file writes, terminal commands, and MCP actions still require the normal approval gate, and runtime safety rules take precedence.
 
 The Claude Code Superpowers marketplace configuration is separate from these files. It must be installed and trusted in the local Claude Code environment; merely adding marketplace metadata to the repository does not install it in ChatGPT or in every local Agent runtime.
 
