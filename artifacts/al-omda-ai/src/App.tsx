@@ -2664,7 +2664,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
               {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
               {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
-              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون':'Active Users',icon:Globe2},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون':'Active Users',icon:Users},
             ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
