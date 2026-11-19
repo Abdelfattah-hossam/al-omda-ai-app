@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
 import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
 import { parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
@@ -162,7 +162,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
   const subtitle = isAr
     ? "تحليلات مبنية على ملف CSV خاص بحسابك. لا توجد أرقام تجريبية ولا يتم جمع عملات مختلفة في إجمالي واحد."
     : "Analytics from a private CSV file in your account. No sample figures are shown, and different currencies are never combined.";
-  const statStyle: React.CSSProperties = { display: "grid", gap: 6, padding: 16, border: "1px solid var(--border)", borderRadius: 14, minWidth: 0, background: "var(--panel, transparent)" };
+  const statStyle: CSSProperties = { display: "grid", gap: 6, padding: 16, border: "1px solid var(--border)", borderRadius: 14, minWidth: 0, background: "var(--panel, transparent)" };
 
   return <div className="page-enter" data-testid={mode === "overview" ? "sales-overview" : "sales-distribution"}>
     <div className="page-heading">
