@@ -29,7 +29,7 @@ const PAGE_SIZE = 100;
 
 export function parsePageOffset(rawOffset: unknown): number | null {
   if (rawOffset === undefined) return 0;
-  if (typeof rawOffset !== "string" || rawOffset.length === 0 || rawOffset.length > 6) return null;
+  if (typeof rawOffset !== "string" || rawOffset.length === 0 || rawOffset.length > 12) return null;
   if (![...rawOffset].every(char => char >= "0" && char <= "9")) return null;
   const offset = Number(rawOffset);
   return Number.isSafeInteger(offset) && offset >= 0 && offset <= 100000 ? offset : null;
@@ -84,6 +84,7 @@ router.get("/collaboration/audit", requireSameOriginRead, async (req, res): Prom
     const offset = parsePageOffset(req.query.offset);
     if (offset === null) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
     const pageSize = PAGE_SIZE;
+    // Fetch one extra row to determine whether another page exists.
     const query = new URLSearchParams({ select: "id,action,record_kind,record_id,created_at", user_id: "eq." + session.user.id, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_audit_events?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<Array<{id:string;action:"created"|"updated"|"deleted";record_kind:"contact"|"event"|"ticket";record_id:string;created_at:string}>>(response);
@@ -101,6 +102,7 @@ router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Prom
     const offset = parsePageOffset(req.query.offset);
     if (offset === null) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
     const pageSize = PAGE_SIZE;
+    // Fetch one extra row to determine whether another page exists.
     const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_records?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<DbRecord[]>(response);
