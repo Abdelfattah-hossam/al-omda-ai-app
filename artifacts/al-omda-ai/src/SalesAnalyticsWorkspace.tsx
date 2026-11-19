@@ -222,7 +222,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
               <div style={{ height: 9, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}><div style={{ width: Math.max(0, item.net) / maxChannel * 100 + "%", height: "100%", borderRadius: 99, background: "var(--accent,#bda06b)" }}/></div>
               <small className="page-subtitle">{item.paidCount} {isAr ? "مدفوعة" : "paid"} · {item.refundCount} {isAr ? "مستردة" : "refunded"}</small>
             </div>)}
-          </div>
+          </div>}
         </section>}
         <section className="panel panel-pad" style={{ marginTop: 16 }}>
           <h2 className="section-title">{isAr ? "آخر المعاملات" : "Transactions"}</h2>
