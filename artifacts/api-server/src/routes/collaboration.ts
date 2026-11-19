@@ -33,6 +33,12 @@ type AuditRow = { id: string; action: "created" | "updated" | "deleted"; record_
 export function parseAuditCursor(createdAt: unknown, id: unknown): AuditCursor | null | undefined {
   if (createdAt === undefined && id === undefined) return null;
   if (typeof createdAt !== "string" || !isoTimestampPattern.test(createdAt) || typeof id !== "string" || !uuidPattern.test(id)) return undefined;
+  const year = Number(createdAt.slice(0, 4));
+  const month = Number(createdAt.slice(5, 7));
+  const day = Number(createdAt.slice(8, 10));
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) return undefined;
   if (!Number.isFinite(new Date(createdAt).getTime())) return undefined;
   // Preserve PostgreSQL microseconds; Date.toISOString() would truncate to milliseconds.
   return { createdAt, id };
