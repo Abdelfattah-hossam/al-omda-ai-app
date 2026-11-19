@@ -622,6 +622,7 @@ function App() {
   const [request, setRequest] = useState('');
   const [planGenerating, setPlanGenerating] = useState(false);
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
+  const [approvingStepId, setApprovingStepId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string,string>>({});
   const [stepCommentErrors, setStepCommentErrors] = useState<Record<string,string>>({});
@@ -1235,27 +1236,31 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const approveStep = async (task:Task, stepId:string) => {
     const stepIndex = task.steps.findIndex((step) => step.id === stepId);
-    if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId) return;
+    if (!authUser || task.demo || approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId || approvingStepId) return;
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
     if (stepIndex !== firstOpen) return;
     if (task.steps.slice(0, stepIndex).some((step) => !step.result?.trim())) {
-      setExecutionError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before the next stage can be approved.');
+      setExecutionError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before this step can be approved.');
       return;
     }
     approvalLockRef.current = true;
-    const steps = task.steps.map((step) => step.id === stepId ? { ...step, state:'approved' as StepState } : step);
-    const approvedStep = steps[stepIndex];
-    const updatedTask = { ...task, steps, status:steps.every((step) => step.state === 'approved') ? 'approved' as TaskStatus : 'review' as TaskStatus };
+    setApprovingStepId(stepId);
+    setWorkspaceError('');
+    setExecutionError('');
+    const steps = task.steps.map((step) => step.id === stepId ? { ...step, state:'approved' as StepState, executionError:undefined } : step);
+    const updatedTask:Task = { ...task, steps, status:steps.every((step) => step.state === 'approved') ? 'approved' : 'review' };
     setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? updatedTask : item) }));
     try {
-      if (!authUser || task.demo) throw new Error(isAr ? 'سجّل الدخول لتنفيذ المرحلة.' : 'Sign in to execute this stage.');
       await saveRemoteTask(updatedTask);
-      await executeStep(updatedTask, approvedStep);
+      // Approval is a separate, persisted action. Execution starts only when the owner presses Execute.
     } catch (error) {
       setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? task : item) }));
-      try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* Keep the local rollback. */ }
+      try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* Keep the last confirmed state and visible error. */ }
       setWorkspaceError(readApiError(error, t('saveTaskFailed')));
-    } finally { approvalLockRef.current = false; }
+    } finally {
+      approvalLockRef.current = false;
+      setApprovingStepId(null);
+    }
   };
 
   const requestStepRevision = async (task:Task, step:PlanStep) => {
@@ -1307,10 +1312,24 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }
   };
 
-  const rejectStep = (task:Task, stepId:string) => {
+  const rejectStep = async (task:Task, stepId:string) => {
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
-    if (task.status !== 'review' || task.steps[firstOpen]?.id !== stepId) return;
-    patchTask(task.id, (prev) => ({ ...prev, steps:prev.steps.map((step) => step.id === stepId ? { ...step, state:'rejected' as StepState } : step) }));
+    if (!authUser || task.demo || approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || task.status !== 'review' || task.steps[firstOpen]?.id !== stepId || approvingStepId) return;
+    approvalLockRef.current = true;
+    setApprovingStepId(stepId);
+    setWorkspaceError('');
+    const rejectedTask:Task = { ...task, steps:task.steps.map((step) => step.id === stepId ? { ...step, state:'rejected' as StepState } : step) };
+    setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? rejectedTask : item) }));
+    try {
+      await saveRemoteTask(rejectedTask);
+    } catch (error) {
+      setSaved((prev) => ({ ...prev, tasks:prev.tasks.map((item) => item.id === task.id ? task : item) }));
+      try { const workspace = await getWorkspace(apiRequestOptions); applyWorkspace(workspace, authUser.email); } catch { /* Keep the visible failure. */ }
+      setWorkspaceError(readApiError(error, t('saveTaskFailed')));
+    } finally {
+      approvalLockRef.current = false;
+      setApprovingStepId(null);
+    }
   };
   const changeStep = (task:Task, stepId:string, values:{text:string;output:string;complete:string}) => patchTask(task.id, (prev) => ({ ...prev, steps:prev.steps.map((step) => step.id === stepId ? { ...step, ...values, state:step.state === 'rejected' ? 'pending' : step.state } : step) }));
   const statusLabel = (status:TaskStatus) => t(taskStatusKey(status));
@@ -1486,7 +1505,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" className="button button-danger button-small" disabled={!!executingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun'}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
-               <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
+               <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !!approvingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
                  <Sparkles size={13}/>{executingStepId===step.id?(isAr?'جارٍ التنفيذ...':'Executing...'):(isAr?'نفّذ الخطوة بالذكاء الاصطناعي':'Execute step with AI')}
                </button>
              </div>}
@@ -1494,14 +1513,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {isCurrent && task.status === 'review' && <div className="step-actions">
               {editId === step.id ? <><button className="button button-quiet button-small" onClick={() => { if (editText.trim() && editOutput.trim() && editComplete.trim()) changeStep(task,step.id,{text:editText.trim(),output:editOutput.trim(),complete:editComplete.trim()}); setEditId(null); }}>{t('save')}</button><button className="button button-quiet button-small" onClick={() => setEditId(null)}>{isAr?'إلغاء':'Cancel'}</button></> :
                 <button className="button button-quiet button-small" onClick={() => { const guidance=getStepGuidance(task.specialty,index,language); setEditId(step.id); setEditText(step.text); setEditOutput(step.output ?? guidance.output); setEditComplete(step.complete ?? guidance.complete); }}><Edit3 size={12}/>{t('edit')}</button>}
-              <button className="button button-primary button-small" disabled={editId === step.id} onClick={() => approveStep(task,step.id)}><Check size={12}/>{t('approve')}</button>
-              <button className="button button-danger button-small" disabled={editId === step.id} onClick={() => rejectStep(task,step.id)}><X size={12}/>{t('reject')}</button>
+              <button className="button button-primary button-small" disabled={editId === step.id || !!approvingStepId || !!executingStepId || !authUser} onClick={() => void approveStep(task,step.id)}><Check size={12}/>{approvingStepId===step.id?(isAr?'جارٍ حفظ الموافقة...':'Saving approval...'):t('approve')}</button>
+              <button className="button button-danger button-small" disabled={editId === step.id || !!approvingStepId || !!executingStepId || !authUser} onClick={() => void rejectStep(task,step.id)}><X size={12}/>{approvingStepId===step.id?(isAr?'جارٍ حفظ الرفض...':'Saving rejection...'):t('reject')}</button>
             </div>}
           </div>
         </div>;
       })}
       {task.status === 'approved' && <div className="notice-bar" style={{marginTop:10}}><CheckCheck size={15}/><span>{t('allApproved')} {task.steps.every((step)=>Boolean(step.result)) ? (isAr?' تم تنفيذ كل المراحل وحفظ مخرجاتها.':' All stages have executed and their outputs are saved.') : (isAr?' توجد مراحل معتمدة تحتاج إلى تنفيذ أو إعادة محاولة.':' Approved stages remain to be executed or retried.')}</span></div>}
-      {task.status !== 'paused' && task.status !== 'stopped' && task.steps.some((step)=>!step.result) && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:12}}><button type="button" className="button button-primary" disabled={!!executingStepId || !authUser} onClick={()=>void approveAndRunRemaining(task)}><Sparkles size={14}/>{executingStepId ? (isAr?'جارٍ تنفيذ المشروع...':'Running project...') : t('approveAll')}</button><small className="section-meta">{isAr?'يعتمد كل مرحلة بالترتيب ثم ينفذها ويحفظ مخرجها قبل الانتقال إلى التالية. يتوقف عند أول خطأ أو مرحلة غير مكتملة.':'Approves and executes each stage in order, saving its deliverable before continuing. Stops at the first error or incomplete stage.'}</small></div>}
+      {task.status !== 'paused' && task.status !== 'stopped' && task.steps.some((step)=>!step.result) && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:12}}><button type="button" className="button button-primary" disabled={!!executingStepId || !!approvingStepId || !authUser} onClick={()=>void approveAndRunRemaining(task)}><Sparkles size={14}/>{executingStepId ? (isAr?'جارٍ تنفيذ المشروع...':'Running project...') : t('approveAll')}</button><small className="section-meta">{isAr?'يعتمد كل مرحلة بالترتيب ثم ينفذها ويحفظ مخرجها قبل الانتقال إلى التالية. يتوقف عند أول خطأ أو مرحلة غير مكتملة.':'Approves and executes each stage in order, saving its deliverable before continuing. Stops at the first error or incomplete stage.'}</small></div>}
       {task.status === 'stopped' && <div className="notice-bar" style={{marginTop:10}}><StopCircle size={15}/><span>{t('stopped')}</span></div>}
       {task.status !== 'approved' && task.status !== 'stopped' && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:8}}>
         <button className="button button-quiet button-small" onClick={() => patchTask(task.id,(prev)=>({...prev,status:prev.status === 'paused' ? 'review' : 'paused'}))}>
