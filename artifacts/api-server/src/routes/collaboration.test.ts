@@ -123,7 +123,7 @@ test("audit API returns a user-scoped page and a stable microsecond cursor", asy
   process.env.SUPABASE_URL = "https://example.supabase.co";
   process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
   process.env.SUPABASE_ANON_KEY = "test-anon-key";
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  globalThis.fetch = (async (input) => {
     const url = new URL(String(input));
     if (url.pathname === "/auth/v1/user") {
       return new Response(JSON.stringify({ id: userId, email: "audit-test@example.com" }), { status: 200, headers: { "content-type": "application/json" } });
