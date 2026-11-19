@@ -41,16 +41,18 @@ async function getSession(req: Parameters<typeof resolveSession>[0], res: Parame
   }
 }
 
-function validPayload(body: unknown, kind: RecordKind): { title: string; description: string; status: DbRecord["status"]; due_at: string | null; metadata: Record<string, unknown> } | null {
+export function validPayload(body: unknown, kind: RecordKind): { title: string; description: string; status: DbRecord["status"]; due_at: string | null; metadata: Record<string, unknown> } | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const value = body as Record<string, unknown>;
   const title = typeof value.title === "string" ? value.title.trim() : "";
   const description = typeof value.description === "string" ? value.description.trim() : "";
-  const status = value.status === "in_progress" || value.status === "resolved" ? value.status : "open";
+  if (value.status !== undefined && value.status !== "open" && value.status !== "in_progress" && value.status !== "resolved") return null;
+  const status = (value.status ?? "open") as DbRecord["status"];
   const dueAt = typeof value.dueAt === "string" && value.dueAt.trim() ? value.dueAt.trim() : null;
+  const parsedDueAt = dueAt ? new Date(dueAt) : null;
   const metadata = value.metadata && typeof value.metadata === "object" && !Array.isArray(value.metadata) ? value.metadata as Record<string, unknown> : {};
   if (!title || title.length > 160 || description.length > 4000 || JSON.stringify(metadata).length > 7000) return null;
-  if (dueAt && (!Number.isFinite(Date.parse(dueAt)) || new Date(dueAt).toISOString() !== dueAt)) return null;
+  if (dueAt && (!parsedDueAt || !Number.isFinite(parsedDueAt.getTime()))) return null;
   if (kind === "contact") {
     for (const key of ["email", "phone", "company"]) {
       const item = metadata[key];
@@ -59,11 +61,11 @@ function validPayload(body: unknown, kind: RecordKind): { title: string; descrip
   }
   if (kind === "event" && !dueAt) return null;
   if (kind === "ticket" && !["open", "in_progress", "resolved"].includes(String(value.status ?? "open"))) return null;
-  return { title, description, status, due_at: dueAt, metadata };
+  return { title, description, status, due_at: parsedDueAt ? parsedDueAt.toISOString() : null, metadata };
 }
 
 function mapRecord(row: DbRecord) {
-  return { id: row.id, kind: row.kind, title: row.title, description: row.description, status: row.status, dueAt: row.due_at, metadata: row.metadata ?? {}, createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, kind: row.kind, title: row.title, description: row.description, status: row.status, dueAt: row.due_at ? new Date(row.due_at).toISOString() : null, metadata: row.metadata ?? {}, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Promise<void> => {
@@ -72,10 +74,15 @@ router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Prom
   const session = await getSession(req, res);
   if (!session) return;
   try {
-    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: "200" });
+    const rawOffset = req.query.offset;
+    const offsetText = typeof rawOffset === "string" ? rawOffset : "0";
+    const offset = /^\\d{1,6}$/.test(offsetText) ? Number(offsetText) : -1;
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
+    const pageSize = 100;
+    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_records?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<DbRecord[]>(response);
-    res.json({ records: rows.map(mapRecord) });
+    res.json({ records: rows.map(mapRecord), nextOffset: rows.length === pageSize ? offset + pageSize : null });
   } catch (error) { reportSupabaseError(req, res, error, "Could not load collaboration records."); }
 });
 
