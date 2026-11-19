@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import express from "express";
 import { once } from "node:events";
-import { parsePageOffset, validPayload } from "./collaboration.js";
+import { buildAuditPage, parseAuditCursor, parsePageOffset, validPayload } from "./collaboration.js";
 import collaborationRouter from "./collaboration.js";
 
 test("calendar timestamps are normalized from PostgREST and ISO offsets", () => {
@@ -74,4 +74,28 @@ test("audit API rejects requests without a signed-in session", async () => {
     if (previousPublishableKey === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
     if (previousAnonKey === undefined) delete process.env.SUPABASE_ANON_KEY; else process.env.SUPABASE_ANON_KEY = previousAnonKey;
   }
+});
+
+test("audit cursors validate and normalize timestamp/id pairs", () => {
+  const id = "123e4567-e89b-42d3-a456-426614174000";
+  assert.deepEqual(parseAuditCursor("2026-11-19T13:45:00+00:00", id), {
+    createdAt: "2026-11-19T13:45:00.000Z",
+    id,
+  });
+  assert.equal(parseAuditCursor(undefined, undefined), null);
+  assert.equal(parseAuditCursor("not-a-date", id), undefined);
+  assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", "not-a-uuid"), undefined);
+  assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", undefined), undefined);
+});
+
+test("audit keyset pagination returns a stable cursor from the last visible row", () => {
+  const rows = Array.from({ length: 3 }, (_, index) => ({
+    id: `123e4567-e89b-42d3-a456-42661417400${index}`,
+    created_at: `2026-11-19T13:45:0${index}.000Z`,
+  }));
+  const page = buildAuditPage(rows, 2);
+  assert.equal(page.rows.length, 2);
+  assert.deepEqual(page.nextCursor, { createdAt: rows[1].created_at, id: rows[1].id });
+  const lastPage = buildAuditPage(rows.slice(0, 2), 2);
+  assert.equal(lastPage.nextCursor, null);
 });
