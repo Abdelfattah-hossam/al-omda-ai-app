@@ -5,6 +5,7 @@ import CollaborationWorkspace from './CollaborationWorkspace';
 import AuditLogWorkspace from './AuditLogWorkspace';
 import SalesAnalyticsWorkspace from './SalesAnalyticsWorkspace';
 import WorkspaceAssets from './WorkspaceAssets';
+import SeoAuditWorkspace from './SeoAuditWorkspace';
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
@@ -485,6 +486,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
   { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
     {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
     {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
+    {path:'/tools/seo',ar:'فحص SEO',en:'SEO Audit',subtitleAr:'فحص وتحسين المواقع بـ20 نقطة',subtitleEn:'20-point website audit and optimization',icon:Search},
   ]},
   { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
     {path:'/specialties/legal',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
@@ -2620,6 +2622,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
+  else if (path === '/tools/seo') page = <SeoAuditWorkspace language={language} />;
   else if (path in professionalSpecialtyPages) page = professionalSpecialtyPage(path);
   else if (path === '/workbench') page = workbenchPage();
   else if (path === '/projects') page = projectsPage();
@@ -2644,7 +2647,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const pageTitleKey = path === '/ai/usage' ? 'aiChat' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
   const professionalTitle = professionalSpecialtyPages[path as keyof typeof professionalSpecialtyPages];
-  const pageTitle = professionalTitle ? (isAr?professionalTitle.ar:professionalTitle.en) : platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
+  const pageTitle = path === '/tools/seo' ? (isAr?'فحص وتحسين SEO':'SEO Audit & Optimization') : professionalTitle ? (isAr?professionalTitle.ar:professionalTitle.en) : platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
@@ -2695,7 +2698,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
           <nav className="nav-stack">
-            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
+            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass},{path:'/tools/seo',label:isAr?'فحص SEO':'SEO Audit',icon:Search}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
