@@ -1,8 +1,11 @@
+create schema if not exists omda_private;
+
 create table if not exists public.collaboration_audit_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   action text not null check (action in ('created', 'updated', 'deleted')),
   record_kind text not null check (record_kind in ('contact', 'event', 'ticket')),
+  -- No FK by design: audit entries must survive deletion of the source collaboration record.
   record_id uuid not null,
   created_at timestamptz not null default now()
 );
