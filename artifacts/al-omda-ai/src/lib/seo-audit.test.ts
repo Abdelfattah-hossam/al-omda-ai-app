@@ -1,8 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyzeSeoSource } from "./seo-audit.js";
-const html='<html><head><title>A useful page title for search engines</title><meta name="description" content="A detailed description of this page that explains its purpose clearly and helps visitors understand the content before opening it."><meta name="viewport" content="width=device-width, initial-scale=1"><meta property="og:image" content="/image.png"><link rel="canonical" href="https://example.com/page"><script type="application/ld+json">{"@type":"WebPage"}</script></head><body><h1>Main</h1><h2>Section</h2><a href="/about">About</a><img src="/a.png" alt="A" width="100" height="100" loading="lazy"></body></html>';
-test("returns exactly twenty ordered checks and bounded score",()=>{const r=analyzeSeoSource({url:"https://example.com/page",html,robotsTxt:"User-agent: *\nAllow: /",sitemapXml:"<urlset><url><loc>https://example.com/</loc></url></urlset>",llmsTxt:"# Site\n\nInformation"});assert.equal(r.items.length,20);assert.deepEqual(r.items.map(x=>x.id),Array.from({length:20},(_,i)=>i+1));assert.ok(r.score!==null&&r.score>=0&&r.score<=100);assert.equal(r.checked+r.unavailable,20);assert.equal(r.items[4].status,"pass");assert.equal(r.items[6].status,"pass");});
-test("does not claim unavailable network/browser checks passed",()=>{const r=analyzeSeoSource({url:"https://example.com",html});for(const id of [1,2,12,15,19,20])assert.equal(r.items[id-1].status,"unavailable");});
-test("detects noindex, missing H1/alt, invalid schema, and insecure URL",()=>{const r=analyzeSeoSource({url:"http://example.com/a_b",html:'<html><head><meta name="robots" content="noindex"><script type="application/ld+json">{bad}</script></head><body><img src="a.png"></body></html>'});assert.equal(r.items[2].status,"warning");assert.equal(r.items[6].status,"error");assert.equal(r.items[8].status,"error");assert.equal(r.items[9].status,"error");assert.equal(r.items[16].status,"error");});
-test("excludes unavailable checks from scoring denominator",()=>{const r=analyzeSeoSource({url:"https://example.com",html:"<html><head><title>Useful title here</title></head><body><h1>Heading</h1></body></html>"});assert.ok(r.unavailable>=5);assert.equal(r.checked+r.unavailable,20);});
+
+test("always returns the complete twenty-point checklist in stable order",()=>{
+ const report=analyzeSeoSource({url:"https://example.com",html:""});
+ assert.equal(report.items.length,20);
+ assert.deepEqual(report.items.map(x=>x.id),Array.from({length:20},(_,i)=>i+1));
+ assert.equal(report.checked+report.unavailable,20);
+ assert.equal(report.items[11].status,"unavailable");
+ assert.equal(report.items[14].status,"unavailable");
+ assert.equal(report.items[18].status,"unavailable");
+});
+
+test("does not award unavailable checks a passing score",()=>{
+ const report=analyzeSeoSource({url:"https://example.com",html:""});
+ assert.equal(report.score,null);
+ assert.equal(report.passed,0);
+ assert.equal(report.unavailable,20);
+});
+
+test("does not treat an invalid URL as HTTPS",()=>{
+ const report=analyzeSeoSource({url:"not a url",html:""});
+ assert.equal(report.items[16].status,"unavailable");
+});
+
+test("uses only verified checks in the score denominator when a DOM parser is available",()=>{
+ if(typeof DOMParser==="undefined")return;
+ const report=analyzeSeoSource({url:"http://example.com/a_b",html:'<html><head><meta name="robots" content="noindex"><script type="application/ld+json">{bad}</script></head><body><img src="a.png"></body></html>'});
+ assert.equal(report.items[2].status,"warning");
+ assert.equal(report.items[6].status,"error");
+ assert.equal(report.items[8].status,"error");
+ assert.equal(report.items[9].status,"error");
+ assert.equal(report.items[16].status,"error");
+ assert.equal(report.checked+report.unavailable,20);
+});
