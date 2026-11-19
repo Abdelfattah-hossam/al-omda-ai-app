@@ -71,7 +71,7 @@ const text = {
     event: "Event",
     ticket: "Ticket",
     record: "Record",
-    failed: "Could not load the activity log. Sign in and try again.",
+    failed: "Could not load the activity log. Check your connection and try again.",
   }
 } as const;
 
@@ -112,7 +112,7 @@ export default function AuditLogWorkspace({ language }: Props) {
         return [...current, ...incoming.filter(event => !seen.has(event.id))];
       });
       setNextCursor(isAuditCursor(data.nextCursor) ? data.nextCursor : null);
-    } catch {
+    } catch (cause) {
       if (abortRef.current !== controller) return;
       if (timedOut || !controller.signal.aborted) setError(cause instanceof Error && cause.message !== "Failed to fetch" ? cause.message : t.failed);
     } finally {
