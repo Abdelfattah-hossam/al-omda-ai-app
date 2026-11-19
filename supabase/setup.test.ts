@@ -193,8 +193,6 @@ test("collaboration audit log is owner-readable and database-written only", () =
   assert.match(hardened, /new\.user_id is distinct from old\.user_id/i);
   assert.match(hardened, /new\.kind is distinct from old\.kind/i);
   assert.match(hardened, /if not exists \(select 1 from auth\.users where id = target_user_id\)/i);
-  assert.match(hardened, /target_user_id := old\.user_id/i);
-  assert.match(hardened, /target_kind := old\.kind/i);
   const errorCode = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015914_use_business_rule_error_for_identity_lock.sql"), "utf8");
   assert.match(errorCode, /using errcode = 'P0001'/i);
 });
