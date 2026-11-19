@@ -1014,6 +1014,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
             evidence,
             signal,
             call: (messages, reviewSignal) => modelCompletion(messages, [], undefined, "review", reviewSignal),
+            onPhase: (phase) => onProgress?.({ type: "status", status: "quality_audit", phase }),
             measureCheckpointBytes: (candidate) => {
               const candidateMessages = state.messages.map((message, index) =>
                 index === finalIndex ? { ...completion.message, content: candidate } : message,
