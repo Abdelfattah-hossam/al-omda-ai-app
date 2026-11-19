@@ -30,6 +30,7 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
   const t = copy[language];
   const labels = t[kind];
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState("");
@@ -43,19 +44,21 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (offset = 0, append = false) => {
     setLoading(true); setError("");
     try {
-      const response = await fetch("/api/collaboration/" + kind, { credentials: "same-origin", headers: { accept: "application/json" } });
+      const response = await fetch("/api/collaboration/" + kind + "?offset=" + offset, { credentials: "same-origin", headers: { accept: "application/json" } });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
-      setRecords(Array.isArray(data?.records) ? data.records : []);
+      if (!Array.isArray(data?.records) || !data.records.every((item: unknown) => item && typeof item === "object" && typeof (item as RecordItem).id === "string")) throw new Error(t.failed);
+      setRecords(current => append ? [...current, ...data.records as RecordItem[]] : data.records as RecordItem[]);
+      setNextOffset(typeof data.nextOffset === "number" && Number.isSafeInteger(data.nextOffset) ? data.nextOffset : null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t.failed);
     } finally { setLoading(false); }
   }, [kind, t.failed]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setRecords([]); setNextOffset(null); reset(); void load(0, false); }, [kind, load]);
 
   function reset() {
     setTitle(""); setDescription(""); setEmail(""); setPhone(""); setCompany(""); setDueAt(""); setStatus("open"); setEditingId(null);
@@ -73,8 +76,10 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
-      if (editingId) setRecords(current => current.map(item => item.id === editingId ? data.record as RecordItem : item));
-      else setRecords(current => [data.record as RecordItem, ...current]);
+      const savedRecord = data?.record as RecordItem | undefined;
+      if (!savedRecord || typeof savedRecord.id !== "string") throw new Error(t.failed);
+      if (editingId) setRecords(current => current.map(item => item.id === editingId ? savedRecord : item));
+      else setRecords(current => [savedRecord, ...current]);
       reset(); setNotice(t.saved);
     } catch (cause) { setError(cause instanceof Error ? cause.message : t.failed); }
     finally { setSaving(false); }
@@ -98,7 +103,9 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
-      setRecords(current => current.map(item => item.id === record.id ? data.record : item));
+      const updatedRecord = data?.record as RecordItem | undefined;
+      if (!updatedRecord || typeof updatedRecord.id !== "string") throw new Error(t.failed);
+      setRecords(current => current.map(item => item.id === record.id ? updatedRecord : item));
     } catch (cause) { setError(cause instanceof Error ? cause.message : t.failed); }
   }
 
@@ -121,15 +128,15 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
       {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
       {notice && <div className="notice-bar" role="status">{notice}</div>}
       <form onSubmit={create} style={{ display: "grid", gap: 10, marginTop: 16 }}>
-        <div className="field-group"><label className="form-label">{labels.name}</label><input className="field" required maxLength={160} value={title} onChange={event => setTitle(event.target.value)} /></div>
+        <div className="field-group"><label className="form-label" htmlFor="collab-title">{labels.name}</label><input id="collab-title" className="field" required maxLength={160} value={title} onChange={event => setTitle(event.target.value)} /></div>
         {kind === "contact" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,190px),1fr))", gap: 10 }}>
-          <div className="field-group"><label className="form-label">{labels.email}</label><input className="field" type="email" maxLength={200} value={email} onChange={event => setEmail(event.target.value)} /></div>
-          <div className="field-group"><label className="form-label">{labels.phone}</label><input className="field" type="tel" maxLength={200} value={phone} onChange={event => setPhone(event.target.value)} /></div>
-          <div className="field-group"><label className="form-label">{labels.company}</label><input className="field" maxLength={200} value={company} onChange={event => setCompany(event.target.value)} /></div>
+          <div className="field-group"><label className="form-label" htmlFor="collab-email">{labels.email}</label><input id="collab-email" className="field" type="email" maxLength={200} value={email} onChange={event => setEmail(event.target.value)} /></div>
+          <div className="field-group"><label className="form-label" htmlFor="collab-phone">{labels.phone}</label><input id="collab-phone" className="field" type="tel" maxLength={200} value={phone} onChange={event => setPhone(event.target.value)} /></div>
+          <div className="field-group"><label className="form-label" htmlFor="collab-company">{labels.company}</label><input id="collab-company" className="field" maxLength={200} value={company} onChange={event => setCompany(event.target.value)} /></div>
         </div>}
-        {kind === "event" && <div className="field-group"><label className="form-label">{t.date}</label><input className="field" type="datetime-local" required value={dueAt} onChange={event => setDueAt(event.target.value)} /></div>}
-        {kind !== "contact" && <div className="field-group"><label className="form-label">{t.status}</label><select className="field" value={status} onChange={event => setStatus(event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
-        <div className="field-group"><label className="form-label">{labels.description}</label><textarea className="field" rows={3} maxLength={4000} value={description} onChange={event => setDescription(event.target.value)} /></div>
+        {kind === "event" && <div className="field-group"><label className="form-label" htmlFor="collab-date">{t.date}</label><input id="collab-date" className="field" type="datetime-local" required value={dueAt} onChange={event => setDueAt(event.target.value)} /></div>}
+        {kind !== "contact" && <div className="field-group"><label className="form-label" htmlFor="collab-status">{t.status}</label><select id="collab-status" className="field" value={status} onChange={event => setStatus(event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
+        <div className="field-group"><label className="form-label" htmlFor="collab-description">{labels.description}</label><textarea id="collab-description" className="field" rows={3} maxLength={4000} value={description} onChange={event => setDescription(event.target.value)} /></div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="button button-primary" type="submit" disabled={saving || !title.trim()}>{editingId ? <Edit3 size={14}/> : <Plus size={14}/>}{saving ? t.loading : editingId ? labels.update : labels.add}</button><button className="button button-quiet" type="button" onClick={reset}>{t.cancel}</button><button className="button button-quiet" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={14}/>{t.refresh}</button></div>
       </form>
     </section>
@@ -141,10 +148,11 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
           {kind === "contact" && <p className="section-meta">{[record.metadata.email, record.metadata.phone, record.metadata.company].filter(value => typeof value === "string" && value).join(" · ")}</p>}
           {record.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{record.description}</p>}
           {record.dueAt && <p className="section-meta">{new Date(record.dueAt).toLocaleString(ar ? "ar" : "en")}</p>}
-          {kind !== "contact" && <div className="field-group" style={{ maxWidth: 240, marginTop: 8 }}><label className="form-label">{t.status}</label><select className="field" value={record.status} onChange={event => void updateStatus(record, event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
+          {kind !== "contact" && <div className="field-group" style={{ maxWidth: 240, marginTop: 8 }}><label className="form-label" htmlFor={`collab-status-${record.id}`}>{t.status}</label><select id={`collab-status-${record.id}`} className="field" value={record.status} onChange={event => void updateStatus(record, event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
           <small className="muted">{new Date(record.createdAt).toLocaleString(ar ? "ar" : "en")}</small>
         </article>)}
       </div>}
+      {nextOffset !== null && <button type="button" className="button button-quiet" style={{ marginTop: 12 }} onClick={() => void load(nextOffset, true)} disabled={loading}>{loading ? t.loading : (ar ? "تحميل المزيد" : "Load more")}</button>}
     </section>
   </div>;
 }
