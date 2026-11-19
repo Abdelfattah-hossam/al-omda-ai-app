@@ -182,4 +182,8 @@ test("collaboration audit log is owner-readable and database-written only", () =
   assert.match(audit, /security definer[\s\S]*?set search_path = ''/i);
   assert.match(audit, /revoke all on function omda_private\.log_collaboration_record_change\(\) from public, anon, authenticated/i);
   assert.match(audit, /after insert or update or delete on public\.collaboration_records/i);
+  const cascade = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015054_skip_collaboration_audit_on_account_cascade.sql"), "utf8");
+  assert.match(cascade, /if not exists \(select 1 from auth\.users where id = target_user_id\)/i);
+  assert.match(cascade, /return old/i);
+  assert.match(cascade, /return new/i);
 });
