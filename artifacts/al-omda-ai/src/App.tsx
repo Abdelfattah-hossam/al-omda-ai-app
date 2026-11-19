@@ -1093,7 +1093,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (!authUser) { setWorkspaceError(isAr ? 'سجّل الدخول أولاً لتشغيل المشروع.' : 'Sign in before running the project.'); return; }
     if (task.demo) { setWorkspaceError(isAr ? 'هذه مهمة عرض تجريبية ولا يمكن تنفيذها.' : 'This is a demo task and cannot be executed.'); return; }
     if (task.status === 'paused' || task.status === 'stopped') { setWorkspaceError(isAr ? 'استأنف المشروع قبل التنفيذ.' : 'Resume the project before execution.'); return; }
-    if (projectRunLockRef.current || taskExecutionLockRef.current || approvalLockRef.current || commentSubmissionLockRef.current || executingStepId) return;
+    if (projectRunLockRef.current || taskExecutionLockRef.current || approvalLockRef.current || commentSubmissionLockRef.current || executingStepId) {
+      setWorkspaceError(isAr ? 'هناك إجراء آخر قيد الحفظ أو التنفيذ. انتظر حتى ينتهي ثم حاول مرة أخرى.' : 'Another save or execution is still in progress. Wait for it to finish, then try again.');
+      return;
+    }
     projectRunLockRef.current = true;
     setProjectRunning(true);
     setWorkspaceError('');
@@ -1239,11 +1242,21 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const approveStep = async (task:Task, stepId:string) => {
     const stepIndex = task.steps.findIndex((step) => step.id === stepId);
-    if (!authUser || task.demo || approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || stepIndex < 0 || task.status !== 'review' || executingStepId || approvingStepId) return;
+    if (!authUser) { setWorkspaceError(isAr ? 'انتهت جلسة الدخول أو لم يتم تسجيل الدخول. سجّل الدخول ثم أعد المحاولة.' : 'Your sign-in session is unavailable. Sign in and try again.'); return; }
+    if (task.demo) { setWorkspaceError(isAr ? 'هذه مهمة تجريبية ولا تقبل الموافقة أو التنفيذ.' : 'This demo task cannot be approved or executed.'); return; }
+    if (approvalLockRef.current || projectRunLockRef.current || taskExecutionLockRef.current || commentSubmissionLockRef.current || executingStepId || approvingStepId) {
+      setWorkspaceError(isAr ? 'هناك إجراء آخر قيد الحفظ أو التنفيذ. انتظر حتى ينتهي ثم حاول مرة أخرى.' : 'Another save or execution is still in progress. Wait for it to finish, then try again.');
+      return;
+    }
+    if (stepIndex < 0) { setWorkspaceError(isAr ? 'لم أتمكن من تحديد المرحلة المطلوبة. حدّث الصفحة وأعد المحاولة.' : 'The requested stage could not be found. Refresh and try again.'); return; }
+    if (task.status !== 'review') { setWorkspaceError(isAr ? 'المشروع ليس في حالة المراجعة. استأنفه أولاً إذا كان متوقفاً.' : 'The project is not in review. Resume it first if it is paused.'); return; }
     const firstOpen = task.steps.findIndex((step) => step.state !== 'approved');
-    if (stepIndex !== firstOpen) return;
+    if (stepIndex !== firstOpen) {
+      setWorkspaceError(isAr ? 'اعتمد المراحل بالترتيب؛ اختر أول مرحلة لم تحصل على موافقتك بعد.' : 'Stages must be approved in order. Choose the first stage awaiting approval.');
+      return;
+    }
     if (task.steps.slice(0, stepIndex).some((step) => !step.result?.trim())) {
-      setExecutionError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before this step can be approved.');
+      setWorkspaceError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before this step can be approved.');
       return;
     }
     approvalLockRef.current = true;
