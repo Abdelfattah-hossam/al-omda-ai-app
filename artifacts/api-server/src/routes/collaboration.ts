@@ -26,15 +26,16 @@ const router: IRouter = Router();
 const allowedKinds = new Set<RecordKind>(["contact", "event", "ticket"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PAGE_SIZE = 100;
+const isoTimestampPattern = /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/;
 type AuditCursor = { createdAt: string; id: string };
 type AuditRow = { id: string; action: "created" | "updated" | "deleted"; record_kind: "contact" | "event" | "ticket"; record_id: string; created_at: string };
 
 export function parseAuditCursor(createdAt: unknown, id: unknown): AuditCursor | null | undefined {
   if (createdAt === undefined && id === undefined) return null;
-  if (typeof createdAt !== "string" || typeof id !== "string" || !uuidPattern.test(id)) return undefined;
-  const date = new Date(createdAt);
-  if (!Number.isFinite(date.getTime())) return undefined;
-  return { createdAt: date.toISOString(), id };
+  if (typeof createdAt !== "string" || !isoTimestampPattern.test(createdAt) || typeof id !== "string" || !uuidPattern.test(id)) return undefined;
+  if (!Number.isFinite(new Date(createdAt).getTime())) return undefined;
+  // Preserve PostgreSQL microseconds; Date.toISOString() would truncate to milliseconds.
+  return { createdAt, id };
 }
 
 export function buildAuditPage<T extends { id: string; created_at: string }>(rows: T[], pageSize = PAGE_SIZE) {
