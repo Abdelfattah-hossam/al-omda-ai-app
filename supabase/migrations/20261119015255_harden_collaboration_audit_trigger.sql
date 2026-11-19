@@ -1,3 +1,5 @@
+-- Versioned follow-up: PostgreSQL has no ALTER FUNCTION form for replacing a PL/pgSQL body.
+-- Keep the earlier migration history intact; this is the final trigger definition.
 create schema if not exists omda_private;
 
 create or replace function omda_private.log_collaboration_record_change()
