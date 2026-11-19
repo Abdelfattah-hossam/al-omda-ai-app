@@ -525,14 +525,23 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
     {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
   ]},
   { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
-    {path:'/agents',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
-    {path:'/agents',ar:'المهندس والتصميم الهندسي',en:'Engineer & Engineering',subtitleAr:'الهندسة والتصميم والمواصفات',subtitleEn:'Engineering, design, and specifications',icon:HardHat},
-    {path:'/agents',ar:'الطب والرعاية الصحية',en:'Medicine & Healthcare',subtitleAr:'المعلومات الصحية والبحث الطبي',subtitleEn:'Health information and medical research',icon:Stethoscope},
-    {path:'/agents',ar:'المحاسبة والمالية',en:'Accounting & Finance',subtitleAr:'الحسابات والتحليل المالي',subtitleEn:'Accounting and financial analysis',icon:Calculator},
-    {path:'/agents',ar:'الصيانة والتشغيل',en:'Maintenance & Operations',subtitleAr:'التشغيل والفحص والصيانة',subtitleEn:'Operations, inspection, and maintenance',icon:Wrench},
-    {path:'/agents',ar:'التعليم والتدريب',en:'Education & Training',subtitleAr:'التعليم وإعداد المحتوى التدريبي',subtitleEn:'Learning and training content',icon:GraduationCap},
+    {path:'/specialties/legal',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
+    {path:'/specialties/engineering',ar:'المهندس والتصميم الهندسي',en:'Engineer & Engineering',subtitleAr:'الهندسة والتصميم والمواصفات',subtitleEn:'Engineering, design, and specifications',icon:HardHat},
+    {path:'/specialties/healthcare',ar:'الطب والرعاية الصحية',en:'Medicine & Healthcare',subtitleAr:'المعلومات الصحية والبحث الطبي',subtitleEn:'Health information and medical research',icon:Stethoscope},
+    {path:'/specialties/accounting',ar:'المحاسبة والمالية',en:'Accounting & Finance',subtitleAr:'الحسابات والتحليل المالي',subtitleEn:'Accounting and financial analysis',icon:Calculator},
+    {path:'/specialties/maintenance',ar:'الصيانة والتشغيل',en:'Maintenance & Operations',subtitleAr:'التشغيل والفحص والصيانة',subtitleEn:'Operations, inspection, and maintenance',icon:Wrench},
+    {path:'/specialties/education',ar:'التعليم والتدريب',en:'Education & Training',subtitleAr:'التعليم وإعداد المحتوى التدريبي',subtitleEn:'Learning and training content',icon:GraduationCap},
   ]},
 ];
+const professionalSpecialtyPages = {
+  "/specialties/legal": { ar:"المحامي والخدمات القانونية", en:"Legal Services", subtitleAr:"بحث قانوني وصياغة ومراجعة المستندات مع توضيح الولاية القضائية وحدود المراجعة.", subtitleEn:"Legal research, drafting, and document review with jurisdiction and review limits made explicit.", workbenchSpecialty:"research" as Specialty, icon:Scale, promptAr:"أحتاج مساعدة في مهمة قانونية. حدّد الدولة والولاية القضائية أولاً، وافصل بين النصوص القانونية الموثقة والتحليل، واذكر المصادر وما يحتاج مراجعة محامٍ مرخص.", promptEn:"I need help with a legal task. First identify the country and jurisdiction, distinguish verified legal sources from analysis, cite sources, and flag what requires review by a licensed lawyer." },
+  "/specialties/engineering": { ar:"المهندس والتصميم الهندسي", en:"Engineering & Design", subtitleAr:"تحليل المتطلبات والمواصفات والحسابات الأولية ومراجعة المخططات مع توثيق الافتراضات.", subtitleEn:"Requirements, specifications, preliminary calculations, and drawing reviews with documented assumptions.", workbenchSpecialty:"development" as Specialty, icon:HardHat, promptAr:"أحتاج مهمة هندسية. ابدأ بتحديد التخصص والمعايير والكود المحلي والأحمال والمدخلات المتاحة، ولا تعتمد أي تصميم إنشائي أو تنفيذي دون مراجعة مهندس مختص.", promptEn:"I need an engineering task. Identify the discipline, applicable local codes, loads, and available inputs first. Do not approve structural or construction designs without qualified engineer review." },
+  "/specialties/healthcare": { ar:"الطب والرعاية الصحية", en:"Healthcare", subtitleAr:"تنظيم المعلومات الصحية والبحث في الأدلة وتجهيز أسئلة للمختص، دون تشخيص أو وصف علاج مستقل.", subtitleEn:"Organize health information, research evidence, and prepare clinician questions without independent diagnosis or prescribing.", workbenchSpecialty:"research" as Specialty, icon:Stethoscope, promptAr:"أحتاج مساعدة معلوماتية صحية. وضّح السؤال والسياق، واعتمد على مصادر طبية موثوقة وحديثة، وافصل المعلومات العامة عن الحالات التي تستلزم تقييم طبيب.", promptEn:"I need health information support. Clarify the question and context, use reliable current medical sources, and distinguish general information from issues requiring clinician assessment." },
+  "/specialties/accounting": { ar:"المحاسبة والمالية", en:"Accounting & Finance", subtitleAr:"تنظيم القيود والتقارير وتحليل المصروفات والتدفقات وفق العملة والفترة والمعيار المحاسبي.", subtitleEn:"Organize entries and reports and analyze expenses and cash flow by currency, period, and accounting standard.", workbenchSpecialty:"business" as Specialty, icon:Calculator, promptAr:"أحتاج مهمة محاسبية أو مالية. حدّد الدولة والعملة والفترة والمعيار المحاسبي، وميّز بين البيانات التي أقدمها والافتراضات، ولا تنشئ أرقامًا غير موجودة.", promptEn:"I need an accounting or finance task. Identify jurisdiction, currency, period, and accounting standard. Separate supplied data from assumptions and never invent figures." },
+  "/specialties/maintenance": { ar:"الصيانة والتشغيل", en:"Maintenance & Operations", subtitleAr:"خطط الصيانة الوقائية وقوائم الفحص وتحليل الأعطال وسجلات التشغيل بناءً على بيانات المعدات.", subtitleEn:"Preventive maintenance plans, inspection checklists, fault analysis, and operating logs based on equipment data.", workbenchSpecialty:"development" as Specialty, icon:Wrench, promptAr:"أحتاج مهمة صيانة وتشغيل. حدّد نوع المعدة والطراز وظروف التشغيل والعطل وإجراءات السلامة، ثم أنشئ خطة فحص وصيانة قابلة للمراجعة دون افتراض بيانات فنية غير متاحة.", promptEn:"I need a maintenance and operations task. Identify equipment type, model, operating conditions, fault, and safety procedures, then prepare a reviewable inspection and maintenance plan without assuming unavailable technical data." },
+  "/specialties/education": { ar:"التعليم والتدريب", en:"Education & Training", subtitleAr:"إعداد الدروس والحقائب التدريبية والاختبارات وخطط التعلم وفق المستوى والأهداف.", subtitleEn:"Create lessons, training materials, assessments, and learning plans matched to level and objectives.", workbenchSpecialty:"assistant" as Specialty, icon:GraduationCap, promptAr:"أحتاج مهمة تعليمية أو تدريبية. حدّد المرحلة والمستوى والأهداف والمدة وطريقة التقييم، ثم جهّز محتوى مناسبًا مع أنشطة وقياس واضح للتعلم.", promptEn:"I need an education or training task. Identify learner level, objectives, duration, and assessment method, then prepare suitable content with activities and measurable learning outcomes." },
+} as const;
+
 const launcherSubtitleKeys: Record<string, TranslationKey> = {
   '/ai':'launcherSubtitleChat', '/workbench':'launcherSubtitleWorkbench', '/agents':'launcherSubtitleAgents',
   '/history':'launcherSubtitleHistory', '/profile':'launcherSubtitleProfile',
@@ -2161,6 +2170,35 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </article>)}</div>
   </div>;
 
+  const professionalSpecialtyPage = (route:string) => {
+    const info = professionalSpecialtyPages[route as keyof typeof professionalSpecialtyPages];
+    if (!info) return notFoundPage(isAr?"التخصص غير موجود":"Specialty not found",isAr?"هذا التخصص غير متاح.":"This specialty is unavailable.","/agents",isAr?"شبكة الوكلاء":"Agent network");
+    const Icon = info.icon;
+    const startTask = () => {
+      setSelectedSpecialty(info.workbenchSpecialty);
+      setRequest(isAr ? info.promptAr : info.promptEn);
+      setLocation("/workbench");
+    };
+    return <div className="page-enter">
+      {pageHeading(isAr?"التخصصات المهنية":"PROFESSIONAL SPECIALTIES",isAr?info.ar:info.en,isAr?info.subtitleAr:info.subtitleEn)}
+      <section className="panel panel-pad" style={{marginTop:16,maxWidth:980}}>
+        <div className="section-head" style={{alignItems:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <span className="agent-icon"><Icon size={24}/></span>
+            <div><span className="eyebrow">{isAr?"مساحة تخصص":"SPECIALTY WORKSPACE"}</span><h2 className="section-title">{isAr?info.ar:info.en}</h2></div>
+          </div>
+          <span className="status-chip">{isAr?"جاهز لبدء طلب":"Ready for a request"}</span>
+        </div>
+        <p className="page-subtitle" style={{lineHeight:1.9,marginTop:16}}>{isAr?info.subtitleAr:info.subtitleEn}</p>
+        <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?"يُنشئ العمدة خطة عمل لمراجعتك. المخرجات المتخصصة تظل مساعدة معلوماتية وتحتاج مراجعة واعتماد المختص عند اللزوم؛ لا تُعرض هذه الصفحة كخدمة مهنية مرخصة.":"AL OMDA creates a plan for your review. Specialist outputs are informational assistance and require qualified review where appropriate; this page is not a licensed professional service."}</span></div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:20}}>
+          <button type="button" className="button button-primary" onClick={startTask}><Plus size={15}/>{isAr?"ابدأ مهمة في هذا التخصص":"Start a task in this specialty"}</button>
+          <Link href="/agents" className="button button-secondary">{isAr?"العودة لشبكة الوكلاء":"Back to agent network"}</Link>
+        </div>
+      </section>
+    </div>;
+  };
+
   const workbenchPage = () => {
     const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
     const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
@@ -2658,6 +2696,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
   else if (path === '/agents') page = agentsPage();
+  else if (path in professionalSpecialtyPages) page = professionalSpecialtyPage(path);
   else if (path === '/workbench') page = workbenchPage();
   else if (path === '/projects') page = projectsPage();
   else if (path === '/pipeline') page = pipelinePage();
@@ -2674,7 +2713,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
   );
   const pageTitleKey = path === '/ai/usage' ? 'aiChat' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
-  const pageTitle = platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
+  const professionalTitle = professionalSpecialtyPages[path as keyof typeof professionalSpecialtyPages];
+  const pageTitle = professionalTitle ? (isAr?professionalTitle.ar:professionalTitle.en) : platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
