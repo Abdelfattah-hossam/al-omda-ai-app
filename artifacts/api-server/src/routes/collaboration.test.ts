@@ -44,6 +44,7 @@ test("pagination offsets accept only bounded decimal integers", () => {
   assert.equal(parsePageOffset("0"), 0);
   assert.equal(parsePageOffset("100"), 100);
   assert.equal(parsePageOffset("100000"), 100000);
+  assert.equal(parsePageOffset("0100000"), 100000);
   for (const invalid of ["", " ", "0x10", "1e3", "-1", "100001", "999999", ["1", "2"], 4]) {
     assert.equal(parsePageOffset(invalid), null);
   }
