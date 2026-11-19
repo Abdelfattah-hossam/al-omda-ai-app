@@ -467,3 +467,13 @@
 - **Version ID:** `a85d85a5-c446-42f1-a43b-1789ec19ac31`.
 - التغيير الإنتاجي في هذه الدفعة هو إعداد كتلة `previews: {}` فقط؛ إعدادات الإنتاج الموجودة أعلى ملف Wrangler ومتغيراتها بقيت كما هي، وظهر في سجل النشر نفس SUPABASE_URL وSUPABASE_PUBLISHABLE_KEY وOMDA_PRECISE_TEMPERATURE.
 - **البناء:** نجح TypeScript وبناء Vite؛ ظهر تحذير حجم JavaScript bundle أكبر من 500 kB، لكنه لم يفشل البناء. يُسجل هذا كبند تحسين أداء لاحق، لا كفشل نشر.
+
+
+### تجهيز مهارات وأدوات الوكلاء (2026-11-19)
+- أضيفت أربع مهارات Agent Skills بمصادرها الأصلية إلى `.agents/skills/`: `frontend-design` و`webapp-testing` و`vercel-react-best-practices` و`supabase-postgres-best-practices`.
+- أضيفت ملفات Playwright المساعدة والأمثلة الخاصة بـ `webapp-testing`، وملف الدليل الموسع وبعض قواعد React الأساسية، ومراجع RLS والفهارس وتجميع الاتصالات لـ Supabase.
+- أضيف `AGENTS.md` لفرض التخطيط والاختبارات والمراجعة وعدم تغيير حركة الشات/التمرير دون طلب صريح.
+- أضيف `.claude/settings.json` لتسجيل سوق `obra/superpowers-marketplace` وتمكين `superpowers@superpowers-marketplace` في Claude Code. الإعداد لا يثبت الإضافة تلقائيًا على أجهزة المطورين؛ يلزم فتح المشروع والموافقة على الثقة ثم تثبيت الإضافة محليًا عند الحاجة.
+- دليل التثبيت والاستخدام: `docs/AGENT_SKILLS_SETUP.md`.
+- لم يتم تثبيت أو تشغيل Claude Code داخل جلسة ChatGPT؛ هذه ملفات إعداد للمستودع، بينما مهارة Supabase Postgres متاحة أيضًا في بيئة المساعد الحالية. لم يتم الادعاء بتشغيل اختبارات متصفح أو أخذ لقطات شاشة في هذه الخطوة.
+- التغييرات تنتظر مراجعة CI عبر PR، ولم تُدمج أو تُنشر بعد.
