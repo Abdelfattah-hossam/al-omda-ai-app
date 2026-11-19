@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import CollaborationWorkspace from './CollaborationWorkspace';
+import AuditLogWorkspace from './AuditLogWorkspace';
 import WorkspaceAssets from './WorkspaceAssets';
-const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
@@ -25,53 +25,13 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Globe2, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
   Send, Settings2, ShieldCheck, Sparkles, StopCircle, UserRound, WandSparkles,
   X, Menu, Languages, Palette, Megaphone, UserRoundCog, Trash2, CircleHelp, TrendingUp, TrendingDown, Minus, Download, RotateCcw, type LucideIcon,
 } from 'lucide-react';
-
-type DeferredGlobalMapProps = { isAr: boolean };
-
-function DeferredGlobalMap({ isAr }: DeferredGlobalMapProps) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setShouldLoad(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setShouldLoad(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "280px 0px" },
-    );
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, []);
-
-  const loadingLabel = isAr ? "سيتم تحميل الخريطة عند الوصول إليها…" : "The map will load as you reach it…";
-  return (
-    <div ref={hostRef} className="global-map-lazy-shell">
-      {shouldLoad ? (
-        <Suspense fallback={<div className="global-map-lazy-placeholder" role="status">{isAr ? "جارٍ تجهيز الخريطة…" : "Preparing map…"}</div>}>
-          <GlobalMap isAr={isAr} />
-        </Suspense>
-      ) : (
-        <div className="global-map-lazy-placeholder" role="status">{loadingLabel}</div>
-      )}
-    </div>
-  );
-}
 
 type Language = 'ar' | 'en';
 type StepState = 'pending' | 'approved' | 'rejected';
@@ -512,7 +472,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
     {path:'/finance/sales-overview',ar:'نظرة عامة على المبيعات',en:'Sales Overview',subtitleAr:'مؤشرات المبيعات',subtitleEn:'Sales metrics',icon:TrendingUp},
     {path:'/finance/sales-distribution',ar:'توزيع المبيعات',en:'Sales Distribution',subtitleAr:'توزيع القنوات والمصادر',subtitleEn:'Channel and source distribution',icon:Globe},
     {path:'/finance/payment-gateways',ar:'بوابات الدفع',en:'Payment Gateways',subtitleAr:'حالة تكاملات الدفع',subtitleEn:'Payment integrations',icon:CreditCard},
-    {path:'/finance/active-users',ar:'المستخدمون النشطون والخريطة العالمية',en:'Active Users & Global Map',subtitleAr:'خريطة عالمية وتحليلات المستخدمين',subtitleEn:'Global map and user analytics',icon:Globe2},
+    {path:'/finance/active-users',ar:'المستخدمون النشطون',en:'Active Users',subtitleAr:'تحليلات نشاط المستخدمين',subtitleEn:'User activity analytics',icon:Users},
   ]},
   { id:'collaboration', titleAr:'التعاون والتطبيقات', titleEn:'COLLABORATION & APPS', subtitleAr:'أدوات التواصل وإدارة العمل', subtitleEn:'Communication and work tools', items:[
     {path:'/collaboration/contacts',ar:'جهات الاتصال',en:'Contacts',subtitleAr:'دفتر جهات الاتصال',subtitleEn:'Contact directory',icon:Contact},
@@ -558,7 +518,7 @@ const platformStatusPages = {
   '/finance/sales-overview': { ar:'نظرة عامة على المبيعات', en:'Sales Overview', sourceAr:'مصدر بيانات المبيعات غير مربوط', sourceEn:'Sales data source is not connected', detailAr:'لن تظهر إيرادات أو مصروفات أو أرباح تقديرية. ستظهر الأرقام بعد ربط مصدر مبيعات حقيقي.', detailEn:'Revenue, expenses, and profit are intentionally hidden until a real sales source is connected.' },
   '/finance/sales-distribution': { ar:'توزيع المبيعات', en:'Sales Distribution', sourceAr:'قنوات المبيعات غير مربوطة', sourceEn:'Sales channels are not connected', detailAr:'لن يتم توزيع المبيعات على الموقع أو التطبيق أو السوق أو الوكلاء دون بيانات معاملات فعلية.', detailEn:'Sales will not be attributed to web, mobile, marketplace, or agents without actual transaction data.' },
   '/finance/payment-gateways': { ar:'بوابات الدفع', en:'Payment Gateways', sourceAr:'لا توجد بوابة دفع متصلة', sourceEn:'No payment gateway is connected', detailAr:'لا توجد معاملات أو مفاتيح ربط مؤكدة لعرضها. لا تُدخل مفاتيح سرية في المحادثة؛ استخدم إعدادات الربط الآمنة عند تجهيز التكامل.', detailEn:'There are no verified payment connections or transactions to display. Never paste secret keys into chat; use secure integration settings when available.' },
-  '/finance/active-users': { ar:'المستخدمون النشطون والخريطة', en:'Active Users & Global Map', sourceAr:'تحليلات المستخدمين غير مفعّلة', sourceEn:'User analytics are not enabled', detailAr:'لن يتم عرض أعداد مستخدمين أو مواقع جغرافية تخمينية. يلزم مصدر تحليلات حقيقي ومصرّح به.', detailEn:'No estimated user counts or guessed locations are shown. A real, authorized analytics source is required.' },
+  '/finance/active-users': { ar:'المستخدمون النشطون', en:'Active Users', sourceAr:'تحليلات المستخدمين غير مفعّلة', sourceEn:'User analytics are not enabled', detailAr:'لن يتم عرض أعداد مستخدمين أو مواقع جغرافية تخمينية. يلزم مصدر تحليلات حقيقي ومصرّح به.', detailEn:'No estimated user counts or guessed locations are shown. A real, authorized analytics source is required.' },
   '/collaboration/contacts': { ar:'جهات الاتصال', en:'Contacts', sourceAr:'دفتر جهات الاتصال غير مربوط', sourceEn:'Contacts provider is not connected', detailAr:'اربط مصدر جهات الاتصال أولًا حتى لا تظهر أسماء أو بيانات أشخاص وهمية.', detailEn:'Connect a contacts source before displaying people or contact details.' },
   '/collaboration/calendar': { ar:'التقويم', en:'Calendar', sourceAr:'التقويم الخارجي غير مربوط', sourceEn:'External calendar is not connected', detailAr:'لا توجد مواعيد خارجية متاحة حاليًا. لن ننشئ أحداثًا أو اجتماعات غير محفوظة.', detailEn:'No external events are available. The app will not invent or imply saved meetings.' },
   '/collaboration/email': { ar:'البريد الإلكتروني', en:'Email', sourceAr:'حساب البريد غير مربوط', sourceEn:'Email account is not connected', detailAr:'لن يتم عرض رسائل أو الادعاء بإرسال بريد قبل ربط حساب بريد فعلي ومنح الإذن.', detailEn:'Messages are not displayed and emails are not claimed as sent until a real mailbox is connected and authorized.' },
@@ -629,7 +589,7 @@ const PAGE_GUIDANCE: Record<string, { ar: string; en: string }> = {
   "/finance/sales-overview": { ar: "تعرض هذه الصفحة مؤشرات المبيعات عند ربط مصدر معاملات حقيقي. لا تُعرض إيرادات أو أرباح تجريبية على أنها أرقام فعلية.", en: "This page displays sales metrics only after a real transaction source is connected. Sample revenue or profit must never appear as real data." },
   "/finance/sales-distribution": { ar: "يتطلب توزيع المبيعات بيانات معاملات وقنوات موثقة. عند عدم وجود مصدر متصل، تظل الصفحة موضحة لحالة عدم الربط.", en: "Sales distribution requires verified transaction and channel data. When no source is connected, the page remains clearly marked as not connected." },
   "/finance/payment-gateways": { ar: "لا تظهر بوابة دفع كمتصلة إلا بعد إعداد مصادقة صحيحة واختبارها. لا تشارك المفاتيح السرية في الشات.", en: "A payment gateway is connected only after valid authentication and verification. Do not share secret keys in chat." },
-  "/finance/active-users": { ar: "تعرض الأرقام الحقيقية من نشاط الحسابات المصرح به. الخريطة توضح النطاق الجغرافي فقط؛ التطبيق لا يجمع إحداثيات المستخدمين ولا يخترع علامات مواقع.", en: "Real figures come from authorized account activity. The map is geographic context only; the app does not collect user coordinates or invent location markers." },
+  "/finance/active-users": { ar: "تعرض الصفحة مؤشرات نشاط الحسابات المصرح به فقط، دون جمع أو عرض مواقع المستخدمين.", en: "This page shows authorized account activity metrics only; it does not collect or display user locations." },
   "/collaboration/contacts": { ar: "تظهر جهات الاتصال بعد ربط دفتر عناوين حقيقي ومنح الإذن. لا تُنشأ أسماء أو أرقام أشخاص افتراضيين.", en: "Contacts appear only after a real address book is connected and authorized. No fictional names or phone numbers are created." },
   "/collaboration/calendar": { ar: "تظهر المواعيد بعد ربط تقويم فعلي. لن يتم الادعاء بحفظ اجتماع أو إرساله ما لم يؤكد مزود التقويم ذلك.", en: "Events appear after a real calendar is connected. A meeting is not claimed as saved or sent unless the calendar provider confirms it." },
   "/collaboration/email": { ar: "تحتاج قراءة الرسائل وإرسالها إلى ربط صندوق بريد ومنح الصلاحيات. لا يتم الادعاء بإرسال رسالة دون تأكيد المزود.", en: "Reading and sending email requires a connected mailbox and granted permissions. No message is claimed as sent without provider confirmation." },
@@ -1414,7 +1374,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const platformStatusPage = (route:string) => {
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
-    const isGlobalMap = route === '/finance/active-users';
+    const isActiveUsersPage = route === '/finance/active-users';
     const exportActiveUsers = () => {
       const isLive = Boolean(!authLoading && authUser && liveUserAnalytics);
       const rows = [
@@ -1428,25 +1388,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users.csv'; anchor.click(); URL.revokeObjectURL(url);
     };
     return <div className="page-enter">
-      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'لوحة المستخدمين النشطين والخريطة العالمية التفاعلية.':'Active users dashboard with an interactive global map.')}
-      {isGlobalMap && <section className="panel panel-pad global-users-dashboard" style={{marginTop:16}}>
-        <div className="global-users-header">
-          <div><span className="eyebrow">USER ANALYTICS</span><h2 className="section-title" style={{marginTop:8}}>{isAr?'المستخدمون النشطون':'Active User'}</h2><p className="page-subtitle">{isAr?'نظرة عامة على نشاط المستخدمين حول العالم':'Global overview of user activity'}</p></div>
-          <button type="button" className="button button-secondary global-export-button" onClick={exportActiveUsers} disabled={authLoading}><Download size={15}/>{isAr?'تصدير':'Export'}</button>
-        </div>
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isActiveUsersPage?(isAr?'لوحة تحليلات المستخدمين النشطين.':'Active users analytics dashboard.'):(isAr?'حالة تكامل المنصة ومصادر البيانات.':'Platform integration status and data sources.'))}
+      {isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+        <div className="section-head"><h2 className="section-title">{isAr?'المستخدمون النشطون':'Active Users'}</h2><button type="button" className="button button-secondary" onClick={exportActiveUsers} disabled={authLoading}><Download size={15}/>{isAr?'تصدير':'Export'}</button></div>
         <div className="global-user-metrics">
           <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authLoading || authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…')))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
           <div className="global-user-growth"><span>{isAr?'مقارنة بالـ30 يومًا السابقة':'Vs. previous 30 days'}</span><strong>{!authLoading && !authUser ? <><TrendingUp size={18}/> 8.06%</> : liveUserAnalytics && liveUserAnalytics.growth_percent !== null ? <><TrendingUp size={18}/> {liveUserAnalytics.growth_percent}%</> : '—'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'محسوبة من نشاط تسجيل الدخول':'Calculated from sign-in activity') : (isAr?'لا تتوفر بيانات كافية':'Not enough live data')) : (isAr?'قيمة تجريبية للزوار':'Sample preview for guests')}</small></div>
         </div>
-        <div className="global-map-toolbar">
-          <div><span className="global-map-live-dot"/><strong>{isAr?'خريطة عالمية تفاعلية':'Minimal world map'}</strong><small>{isAr?'حرّك الخريطة واسحب بإصبعين للتكبير':'Pan the map and pinch to zoom'}</small></div>
-        </div>
-        <div className="global-map-viewport">
-          <DeferredGlobalMap isAr={isAr}/>
-        </div>
-        <p className="global-map-disclaimer">{authUser ? (liveUserAnalytics ? (isAr?'البيانات الحقيقية محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة. لا نجمع إحداثيات الموقع.':'Live figures are calculated from sign-ins in the last 30 days versus the previous 30 days. No location coordinates are collected.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')} {' '}{isAr?'الخصوصية: لا يقرأ التطبيق موقعك ولا يخزن إحداثياتك. عند تحميل الخريطة، يتلقى OpenFreeMap طلبات تحميل مناطق الخريطة المعروضة. خدمته العامة لا تتطلب مفتاح API أو ملفات تعريف ارتباط.':'Privacy: the app does not read or store your location coordinates. When the map loads, OpenFreeMap receives requests for the map areas being displayed. Its public service does not require an API key or cookies.'}</p>
+        <p className="page-subtitle" style={{marginTop:14}}>{authUser ? (liveUserAnalytics ? (isAr?'البيانات محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة.':'Figures are calculated from sign-ins in the last 30 days versus the previous 30 days.') : (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.')) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
-      {!isGlobalMap && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+      {!isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
         <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض العمدة أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: AL OMDA will not display invented figures, records, or locations without a connected source.'}</span></div>
@@ -1613,35 +1564,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
             </Link>})}
           </div>
         </div>)}
-      </section>
-      <section className="panel panel-pad global-users-dashboard dashboard-global-map active-user-map-card" aria-labelledby="dashboard-global-map-title">
-        <div className="active-user-map-heading">
-          <div>
-            <h2 id="dashboard-global-map-title">{isAr?'المستخدمون النشطون':'Active User'}</h2>
-            <p>{isAr?'إحصائيات النشاط خلال آخر 30 يومًا':'Account activity · last 30 days'}</p>
-          </div>
-          <button type="button" className="active-user-map-export" onClick={() => {
-            const value = authLoading || !authUser || !liveUserAnalytics ? '' : String(liveUserAnalytics.active_users_30d);
-            const csv = ['metric,value','active_users_last_30_days,' + value].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = 'al-omda-active-users.csv';
-            anchor.click();
-            URL.revokeObjectURL(url);
-          }} aria-label={isAr?'تصدير إحصائيات المستخدمين':'Export active user analytics'}>
-            <span aria-hidden="true">⇧</span>{isAr?'تصدير':'Export'}
-          </button>
-        </div>
-        <div className="active-user-map-visual">
-          <DeferredGlobalMap isAr={isAr}/>
-        </div>
-        <div className="active-user-map-total">
-          <strong>{authLoading || !authUser || !liveUserAnalytics ? '—' : liveUserAnalytics.active_users_30d.toLocaleString()}</strong>
-          <span>{isAr?'إجمالي المستخدمين النشطين':'Total Active User'}</span>
-          <small>{!authUser ? (isAr?'سجّل الدخول لعرض الإحصائيات':'Sign in to view analytics') : authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Verified sign-in analytics') : (liveUserAnalyticsError || (isAr?'البيانات غير متاحة حاليًا':'Analytics unavailable'))}</small>
-        </div>
       </section>
       <section className="dashboard-section">
         <div className="dashboard-section-heading"><div><h2>{isAr?'ملخص الأداء':'Performance overview'}</h2><p>{isAr?'مؤشرات مهامك وخططك في مكان واحد':'Your tasks and plans in one place'}</p></div><span className="dashboard-period"><Activity size={13}/>{isAr?'كل الوقت':'All time'}</span></div>
@@ -2705,6 +2627,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/collaboration/contacts') page = <CollaborationWorkspace key="contact" kind="contact" language={language} />;
   else if (path === '/collaboration/calendar') page = <CollaborationWorkspace key="event" kind="event" language={language} />;
   else if (path === '/collaboration/tickets') page = <CollaborationWorkspace key="ticket" kind="ticket" language={language} />;
+  else if (path === '/system/security') page = <AuditLogWorkspace language={language} />;
   else if (path in platformStatusPages) page = platformStatusPage(path);
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
@@ -2741,7 +2664,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
               {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
               {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
-              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون والخريطة العالمية':'Active Users & Global Map',icon:Globe2},
+              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون':'Active Users',icon:Users},
             ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
           </nav>
         </section>

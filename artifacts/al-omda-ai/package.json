@@ -72,7 +72,6 @@
     "vaul": "^1.1.2",
     "vite": "catalog:",
     "wouter": "^3.3.5",
-    "zod": "catalog:",
-    "maplibre-gl": "6.19.0"
+    "zod": "catalog:"
   }
 }

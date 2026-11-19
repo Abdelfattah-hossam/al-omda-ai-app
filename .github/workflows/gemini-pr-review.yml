@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: write
 
 concurrency:
@@ -24,6 +24,7 @@ jobs:
           !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
     steps:
       - name: Fetch pull request diff without checking out or running PR code
         env:
@@ -40,6 +41,7 @@ jobs:
           head -c 120000 pr.diff > pr-review.diff
 
       - name: Ask Gemini for a read-only code review
+        continue-on-error: true
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -96,6 +98,7 @@ jobs:
           echo "reviewed=true" >> "$GITHUB_OUTPUT"
 
       - name: Post review as a pull request comment
+        continue-on-error: true
         if: steps.gemini.outputs.reviewed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

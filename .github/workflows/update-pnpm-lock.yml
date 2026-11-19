@@ -3,7 +3,7 @@ name: Update pnpm lockfile
 on:
   push:
     branches:
-      - feat/realistic-apple-style-global-map
+      - feat/collaboration-audit-log
     paths:
       - "artifacts/al-omda-ai/package.json"
       - "pnpm-lock.yaml"

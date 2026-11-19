@@ -170,3 +170,29 @@ test("project creation validates bounded steps and writes quota in the same tran
   assert.match(creation, /insert into public\.ai_daily_usage[\s\S]*?on conflict/i);
   assert.match(creation, /insert into public\.tasks/i);
 });
+
+
+test("collaboration audit log is owner-readable and database-written only", () => {
+  const audit = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119014812_create_collaboration_audit_events.sql"), "utf8");
+  assert.match(audit, /create table if not exists public\.collaboration_audit_events/i);
+  assert.match(audit, /alter table public\.collaboration_audit_events enable row level security/i);
+  assert.match(audit, /revoke all on table public\.collaboration_audit_events from public, anon, authenticated/i);
+  assert.match(audit, /grant select on table public\.collaboration_audit_events to authenticated/i);
+  assert.match(audit, /using \(\(select auth\.uid\(\)\) = user_id\)/i);
+  assert.match(audit, /security definer[\s\S]*?set search_path = ''/i);
+  assert.match(audit, /revoke all on function omda_private\.log_collaboration_record_change\(\) from public, anon, authenticated/i);
+  assert.match(audit, /after insert or update or delete on public\.collaboration_records/i);
+  const cascade = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015054_skip_collaboration_audit_on_account_cascade.sql"), "utf8");
+  assert.match(cascade, /if not exists \(select 1 from auth\.users where id = target_user_id\)/i);
+  assert.match(cascade, /return old/i);
+  assert.match(cascade, /return new/i);
+  const hardened = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015255_harden_collaboration_audit_trigger.sql"), "utf8");
+  assert.match(hardened, /target_user_id := old\.user_id/i);
+  assert.match(hardened, /target_kind := old\.kind/i);
+  assert.match(hardened, /prevent_collaboration_record_identity_change/i);
+  assert.match(hardened, /new\.user_id is distinct from old\.user_id/i);
+  assert.match(hardened, /new\.kind is distinct from old\.kind/i);
+  assert.match(hardened, /if not exists \(select 1 from auth\.users where id = target_user_id\)/i);
+  const errorCode = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015914_use_business_rule_error_for_identity_lock.sql"), "utf8");
+  assert.match(errorCode, /using errcode = 'P0001'/i);
+});

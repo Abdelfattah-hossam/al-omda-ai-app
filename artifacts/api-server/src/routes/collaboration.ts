@@ -25,6 +25,42 @@ type DbRecord = {
 const router: IRouter = Router();
 const allowedKinds = new Set<RecordKind>(["contact", "event", "ticket"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PAGE_SIZE = 100;
+const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
+type AuditCursor = { createdAt: string; id: string };
+type AuditRow = { id: string; action: "created" | "updated" | "deleted"; record_kind: "contact" | "event" | "ticket"; record_id: string; created_at: string };
+
+export function parseAuditCursor(createdAt: unknown, id: unknown): AuditCursor | null | undefined {
+  if (createdAt === undefined && id === undefined) return null;
+  if (typeof createdAt !== "string" || !isoTimestampPattern.test(createdAt) || typeof id !== "string" || !uuidPattern.test(id)) return undefined;
+  const year = Number(createdAt.slice(0, 4));
+  const month = Number(createdAt.slice(5, 7));
+  const day = Number(createdAt.slice(8, 10));
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) return undefined;
+  if (!Number.isFinite(new Date(createdAt).getTime())) return undefined;
+  // Preserve PostgreSQL microseconds; Date.toISOString() would truncate to milliseconds.
+  return { createdAt, id };
+}
+
+export function buildAuditPage<T extends { id: string; created_at: string }>(rows: T[], pageSize = PAGE_SIZE) {
+  const hasMore = rows.length > pageSize;
+  const pageRows = hasMore ? rows.slice(0, pageSize) : rows;
+  const last = pageRows[pageRows.length - 1];
+  return {
+    rows: pageRows,
+    nextCursor: hasMore && last ? { createdAt: last.created_at, id: last.id } : null,
+  };
+}
+
+export function parsePageOffset(rawOffset: unknown): number | null {
+  if (rawOffset === undefined) return 0;
+  if (typeof rawOffset !== "string" || rawOffset.length === 0 || rawOffset.length > 12) return null;
+  if (![...rawOffset].every(char => char >= "0" && char <= "9")) return null;
+  const offset = Number(rawOffset);
+  return Number.isSafeInteger(offset) && offset >= 0 && offset <= 100000 ? offset : null;
+}
 
 async function getSession(req: Parameters<typeof resolveSession>[0], res: Parameters<typeof resolveSession>[1]): Promise<SupabaseSession | null | false> {
   try {
@@ -68,21 +104,43 @@ function mapRecord(row: DbRecord) {
   return { id: row.id, kind: row.kind, title: row.title, description: row.description, status: row.status, dueAt: row.due_at ? new Date(row.due_at).toISOString() : null, metadata: row.metadata ?? {}, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
+router.get("/collaboration/audit", requireSameOriginRead, async (req, res): Promise<void> => {
+  const session = await getSession(req, res);
+  if (!session) return;
+  try {
+    const cursor = parseAuditCursor(req.query.beforeCreatedAt, req.query.beforeId);
+    if (cursor === undefined) { res.status(400).json({ error: "Audit cursor is invalid." }); return; }
+    const query = new URLSearchParams({
+      select: "id,action,record_kind,record_id,created_at",
+      user_id: "eq." + session.user.id,
+      order: "created_at.desc,id.desc",
+      limit: String(PAGE_SIZE + 1),
+    });
+    if (cursor) {
+      query.set("or", "(created_at.lt." + cursor.createdAt + ",and(created_at.eq." + cursor.createdAt + ",id.lt." + cursor.id + "))");
+    }
+    const response = await supabaseFetch("/rest/v1/collaboration_audit_events?" + query.toString(), {}, session.accessToken);
+    const rows = await readSupabaseJson<AuditRow[]>(response);
+    const page = buildAuditPage(rows);
+    res.json({ events: page.rows, nextCursor: page.nextCursor });
+  } catch (error) { reportSupabaseError(req, res, error, "Could not load audit events."); }
+});
+
 router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Promise<void> => {
   const kind = req.params.kind as RecordKind;
   if (!allowedKinds.has(kind)) { res.status(404).json({ error: "Workspace type not found." }); return; }
   const session = await getSession(req, res);
   if (!session) return;
   try {
-    const rawOffset = req.query.offset;
-    const offsetText = typeof rawOffset === "string" ? rawOffset : "0";
-    const offset = offsetText.length > 0 && offsetText.length <= 6 && [...offsetText].every(char => char >= "0" && char <= "9") ? Number(offsetText) : -1;
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
-    const pageSize = 100;
-    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize), offset: String(offset) });
+    const offset = parsePageOffset(req.query.offset);
+    if (offset === null) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
+    const pageSize = PAGE_SIZE;
+    // Fetch one extra row to determine whether another page exists.
+    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_records?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<DbRecord[]>(response);
-    res.json({ records: rows.map(mapRecord), nextOffset: rows.length === pageSize ? offset + pageSize : null });
+    const hasMore = rows.length > pageSize;
+    res.json({ records: (hasMore ? rows.slice(0, pageSize) : rows).map(mapRecord), nextOffset: hasMore ? offset + pageSize : null });
   } catch (error) { reportSupabaseError(req, res, error, "Could not load collaboration records."); }
 });
 
