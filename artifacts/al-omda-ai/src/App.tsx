@@ -1450,6 +1450,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const activeIndex = task.steps.findIndex((step) => step.state !== 'approved');
     return <section className="panel plan-card" id="task-plan">
       <div className="plan-heading"><div><div className="eyebrow">{t('planIsDemo')}</div><h2 className="section-title" style={{marginTop:9}}>{t('yourPlan')}</h2></div><span className="section-meta">{count(task)}/{task.steps.length}</span></div>
+      {workspaceLoadError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceLoadError}</div>}
+      {workspaceError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceError}</div>}
       <div className="notice-bar" style={{margin:'15px 0 5px'}}><ShieldCheck size={15} style={{flex:'none'}}/><span>{planGenerating ? (isAr ? 'العمدة بيحلل طلبك وينشئ الخطة...' : 'AL OMDA is analyzing your request...') : (isAr ? 'الخطة تُنشأ بالذكاء الاصطناعي وتُحفظ للمراجعة؛ لا يبدأ التنفيذ قبل موافقتك.' : 'AI-generated plan saved for review; execution will not start before your approval.')}</span></div>
       {task.status === 'paused' && <div className="notice-bar" style={{marginTop:12}}><Pause size={14}/><span>{t('paused')}</span></div>}
       {task.steps.map((step,index) => {
@@ -2184,7 +2186,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div className="field-group"><div className="form-label">{t('chooseSpecialty')}</div><div className="select-grid">{specialties.map(({id,icon:Icon})=><button type="button" key={id} className={`select-specialty ${selectedSpecialty===id?'selected':''}`} onClick={()=>setSelectedSpecialty(id)} data-testid={`select-specialty-${id}`}><Icon size={14}/>{label(id)}</button>)}</div></div>
           <div className="notice-bar" style={{marginBottom:17}}><ShieldCheck size={14}/><span>{t('planDisclaimer')}</span></div>
           <button type="submit" className="button button-primary" disabled={!request.trim() || planGenerating} data-testid="button-propose-plan"><Sparkles size={15}/>{planGenerating ? (isAr ? 'جارٍ إنشاء الخطة...' : 'Generating plan...') : t('generatePlan')}<Send size={13}/></button>
-          {(workspaceLoadError || workspaceError) && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceLoadError || workspaceError}</div>}
+          {workspaceLoadError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceLoadError}</div>}
+          {workspaceError && <div className="notice-bar notice-error" role="alert" style={{marginTop:12}}>{workspaceError}</div>}
         </form>
         {active ? renderPlan(active) : <section className="panel plan-empty"><div><span className="empty-mark"><MessageSquareText size={22}/></span><h3>{t('planEmptyTitle')}</h3><p>{t('planEmptyText')}</p></div></section>}
       </div>
@@ -2592,7 +2595,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             </div>
           </>}
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authConfigured')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
-          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{(workspaceLoadError||workspaceError)&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError||workspaceError}</div>}
+          {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceLoadError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
         
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || defaultDisplayName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
