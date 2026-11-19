@@ -621,6 +621,7 @@ function App() {
   const org = saved.org.trim() || (isAr ? 'مساحة العمل' : 'Workspace');
   const [request, setRequest] = useState('');
   const [planGenerating, setPlanGenerating] = useState(false);
+  const [projectRunning, setProjectRunning] = useState(false);
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
   const [approvingStepId, setApprovingStepId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState('');
@@ -1094,6 +1095,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     if (task.status === 'paused' || task.status === 'stopped') { setWorkspaceError(isAr ? 'استأنف المشروع قبل التنفيذ.' : 'Resume the project before execution.'); return; }
     if (projectRunLockRef.current || taskExecutionLockRef.current || approvalLockRef.current || commentSubmissionLockRef.current || executingStepId) return;
     projectRunLockRef.current = true;
+    setProjectRunning(true);
     setWorkspaceError('');
     setExecutionError('');
     let workingTask = task;
@@ -1132,6 +1134,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }
     } finally {
       projectRunLockRef.current = false;
+      setProjectRunning(false);
     }
   };
 
@@ -1505,7 +1508,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" className="button button-danger button-small" disabled={!!executingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun'}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
-               <button type="button" className="button button-primary button-small" disabled={!!executingStepId || !!approvingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
+               <button type="button" className="button button-primary button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
                  <Sparkles size={13}/>{executingStepId===step.id?(isAr?'جارٍ التنفيذ...':'Executing...'):(isAr?'نفّذ الخطوة بالذكاء الاصطناعي':'Execute step with AI')}
                </button>
              </div>}
@@ -1513,20 +1516,20 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {isCurrent && task.status === 'review' && <div className="step-actions">
               {editId === step.id ? <><button className="button button-quiet button-small" onClick={() => { if (editText.trim() && editOutput.trim() && editComplete.trim()) changeStep(task,step.id,{text:editText.trim(),output:editOutput.trim(),complete:editComplete.trim()}); setEditId(null); }}>{t('save')}</button><button className="button button-quiet button-small" onClick={() => setEditId(null)}>{isAr?'إلغاء':'Cancel'}</button></> :
                 <button className="button button-quiet button-small" onClick={() => { const guidance=getStepGuidance(task.specialty,index,language); setEditId(step.id); setEditText(step.text); setEditOutput(step.output ?? guidance.output); setEditComplete(step.complete ?? guidance.complete); }}><Edit3 size={12}/>{t('edit')}</button>}
-              <button className="button button-primary button-small" disabled={editId === step.id || !!approvingStepId || !!executingStepId || !authUser} onClick={() => void approveStep(task,step.id)}><Check size={12}/>{approvingStepId===step.id?(isAr?'جارٍ حفظ الموافقة...':'Saving approval...'):t('approve')}</button>
+              <button className="button button-primary button-small" disabled={editId === step.id || projectRunning || !!approvingStepId || !!executingStepId || !authUser} onClick={() => void approveStep(task,step.id)}><Check size={12}/>{approvingStepId===step.id?(isAr?'جارٍ حفظ الموافقة...':'Saving approval...'):t('approve')}</button>
               <button className="button button-danger button-small" disabled={editId === step.id || !!approvingStepId || !!executingStepId || !authUser} onClick={() => void rejectStep(task,step.id)}><X size={12}/>{approvingStepId===step.id?(isAr?'جارٍ حفظ الرفض...':'Saving rejection...'):t('reject')}</button>
             </div>}
           </div>
         </div>;
       })}
       {task.status === 'approved' && <div className="notice-bar" style={{marginTop:10}}><CheckCheck size={15}/><span>{t('allApproved')} {task.steps.every((step)=>Boolean(step.result)) ? (isAr?' تم تنفيذ كل المراحل وحفظ مخرجاتها.':' All stages have executed and their outputs are saved.') : (isAr?' توجد مراحل معتمدة تحتاج إلى تنفيذ أو إعادة محاولة.':' Approved stages remain to be executed or retried.')}</span></div>}
-      {task.status !== 'paused' && task.status !== 'stopped' && task.steps.some((step)=>!step.result) && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:12}}><button type="button" className="button button-primary" disabled={!!executingStepId || !!approvingStepId || !authUser} onClick={()=>void approveAndRunRemaining(task)}><Sparkles size={14}/>{executingStepId ? (isAr?'جارٍ تنفيذ المشروع...':'Running project...') : t('approveAll')}</button><small className="section-meta">{isAr?'يعتمد كل مرحلة بالترتيب ثم ينفذها ويحفظ مخرجها قبل الانتقال إلى التالية. يتوقف عند أول خطأ أو مرحلة غير مكتملة.':'Approves and executes each stage in order, saving its deliverable before continuing. Stops at the first error or incomplete stage.'}</small></div>}
+      {task.status !== 'paused' && task.status !== 'stopped' && task.steps.some((step)=>!step.result) && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:12}}><button type="button" className="button button-primary" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser} onClick={()=>void approveAndRunRemaining(task)}><Sparkles size={14}/>{projectRunning || executingStepId ? (isAr?'جارٍ تنفيذ المشروع...':'Running project...') : t('approveAll')}</button><small className="section-meta">{isAr?'يعتمد كل مرحلة بالترتيب ثم ينفذها ويحفظ مخرجها قبل الانتقال إلى التالية. يتوقف عند أول خطأ أو مرحلة غير مكتملة.':'Approves and executes each stage in order, saving its deliverable before continuing. Stops at the first error or incomplete stage.'}</small></div>}
       {task.status === 'stopped' && <div className="notice-bar" style={{marginTop:10}}><StopCircle size={15}/><span>{t('stopped')}</span></div>}
       {task.status !== 'approved' && task.status !== 'stopped' && <div className="step-actions" style={{borderTop:'1px solid #2b3038',paddingTop:14,marginTop:8}}>
-        <button className="button button-quiet button-small" onClick={() => patchTask(task.id,(prev)=>({...prev,status:prev.status === 'paused' ? 'review' : 'paused'}))}>
+        <button className="button button-quiet button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser || task.demo} onClick={() => patchTask(task.id,(prev)=>({...prev,status:prev.status === 'paused' ? 'review' : 'paused'}))}>
           {task.status === 'paused' ? <Play size={13}/> : <Pause size={13}/>} {task.status === 'paused' ? t('resume') : t('pause')}
         </button>
-        <button className="button button-danger button-small" onClick={() => { if (window.confirm(t('confirmStop'))) patchTask(task.id,(prev)=>({...prev,status:'stopped'})); }}><StopCircle size={13}/>{t('stop')}</button>
+        <button className="button button-danger button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser || task.demo} onClick={() => { if (window.confirm(t('confirmStop'))) patchTask(task.id,(prev)=>({...prev,status:'stopped'})); }}><StopCircle size={13}/>{t('stop')}</button>
       </div>}
     </section>;
   };
