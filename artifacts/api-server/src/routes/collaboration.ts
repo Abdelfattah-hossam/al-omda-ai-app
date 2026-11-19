@@ -26,7 +26,7 @@ const router: IRouter = Router();
 const allowedKinds = new Set<RecordKind>(["contact", "event", "ticket"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PAGE_SIZE = 100;
-const isoTimestampPattern = /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/;
+const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 type AuditCursor = { createdAt: string; id: string };
 type AuditRow = { id: string; action: "created" | "updated" | "deleted"; record_kind: "contact" | "event" | "ticket"; record_id: string; created_at: string };
 
