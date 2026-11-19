@@ -25,7 +25,7 @@ import {
   type Workspace as ApiWorkspace,
 } from '@workspace/api-client-react';
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Globe2, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
+  Activity, ArrowLeft, ArrowRight, ArrowUpLeft, BadgeCheck, Globe, Users, CreditCard, Contact, CalendarDays, Mail, Ticket, Scale, HardHat, Stethoscope, Calculator, Wrench, GraduationCap, Monitor, RefreshCw,
   Bot, BriefcaseBusiness, Check, CheckCheck, ChevronDown,
   Code2, Compass, Edit3, FileText, FlaskConical, History, LayoutDashboard,
   LockKeyhole, MessageSquareText, Pause, Play, Plus, Search,
@@ -472,7 +472,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
     {path:'/finance/sales-overview',ar:'نظرة عامة على المبيعات',en:'Sales Overview',subtitleAr:'مؤشرات المبيعات',subtitleEn:'Sales metrics',icon:TrendingUp},
     {path:'/finance/sales-distribution',ar:'توزيع المبيعات',en:'Sales Distribution',subtitleAr:'توزيع القنوات والمصادر',subtitleEn:'Channel and source distribution',icon:Globe},
     {path:'/finance/payment-gateways',ar:'بوابات الدفع',en:'Payment Gateways',subtitleAr:'حالة تكاملات الدفع',subtitleEn:'Payment integrations',icon:CreditCard},
-    {path:'/finance/active-users',ar:'المستخدمون النشطون',en:'Active Users',subtitleAr:'تحليلات نشاط المستخدمين',subtitleEn:'User activity analytics',icon:Globe2},
+    {path:'/finance/active-users',ar:'المستخدمون النشطون',en:'Active Users',subtitleAr:'تحليلات نشاط المستخدمين',subtitleEn:'User activity analytics',icon:Users},
   ]},
   { id:'collaboration', titleAr:'التعاون والتطبيقات', titleEn:'COLLABORATION & APPS', subtitleAr:'أدوات التواصل وإدارة العمل', subtitleEn:'Communication and work tools', items:[
     {path:'/collaboration/contacts',ar:'جهات الاتصال',en:'Contacts',subtitleAr:'دفتر جهات الاتصال',subtitleEn:'Contact directory',icon:Contact},
