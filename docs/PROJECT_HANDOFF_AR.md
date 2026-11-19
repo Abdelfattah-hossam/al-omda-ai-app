@@ -488,4 +488,4 @@
 - **الاختبار الجديد:** اختبار تكامل ينشئ مهارات في المسارين ويتأكد من تحميل تعليماتها إلى system prompt قبل تشغيل الوكيل.
 - **الأثر المتوقع بعد دمج PR #165:** مهارات frontend-design وwebapp-testing وVercel React وSupabase Postgres الموجودة تحت `.agents/skills` ستُكتشف تلقائيًا بواسطة Local Agent Runtime. هذا لا يثبت بعد اختبار تشغيل كل مهارة منفردة.
 - **Superpowers:** ما زال تكامل Claude Code Marketplace مستقلًا؛ لا يتحول إلى إضافة ChatGPT أو Local Runtime بمجرد تفعيل هذا المحمّل.
-- **التحقق الحالي:** Cloudflare PR Preview للتحديث `08c6a5e` نجحت؛ CI ما زال في مرحلة TypeScript/build عند آخر فحص، فلا تعتبر الدفعة مكتملة قبل النتيجة النهائية.
+- **التحقق:** Cloudflare PR Preview للتحديث `08c6a5e` نجحت؛ CI رقم `44527192563` اكتمل بنجاح. سجل الاختبار يثبت نجاح الاختبار الجديد `loads both legacy and standard Agent Skills folders into the agent instructions`، واختبارات Local Agent وTypeScript والبناء. PR #167 ما زال Draft وغير مدمج.
