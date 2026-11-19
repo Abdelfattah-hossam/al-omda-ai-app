@@ -17,8 +17,15 @@ const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(
 function isAuditCursor(value: unknown): value is AuditCursor {
   if (!value || typeof value !== "object") return false;
   const cursor = value as Record<string, unknown>;
-  return typeof cursor.createdAt === "string" && isoTimestampPattern.test(cursor.createdAt) && Number.isFinite(new Date(cursor.createdAt).getTime()) &&
-    typeof cursor.id === "string" && uuidPattern.test(cursor.id);
+  if (typeof cursor.createdAt !== "string" || !isoTimestampPattern.test(cursor.createdAt) ||
+      typeof cursor.id !== "string" || !uuidPattern.test(cursor.id)) return false;
+  const year = Number(cursor.createdAt.slice(0, 4));
+  const month = Number(cursor.createdAt.slice(5, 7));
+  const day = Number(cursor.createdAt.slice(8, 10));
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1] &&
+    Number.isFinite(new Date(cursor.createdAt).getTime());
 }
 function shortId(id: string): string {
   return uuidPattern.test(id) ? id.slice(0, 8) : id;
