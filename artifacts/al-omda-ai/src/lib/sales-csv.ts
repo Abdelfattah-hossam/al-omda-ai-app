@@ -82,6 +82,11 @@ function findColumn(headers: string[], key: keyof typeof HEADER_ALIASES): number
   return headers.findIndex((header) => HEADER_ALIASES[key].includes(header));
 }
 
+function isSupportedCurrency(value: string): boolean {
+  try { new Intl.NumberFormat("en", { style: "currency", currency: value }); return true; }
+  catch { return false; }
+}
+
 function normalizeStatus(value: string): SalesStatus | null {
   const status = value.trim().toLowerCase();
   if (["paid", "succeeded", "completed", "success", "settled"].includes(status)) return "paid";
@@ -127,7 +132,7 @@ export function parseSalesCsv(input: string, maxRows = 10000): SalesCsvParseResu
     const problems: string[] = [];
     if (!date) problems.push("date must be a real ISO date");
     if (!/^\d+(?:\.\d{1,2})?$/.test(amountText) || !Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000) problems.push("amount must be a positive number with up to 2 decimals");
-    if (!/^[A-Z]{3}$/.test(currency)) problems.push("currency must be a 3-letter ISO code");
+    if (!/^[A-Z]{3}$/.test(currency) || !isSupportedCurrency(currency)) problems.push("currency must be a supported 3-letter ISO code");
     if (!status) problems.push("status must be paid, refunded, pending, or cancelled");
     if (problems.length) {
       errors.push({ row: rowNumber, message: problems.join("; ") });
