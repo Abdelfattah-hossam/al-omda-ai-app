@@ -12,6 +12,7 @@ import { buildBingCompatibleSearchUrl, requestBingCompatibleSearch } from "./web
 import { isAllowedBrowserOrigin, parseAllowedOrigins } from "./origin-policy.js";
 import { compareHttpRoleResponses, redactResponseHeaders } from "./http-diff.js";
 import { consumeOpenAIChatStream } from "./openai-stream.js";
+import { addThroughputSample, calculateTokensPerSecond, createThroughputAccumulator } from "./throughput.js";
 import { isBlockedNetworkAddress, isLocalLabTargetOverrideEnabled } from "./network-safety.js";
 import { requestPinnedHttpWithFallback, type PinnedAddress } from "./pinned-http.js";
 import { terminateChildProcess } from "./supervisor-process.js";
@@ -909,11 +910,12 @@ async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Pro
   return orderModelProvidersByPurpose(normalized, purpose);
 }
 
-async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general", signal?: AbortSignal): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; provider: string }> {
+async function modelCompletion(messages: Array<Record<string, unknown>>, tools = AGENT_TOOLS, onProgress?: (event: Json) => void, purpose: ModelPurpose = "general", signal?: AbortSignal): Promise<{ message: Record<string, unknown>; usage: Record<string, unknown> | null; durationMs: number; generationDurationMs: number; tokensPerSecond: number | null; provider: string }> {
   const providers = await getModelProviders(purpose);
   if (!providers.length) throw new Error("Configure a primary, fallback, or .omda/models.json provider.");
   const failures: string[] = [];
   const availableTools = tools === AGENT_TOOLS ? await getAgentTools() : tools;
+  const requestStarted = Date.now();
   for (const provider of providers) {
     const providerKey = provider.name + "|" + provider.base + "|" + provider.model;
     const cooldownRemaining = getProviderCooldownRemainingMs(providerKey, providerCooldowns);
@@ -922,7 +924,6 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       onProgress?.({ type: "status", status: "provider_skipped", provider: provider.name, cooldownMs: cooldownRemaining });
       continue;
     }
-    const started = Date.now();
     let emitted = false;
     let responseStatus: number | null = null;
     let retryAfter: string | null = null;
@@ -949,7 +950,7 @@ async function modelCompletion(messages: Array<Record<string, unknown>>, tools =
       });
       if (!streamed.message || typeof streamed.message !== "object") throw new Error("Model returned an invalid streaming completion.");
       clearProviderCooldown(providerKey, providerCooldowns);
-      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - started, provider: provider.name };
+      return { message: streamed.message, usage: streamed.usage, durationMs: Date.now() - requestStarted, generationDurationMs: streamed.generationDurationMs, tokensPerSecond: streamed.tokensPerSecond, provider: provider.name };
     } catch (error) {
       if (signal?.aborted) throw error;
       const message = error instanceof Error ? error.message : "request failed";
@@ -966,6 +967,9 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
   let totalDurationMs = 0;
+  let totalGenerationDurationMs = 0;
+  const throughput = createThroughputAccumulator();
+  let tokensPerSecond: number | null = null;
   let lastProvider = "primary";
   for (let turn = 0; turn < 10; turn++) {
     if (signal?.aborted) {
@@ -984,15 +988,19 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
       return { status: "cancelled", sessionId: id, message: "The Agent was stopped and its latest checkpoint is saved. You can resume this session later.", turns: turn };
     }
     totalDurationMs += completion.durationMs;
+    totalGenerationDurationMs += completion.generationDurationMs;
     lastProvider = completion.provider;
     if (typeof completion.usage?.prompt_tokens === "number") totalPromptTokens += completion.usage.prompt_tokens;
-    if (typeof completion.usage?.completion_tokens === "number") totalCompletionTokens += completion.usage.completion_tokens;
+    const completionTokens = typeof completion.usage?.completion_tokens === "number" ? completion.usage.completion_tokens : null;
+    if (completionTokens !== null) totalCompletionTokens += completionTokens;
+    addThroughputSample(throughput, completionTokens, completion.generationDurationMs);
+    tokensPerSecond = calculateTokensPerSecond(throughput);
     state.messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (calls.length) ensureAssistantToolCallMessage(state.messages, calls);
     if (!calls.length) {
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
