@@ -82,8 +82,9 @@ export default function AuditLogWorkspace({ language }: Props) {
     const timeoutId = window.setTimeout(() => { timedOut = true; controller.abort(); }, 10000);
     setLoading(true); setError("");
     try {
-      const response = await fetch("/api/collaboration/audit?offset=" + offset, {
-        credentials: "same-origin", headers: { accept: "application/json" }, signal: controller.signal
+      const query = new URLSearchParams({ offset: String(offset) });
+      const response = await fetch("/api/collaboration/audit?" + query.toString(), {
+        credentials: "same-origin", headers: { accept: "application/json" }, signal: controller.signal, cache: "no-store"
       });
       const data = await response.json().catch(() => null);
       if (requestId !== requestSequence.current) return;
@@ -123,7 +124,7 @@ export default function AuditLogWorkspace({ language }: Props) {
       <div className="section-head"><strong>{ar ? "سجل التغييرات" : "Change history"}</strong><span className="status-chip">{events.length}</span></div>
       {loading && events.length === 0 ? <p className="section-meta" role="status">{t.loading}</p> : events.length === 0 ? <div className="plan-empty"><History size={24}/><p>{t.empty}</p></div> : <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
         {events.map(event => <article className="panel panel-pad" key={event.id}>
-          <div className="section-head"><strong>{actionLabel(event.action)} · {kindLabel(event.record_kind)}</strong><span className="muted">{formatDate(event.created_at, ar ? "ar" : "en")}</span></div>
+          <div className="section-head"><strong>{actionLabel(event.action)} · {kindLabel(event.record_kind)}</strong><span className="muted">{formatDate(event.created_at, ar ? "ar-SA" : "en-US")}</span></div>
           <p className="section-meta">{t.record}: <span style={{ fontFamily: "monospace" }}>{/* record_id is a UUID; show its short prefix */}{event.record_id.slice(0, 8)}</span></p>
         </article>)}
       </div>}
