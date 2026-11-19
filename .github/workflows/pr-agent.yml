@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Run PR-Agent review
+        id: pr_agent
         continue-on-error: true
         uses: the-pr-agent/pr-agent@main
         env:
@@ -38,3 +39,12 @@ jobs:
           github_action_config.auto_describe: "false"
           github_action_config.auto_improve: "false"
           pr_reviewer.extra_instructions: "Review only the pull request diff. Report only verifiable defects with file paths, line references, impact, and a concise fix. Prioritize security, authentication and authorization, data integrity, concurrency, error handling, accessibility, and missing regression tests. Do not modify code or create commits."
+
+      - name: Report advisory review unavailability
+        if: ${{ steps.pr_agent.outcome == 'failure' }}
+        run: |
+          echo "::warning::PR-Agent advisory review did not complete. Required CI, typecheck, build, and test checks remain authoritative."
+          {
+            echo "### PR-Agent advisory review"
+            echo "The optional AI review did not complete. This does not replace or bypass required CI, typecheck, build, or test checks."
+          } >> "$GITHUB_STEP_SUMMARY"
