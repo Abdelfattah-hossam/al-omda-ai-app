@@ -9,15 +9,27 @@ type AuditEvent = {
   created_at: string;
 };
 
+type AuditCursor = { createdAt: string; id: string };
 type Props = { language: "ar" | "en" };
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isAuditCursor(value: unknown): value is AuditCursor {
+  if (!value || typeof value !== "object") return false;
+  const cursor = value as Record<string, unknown>;
+  return typeof cursor.createdAt === "string" && Number.isFinite(new Date(cursor.createdAt).getTime()) &&
+    typeof cursor.id === "string" && uuidPattern.test(cursor.id);
+}
+function shortId(id: string): string {
+  return uuidPattern.test(id) ? id.slice(0, 8) : id;
+}
 
 function isAuditEvent(item: unknown): item is AuditEvent {
   if (!item || typeof item !== "object") return false;
   const value = item as Record<string, unknown>;
-  return typeof value.id === "string" &&
+  return typeof value.id === "string" && uuidPattern.test(value.id) &&
     (value.action === "created" || value.action === "updated" || value.action === "deleted") &&
     (value.record_kind === "contact" || value.record_kind === "event" || value.record_kind === "ticket") &&
-    typeof value.record_id === "string" && typeof value.created_at === "string" &&
+    typeof value.record_id === "string" && uuidPattern.test(value.record_id) && typeof value.created_at === "string" &&
     Number.isFinite(new Date(value.created_at).getTime());
 }
 
@@ -42,7 +54,7 @@ const text = {
     event: "موعد",
     ticket: "تذكرة",
     record: "السجل",
-    failed: "تعذر تحميل سجل الأنشطة. سجّل الدخول وحاول مرة أخرى.",
+    failed: "تعذر تحميل سجل الأنشطة. تحقق من الاتصال وحاول مرة أخرى.",
   },
   en: {
     title: "Security & Logs",
@@ -67,12 +79,12 @@ export default function AuditLogWorkspace({ language }: Props) {
   const ar = language === "ar";
   const t = text[language];
   const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [nextCursor, setNextCursor] = useState<AuditCursor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
-  const load = useCallback(async (offset = 0, append = false) => {
+  const load = useCallback(async (cursor: AuditCursor | null = null, append = false) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -80,19 +92,29 @@ export default function AuditLogWorkspace({ language }: Props) {
     const timeoutId = window.setTimeout(() => { timedOut = true; controller.abort(); }, 10000);
     setLoading(true); setError("");
     try {
-      const query = new URLSearchParams({ offset: String(offset) });
-      const response = await fetch("/api/collaboration/audit?" + query.toString(), {
+      const query = new URLSearchParams();
+      if (cursor) {
+        query.set("beforeCreatedAt", cursor.createdAt);
+        query.set("beforeId", cursor.id);
+      }
+      const queryString = query.toString();
+      const response = await fetch("/api/collaboration/audit" + (queryString ? "?" + queryString : ""), {
         credentials: "same-origin", headers: { accept: "application/json" }, signal: controller.signal, cache: "no-store"
       });
       const data = await response.json().catch(() => null);
       if (abortRef.current !== controller) return;
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
       if (!Array.isArray(data?.events) || !data.events.every(isAuditEvent)) throw new Error(t.failed);
-      setEvents(current => append ? [...current, ...data.events as AuditEvent[]] : data.events as AuditEvent[]);
-      setNextOffset(typeof data.nextOffset === "number" && Number.isSafeInteger(data.nextOffset) ? data.nextOffset : null);
+      const incoming = data.events as AuditEvent[];
+      setEvents(current => {
+        if (!append) return incoming;
+        const seen = new Set(current.map(event => event.id));
+        return [...current, ...incoming.filter(event => !seen.has(event.id))];
+      });
+      setNextCursor(isAuditCursor(data.nextCursor) ? data.nextCursor : null);
     } catch {
       if (abortRef.current !== controller) return;
-      if (timedOut || !controller.signal.aborted) setError(t.failed);
+      if (timedOut || !controller.signal.aborted) setError(cause instanceof Error && cause.message !== "Failed to fetch" ? cause.message : t.failed);
     } finally {
       window.clearTimeout(timeoutId);
       if (abortRef.current === controller) {
@@ -121,14 +143,14 @@ export default function AuditLogWorkspace({ language }: Props) {
       <button type="button" className="button button-quiet" style={{ marginTop: 12 }} onClick={() => void load()} disabled={loading}><RefreshCw size={14}/>{t.refresh}</button>
     </section>
     <section className="panel panel-pad">
-      <div className="section-head"><strong>{ar ? "سجل التغييرات" : "Change history"}</strong><span className="status-chip">{events.length}</span></div>
-      {loading && events.length === 0 ? <p className="section-meta" role="status">{t.loading}</p> : events.length === 0 ? <div className="plan-empty"><History size={24}/><p>{t.empty}</p></div> : <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+      <div className="section-head"><strong>{ar ? "سجل التغييرات" : "Change history"}</strong><span className="status-chip">{ar ? `تم تحميل ${events.length}` : `${events.length} loaded`}</span></div>
+      {loading && events.length === 0 ? <p className="section-meta" role="status">{t.loading}</p> : events.length === 0 ? (error ? null : <div className="plan-empty"><History size={24}/><p>{t.empty}</p></div>) : <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
         {events.map(event => <article className="panel panel-pad" key={event.id}>
           <div className="section-head"><strong>{actionLabel(event.action)} · {kindLabel(event.record_kind)}</strong><span className="muted">{formatDate(event.created_at, ar ? "ar-SA" : "en-US")}</span></div>
-          <p className="section-meta">{t.record}: <span style={{ fontFamily: "monospace" }}>{/* record_id is a UUID; show its short prefix */}{event.record_id.slice(0, 8)}</span></p>
+          <p className="section-meta">{t.record}: <span style={{ fontFamily: "monospace" }}>{/* record_id is a UUID; show its short prefix */}{shortId(event.record_id)}</span></p>
         </article>)}
       </div>}
-      {nextOffset !== null && <button type="button" className="button button-quiet" style={{ marginTop: 12 }} onClick={() => void load(nextOffset, true)} disabled={loading}>{loading ? t.loading : t.more}</button>}
+      {nextCursor !== null && <button type="button" className="button button-quiet" style={{ marginTop: 12 }} onClick={() => void load(nextCursor, true)} disabled={loading}>{loading ? t.loading : t.more}</button>}
     </section>
   </div>;
 }
