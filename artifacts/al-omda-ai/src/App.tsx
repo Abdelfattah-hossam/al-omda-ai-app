@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
+import CollaborationWorkspace from './CollaborationWorkspace';
 import WorkspaceAssets from './WorkspaceAssets';
 const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
@@ -2701,6 +2702,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/projects') page = projectsPage();
   else if (path === '/pipeline') page = pipelinePage();
   else if (path === '/assets') page = assetsPage();
+  else if (path === '/collaboration/contacts') page = <CollaborationWorkspace kind="contact" language={language} />;
+  else if (path === '/collaboration/calendar') page = <CollaborationWorkspace kind="event" language={language} />;
+  else if (path === '/collaboration/tickets') page = <CollaborationWorkspace kind="ticket" language={language} />;
   else if (path in platformStatusPages) page = platformStatusPage(path);
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
