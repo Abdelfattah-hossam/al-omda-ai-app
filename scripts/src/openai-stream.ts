@@ -1,6 +1,10 @@
 export type StreamedCompletion = {
   message: Record<string, unknown>;
   usage: Record<string, unknown> | null;
+  /** Span between the first and last content/tool delta; excludes time-to-first-token and post-stream overhead. */
+  generationDurationMs: number;
+  /** Completion tokens divided by generationDurationMs; null when usage or a positive interval is unavailable. */
+  tokensPerSecond: number | null;
 };
 
 export async function consumeOpenAIChatStream(
@@ -12,8 +16,10 @@ export async function consumeOpenAIChatStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let content = "";
-  let usage: Record<string, unknown> | null = null;
+  let usage: unknown = null;
   let finishReason: unknown;
+  let firstGenerationDeltaAt: number | null = null;
+  let lastGenerationDeltaAt: number | null = null;
   let seenEvent = false;
   const toolCalls = new Map<number, { id: string; type: "function"; function: { name: string; arguments: string } }>();
 
@@ -30,7 +36,15 @@ export async function consumeOpenAIChatStream(
     if (!choice) return;
     if (choice.finish_reason) finishReason = choice.finish_reason;
     const delta = choice.delta && typeof choice.delta === "object" ? choice.delta : {};
-    if (typeof delta.content === "string" && delta.content) {
+    const hasContentDelta = typeof delta.content === "string" && Boolean(delta.content);
+    const hasToolDelta = Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0;
+    if (hasContentDelta || hasToolDelta) {
+      // One timestamp per SSE event keeps callback work from inflating throughput.
+      const deltaAt = performance.now();
+      if (firstGenerationDeltaAt === null) firstGenerationDeltaAt = deltaAt;
+      lastGenerationDeltaAt = deltaAt;
+    }
+    if (hasContentDelta) {
       content += delta.content;
       onToken?.(delta.content);
     }
@@ -65,5 +79,11 @@ export async function consumeOpenAIChatStream(
   const message: Record<string, unknown> = { role: "assistant", content };
   if (toolCalls.size) message.tool_calls = [...toolCalls.entries()].sort((a, b) => a[0] - b[0]).map(([, call]) => call);
   if (finishReason) message.finish_reason = finishReason;
-  return { message, usage };
+  const generationDurationMs = firstGenerationDeltaAt !== null && lastGenerationDeltaAt !== null ? lastGenerationDeltaAt - firstGenerationDeltaAt : 0;
+  const usageRecord = usage && typeof usage === "object" ? usage as Record<string, unknown> : null;
+  const completionTokens = typeof usageRecord?.completion_tokens === "number" ? usageRecord.completion_tokens : null;
+  const tokensPerSecond = completionTokens !== null && generationDurationMs > 0
+    ? Math.round((completionTokens / generationDurationMs) * 1000 * 10) / 10
+    : null;
+  return { message, usage: usageRecord, generationDurationMs, tokensPerSecond };
 }
