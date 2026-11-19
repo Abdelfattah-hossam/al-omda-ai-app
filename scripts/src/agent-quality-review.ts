@@ -22,7 +22,7 @@ function completedWithoutTools(result:QualityCompletion):boolean {
 function bytes(value:string):number{return new TextEncoder().encode(value).byteLength;}
 export async function reviewFinalAnswer(input:{
  request:string; draft:string; evidence:string[]; call:QualityCompletionCall; signal?:AbortSignal;
- measureCheckpointBytes?:(candidateContent:string)=>number; language?:"ar"|"en";
+ measureCheckpointBytes?:(candidateContent:string)=>number; language?:"ar"|"en"; onPhase?:(phase:"auditing"|"refining")=>void;
 }):Promise<QualityReviewResult>{
  const calls:QualityCompletion[]=[];
  if(!input.draft.trim()||!shouldAuditFinalAnswer(input.request))return {content:input.draft,status:"passed",calls};
@@ -48,6 +48,7 @@ export async function reviewFinalAnswer(input:{
   if(/^PASS$/i.test(text))return {content:input.draft,status:"passed",calls};
   const issues=parseAuditIssues(text);
   if(!issues.length)return withNote(unavailableNote,"unavailable");
+  input.onPhase?.("refining");
   const refined=await input.call([{role:"system",content:refineSystem},{role:"user",content:JSON.stringify({request:input.request,evidence,draft:input.draft,requiredFixes:issues})}],input.signal);
   calls.push(refined);
   if(!completedWithoutTools(refined)||typeof refined.message.content!=="string"||!refined.message.content.trim())return withNote(incompleteNote,"refinement_incomplete");
