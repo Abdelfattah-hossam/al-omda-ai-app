@@ -5,7 +5,8 @@ create table if not exists public.collaboration_audit_events (
   user_id uuid not null references auth.users(id) on delete cascade,
   action text not null check (action in ('created', 'updated', 'deleted')),
   record_kind text not null check (record_kind in ('contact', 'event', 'ticket')),
-  -- No FK by design: audit entries must survive deletion of the source collaboration record.
+  -- No FK to collaboration_records: audit entries survive source-record deletion.
+  -- user_id cascades to auth.users; account deletion intentionally removes that account’s audit history.
   record_id uuid not null,
   created_at timestamptz not null default now()
 );
