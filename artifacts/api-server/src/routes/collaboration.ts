@@ -25,6 +25,15 @@ type DbRecord = {
 const router: IRouter = Router();
 const allowedKinds = new Set<RecordKind>(["contact", "event", "ticket"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PAGE_SIZE = 100;
+
+export function parsePageOffset(rawOffset: unknown): number | null {
+  if (rawOffset === undefined) return 0;
+  if (typeof rawOffset !== "string" || rawOffset.length === 0 || rawOffset.length > 6) return null;
+  if (![...rawOffset].every(char => char >= "0" && char <= "9")) return null;
+  const offset = Number(rawOffset);
+  return Number.isSafeInteger(offset) && offset >= 0 && offset <= 100000 ? offset : null;
+}
 
 async function getSession(req: Parameters<typeof resolveSession>[0], res: Parameters<typeof resolveSession>[1]): Promise<SupabaseSession | null | false> {
   try {
@@ -72,10 +81,9 @@ router.get("/collaboration/audit", requireSameOriginRead, async (req, res): Prom
   const session = await getSession(req, res);
   if (!session) return;
   try {
-    const rawOffset = req.query.offset;
-    const offset = rawOffset === undefined ? 0 : typeof rawOffset === "string" && rawOffset.trim() ? Number(rawOffset) : -1;
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
-    const pageSize = 100;
+    const offset = parsePageOffset(req.query.offset);
+    if (offset === null) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
+    const pageSize = PAGE_SIZE;
     const query = new URLSearchParams({ select: "id,action,record_kind,record_id,created_at", user_id: "eq." + session.user.id, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_audit_events?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<Array<{id:string;action:"created"|"updated"|"deleted";record_kind:"contact"|"event"|"ticket";record_id:string;created_at:string}>>(response);
@@ -90,10 +98,9 @@ router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Prom
   const session = await getSession(req, res);
   if (!session) return;
   try {
-    const rawOffset = req.query.offset;
-    const offset = rawOffset === undefined ? 0 : typeof rawOffset === "string" && rawOffset.trim() ? Number(rawOffset) : -1;
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
-    const pageSize = 100;
+    const offset = parsePageOffset(req.query.offset);
+    if (offset === null) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
+    const pageSize = PAGE_SIZE;
     const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_records?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<DbRecord[]>(response);
