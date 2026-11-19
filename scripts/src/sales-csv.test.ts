@@ -16,6 +16,8 @@ test("rejects missing required columns and invalid calendar dates", () => {
   assert.match(missing.errors[0].message, /Missing required columns/);
   const invalid = parseSalesCsv("date,amount,currency,status\n2026-02-30,10,AED,paid");
   assert.match(invalid.errors[0].message, /real ISO date/);
+  const unsupported = parseSalesCsv("date,amount,currency,status\n2026-11-01,10,ZZZ,paid");
+  assert.match(unsupported.errors[0].message, /supported 3-letter ISO code/);
 });
 
 test("rejects unsupported statuses, malformed row widths, and negative amounts", () => {
