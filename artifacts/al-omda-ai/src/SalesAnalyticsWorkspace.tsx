@@ -45,7 +45,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingParse, setPendingParse] = useState<ParseState | null>(null);
 
-  const csvAssets = useMemo(() => assets.filter((asset) => asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null)), [assets]);
+  const csvAssets = useMemo(() => assets.filter((asset) => asset.name.toLowerCase().startsWith("sales-") && asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null)), [assets]);
   const currencies = useMemo(() => [...new Set(parse.rows.map((row) => row.currency))].sort(), [parse.rows]);
   const selectedRows = useMemo(() => parse.rows.filter((row) => row.currency === currency), [parse.rows, currency]);
   const summary = useMemo(() => {
@@ -76,7 +76,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : (isAr ? "تعذر تحميل ملفات المبيعات." : "Could not load sales files."));
       const next = Array.isArray(payload) ? payload as Asset[] : [];
-      const csv = next.filter((asset) => asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null));
+      const csv = next.filter((asset) => asset.name.toLowerCase().startsWith("sales-") && asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null));
       setAssets(csv);
       setSelectedPath((current) => csv.some((asset) => asset.path === current) ? current : csv[0]?.path ?? "");
     } catch (cause) {
@@ -145,7 +145,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
     setUploading(true);
     setError("");
     try {
-      const url = "/api/storage/assets?filename=" + encodeURIComponent(pendingFile.name);
+      const url = "/api/storage/assets?filename=" + encodeURIComponent("sales-" + pendingFile.name);
       const response = await fetch(url, { method: "PUT", credentials: "same-origin", headers: { "content-type": "text/csv" }, body: pendingFile });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : (isAr ? "تعذر حفظ ملف CSV." : "Could not save the CSV file."));
