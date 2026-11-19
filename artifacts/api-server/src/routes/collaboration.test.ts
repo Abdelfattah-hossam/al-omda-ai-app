@@ -79,11 +79,13 @@ test("audit API rejects requests without a signed-in session", async () => {
 test("audit cursors validate and normalize timestamp/id pairs", () => {
   const id = "123e4567-e89b-42d3-a456-426614174000";
   assert.deepEqual(parseAuditCursor("2026-11-19T13:45:00+00:00", id), {
-    createdAt: "2026-11-19T13:45:00.000Z",
+    createdAt: "2026-11-19T13:45:00+00:00",
     id,
   });
   assert.equal(parseAuditCursor(undefined, undefined), null);
   assert.equal(parseAuditCursor("not-a-date", id), undefined);
+  assert.equal(parseAuditCursor("2026-11-19T13:45:00.123456+00:00", id)?.createdAt, "2026-11-19T13:45:00.123456+00:00");
+  assert.equal(parseAuditCursor("2026-11-19T13:45:00.1234567+00:00", id), undefined);
   assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", "not-a-uuid"), undefined);
   assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", undefined), undefined);
 });
