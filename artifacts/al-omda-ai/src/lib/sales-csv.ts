@@ -82,7 +82,9 @@ function findColumn(headers: string[], key: keyof typeof HEADER_ALIASES): number
   return headers.findIndex((header) => HEADER_ALIASES[key].includes(header));
 }
 
+const SUPPORTED_CURRENCIES = new Set(((Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.("currency") ?? []));
 function isSupportedCurrency(value: string): boolean {
+  if (SUPPORTED_CURRENCIES.size) return SUPPORTED_CURRENCIES.has(value);
   try { new Intl.NumberFormat("en", { style: "currency", currency: value }); return true; }
   catch { return false; }
 }
