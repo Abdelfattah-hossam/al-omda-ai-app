@@ -95,6 +95,7 @@ export default function AuditLogWorkspace({ language }: Props) {
     try {
       const query = new URLSearchParams();
       if (cursor) {
+        // Pass the database timestamp through unchanged to preserve PostgreSQL microseconds.
         query.set("beforeCreatedAt", cursor.createdAt);
         query.set("beforeId", cursor.id);
       }
