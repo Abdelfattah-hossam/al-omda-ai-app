@@ -71,13 +71,11 @@ export default function AuditLogWorkspace({ language }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
-  const requestSequence = useRef(0);
 
   const load = useCallback(async (offset = 0, append = false) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const requestId = ++requestSequence.current;
     let timedOut = false;
     const timeoutId = window.setTimeout(() => { timedOut = true; controller.abort(); }, 10000);
     setLoading(true); setError("");
@@ -87,24 +85,26 @@ export default function AuditLogWorkspace({ language }: Props) {
         credentials: "same-origin", headers: { accept: "application/json" }, signal: controller.signal, cache: "no-store"
       });
       const data = await response.json().catch(() => null);
-      if (requestId !== requestSequence.current) return;
+      if (abortRef.current !== controller) return;
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
       if (!Array.isArray(data?.events) || !data.events.every(isAuditEvent)) throw new Error(t.failed);
       setEvents(current => append ? [...current, ...data.events as AuditEvent[]] : data.events as AuditEvent[]);
       setNextOffset(typeof data.nextOffset === "number" && Number.isSafeInteger(data.nextOffset) ? data.nextOffset : null);
     } catch {
-      if (requestId === requestSequence.current && timedOut) setError(t.failed);
-      else if (requestId === requestSequence.current && !controller.signal.aborted) setError(t.failed);
+      if (abortRef.current !== controller) return;
+      if (timedOut || !controller.signal.aborted) setError(t.failed);
     } finally {
       window.clearTimeout(timeoutId);
-      if (requestId === requestSequence.current) setLoading(false);
-      if (abortRef.current === controller) abortRef.current = null;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
   }, [t.failed]);
 
   useEffect(() => {
     void load();
-    return () => { requestSequence.current += 1; abortRef.current?.abort(); };
+    return () => { abortRef.current?.abort(); abortRef.current = null; };
   }, [load]);
 
   const actionLabel = (action: AuditEvent["action"]) => action === "created" ? t.created : action === "updated" ? t.updated : t.deleted;
