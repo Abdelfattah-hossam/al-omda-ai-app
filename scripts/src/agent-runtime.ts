@@ -30,6 +30,7 @@ import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpF
 import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
 import { getDelegationRunStatus, type DelegationTaskStatus } from "./agent-delegation-status.js";
+import { ensureAssistantToolCallMessage } from "./agent-history.js";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.OMDA_AGENT_PORT || 4318);
@@ -986,6 +987,7 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     if (typeof completion.usage?.completion_tokens === "number") totalCompletionTokens += completion.usage.completion_tokens;
     state.messages.push(completion.message);
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
+    if (calls.length) ensureAssistantToolCallMessage(state.messages, calls);
     if (!calls.length) {
       await saveAgentState(id, state);
       return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: Math.round(totalCompletionTokens / Math.max(totalDurationMs / 1000, 0.001)), provider: lastProvider } };
@@ -1257,6 +1259,7 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
       const originalGoal = state.messages.find((message) => message.role === "user")?.content;
       state.purpose = inferModelPurpose(typeof originalGoal === "string" ? originalGoal : "");
     }
+    if (state.pendingToolCalls?.length) ensureAssistantToolCallMessage(state.messages, state.pendingToolCalls);
     if (state.pendingToolCalls?.length) {
       if (signal.aborted) {
         const cancelledCalls = state.pendingToolCalls;
@@ -1280,6 +1283,7 @@ async function continueAgent(body: Json, onProgress?: (event: Json) => void): Pr
     const state = await loadAgentState(id);
     state.toolFailures = [];
     const pending = state.pendingToolCalls || [];
+    if (pending.length) ensureAssistantToolCallMessage(state.messages, pending);
     if (!pending.length) throw new Error("This agent session has no pending approval request.");
     const approved = new Set(Array.isArray(body.approvedCallIds) ? body.approvedCallIds.filter((item): item is string => typeof item === "string") : []);
     const imageQueue: McpImageObservation[] = [];
