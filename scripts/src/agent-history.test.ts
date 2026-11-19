@@ -41,3 +41,11 @@ test("does not merge a new batch into an earlier assistant tool message", () => 
   assert.deepEqual(messages[0].tool_calls, [first]);
   assert.deepEqual(messages[3].tool_calls, [second]);
 });
+
+import { assertResumeInstructionAllowed } from "./agent-history.js";
+
+test("rejects a new resume instruction while approvals are pending before state mutation", () => {
+  assert.doesNotThrow(() => assertResumeInstructionAllowed(true, ""));
+  assert.throws(() => assertResumeInstructionAllowed(true, "Start a different task"), /Resolve pending approvals/);
+  assert.doesNotThrow(() => assertResumeInstructionAllowed(false, "Continue with the new constraint"));
+});

@@ -27,3 +27,10 @@ export function ensureAssistantToolCallMessage(
     messages.push({ role: "assistant", content: "", tool_calls: missing });
   }
 }
+
+/** Prevent a new resume goal from mutating a checkpoint that still has unresolved approvals. */
+export function assertResumeInstructionAllowed(hasPendingApprovals: boolean, instruction: string): void {
+  if (hasPendingApprovals && instruction.trim()) {
+    throw new Error("Resolve pending approvals before adding a new resume instruction.");
+  }
+}

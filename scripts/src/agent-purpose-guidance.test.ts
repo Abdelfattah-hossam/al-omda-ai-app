@@ -44,3 +44,20 @@ test("provides bounded professional guidance without claiming credentials", () =
   assert.match(getProfessionalOperatingGuidance("medical"), /not present an AI response as a diagnosis/i);
   assert.match(getProfessionalOperatingGuidance("legal"), /jurisdiction/i);
 });
+
+import { parseAuditIssues, shouldAuditFinalAnswer } from "./agent-purpose-guidance.js";
+
+test("audits only high-risk final deliverables, not ordinary research or chat", () => {
+  assert.equal(shouldAuditFinalAnswer("Review a UAE legal contract"), true);
+  assert.equal(shouldAuditFinalAnswer("Calculate structural beam loads"), true);
+  assert.equal(shouldAuditFinalAnswer("Review a clinical treatment plan"), true);
+  assert.equal(shouldAuditFinalAnswer("Build a secure TypeScript API"), true);
+  assert.equal(shouldAuditFinalAnswer("Prepare a cash flow forecast"), true);
+  assert.equal(shouldAuditFinalAnswer("Compare three marketing providers"), false);
+  assert.equal(shouldAuditFinalAnswer("How are you?"), false);
+});
+
+test("extracts only bounded concrete audit issues", () => {
+  assert.deepEqual(parseAuditIssues("PASS\\nISSUE: Missing units\\nBLOCKER: Unsupported formula\\nstyle suggestion"), ["Missing units", "Unsupported formula"]);
+  assert.deepEqual(parseAuditIssues("PASS"), []);
+});
