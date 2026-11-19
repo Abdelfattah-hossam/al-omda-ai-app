@@ -91,14 +91,14 @@ router.get("/collaboration/:kind", requireSameOriginRead, async (req, res): Prom
   if (!session) return;
   try {
     const rawOffset = req.query.offset;
-    const offsetText = typeof rawOffset === "string" ? rawOffset : "0";
-    const offset = offsetText.length > 0 && offsetText.length <= 6 && [...offsetText].every(char => char >= "0" && char <= "9") ? Number(offsetText) : -1;
+    const offset = rawOffset === undefined ? 0 : typeof rawOffset === "string" && rawOffset.trim() ? Number(rawOffset) : -1;
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
     const pageSize = 100;
-    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize), offset: String(offset) });
+    const query = new URLSearchParams({ select: "id,kind,title,description,status,due_at,metadata,created_at,updated_at", user_id: "eq." + session.user.id, kind: "eq." + kind, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_records?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<DbRecord[]>(response);
-    res.json({ records: rows.map(mapRecord), nextOffset: rows.length === pageSize ? offset + pageSize : null });
+    const hasMore = rows.length > pageSize;
+    res.json({ records: (hasMore ? rows.slice(0, pageSize) : rows).map(mapRecord), nextOffset: hasMore ? offset + pageSize : null });
   } catch (error) { reportSupabaseError(req, res, error, "Could not load collaboration records."); }
 });
 
