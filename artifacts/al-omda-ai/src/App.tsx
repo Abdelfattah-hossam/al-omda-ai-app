@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent,
 import { Link, useLocation } from 'wouter';
 import AIChatPage from './AIChat';
 import CollaborationWorkspace from './CollaborationWorkspace';
+import AuditLogWorkspace from './AuditLogWorkspace';
 import WorkspaceAssets from './WorkspaceAssets';
 const GlobalMap = lazy(() => import('./components/global-map'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
@@ -2705,6 +2706,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/collaboration/contacts') page = <CollaborationWorkspace key="contact" kind="contact" language={language} />;
   else if (path === '/collaboration/calendar') page = <CollaborationWorkspace key="event" kind="event" language={language} />;
   else if (path === '/collaboration/tickets') page = <CollaborationWorkspace key="ticket" kind="ticket" language={language} />;
+  else if (path === '/system/security') page = <AuditLogWorkspace language={language} />;
   else if (path in platformStatusPages) page = platformStatusPage(path);
   else if (path === '/history') page = historyPage();
   else if (path === '/profile') page = profilePage();
