@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validPayload } from "./collaboration.js";
+import express from "express";
+import { once } from "node:events";
+import { parsePageOffset, validPayload } from "./collaboration.js";
+import collaborationRouter from "./collaboration.js";
 
 test("calendar timestamps are normalized from PostgREST and ISO offsets", () => {
   const payload = validPayload({
@@ -34,4 +37,40 @@ test("titles and descriptions are bounded", () => {
   assert.equal(validPayload({ title: " " }, "ticket"), null);
   assert.equal(validPayload({ title: "x".repeat(161) }, "ticket"), null);
   assert.equal(validPayload({ title: "Ticket", description: "x".repeat(4001) }, "ticket"), null);
+});
+
+test("pagination offsets accept only bounded decimal integers", () => {
+  assert.equal(parsePageOffset(undefined), 0);
+  assert.equal(parsePageOffset("0"), 0);
+  assert.equal(parsePageOffset("100"), 100);
+  assert.equal(parsePageOffset("100000"), 100000);
+  for (const invalid of ["", " ", "0x10", "1e3", "-1", "100001", "999999", ["1", "2"], 4]) {
+    assert.equal(parsePageOffset(invalid), null);
+  }
+});
+
+test("audit API rejects requests without a signed-in session", async () => {
+  const previousUrl = process.env.SUPABASE_URL;
+  const previousPublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const previousAnonKey = process.env.SUPABASE_ANON_KEY;
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+  process.env.SUPABASE_ANON_KEY = "test-anon-key";
+
+  const app = express();
+  app.use(collaborationRouter);
+  const server = app.listen(0, "127.0.0.1");
+  try {
+    await once(server, "listening");
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const origin = "http://127.0.0.1:" + address.port;
+    const response = await fetch(origin + "/collaboration/audit", { headers: { origin } });
+    assert.equal(response.status, 401);
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    if (previousUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = previousUrl;
+    if (previousPublishableKey === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
+    if (previousAnonKey === undefined) delete process.env.SUPABASE_ANON_KEY; else process.env.SUPABASE_ANON_KEY = previousAnonKey;
+  }
 });
