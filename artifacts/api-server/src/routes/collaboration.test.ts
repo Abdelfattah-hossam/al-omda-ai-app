@@ -87,6 +87,8 @@ test("audit cursors validate and normalize timestamp/id pairs", () => {
   assert.equal(parseAuditCursor("not-a-date", id), undefined);
   assert.equal(parseAuditCursor("2026-11-19T13:45:00.123456+00:00", id)?.createdAt, "2026-11-19T13:45:00.123456+00:00");
   assert.equal(parseAuditCursor("2026-11-19T13:45:00.1234567+00:00", id), undefined);
+  assert.equal(parseAuditCursor("2026-02-30T13:45:00Z", id), undefined);
+  assert.equal(parseAuditCursor("2024-02-29T13:45:00Z", id)?.createdAt, "2024-02-29T13:45:00Z");
   assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", "not-a-uuid"), undefined);
   assert.equal(parseAuditCursor("2026-11-19T13:45:00Z", undefined), undefined);
 });
