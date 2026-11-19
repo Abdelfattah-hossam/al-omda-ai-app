@@ -73,14 +73,14 @@ router.get("/collaboration/audit", requireSameOriginRead, async (req, res): Prom
   if (!session) return;
   try {
     const rawOffset = req.query.offset;
-    const offsetText = typeof rawOffset === "string" ? rawOffset : "0";
-    const offset = offsetText.length > 0 && offsetText.length <= 6 && [...offsetText].every(char => char >= "0" && char <= "9") ? Number(offsetText) : -1;
+    const offset = rawOffset === undefined ? 0 : typeof rawOffset === "string" && rawOffset.trim() ? Number(rawOffset) : -1;
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) { res.status(400).json({ error: "Pagination offset is invalid." }); return; }
     const pageSize = 100;
-    const query = new URLSearchParams({ select: "id,action,record_kind,record_id,created_at", user_id: "eq." + session.user.id, order: "created_at.desc", limit: String(pageSize), offset: String(offset) });
+    const query = new URLSearchParams({ select: "id,action,record_kind,record_id,created_at", user_id: "eq." + session.user.id, order: "created_at.desc", limit: String(pageSize + 1), offset: String(offset) });
     const response = await supabaseFetch("/rest/v1/collaboration_audit_events?" + query.toString(), {}, session.accessToken);
     const rows = await readSupabaseJson<Array<{id:string;action:"created"|"updated"|"deleted";record_kind:"contact"|"event"|"ticket";record_id:string;created_at:string}>>(response);
-    res.json({ events: rows, nextOffset: rows.length === pageSize ? offset + pageSize : null });
+    const hasMore = rows.length > pageSize;
+    res.json({ events: hasMore ? rows.slice(0, pageSize) : rows, nextOffset: hasMore ? offset + pageSize : null });
   } catch (error) { reportSupabaseError(req, res, error, "Could not load audit events."); }
 });
 
