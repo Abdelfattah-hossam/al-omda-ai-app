@@ -18,6 +18,8 @@ alter table public.collaboration_audit_events enable row level security;
 revoke all on table public.collaboration_audit_events from public, anon, authenticated;
 grant select on table public.collaboration_audit_events to authenticated;
 
+-- This SELECT policy is evaluated as the authenticated caller; auth.uid() is the JWT subject.
+-- The SECURITY DEFINER trigger below is a separate database-write path and never reads auth.uid().
 create policy "Users can read their own collaboration audit events"
   on public.collaboration_audit_events for select to authenticated
   using ((select auth.uid()) = user_id);
