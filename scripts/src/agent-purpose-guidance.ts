@@ -2,13 +2,16 @@ export type AgentDomain = "legal" | "engineering" | "medical" | "software" | "fi
 
 export function inferAgentDomain(goal: string): AgentDomain {
   const text = goal.normalize("NFKC").toLocaleLowerCase();
-  if (/\b(law|legal|lawyer|attorney|contract|compliance|statute|regulation|litigation)\b|قانون|قانوني|محامي|عقد|امتثال|تشريع|لائحة|قضية/u.test(text)) return "legal";
-  if (/\b(engineer|engineering|architecture|structural|civil|mechanical|electrical|boq|aci|iec|iso|reinforced concrete|concrete beam|beam load|structural load|load calculation|quantity survey)\b|هندسة|هندسي|معماري|إنشائي|انشائي|خرسانة|كمرة|كمرات|كميات|أحمال|احمال|مخطط هندسي|كود البناء|كود هندسي|كود إنشائي/u.test(text)) return "engineering";
-  if (/\b(software|coding|program|programming|developer|refactor|debug|typescript|javascript|python|api|database|website|web app|mobile app|application|frontend|backend)\b|برمج|برمجة|كود|تطوير برمجي|قاعدة بيانات|واجهة برمجية/u.test(text)) return "software";
-  if (/\b(medical|medicine|clinical|doctor|diagnosis|patient|clinical trial|peer.reviewed)\b|(?:^|[\s،,؛])(?:ال)?(?:طب|طبي|طبيب|تشخيص|مريض|دواء)(?:$|[\s،,؛])|دراسة سريرية/u.test(text)) return "medical";
-  if (/\b(finance|financial|investment|accounting|valuation|cash flow|roi|budget|forecast)\b|مالي|مالية|استثمار|محاسبة|تقييم مالي|تدفق نقدي|عائد الاستثمار|ميزانية|توقعات مالية/u.test(text)) return "finance";
-  if (/\b(business|strategy|marketing|sales|management|operations|content|campaign|brand)\b|أعمال|اعمال|تجارة|إدارة|ادارة|تسويق|مبيعات|تشغيل|محتوى|حملة|علامة تجارية/u.test(text)) return "business";
-  if (/\b(research|study|investigate|compare|analysis|analyze|literature review)\b|بحث|دراسة|استقصاء|قارن|تحليل|مراجعة علمية/u.test(text)) return "research";
+
+  // Resolve safety-critical and explicit intents before broad keywords such as
+  // "architecture", "electrical", or "application" to avoid cross-domain routing.
+  if (/\\b(law|legal|lawyer|attorney|contract|compliance|statute|regulation|litigation)\\b|قانون|قانوني|محامي|عقد|امتثال|تشريع|لائحة|قضية/u.test(text)) return "legal";
+  if (/\\b(medical|medicine|clinical|doctor|diagnosis|patient|clinical trial|peer.reviewed|treatment|symptom|medication|healthcare)\\b|(?:^|[\\s،,؛])(?:ال)?(?:طب|طبي|طبيب|تشخيص|مريض|دواء|علاج|صحة|أعراض|اعراض)(?:$|[\\s،,؛])|دراسة سريرية/u.test(text)) return "medical";
+  if (/\\b(finance|financial|investment|accounting|valuation|cash flow|roi|budget|forecast|tax|balance sheet)\\b|مالي|مالية|استثمار|محاسبة|تقييم مالي|تدفق نقدي|عائد الاستثمار|ميزانية|توقعات مالية|ضرائب|قوائم مالية/u.test(text)) return "finance";
+  if (/\\b(software|coding|program|programming|developer|refactor|debug|typescript|javascript|python|api|database|website|web app|mobile app|application|frontend|backend|software architecture)\\b|برمج|برمجة|كود برمجي|تطوير برمجي|قاعدة بيانات|واجهة برمجية|هندسة برمجيات/u.test(text)) return "software";
+  if (/\\b(engineer|engineering|architecture|structural|civil|mechanical|electrical engineering|boq|aci|iec|iso|reinforced concrete|concrete beam|beam load|structural load|load calculation|quantity survey|hvac|foundation)\\b|هندسة|هندسي|معماري|إنشائي|انشائي|خرسانة|كمرة|كمرات|كميات|أحمال|احمال|مخطط هندسي|كود البناء|كود هندسي|كود إنشائي|مدني|ميكانيكي|كهربائي|حمل|أساس/u.test(text)) return "engineering";
+  if (/\\b(business|strategy|marketing|sales|management|operations|content|campaign|brand)\\b|أعمال|اعمال|تجارة|إدارة|ادارة|تسويق|مبيعات|تشغيل|محتوى|حملة|علامة تجارية/u.test(text)) return "business";
+  if (/\\b(research|study|investigate|compare|analysis|analyze|literature review)\\b|بحث|دراسة|استقصاء|قارن|تحليل|مراجعة علمية/u.test(text)) return "research";
   return "general";
 }
 
