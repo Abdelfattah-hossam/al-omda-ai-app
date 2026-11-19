@@ -1388,7 +1388,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users.csv'; anchor.click(); URL.revokeObjectURL(url);
     };
     return <div className="page-enter">
-      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isAr?'لوحة تحليلات المستخدمين النشطين.':'Active users analytics dashboard.')}
+      {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isActiveUsersPage?(isAr?'لوحة تحليلات المستخدمين النشطين.':'Active users analytics dashboard.'):(isAr?'حالة تكامل المنصة ومصادر البيانات.':'Platform integration status and data sources.'))}
       {isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?'المستخدمون النشطون':'Active Users'}</h2><button type="button" className="button button-secondary" onClick={exportActiveUsers} disabled={authLoading}><Download size={15}/>{isAr?'تصدير':'Export'}</button></div>
         <div className="global-user-metrics">
