@@ -324,6 +324,38 @@ async function stopMockModel(mock: MockModelHandle): Promise<void> {
   await new Promise<void>((resolve, reject) => mock.server.close((error) => error ? reject(error) : resolve()));
 }
 
+test("loads both legacy and standard Agent Skills folders into the agent instructions", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "omda-agent-skills-test-"));
+  await writeFileForMcp(join(workspace, ".omda", "skills", "legacy-review", "SKILL.md"), "# Legacy review skill\nLEGACY_REVIEW_SKILL_SENTINEL");
+  await writeFileForMcp(join(workspace, ".agents", "skills", "frontend-design", "SKILL.md"), "# Frontend design skill\nFRONTEND_DESIGN_SKILL_SENTINEL");
+  await writeFileForMcp(join(workspace, ".agents", "skills", "webapp-testing", "SKILL.md"), "# Web app testing skill\nWEBAPP_TESTING_SKILL_SENTINEL");
+  let systemPrompt = "";
+  const mock = await startMockModel((_requestNumber, body) => {
+    const messages = Array.isArray(body.messages) ? body.messages as Array<{ role?: string; content?: string }> : [];
+    systemPrompt = String(messages[0]?.content ?? "");
+    return { payload: { choices: [{ delta: { content: "Loaded project skills successfully." }, finish_reason: "stop" }] } };
+  });
+  let isolated: RuntimeHandle | undefined;
+  try {
+    isolated = await startRuntime({
+      OMDA_AGENT_WORKSPACE: workspace,
+      OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+      OMDA_AGENT_MODEL_NAME: "skills-test-model",
+    });
+    const response = await postTo(isolated, "/v1/agent/run", { goal: "Use the relevant installed project skills for this task." });
+    const responseBody = await response.text();
+    assert.equal(response.status, 200, responseBody + "\n" + isolated.stderr);
+    assert.equal((JSON.parse(responseBody) as { status: string }).status, "completed");
+    assert.match(systemPrompt, /LEGACY_REVIEW_SKILL_SENTINEL/);
+    assert.match(systemPrompt, /FRONTEND_DESIGN_SKILL_SENTINEL/);
+    assert.match(systemPrompt, /WEBAPP_TESTING_SKILL_SENTINEL/);
+  } finally {
+    if (isolated) await stopRuntime(isolated);
+    else await rm(workspace, { recursive: true, force: true });
+    await stopMockModel(mock);
+  }
+});
+
 test("returns a controlled tool error for malformed HTTP target URLs", async () => {
   const mock = await startMockModel((requestNumber) => requestNumber === 1
     ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "invalid-url-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "not-a-valid-url", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
