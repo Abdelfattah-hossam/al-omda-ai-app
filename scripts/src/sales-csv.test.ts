@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSalesCsv } from "../../artifacts/al-omda-ai/src/lib/sales-csv.js";
+const salesCsvModule = "../../artifacts/al-omda-ai/src/lib/sales-csv.ts";
+const { parseSalesCsv } = await import(salesCsvModule);
 
 test("parses valid sales rows, quoted channels, and aliases", () => {
   const result = parseSalesCsv('transaction_date,total,currency_code,payment_status,source,order_id\n2026-11-01,125.50,AED,paid,"Web, UAE",A-1\n2026-11-02,25,AED,refunded,Store,A-2');
