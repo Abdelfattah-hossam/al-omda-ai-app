@@ -2,9 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildToolCallingOptions, getModelTemperature, getProfessionalOperatingGuidance, inferAgentDomain } from "./agent-purpose-guidance.js";
 
-test("prioritizes engineering context over generic building-code wording", () => {
+test("prioritizes explicit domain signals over ambiguous shared vocabulary", () => {
   assert.equal(inferAgentDomain("Calculate the beam load under the building code"), "engineering");
   assert.equal(inferAgentDomain("احسب أحمال الكمرة حسب كود البناء"), "engineering");
+  assert.equal(inferAgentDomain("Refactor the software architecture"), "software");
+  assert.equal(inferAgentDomain("Analyze the architecture of a reinforced concrete building"), "engineering");
+  assert.equal(inferAgentDomain("What is the recommended treatment for high blood pressure?"), "medical");
+  assert.equal(inferAgentDomain("A patient has electrical burns; what should be done?"), "medical");
+  assert.equal(inferAgentDomain("Evaluate investment risk in a software company"), "finance");
+  assert.equal(inferAgentDomain("How do I redeem my gift card code?"), "general");
 });
 
 test("classifies software, legal, medical, finance, business, and research requests", () => {
