@@ -51,7 +51,7 @@ set search_path = ''
 as $$
 begin
   if new.user_id is distinct from old.user_id or new.kind is distinct from old.kind then
-    raise exception 'Collaboration record owner and kind are immutable' using errcode = 'P0001';
+    raise exception 'Collaboration record owner and kind are immutable' using errcode = '23514';
   end if;
   return new;
 end;
