@@ -120,7 +120,8 @@ router.patch("/collaboration/:kind/:id", requireSameOrigin, async (req, res): Pr
 
 router.delete("/collaboration/:kind/:id", requireSameOrigin, async (req, res): Promise<void> => {
   const kind = req.params.kind as RecordKind;
-  const id = req.params.id;
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] ?? "" : rawId;
   if (!allowedKinds.has(kind) || !uuidPattern.test(id)) { res.status(400).json({ error: "Record reference is invalid." }); return; }
   const session = await getSession(req, res);
   if (!session) return;
