@@ -98,8 +98,10 @@ jobs:
             attempt=$((attempt + 1))
           done
 
-          jq -er '[.candidates[0].content.parts[]? | .text // empty] | join("\n") | select(length > 0)' \
-            gemini-response.json > gemini-review.md
+          if ! jq -er '[.candidates[0].content.parts[]? | .text // empty] | join("\n") | gsub("^[[:space:]]+|[[:space:]]+$"; "") | select(length > 0)' \
+            gemini-response.json > gemini-review.md || [ ! -s gemini-review.md ]; then
+            skip_review "Gemini returned no usable review text."
+          fi
           echo "reviewed=true" >> "$GITHUB_OUTPUT"
 
       - name: Report unexpected Gemini step failure
