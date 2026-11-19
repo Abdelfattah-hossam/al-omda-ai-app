@@ -131,9 +131,13 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       setError(isAr ? "الحد الأقصى لملف الاستيراد 2 ميجابايت." : "The import file limit is 2 MB.");
       return;
     }
-    const result = parseSalesCsv(await file.text());
-    setPendingFile(file);
-    setPendingParse(result);
+    try {
+      const result = parseSalesCsv(await file.text());
+      setPendingFile(file);
+      setPendingParse(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (isAr ? "تعذرت قراءة الملف." : "Could not read the file."));
+    }
   };
 
   const uploadFile = async () => {
@@ -225,7 +229,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
           <div style={{ overflowX: "auto", marginTop: 10 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620, fontSize: 13 }}>
               <thead><tr>{[isAr ? "التاريخ" : "Date", isAr ? "المبلغ" : "Amount", isAr ? "الحالة" : "Status", isAr ? "القناة" : "Channel", isAr ? "المرجع" : "Reference"].map((label) => <th key={label} style={{ textAlign: "start", padding: 10, borderBottom: "1px solid var(--border)" }}>{label}</th>)}</tr></thead>
-              <tbody>{selectedRows.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100).map((row, index) => <tr key={row.reference || row.date + row.amount + index}>{[row.date, money(row.amount, row.currency, language), row.status, row.channel, row.reference || "—"].map((value, i) => <td key={i} style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{value}</td>)}</tr>)}</tbody>
+              <tbody>{selectedRows.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100).map((row, index) => <tr key={(row.reference || "transaction") + "-" + index}>{[row.date, money(row.amount, row.currency, language), row.status, row.channel, row.reference || "—"].map((value, i) => <td key={i} style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{value}</td>)}</tr>)}</tbody>
             </table>
           </div>
           <p className="page-subtitle" style={{ marginTop: 10 }}>{isAr ? "يتم استبعاد المعلّق والملغي من إجمالي المبيعات. الاستردادات تخصم من صافي المبيعات. تعرض الصفحة أول 100 معاملة فقط." : "Pending and cancelled rows are excluded from sales totals. Refunds reduce net sales. The table shows the first 100 transactions."}</p>
