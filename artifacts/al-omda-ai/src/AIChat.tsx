@@ -1706,7 +1706,6 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات العمدة" : "AL OMDA settings"}>
           <header><strong><Settings2 size={16}/>{ar ? "إعدادات العمدة" : "AL OMDA settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <div className="ai-chat-settings-body">
-            {error && <p className={"ai-chat-settings-feedback" + (/تعذر|فشل|خطأ|error|failed|could not/i.test(error) ? " is-error" : "")} role="status">{error}</p>}
             <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span>{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
               <div className="ai-chat-settings-stats"><div><small>{ar ? "المتبقي اليوم" : "Remaining"}</small><strong>{usage?.remaining ?? "—"}</strong></div><div><small>{ar ? "المستخدم" : "Used"}</small><strong>{usage?.used ?? "—"}</strong></div><div><small>{ar ? "الحد اليومي" : "Daily limit"}</small><strong>{usage?.limit ?? "—"}</strong></div></div>
               <div className="ai-chat-settings-progress"><i style={{width:percent + "%"}}/></div>
@@ -1764,7 +1763,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
           </div>
-          <footer><button type="button" className="button button-primary" onClick={()=>{void saveMemory().then(saved=>{if(saved)setShowSettingsModal(false);});}} disabled={memorySaving || memoryLoading}>{memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "إغلاق وحفظ الكل" : "Save & close")}</button></footer>
+          <footer>{error && <p className={"ai-chat-settings-feedback" + (/تعذر|فشل|خطأ|error|failed|could not/i.test(error) ? " is-error" : "")} role="status">{error}</p>}<button type="button" className="button button-primary" onClick={()=>{void saveMemory().then(saved=>{if(saved)setShowSettingsModal(false);});}} disabled={memorySaving || memoryLoading}>{memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "إغلاق وحفظ الكل" : "Save & close")}</button></footer>
         </section>
       </div>}
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
