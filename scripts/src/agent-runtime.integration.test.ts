@@ -389,6 +389,39 @@ test("passes project Skill instructions to delegated specialists", async () => {
   }
 });
 
+test("delegated specialists have overlapping in-flight model requests", async () => {
+  const mock = await startMockModel(() => ({ delayMs: 1000 }));
+  let active = 0;
+  let maxActive = 0;
+  mock.server.on('request', (_request, response) => {
+    active++;
+    maxActive = Math.max(maxActive, active);
+    response.once('finish', () => { active--; });
+  });
+  let isolated: RuntimeHandle | undefined;
+  try {
+    isolated = await startRuntime({
+      OMDA_AGENT_MODEL_BASE_URL: mock.baseUrl,
+      OMDA_AGENT_MODEL_NAME: 'parallel-acceptance-model',
+    });
+    const response = await postTo(isolated, '/v1/agent/delegate', {
+      tasks: [
+        { role: 'Reader', goal: 'Report a short reading finding.', mode: 'read_only' },
+        { role: 'Reviewer', goal: 'Report an independent review finding.', mode: 'read_only' },
+      ],
+    });
+    const result = await response.json() as { status: string; summary: { completed: number; failed: number } };
+    assert.equal(response.status, 200);
+    assert.equal(mock.requests, 2);
+    assert.equal(maxActive, 2, 'Both specialist requests must overlap, not merely finish in sequence.');
+    assert.equal(result.status, 'completed');
+    assert.deepEqual(result.summary, { total: 2, completed: 2, failed: 0 });
+  } finally {
+    if (isolated) await stopRuntime(isolated);
+    await stopMockModel(mock);
+  }
+});
+
 test("returns a controlled tool error for malformed HTTP target URLs", async () => {
   const mock = await startMockModel((requestNumber) => requestNumber === 1
     ? { payload: { choices: [{ delta: { tool_calls: [{ index: 0, id: "invalid-url-check", type: "function", function: { name: "http.request", arguments: JSON.stringify({ url: "not-a-valid-url", method: "GET" }) } }] }, finish_reason: "tool_calls" }] } }
