@@ -9552,3 +9552,15 @@ body:has(.ai-chat-page){
   .ai-chat-page .artifact-actions{gap:7px}
   .ai-chat-page .artifact-actions .button{min-height:38px;font-size:11.5px}
 }
+
+/* Guest registration nudge (dismissible, non-blocking). */
+.guest-nudge{position:fixed;inset-inline-start:16px;bottom:18px;z-index:60;max-width:330px;padding:16px 16px 14px;border:1px solid rgba(224,181,101,.4);border-radius:16px;background:linear-gradient(150deg,#191a20,#101218);box-shadow:0 18px 50px rgba(0,0,0,.45),0 0 24px rgba(224,181,101,.08)}
+.guest-nudge>strong{display:block;color:#f6dca0;font-size:14px;margin-bottom:4px;padding-inline-end:22px}
+.guest-nudge>p{margin:0 0 8px;color:#cfc9bb;font-size:12px;line-height:1.8}
+.guest-nudge>ul{margin:0 0 12px;padding-inline-start:18px;display:grid;gap:3px;color:#e6ddc8;font-size:12px;line-height:1.7}
+.guest-nudge-actions{display:flex;gap:8px;flex-wrap:wrap}
+.guest-nudge-close{position:absolute;inset-inline-end:8px;top:8px;display:grid;place-items:center;width:26px;height:26px;border:1px solid rgba(224,181,101,.25);border-radius:8px;background:transparent;color:#cbb37f;cursor:pointer}
+.guest-nudge-close:hover{border-color:rgba(224,181,101,.55);color:#f6dca0}
+@media(max-width:760px){.guest-nudge{inset-inline:12px;max-width:none;bottom:78px}}
+@media(prefers-reduced-motion:no-preference){.guest-nudge{animation:guestNudgeIn .45s ease-out both}}
+@keyframes guestNudgeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}

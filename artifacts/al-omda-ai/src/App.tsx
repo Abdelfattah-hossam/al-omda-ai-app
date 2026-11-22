@@ -708,6 +708,25 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   </section>;
 }
 
+// Dismissible welcome nudge for anonymous visitors: explains what a free
+// account unlocks. Additive and non-blocking; stays hidden once dismissed.
+function GuestWelcomeNudge({ isAr, onSignup, onDismiss }: { isAr: boolean; onSignup: () => void; onDismiss: () => void }) {
+  return <aside className="guest-nudge" role="dialog" aria-label={isAr ? 'إنشاء حساب' : 'Create an account'}>
+    <button type="button" className="guest-nudge-close" onClick={onDismiss} aria-label={isAr ? 'إغلاق' : 'Close'}><X size={14}/></button>
+    <strong>{isAr ? 'أهلاً بك في العمدة' : 'Welcome to AL OMDA'}</strong>
+    <p>{isAr ? 'أنت تتصفح كضيف الآن. أنشئ حسابًا مجانيًا ليحفظ العمدة شغلك:' : 'You are browsing as a guest. Create a free account so AL OMDA keeps your work:'}</p>
+    <ul>
+      <li>{isAr ? 'محادثاتك محفوظة ومتزامنة بين أجهزتك' : 'Your conversations saved and synced across your devices'}</li>
+      <li>{isAr ? 'ملفاتك ومشاريعك في مكان واحد' : 'Your files and projects in one place'}</li>
+      <li>{isAr ? 'متابعة شغلك من الهاتف أو الكمبيوتر' : 'Pick up your work from phone or computer'}</li>
+    </ul>
+    <div className="guest-nudge-actions">
+      <button type="button" className="button button-primary button-small" onClick={onSignup}>{isAr ? 'إنشاء حساب مجاني' : 'Create a free account'}</button>
+      <button type="button" className="button button-quiet button-small" onClick={onDismiss}>{isAr ? 'لاحقًا' : 'Later'}</button>
+    </div>
+  </aside>;
+}
+
 function App() {
   const [location, setLocation] = useLocation();
   const [saved, setSaved] = useState(readInitial);
@@ -2793,6 +2812,31 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const professionalTitle = professionalSpecialtyPages[path as keyof typeof professionalSpecialtyPages];
   const pageTitle = professionalTitle ? (isAr?professionalTitle.ar:professionalTitle.en) : platformTitle ? (isAr?platformTitle.ar:platformTitle.en) : path === '/projects' ? (isAr?'المشاريع':'Projects') : path === '/pipeline' ? (isAr?'مسار العمل':'Pipeline') : path === '/assets' ? (isAr?'الأصول والملفات':'Assets') : t(pageTitleKey);
   const shouldSkipRouteTransition = path === '/ai' || path === '/ai/usage';
+  // Guest registration nudge: never on the first load's instant; on a later
+  // visit after a short delay, on a first visit after a longer one, or soon
+  // after the visitor starts exploring (first route change). Dismissal is
+  // remembered permanently. Hidden for signed-in users.
+  const [guestNudge, setGuestNudge] = useState<'waiting' | 'shown' | 'dismissed'>('waiting');
+  const guestNudgeEntryPath = useRef<string | null>(null);
+  useEffect(() => {
+    if (authLoading || authUser) return;
+    try { if (window.localStorage.getItem('omda-guest-nudge-dismissed') === '1') { setGuestNudge('dismissed'); return; } } catch { /* storage unavailable */ }
+    let visits = 1;
+    try { visits = Number(window.localStorage.getItem('omda-guest-visits') || '0') + 1; window.localStorage.setItem('omda-guest-visits', String(visits)); } catch { /* storage unavailable */ }
+    guestNudgeEntryPath.current = location;
+    const timer = window.setTimeout(() => setGuestNudge('shown'), visits >= 2 ? 8000 : 40000);
+    return () => window.clearTimeout(timer);
+  }, [authLoading, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (authLoading || authUser || guestNudge !== 'waiting') return undefined;
+    if (guestNudgeEntryPath.current !== null && location !== guestNudgeEntryPath.current) {
+      const timer = window.setTimeout(() => setGuestNudge('shown'), 1500);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [location, authLoading, authUser, guestNudge]);
+  const dismissGuestNudge = () => { setGuestNudge('dismissed'); try { window.localStorage.setItem('omda-guest-nudge-dismissed', '1'); } catch { /* storage unavailable */ } };
+
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <aside className="sidebar">
       <div className="sidebar-brand-area">
@@ -2926,6 +2970,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </aside>
     </div>}
     {path !== '/ai' && path !== '/ai/usage' && <Link href={navigationHref("/ai")} className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
+    {!authLoading && !authUser && guestNudge === 'shown' && <GuestWelcomeNudge isAr={isAr} onSignup={()=>setLocation(focusedHref('/profile','profile-account-card'))} onDismiss={dismissGuestNudge}/>}
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }
