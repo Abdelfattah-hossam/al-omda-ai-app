@@ -10,6 +10,7 @@ const WorkspaceAssets = lazy(() => import('./WorkspaceAssets'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
+import type { PdfBlock } from './lib/table-pdf';
 import { downloadBlobAsFile } from './lib/download-file';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
@@ -658,6 +659,24 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
     }
   };
 
+  const downloadAssetAsPdf = async (asset: CommandAsset) => {
+    setError('');
+    try {
+      const blocks = await previewOfficeDocumentBlocks(await fetchAssetBlob(asset.path), 'docx');
+      if (!blocks) throw new Error(isAr ? 'لا يوجد محتوى قابل للتحويل إلى PDF.' : 'No content available to convert to PDF.');
+      const pdfBlocks: PdfBlock[] = [];
+      blocks.forEach((block, index) => {
+        if (block.type === 'table' || block.type === 'sheet') pdfBlocks.push({ type: 'table', rows: block.rows });
+        else pdfBlocks.push(index === 0 ? { type: 'title', text: block.text } : { type: 'paragraph', text: block.text });
+      });
+      const { createDocumentPdfBlob } = await import('./lib/table-pdf');
+      const pdf = await createDocumentPdfBlob(pdfBlocks);
+      await downloadBlobAsFile(pdf, displayName(asset).replace(/\.docx$/i, '') + '.pdf');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (isAr ? 'تعذر إنشاء ملف PDF.' : 'Could not create the PDF.'));
+    }
+  };
+
   const togglePreview = async (asset: CommandAsset) => {
     if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewText(''); setPreviewBlocks(null); return; }
     setError('');
@@ -697,6 +716,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
         <div style={{display:'flex',gap:8,flexShrink:0,flexWrap:'wrap'}}>
           <button type="button" className="button button-quiet button-small" onClick={()=>void togglePreview(asset)}>{previewPath === asset.path ? (isAr ? 'إغلاق المعاينة' : 'Close preview') : (isAr ? 'معاينة' : 'Preview')}</button>
           <button type="button" className="button button-secondary button-small" onClick={()=>void downloadAsset(asset)}>{isAr ? 'تحميل' : 'Download'}</button>
+          {asset.name.toLowerCase().endsWith('.docx') && <button type="button" className="button button-quiet button-small" data-testid="asset-download-pdf" onClick={()=>void downloadAssetAsPdf(asset)}>{isAr ? 'تحميل PDF' : 'Download PDF'}</button>}
         </div>
       </div>
       {previewPath === asset.path && <div style={{marginTop:8}}>

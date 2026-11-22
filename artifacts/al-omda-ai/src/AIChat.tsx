@@ -678,6 +678,24 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
   }, []);
 
 
+  const downloadWordAsPdf = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }, attachmentName: string) => {
+    // The iPhone file viewer shrinks Word tables to their text, so offer a PDF copy that looks the same everywhere.
+    try {
+      const { createDocumentPdfBlob } = await import("./lib/table-pdf");
+      const title = (documentData.title || "").trim();
+      const blocks: import("./lib/table-pdf").PdfBlock[] = [];
+      if (title) blocks.push({ type: "title", text: title });
+      for (const paragraph of documentData.paragraphs) if (paragraph.trim() && paragraph.trim() !== title) blocks.push({ type: "paragraph", text: paragraph });
+      if (documentData.columns.length > 0) blocks.push({ type: "table", rows: [documentData.columns, ...documentData.rows.map((row) => documentData.columns.map((_, index) => String(row[index] ?? "")))] });
+      const pdf = await createDocumentPdfBlob(blocks, ar);
+      const url = URL.createObjectURL(pdf);
+      await downloadFileFromUrl(url, attachmentName.replace(/\.docx$/i, "") + ".pdf");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : (ar ? "تعذر إنشاء ملف PDF." : "Could not create the PDF."));
+    }
+  };
+
   const createWordAttachment = async (documentData: { title: string; paragraphs: string[]; columns: string[]; rows: string[][] }) => {
     const primaryModuleUrl = "https://esm.sh/docx@9.5.1";
     const fallbackModuleUrl = "https://cdn.jsdelivr.net/npm/docx@9.5.1/+esm";
@@ -1550,6 +1568,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
             {message.attachment && (message.documentData || message.spreadsheetData || message.presentationData || message.sourceData || message.appData) && <div className="artifact-actions" style={{display:"flex",gap:8,flexWrap:"wrap",width:"100%"}}>
               <button type="button" className="button button-primary button-small" onClick={()=>setPreviewingDocument(previewingDocument===index?null:index)} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,flex:"1 1 130px"}}><Search size={15}/>{previewingDocument===index?(ar?"إغلاق المعاينة":"Close preview"):(ar?"معاينة الملف":"Preview file")}</button>
               <button type="button" className="button button-primary button-small" onClick={()=>{void downloadFileFromUrl(message.attachment!.url, message.attachment!.name);}} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,flex:"1 1 130px"}}><FileText size={15}/>{message.appData?(ar?"تحميل / فتح التطبيق":"Download / open app"):message.spreadsheetData?(ar?"تحميل ملف Excel":"Download Excel"):message.presentationData?(ar?"تحميل PowerPoint":"Download PowerPoint"):message.sourceData?(ar?"تحميل ملف الكود":"Download source file"):(ar?"تحميل ملف Word":"Download Word")} ({message.attachment.name.split(".").pop()})</button>
+              {message.documentData && <button type="button" className="button button-quiet button-small" data-testid="download-word-pdf" onClick={()=>{void downloadWordAsPdf(message.documentData!, message.attachment!.name);}} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,flex:"1 1 130px"}}><FileText size={15}/>{ar?"تحميل PDF (يظهر الجدول كاملًا)":"Download PDF (full-width table)"}</button>}
               {message.appData && <button type="button" className="button button-quiet button-small" onClick={()=>{void navigator.clipboard.writeText(message.appData!.html).then(()=>{setCopiedIndex(index);window.setTimeout(()=>setCopiedIndex((current)=>current===index?null:current),1800);}).catch(()=>setError(ar?"تعذر نسخ كود HTML.":"Could not copy HTML source."));}} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم نسخ الكود":"Code copied"):(ar?"نسخ الكود":"Copy code")}</button>}
               {message.documentData && <button type="button" className="button button-quiet button-small" onClick={()=>void copyArtifactText(getWordCopyText(message.documentData!),index,ar?"تعذر نسخ محتوى Word.":"Could not copy Word content.")} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم النسخ":"Copied"):(ar?"نسخ النص والجدول":"Copy text & table")}</button>}
               {message.spreadsheetData && <button type="button" className="button button-quiet button-small" onClick={()=>void copyArtifactText(getSpreadsheetCopyText(message.spreadsheetData!),index,ar?"تعذر نسخ بيانات Excel.":"Could not copy Excel data.")} style={{display:"inline-flex",alignItems:"center",gap:8}}><Copy size={15}/>{copiedIndex===index?(ar?"تم النسخ":"Copied"):(ar?"نسخ بيانات الجداول":"Copy sheet data")}</button>}
