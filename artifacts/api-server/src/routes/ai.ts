@@ -11,7 +11,7 @@ import { parseWordDocument } from "../lib/word-document.js";
 import { parseProjectPlan } from "../lib/project-plan.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
-import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
+import { estimatePromptTokens, getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose, reorderProvidersForPromptSize } from "../lib/ai-model-policy.js";
 import { callWithRateLimitRetry, isRateLimitError, parseRetryAfterSeconds, runWithProviderFailover } from "../lib/provider-failover.js";
 import { getWorkersAiBinding } from "../lib/cloudflare-ai.js";
 import { ASSET_READ_MAX_BYTES, extractFetchableUrl, runRequestReadTools, type RequestToolDeps, type WorkspaceAssetRef } from "../lib/execution-tools.js";
@@ -198,7 +198,8 @@ function chooseProviders(messages: ChatMessage[]) {
   const purpose = inferHostedModelPurpose(getLatestUserRequest(messages));
   const configured = getProviders();
   // Choose the strongest configured free provider pool for the latest request purpose.
-  return getHostedProviderOrder(purpose, coding, hasImage).filter((provider) => configured[provider as keyof typeof configured]);
+  const order = getHostedProviderOrder(purpose, coding, hasImage).filter((provider) => configured[provider as keyof typeof configured]);
+  return reorderProvidersForPromptSize(order, estimatePromptTokens(messages.map((message) => message.content)));
 }
 
 // Best-effort per-provider cooldown: after a rate-limit failure, skip that
@@ -815,8 +816,12 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     }).join("");
     const feedback = task.steps.slice(0, stepIndex + 1).flatMap((item, index) => (item.comments ?? []).map((note) => "[Stage " + (index + 1) + ": " + item.text + "][" + note.author + "] " + note.text)).join("\n").slice(0, 3000);
     const messages: ChatMessage[] = [{ role: "user", content: prompt + toolEvidence + (feedback ? "\n\nUser feedback and required corrections for this and earlier stages (must be followed; do not skip or silently disregard):\n" + feedback + "\nIf an earlier deliverable is contradicted or cannot safely be relied on, clearly flag the dependency and request correction rather than proceeding as if it were valid." : "") }];
+    // Provider capability/purpose order was chosen from the step text, but the
+    // real prompt (template + tool evidence + feedback) is what can exceed a
+    // free TPM bucket, so reorder against the actual outgoing size.
+    const stepProviders = reorderProvidersForPromptSize(providers, estimatePromptTokens(messages.map((message) => message.content)));
     const stepOutcome = await runWithProviderFailover(
-      providers,
+      stepProviders,
       (candidate) => callProviderWithRetry(candidate, messages, memory),
       noteProviderFailure,
     );

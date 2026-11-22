@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "./ai-model-policy.js";
+import { estimatePromptTokens, getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose, reorderProvidersForPromptSize } from "./ai-model-policy.js";
 
 test("classifies precision work in English and Arabic", () => {
   assert.equal(inferHostedModelPurpose("Review this legal contract"), "precision");
@@ -36,4 +36,11 @@ test("prioritizes free hosted providers by request purpose and image capability"
   assert.deepEqual(getHostedProviderOrder("general"), ["groq", "cloudflare", "openrouter", "gemini"]);
   assert.deepEqual(getHostedProviderOrder("precision", true), ["groq", "cloudflare", "gemini", "openrouter"]);
   assert.deepEqual(getHostedProviderOrder("precision", false, true), ["groq", "gemini", "openrouter"]);
+});
+
+test("leads with the next quota bucket when a prompt would likely bust Groq's free TPM", () => {
+  assert.deepEqual(reorderProvidersForPromptSize(["groq", "cloudflare", "openrouter", "gemini"], 6638), ["cloudflare", "groq", "openrouter", "gemini"]);
+  assert.deepEqual(reorderProvidersForPromptSize(["groq", "cloudflare", "openrouter", "gemini"], 1200), ["groq", "cloudflare", "openrouter", "gemini"]);
+  assert.deepEqual(reorderProvidersForPromptSize(["groq", "gemini", "openrouter"], 9000), ["groq", "gemini", "openrouter"]);
+  assert.ok(estimatePromptTokens(["abc"]) >= 1);
 });

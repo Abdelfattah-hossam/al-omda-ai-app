@@ -23,3 +23,19 @@ export function getHostedProviderOrder(purpose: HostedModelPurpose, coding = fal
   if (purpose === "research") return ["openrouter", "groq", "cloudflare", "gemini"];
   return ["groq", "cloudflare", "openrouter", "gemini"];
 }
+
+/**
+ * Groq's free tier shares an 8K tokens-per-minute bucket per model, so very
+ * large prompts are likely to hit a 429 there even when the account is quiet.
+ * Lead with the next quota bucket instead of spending the request on a likely
+ * rate-limit failure. Arabic text tokenizes denser than English; chars/3 is a
+ * safe upper estimate.
+ */
+export function estimatePromptTokens(texts: readonly string[]): number {
+  return texts.reduce((sum, text) => sum + Math.ceil(text.length / 3), 0);
+}
+
+export function reorderProvidersForPromptSize(order: readonly string[], estimatedTokens: number): string[] {
+  if (estimatedTokens <= 5500 || order[0] !== "groq" || !order.includes("cloudflare")) return [...order];
+  return ["cloudflare", ...order.filter((provider) => provider !== "cloudflare")];
+}
