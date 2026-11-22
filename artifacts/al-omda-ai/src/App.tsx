@@ -9,6 +9,8 @@ const SalesAnalyticsWorkspace = lazy(() => import('./SalesAnalyticsWorkspace'));
 const WorkspaceAssets = lazy(() => import('./WorkspaceAssets'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
+import { previewOfficeDocument } from './lib/office-preview';
+import { downloadBlobAsFile } from './lib/download-file';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
 import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
@@ -603,6 +605,102 @@ function getPageGuidance(route: string, isAr: boolean): string {
   const key = route.startsWith("/history/") ? "/history" : route;
   const guide = PAGE_GUIDANCE[key] ?? PAGE_GUIDANCE["/"];
   return isAr ? guide.ar : guide.en;
+}
+
+// Generated files saved under a task's storage folder (artifact fast-path
+// tasks register the produced file there). The task register must let the
+// owner preview and download the actual file, not just read its metadata.
+function TaskGeneratedFiles({ taskId, isAr }: { taskId: string; isAr: boolean }) {
+  const [assets, setAssets] = useState<CommandAsset[] | null>(null);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewText, setPreviewText] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/storage/assets?projectId=' + encodeURIComponent(taskId), { credentials: 'same-origin' });
+        if (!response.ok) { if (!cancelled) setAssets([]); return; }
+        const data = await response.json().catch(() => []);
+        if (!cancelled) setAssets(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setAssets([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [taskId]);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  if (!assets || assets.length === 0) return null;
+
+  const fetchAssetBlob = async (path: string) => {
+    const response = await fetch('/api/storage/assets/download?path=' + encodeURIComponent(path), { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(isAr ? 'تعذر تحميل الملف.' : 'Could not load the file.');
+    return response.blob();
+  };
+
+  const downloadAsset = async (asset: CommandAsset) => {
+    setError('');
+    try {
+      await downloadBlobAsFile(await fetchAssetBlob(asset.path), asset.name);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (isAr ? 'تعذر تنزيل الملف.' : 'Could not download the file.'));
+    }
+  };
+
+  const togglePreview = async (asset: CommandAsset) => {
+    if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewText(''); return; }
+    setError('');
+    setPreviewPath(asset.path);
+    setPreviewUrl('');
+    setPreviewText('');
+    setPreviewLoading(true);
+    try {
+      const blob = await fetchAssetBlob(asset.path);
+      const mime = asset.mimeType ?? blob.type;
+      const extension = asset.name.split('.').pop()?.toLowerCase() ?? '';
+      if (mime.startsWith('image/') || mime === 'application/pdf' || mime === 'text/html') {
+        // Sandboxed at render time so uploaded HTML never runs with app access.
+        setPreviewUrl(URL.createObjectURL(blob));
+      } else if (mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml') {
+        setPreviewText(await blob.text());
+      } else if (['docx', 'xlsx', 'pptx'].includes(extension)) {
+        setPreviewText(await previewOfficeDocument(blob, extension));
+      } else {
+        throw new Error(isAr ? 'المعاينة المباشرة لهذا النوع غير متاحة حاليًا؛ يمكنك تنزيل الملف وفتحه ببرنامجه.' : 'Inline preview is not available for this file type yet. Download it to open it in its native app.');
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : (isAr ? 'تعذر تحميل المعاينة.' : 'Could not load preview.'));
+      setPreviewPath(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  return <section className="panel panel-pad">
+    <div className="section-head"><h2 className="section-title">{isAr ? 'الملفات الناتجة' : 'Generated files'}</h2></div>
+    {assets.map((asset) => <div key={asset.path} style={{marginBottom:10}}>
+      <div className="setting-row">
+        <div><strong style={{overflowWrap:'anywhere'}}>{asset.name}</strong><small>{asset.size ? (Math.round(asset.size / 102.4) / 10) + ' KB' : ''}</small></div>
+        <div style={{display:'flex',gap:8,flexShrink:0,flexWrap:'wrap'}}>
+          <button type="button" className="button button-quiet button-small" onClick={()=>void togglePreview(asset)}>{previewPath === asset.path ? (isAr ? 'إغلاق المعاينة' : 'Close preview') : (isAr ? 'معاينة' : 'Preview')}</button>
+          <button type="button" className="button button-secondary button-small" onClick={()=>void downloadAsset(asset)}>{isAr ? 'تحميل' : 'Download'}</button>
+        </div>
+      </div>
+      {previewPath === asset.path && <div style={{marginTop:8}}>
+        {previewLoading && <p className="section-meta">{isAr ? 'جارٍ تحميل المعاينة…' : 'Loading preview…'}</p>}
+        {!previewLoading && previewUrl && (asset.mimeType?.startsWith('image/')
+          ? <img src={previewUrl} alt={asset.name} style={{maxWidth:'100%',maxHeight:'60vh',objectFit:'contain',borderRadius:10}}/>
+          : <iframe title={asset.name} src={previewUrl} sandbox="" style={{display:'block',width:'100%',height:'min(60vh,560px)',minHeight:280,border:'1px solid #2a3038',borderRadius:10,background:'#fff'}}/>)}
+        {!previewLoading && !previewUrl && previewText && <pre dir="auto" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:340,overflow:'auto',background:'#10141b',border:'1px solid #2a3038',borderRadius:10,padding:12,fontSize:12,lineHeight:1.8,margin:0}}>{previewText}</pre>}
+      </div>}
+    </div>)}
+    {error && <div className="notice-bar" style={{marginTop:10}}><span>{error}</span></div>}
+  </section>;
 }
 
 function App() {
@@ -2532,6 +2630,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?`نجح ${successfulExecutions} · فشل ${failedExecutions} · متبقٍ ${unexecutedSteps}`:`${successfulExecutions} succeeded · ${failedExecutions} failed · ${unexecutedSteps} awaiting`}</small></div><span className={`status-chip ${failedExecutions>0?'stopped':successfulExecutions>0?'approved':'paused'}`}>{successfulExecutions+failedExecutions>0?(isAr?'مسجل':'Tracked'):(isAr?'لم يبدأ':'Not started')}</span></div>
             <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'السهم يعكس نتائج تشغيل خطوات الذكاء الاصطناعي المسجلة فقط، ولا يعني اجتياز اختبارات خارجية أو اكتمال المشروع بالكامل.':'The trend reflects recorded AI step runs only; it does not certify external tests or full project completion.'}</span></div>
           </section>
+          <TaskGeneratedFiles taskId={task.id} isAr={isAr}/>
           <section className="panel panel-pad">
             <div className="section-head"><h2 className="section-title">{t('taskRequest')}</h2></div>
             <p style={{color:'#b7b7b1',fontSize:11,lineHeight:1.9,margin:'0 0 18px',overflowWrap:'anywhere'}}>{task.request}</p>

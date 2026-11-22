@@ -1049,10 +1049,10 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .app-shell button:focus-visible,.app-shell a:focus-visible{outline:2px solid var(--omda-accent)!important;outline-offset:3px;box-shadow:0 0 0 5px rgba(var(--omda-glow),.17),0 0 24px rgba(var(--omda-glow),.3)}
 
 .app-shell .button-primary,.app-shell .ai-send-button{
-  color:#fff!important;border:1px solid rgba(var(--omda-glow),.72)!important;
+  color:#241a08!important;border:1px solid rgba(var(--omda-glow),.72)!important;
   background:linear-gradient(115deg,var(--omda-accent),var(--omda-accent-2))!important;
   box-shadow:0 5px 18px rgba(var(--omda-glow),.22),0 0 18px rgba(var(--omda-glow),.18),inset 0 1px 0 rgba(255,255,255,.35)!important;
-  text-shadow:0 1px 8px rgba(0,0,0,.18)
+  text-shadow:0 1px 0 rgba(255,255,255,.28)
 }
 
 .app-shell .button-quiet,.app-shell .icon-button,.app-shell .ai-plus-button,.app-shell .ai-chat-actions .button{
