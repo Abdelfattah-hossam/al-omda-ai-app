@@ -298,9 +298,11 @@ router.delete("/storage/assets", requireSameOrigin, async (req, res): Promise<vo
   const path = typeof req.query.path === "string" ? req.query.path : "";
   if (!isValidWorkspaceAssetPath(path, session.user.id)) { res.status(400).json({ error: "File path is invalid." }); return; }
   try {
+    // No content-type header: the delete carries no body, and Supabase Storage
+    // rejects a bodyless request that declares application/json with
+    // "Body cannot be empty when content-type is set to 'application/json'".
     const response = await supabaseFetch(`/storage/v1/object/${WORKSPACE_ASSET_BUCKET}/${assetObjectPath(path)}`, {
       method: "DELETE",
-      headers: { "content-type": "application/json" },
     }, session.accessToken);
     await readSupabaseJson<unknown>(response);
     res.json({ ok: true, path });
