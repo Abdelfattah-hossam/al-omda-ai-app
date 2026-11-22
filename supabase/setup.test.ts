@@ -196,3 +196,14 @@ test("collaboration audit log is owner-readable and database-written only", () =
   const errorCode = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261119015914_use_business_rule_error_for_identity_lock.sql"), "utf8");
   assert.match(errorCode, /using errcode = 'P0001'/i);
 });
+
+
+test("all ten specialties are accepted by table and both task creation functions", () => {
+  const expanded = readFileSync(resolve(process.cwd(), "../supabase/migrations/20261122170600_expand_ten_specialties.sql"), "utf8");
+  for (const specialty of ["content", "social", "education", "finance"]) {
+    assert.ok(sql.split("'" + specialty + "'").length >= 4);
+    assert.ok(expanded.split("'" + specialty + "'").length >= 4);
+  }
+  assert.match(expanded, /begin;/i);
+  assert.match(expanded, /commit;/i);
+});

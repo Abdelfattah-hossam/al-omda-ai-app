@@ -16,7 +16,7 @@ create table if not exists public.tasks (
   user_id uuid not null references auth.users (id) on delete cascade,
   title text not null check (char_length(title) between 1 and 160),
   request text not null check (char_length(request) between 1 and 10000),
-  specialty text not null check (specialty in ('business', 'development', 'design', 'marketing', 'research', 'assistant')),
+  specialty text not null check (specialty in ('business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance')),
   steps jsonb not null check (jsonb_typeof(steps) = 'array'),
   status text not null check (status in ('review', 'paused', 'approved', 'stopped')),
   created_at timestamptz not null default now(),
@@ -613,7 +613,7 @@ begin
      or p_title is null or char_length(btrim(p_title)) not between 1 and 160
      or p_request is null or char_length(btrim(p_request)) not between 1 and 10000
      or p_specialty is null
-     or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
+     or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance')
      or jsonb_typeof(p_steps) is distinct from 'array'
      or jsonb_array_length(p_steps) not between 1 and 8 then
     raise exception 'Invalid project task request';
@@ -897,7 +897,7 @@ begin
 
   if p_title is null or char_length(btrim(p_title)) < 1 or char_length(p_title) > 160 or p_title ~ '[[:cntrl:]]'
      or p_request is null or char_length(p_request) < 1 or char_length(p_request) > 10000
-     or p_specialty is null or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
+     or p_specialty is null or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance')
      or p_filename is null or char_length(p_filename) < 1 or char_length(p_filename) > 120
      or position('/' in p_filename) > 0 or position(chr(92) in p_filename) > 0 or p_filename ~ '[[:cntrl:]]'
      or p_mime_type is null or p_mime_type not in (
