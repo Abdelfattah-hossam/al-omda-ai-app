@@ -1448,8 +1448,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
       setWorkspaceError(isAr ? 'اعتمد المراحل بالترتيب؛ اختر أول مرحلة لم تحصل على موافقتك بعد.' : 'Stages must be approved in order. Choose the first stage awaiting approval.');
       return;
     }
-    if (task.steps.slice(0, stepIndex).some((step) => !step.result?.trim())) {
-      setWorkspaceError(isAr ? 'لا يمكن اعتماد المرحلة التالية قبل حفظ مخرج المرحلة السابقة بنجاح.' : 'The previous stage must produce and save its deliverable before this step can be approved.');
+    const unexecutedPriorIndex = task.steps.slice(0, stepIndex).findIndex((step) => !step.result?.trim());
+    if (unexecutedPriorIndex >= 0) {
+      setWorkspaceError(isAr
+        ? `المرحلة ${unexecutedPriorIndex + 1} معتمدة لكنها لم تُنفَّذ بعد. اضغط «نفّذ الخطوة بالذكاء الاصطناعي» عليها، وانتظر نتيجتها، ثم عاود الاعتماد.`
+        : `Stage ${unexecutedPriorIndex + 1} is approved but not executed yet. Press "Execute step with AI" on it, wait for its result, then approve again.`);
       return;
     }
     approvalLockRef.current = true;
