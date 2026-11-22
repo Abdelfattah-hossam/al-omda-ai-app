@@ -86,6 +86,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-formula-cell.test.ts
       - name: Test Excel recalculation metadata in exported bytes
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-workbook-recalculation.test.ts
+      - name: Test actual PptxGenJS package layout
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/pptxgenjs-package.test.ts
       - name: Test stage-result Markdown rendering
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/task-result-markdown.test.ts
       - name: Test workspace asset upload MIME normalization

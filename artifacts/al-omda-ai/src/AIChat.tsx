@@ -895,7 +895,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       slide.addText("AL OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
     }
     const blob = await pptx.write({ outputType: "blob" }) as Blob;
-    const expectedNotesCount = data.slides.filter((item) => Boolean(item.notes)).length;
+    // PptxGenJS writes a notes part for every slide, including empty notes.
+    const expectedNotesCount = data.slides.length;
     if (!(blob instanceof Blob) || blob.size < 1000 || !(await validateOoxmlPackage(blob, { requiredEntries: ["[Content_Types].xml", "_rels/.rels", "ppt/presentation.xml", "ppt/_rels/presentation.xml.rels"], expectedSlideCount: data.slides.length, expectedNotesCount, expectedText: data.slides.flatMap((slide) => [slide.title, ...slide.bullets, ...(slide.notes ? [slide.notes] : [])]) }))) throw new Error(ar ? "ملف PowerPoint الناتج لا يحتوي على بنية PPTX المطلوبة أو أن عدد الشرائح/الملاحظات غير مطابق." : "The generated PowerPoint file is missing required PPTX package entries or its slide/note counts do not match.");
     const url = URL.createObjectURL(blob);
     const safeName = (data.title || "AL-OMDA-presentation").replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || "AL-OMDA-presentation";
