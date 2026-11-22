@@ -639,7 +639,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
 
   // Storage keys are ASCII-safe ids; the friendly name lives in the artifact
   // task's request metadata. Use it only when it unambiguously maps (one file).
-  const artifactNameMatch = taskRequest?.match(/Generated artifact\s*-\s*([^(\n]+)\(/);
+  const artifactNameMatch = taskRequest?.match(/Generated artifact[:：-]\s*([^\n(]+)\(/);
   const displayName = (asset: CommandAsset) => (assets.length === 1 && artifactNameMatch ? artifactNameMatch[1].trim() : asset.name);
 
   const fetchAssetBlob = async (path: string) => {
