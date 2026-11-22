@@ -143,3 +143,131 @@ export async function runFetchUrlTool(
     clearTimeout(timer);
   }
 }
+
+/**
+ * read_workspace_asset (read class): lets an approved step consume a text
+ * file the user already uploaded to their workspace (chat inbox or the
+ * task's own project folder). Storage stays the source of truth; the lib
+ * only matches names and defines limits, while the route injects the
+ * authenticated list/read calls. Rich parsers (xlsx, docx, pptx, pdf) are a
+ * later slice; v1 reads text-like types only.
+ */
+
+export type WorkspaceAssetRef = {
+  /** Full storage path: <userId>/<folder>/<stored-name>. */
+  path: string;
+  /** Stored leaf name (ASCII-folded storage key, usually "<uuid>-<name>"). */
+  name: string;
+  mimeType: string | null;
+  size: number | null;
+};
+
+export const ASSET_READ_MAX_BYTES = 256 * 1024;
+export const ASSET_EVIDENCE_MAX_CHARS = 15000;
+export const ASSET_MENTION_MAX_MATCHES = 2;
+
+const TEXT_ASSET_MIME_TYPES = new Set([
+  "application/json",
+  "application/xml",
+  "application/sql",
+  "image/svg+xml",
+]);
+
+export function isTextAssetMime(mimeType: string | null): boolean {
+  if (!mimeType) return false;
+  const base = mimeType.split(";")[0].trim().toLowerCase();
+  return base.startsWith("text/") || TEXT_ASSET_MIME_TYPES.has(base);
+}
+
+/** Strips the "<uuid>-" storage prefix so the user-facing name is matched. */
+function assetDisplayName(storedName: string): string {
+  const match = storedName.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-(.+)$/i);
+  return match ? match[1] : storedName;
+}
+
+/**
+ * Matches files the customer's request explicitly names, by full leaf name
+ * ("sales.csv") or by a distinctive stem ("sales"). Case-insensitive; at
+ * most ASSET_MENTION_MAX_MATCHES files to keep evidence bounded.
+ */
+export function findAssetMentions(
+  request: string,
+  assets: WorkspaceAssetRef[],
+  max: number = ASSET_MENTION_MAX_MATCHES,
+): WorkspaceAssetRef[] {
+  if (typeof request !== "string" || !request.trim()) return [];
+  const haystack = request.toLowerCase();
+  const matches: WorkspaceAssetRef[] = [];
+  for (const asset of assets) {
+    if (matches.length >= max) break;
+    const leaf = assetDisplayName(asset.name).toLowerCase();
+    if (!leaf) continue;
+    const stem = leaf.replace(/\.[a-z0-9]{1,5}$/, "");
+    if (haystack.includes(leaf) || (stem.length >= 4 && haystack.includes(stem))) {
+      matches.push(asset);
+    }
+  }
+  return matches;
+}
+
+export type ReadAssetDeps = {
+  readAssetText: (path: string) => Promise<{ text: string; bytes: number }>;
+};
+
+/** Runs the read-only read_workspace_asset tool against one matched asset. */
+export async function runReadAssetTool(asset: WorkspaceAssetRef, deps: ReadAssetDeps): Promise<ToolRun> {
+  const started = Date.now();
+  const base = { tool: "read_workspace_asset", riskClass: "read" as const };
+  const displayName = assetDisplayName(asset.name);
+  if (!isTextAssetMime(asset.mimeType)) {
+    return { ...base, ok: false, detail: "unsupported content type for text evidence: " + (asset.mimeType ?? "unknown"), durationMs: Date.now() - started };
+  }
+  if (asset.size != null && asset.size > ASSET_READ_MAX_BYTES) {
+    return { ...base, ok: false, detail: "file too large for inline evidence (" + Math.round(asset.size / 1024) + " KB > " + Math.round(ASSET_READ_MAX_BYTES / 1024) + " KB)", durationMs: Date.now() - started };
+  }
+  try {
+    const result = await deps.readAssetText(asset.path);
+    const evidence = result.text.replace(/\u0000/g, "").trim().slice(0, ASSET_EVIDENCE_MAX_CHARS);
+    if (!evidence) {
+      return { ...base, ok: false, detail: "no readable text content in " + displayName, durationMs: Date.now() - started };
+    }
+    return {
+      ...base,
+      ok: true,
+      detail: displayName + ", " + (result.bytes / 1024).toFixed(1) + " KB",
+      durationMs: Date.now() - started,
+      data: evidence,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "read failed";
+    return { ...base, ok: false, detail: displayName + ": " + message, durationMs: Date.now() - started };
+  }
+}
+
+export type RequestToolDeps = ReadAssetDeps & {
+  fetchImpl?: typeof fetch;
+  /** Lists the caller's workspace assets (chat inbox + current task folder). */
+  listAssets?: () => Promise<WorkspaceAssetRef[]>;
+};
+
+/**
+ * Runs every read-class tool the request activates: fetch_url when it cites
+ * a URL, read_workspace_asset for each explicitly named workspace file.
+ * Listing failures are best-effort and never block the step.
+ */
+export async function runRequestReadTools(request: string, deps: RequestToolDeps): Promise<ToolRun[]> {
+  const runs: ToolRun[] = [];
+  const url = extractFetchableUrl(request);
+  if (url) runs.push(await runFetchUrlTool(url, deps.fetchImpl));
+  if (deps.listAssets) {
+    try {
+      const assets = await deps.listAssets();
+      for (const asset of findAssetMentions(request, assets)) {
+        runs.push(await runReadAssetTool(asset, deps));
+      }
+    } catch {
+      // Asset listing is best-effort; a failed listing must not fail the step.
+    }
+  }
+  return runs;
+}
