@@ -1,3 +1,6 @@
+export function slideshowElapsed(now:number,start:number,duration:number):number {
+  return Math.max(0,Math.min(duration,now-start));
+}
 export type SlideshowFrame = { src: string; caption: string };
 
 function videoMimeCandidates(withAudio:boolean):string[]{
@@ -95,7 +98,7 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
       const frame = (now: number) => {
         try {
           if (recordingError) throw recordingError;
-          const elapsed = Math.min(duration, now - start);
+          const elapsed = slideshowElapsed(now,start,duration);
           draw(elapsed);
           if (elapsed >= duration) { resolve(); return; }
           animation = requestAnimationFrame(frame);
