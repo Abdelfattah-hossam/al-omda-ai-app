@@ -747,6 +747,9 @@ function App() {
   const [planGenerating, setPlanGenerating] = useState(false);
   const [projectRunning, setProjectRunning] = useState(false);
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
+  const [fileActionProposal, setFileActionProposal] = useState<{ taskId:string; stepId:string; displayName:string; inputHash:string; disclosure:string[]; alreadySaved:boolean } | null>(null);
+  const [fileActionBusy, setFileActionBusy] = useState(false);
+  const [fileActionMessage, setFileActionMessage] = useState<{ tone:'error'|'ok'; text:string } | null>(null);
   const [approvingStepId, setApprovingStepId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string,string>>({});
@@ -1179,6 +1182,35 @@ pnpm --filter @workspace/scripts agent:runtime`;
     } catch (error) { setWorkspaceError(readApiError(error, isAr ? 'تعذر إنشاء الخطة بالذكاء الاصطناعي.' : 'AI plan generation failed.')); }
     finally { setPlanGenerating(false); }
   };
+    const proposeStepFile = async (task:Task, step:PlanStep) => {
+      setFileActionMessage(null);
+      setFileActionBusy(true);
+      try {
+        const response = await fetch('/api/ai/tool-actions/save-step-file/propose', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify({taskId:task.id,stepId:step.id}) });
+        const data = await response.json().catch(()=>({}));
+        if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تجهيز إجراء الحفظ.' : 'Could not prepare the save action.'));
+        setFileActionProposal({ taskId:task.id, stepId:step.id, displayName:data.proposal.displayName, inputHash:data.proposal.inputHash, disclosure:data.proposal.disclosure, alreadySaved:Boolean(data.alreadySaved) });
+      } catch (error) {
+        setFileActionMessage({ tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر تجهيز إجراء الحفظ.' : 'Could not prepare the save action.') });
+      } finally { setFileActionBusy(false); }
+    };
+    const decideStepFile = async (decision:'approve'|'reject') => {
+      if (!fileActionProposal) return;
+      setFileActionBusy(true);
+      try {
+        const response = await fetch('/api/ai/tool-actions/save-step-file/decide', { method:'POST', credentials:'same-origin', headers:{'content-type':'application/json'}, body:JSON.stringify({taskId:fileActionProposal.taskId,stepId:fileActionProposal.stepId,decision,inputHash:fileActionProposal.inputHash}) });
+        const data = await response.json().catch(()=>({}));
+        if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر إكمال الإجراء.' : 'Could not complete the action.'));
+        setFileActionMessage(decision === 'approve'
+          ? { tone:'ok', text:(isAr ? 'تم حفظ الملف ' : 'Saved file ') + fileActionProposal.displayName + (isAr ? ' في أصول المشروع.' : ' in the project assets.') }
+          : { tone:'ok', text:isAr ? 'تم رفض الإجراء ولم يُكتب أي ملف.' : 'Action rejected. Nothing was written.' });
+        setFileActionProposal(null);
+        try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* the periodic refresh will catch up */ }
+      } catch (error) {
+        setFileActionMessage({ tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر إكمال الإجراء.' : 'Could not complete the action.') });
+        setFileActionProposal(null);
+      } finally { setFileActionBusy(false); }
+    };
     const executeStep = async (task:Task, step:PlanStep, fromProjectRun = false): Promise<{ result:string; executedAt:string } | null> => {
     if (taskExecutionLockRef.current || (projectRunLockRef.current && !fromProjectRun)) return null;
     if (!authUser) { setExecutionError(isAr ? 'سجّل الدخول أولاً لتنفيذ المرحلة.' : 'Sign in before executing this stage.'); return null; }
@@ -1648,6 +1680,19 @@ pnpm --filter @workspace/scripts agent:runtime`;
              <div style={{display:'grid',gap:7,marginTop:12}}><label className="form-label">{isAr?'تعليق أو تحديث على المرحلة':'Comment or progress update'}</label><textarea className="step-edit" rows={2} maxLength={2000} value={commentDrafts[step.id] ?? ''} onChange={(event)=>setCommentDrafts((prev)=>({...prev,[step.id]:event.target.value}))} placeholder={isAr?'مثال: أنجزت الجزء الأول، وهذه البيانات تحتاج تعديل...':'Example: I completed the first part; please revise these details...'} aria-label={isAr?'تعليق على المرحلة':'Step comment'}/><div className="step-actions"><button type="button" data-testid={`add-step-comment-${step.id}`} className="button button-quiet button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !(commentDrafts[step.id] ?? '').trim() || !authUser || (step.comments?.length ?? 0) >= 50} onClick={()=>void addStepComment(task,step.id)}><MessageSquareText size={13}/>{executingStepId===step.id?(isAr?'جارٍ حفظ التعليق والرد...':'Saving comment and reply...'):(isAr?'إضافة التعليق':'Add comment')}</button></div></div>
              {stepCommentErrors[step.id] && <div className="notice-bar notice-error" role="alert" style={{marginTop:8}}>{stepCommentErrors[step.id]}</div>}
              {step.revisionHistory && step.revisionHistory.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل النسخ السابقة':'Previous versions'}</strong>{step.revisionHistory.map((revision,revisionIndex)=><details key={revision.revisionRequestedAt+revisionIndex} style={{padding:9,border:'1px solid var(--border,#59616c)',borderRadius:8}}><summary style={{cursor:'pointer',fontSize:12}}>{isAr?'النسخة السابقة':'Previous version'} · {dateLabel(revision.executedAt ?? revision.revisionRequestedAt,language)}</summary><p style={{fontSize:12,whiteSpace:'pre-wrap',lineHeight:1.7}}>{revision.note}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,maxHeight:260,overflow:'auto'}}>{revision.result}</pre></details>)}</div>}
+             {step.result && step.state === 'approved' && <div style={{display:'grid',gap:8,marginTop:10}} data-testid={`step-file-action-${step.id}`}>
+               <div className="step-actions"><button type="button" data-testid={`save-step-file-${step.id}`} className="button button-quiet button-small" disabled={fileActionBusy || !authUser || task.demo} onClick={()=>void proposeStepFile(task,step)}><Download size={13}/>{isAr?'حفظ نتيجة المرحلة كملف Markdown':'Save stage result as Markdown file'}</button></div>
+               {fileActionProposal && fileActionProposal.taskId === task.id && fileActionProposal.stepId === step.id && <div role="dialog" aria-label={isAr?'مراجعة إجراء كتابة':'Review write action'} style={{display:'grid',gap:8,padding:12,border:'1px solid var(--gold,#c9a55c)',borderRadius:10,background:'var(--surface,#10151b)'}}>
+                 <strong style={{fontSize:13}}>{isAr?'مراجعة قبل التنفيذ: إجراء كتابة يحتاج موافقتك':'Review before running: a write action needs your approval'}</strong>
+                 {fileActionProposal.disclosure.map((line,lineIndex)=><p key={lineIndex} style={{margin:0,fontSize:12,lineHeight:1.8,overflowWrap:'anywhere'}}>{line}</p>)}
+                 {fileActionProposal.alreadySaved && <p style={{margin:0,fontSize:12,color:'#e0b84f'}}>{isAr?'هذا الملف نفسه محفوظ مسبقًا لهذه المرحلة.':'This exact file is already saved for this stage.'}</p>}
+                 <div className="step-actions">
+                   <button type="button" data-testid={`approve-step-file-${step.id}`} className="button button-primary button-small" disabled={fileActionBusy || fileActionProposal.alreadySaved} onClick={()=>void decideStepFile('approve')}><Check size={12}/>{isAr?'اعتماد وحفظ الملف':'Approve and save'}</button>
+                   <button type="button" data-testid={`reject-step-file-${step.id}`} className="button button-danger button-small" disabled={fileActionBusy} onClick={()=>void decideStepFile('reject')}><X size={12}/>{isAr?'رفض':'Reject'}</button>
+                 </div>
+               </div>}
+               {fileActionMessage && <div className={fileActionMessage.tone==='error'?'notice-bar notice-error':'notice-bar'} role={fileActionMessage.tone==='error'?'alert':'status'}>{fileActionMessage.text}</div>}
+             </div>}
              {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" data-testid={`request-step-revision-${step.id}`} className="button button-danger button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{executingStepId===step.id?(isAr?'جارٍ تسجيل طلب التعديل...':'Saving revision request...'):(isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun')}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>

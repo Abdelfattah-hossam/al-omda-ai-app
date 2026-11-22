@@ -8,6 +8,7 @@ import chatHistoryRouter from "./chat-history";
 import memoryRouter from "./memory";
 import analyticsRouter from "./analytics";
 import collaborationRouter from "./collaboration";
+import toolActionsRouter from "./tool-actions";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(chatHistoryRouter);
 router.use(memoryRouter);
 router.use(analyticsRouter);
 router.use(collaborationRouter);
+router.use(toolActionsRouter);
 
 export default router;
