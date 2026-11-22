@@ -8,6 +8,7 @@ import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
+import { buildFormulaWorksheetCell } from "./lib/office-formula-cell";
 import { resolveArtifactUploadMime } from "./lib/asset-upload";
 import { previewOfficeDocument } from "./lib/office-preview";
 import { parseModelProviderHealth, providerStatusLabel } from "./lib/model-provider-health";
@@ -785,7 +786,10 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
         const cell = XLSX.utils.decode_cell(address);
         if (cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
         const canonicalAddress = XLSX.utils.encode_cell(cell);
-        worksheet[canonicalAddress] = { f: formula };
+        // buildFormulaWorksheetCell keeps the model's cached value (or a placeholder) next
+        // to the formula: XLSX.write drops a formula-only cell entirely, which then fails
+        // the round-trip validation below and the whole workbook is rejected.
+        worksheet[canonicalAddress] = buildFormulaWorksheetCell(worksheet[canonicalAddress], formula);
         expectedFormulas.push({ sheet: sheet.name, cell: canonicalAddress });
       }
       XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
