@@ -36,32 +36,16 @@ function toError(value: unknown): Error {
 }
 
 function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Something went wrong
-        </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          This part of the app hit an error. The rest of the app is still
-          running.
-        </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
-        {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
-            {error.message || String(error)}
-          </pre>
-        ) : null}
-        <button
-          type="button"
-          onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
-        >
-          Try again
-        </button>
-      </div>
+  const ar = document.documentElement.lang !== 'en';
+  const updatedBundle = /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk [\w-]+ failed|ChunkLoadError/i.test(error.message);
+  return <div dir={ar?'rtl':'ltr'} style={{minHeight:'100dvh',display:'grid',placeItems:'center',padding:24,background:'#111015',color:'#efe7d8'}}>
+    <div style={{width:'min(520px,100%)',textAlign:'center'}}>
+      <h1 style={{fontSize:22,color:'#d4ae69'}}>{updatedBundle?(ar?'يوجد إصدار أحدث من التطبيق':'An app update is ready'):(ar?'تعذر عرض هذه الصفحة':'Something went wrong')}</h1>
+      <p style={{fontSize:15,lineHeight:1.9,color:'#beb5a5'}}>{updatedBundle?(ar?'حدّث الصفحة لتحميل الملفات الجديدة. مشاريعك ومحادثاتك المحفوظة ستبقى كما هي.':'Reload to load the updated app files. Your saved projects and conversations will remain unchanged.'):(ar?'حدث خطأ في هذا الجزء من التطبيق. يمكنك المحاولة مرة أخرى.':'This part of the app hit an error. You can try again.')}</p>
+      {import.meta.env.DEV&&<pre style={{overflow:'auto',textAlign:'start'}}>{error.message}</pre>}
+      <button type="button" onClick={updatedBundle?()=>window.location.reload():resetError} style={{minHeight:44,padding:'10px 22px',borderRadius:10,border:'1px solid #caa65e',background:'#d4ae69',color:'#17130d',fontWeight:700,cursor:'pointer'}}>{updatedBundle?(ar?'تحديث التطبيق':'Reload app'):(ar?'حاول مرة أخرى':'Try again')}</button>
     </div>
-  );
+  </div>;
 }
 
 export class ErrorBoundary extends Component<

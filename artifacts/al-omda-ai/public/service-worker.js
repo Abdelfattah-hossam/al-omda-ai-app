@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-omda-shell-v1';
+const CACHE_NAME = 'al-omda-shell-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -40,13 +40,21 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/assets/') || APP_SHELL.includes(url.pathname)) {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      caches.match(request).then(async (cached) => {
+        // A missing old bundle can receive the SPA HTML fallback with status 200.
+        // Never keep that HTML under a script/style asset key after deployment.
+        const validAsset = response => !url.pathname.startsWith('/assets/') || !(response.headers.get('content-type') || '').includes('text/html');
+        if (cached && validAsset(cached)) return cached;
+        if (cached) await (await caches.open(CACHE_NAME)).delete(request);
+        return fetch(request).then((response) => {
+        if (!validAsset(response)) return Response.error();
         if (response.ok) {
           const copy = response.clone();
           void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }
         return response;
-      }))
+      });
+      })
     );
   }
 });
