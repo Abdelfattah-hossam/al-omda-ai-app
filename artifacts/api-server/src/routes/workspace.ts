@@ -3,6 +3,7 @@ import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { isRevisionHistoryUnchanged } from "../lib/task-history.js";
 import { getWorkspaceAssetMimeType, MAX_WORKSPACE_ASSET_BYTES, sanitizeWorkspaceAssetName } from "../lib/storage-assets.js";
+import { sanitizeWorkspaceProfile, sanitizeWorkspaceTask } from "../lib/workspace-sanitize.js";
 import {
   UpdateProfileResponse,
   UpdateProfileBody,
@@ -185,22 +186,49 @@ router.get("/workspace", async (req, res): Promise<void> => {
     ]);
     const [profiles, taskRows] = await Promise.all([
       readSupabaseJson<DbProfile[]>(profileResponse),
-      readSupabaseJson<DbTask[]>(tasksResponse),
+      readSupabaseJson<unknown[]>(tasksResponse),
     ]);
     if (!profiles[0]) {
       res.status(503).json({ error: "The profile table is not ready. Run supabase/setup.sql in the Supabase SQL Editor." });
       return;
     }
-    res.json(
-      GetWorkspaceResponse.parse({
-        profile: {
-          displayName: profiles[0].display_name,
-          organization: profiles[0].organization,
-          avatarPath: profiles[0].avatar_path,
-        },
-        tasks: taskRows.map(mapTask),
-      }),
-    );
+    // Legacy or malformed task rows must not take down the whole workspace:
+    // sanitize every row, drop only the ones that still fail validation.
+    const profile = sanitizeWorkspaceProfile({
+      displayName: profiles[0].display_name,
+      organization: profiles[0].organization,
+      avatarPath: profiles[0].avatar_path,
+    });
+    const tasks = taskRows
+      .map((row, index) => {
+        const task = sanitizeWorkspaceTask(row);
+        if (!task) console.warn("[Workspace] Dropping unreadable task row while loading the workspace.", { index });
+        return task;
+      })
+      .filter((task): task is NonNullable<typeof task> => task !== null);
+    const parsed = GetWorkspaceResponse.safeParse({ profile, tasks });
+    if (parsed.success) {
+      res.json(parsed.data);
+      return;
+    }
+    const taskSchema = GetWorkspaceResponse.shape.tasks.element;
+    const kept = tasks.filter((task) => {
+      const result = taskSchema.safeParse(task);
+      if (!result.success) {
+        console.warn("[Workspace] Dropping task that still failed response validation after sanitization.", {
+          id: task.id,
+          issues: result.error.issues.slice(0, 3),
+        });
+      }
+      return result.success;
+    });
+    const reparsed = GetWorkspaceResponse.safeParse({ profile, tasks: kept });
+    if (reparsed.success) {
+      res.json(reparsed.data);
+      return;
+    }
+    console.error("[Workspace] Response validation failed after sanitization; returning the profile without tasks.", parsed.error.issues.slice(0, 5));
+    res.json(GetWorkspaceResponse.parse({ profile, tasks: [] }));
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not load your workspace.");
   }
