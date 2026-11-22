@@ -76,7 +76,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : (isAr ? "تعذر تحميل ملفات المبيعات." : "Could not load sales files."));
       const next = Array.isArray(payload) ? payload as Asset[] : [];
-      const csv = next.filter((asset) => asset.name.toLowerCase().startsWith("sales-") && asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null));
+      const csv = next.filter((asset) => isSalesCsvAssetName(asset.name) && (asset.mimeType === "text/csv" || asset.mimeType === null));
       setAssets(csv);
       setSelectedPath((current) => csv.some((asset) => asset.path === current) ? current : csv[0]?.path ?? "");
     } catch (cause) {
