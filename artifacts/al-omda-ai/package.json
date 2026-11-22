@@ -76,6 +76,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@fix-webm-duration/fix": "1.0.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   }

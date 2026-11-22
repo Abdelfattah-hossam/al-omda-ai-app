@@ -1,3 +1,55 @@
+import { fixWebmDuration } from '@fix-webm-duration/fix';
+
+// Only rewrite the small metadata header. The parser intentionally treats
+// Clusters as opaque data, so rewriting them can turn an unknown-size Cluster
+// into a finite one containing later Clusters. Keep recorded packets untouched.
+export function firstWebmClusterOffset(bytes:Uint8Array):number|null {
+  const read = (start:number) => {
+    if (start>=bytes.length || bytes[start]===0) return null;
+    let idWidth=1;while(idWidth<=4 && !(bytes[start]&(1<<(8-idWidth))))idWidth++;
+    if(idWidth>4 || start+idWidth>=bytes.length)return null;
+    let id=0;for(let i=0;i<idWidth;i++)id=id*256+bytes[start+i];
+    const sizeAt=start+idWidth;let width=1;
+    while(width<=8 && !(bytes[sizeAt]&(1<<(8-width))))width++;
+    if(width>8 || sizeAt+width>bytes.length)return null;
+    let size=BigInt(bytes[sizeAt]&((1<<(8-width))-1));
+    for(let i=1;i<width;i++)size=size*256n+BigInt(bytes[sizeAt+i]);
+    const unknown=size===(1n<<BigInt(7*width))-1n;
+    if(!unknown && size>BigInt(Number.MAX_SAFE_INTEGER))return null;
+    return {id,payload:sizeAt+width,size:unknown?null:Number(size)};
+  };
+  let cursor=0;
+  while(cursor<bytes.length){
+    const item=read(cursor);if(!item)return null;
+    if(item.id===0x18538067){
+      cursor=item.payload;
+      while(cursor<bytes.length){
+        const child=read(cursor);if(!child)return null;
+        if(child.id===0x1f43b675)return cursor;
+        if(child.size===null)return null;
+        cursor=child.payload+child.size;
+      }
+      return null;
+    }
+    if(item.size===null)return null;
+    cursor=item.payload+item.size;
+  }
+  return null;
+}
+export async function finalizeVideoDuration(blob:Blob,durationMs:number):Promise<Blob> {
+  if (!blob.type.startsWith('video/webm') || !Number.isFinite(durationMs) || durationMs <= 0) return blob;
+  const cluster=firstWebmClusterOffset(new Uint8Array(await blob.arrayBuffer()));
+  if(cluster===null)return fixWebmDuration(blob,durationMs,{logger:false});
+  const header=await fixWebmDuration(blob.slice(0,cluster,blob.type),durationMs,{logger:false});
+  return new Blob([header,blob.slice(cluster)],{type:blob.type});
+}
+export function slideshowRecordingElapsed(now:number,requestedAt:number,startedAt:number|null,duration:number):number {
+  if (startedAt === null) {
+    if (now-requestedAt > 5000) throw new Error('تعذر بدء تسجيل الفيديو. جرّب متصفحًا آخر.');
+    return 0;
+  }
+  return slideshowElapsed(now,startedAt,duration);
+}
 export function slideshowElapsed(now:number,start:number,duration:number):number {
   return Math.max(0,Math.min(duration,now-start));
 }
@@ -91,6 +143,8 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
       onProgress(Math.min(100, Math.round(elapsed / duration * 100)));
     };
     draw(0);
+    let recordingStartedAt: number | null = null;
+    activeRecorder.onstart = () => { recordingStartedAt = performance.now(); };
     activeRecorder.start(500);
     source?.start();
     const start = performance.now();
@@ -98,7 +152,7 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
       const frame = (now: number) => {
         try {
           if (recordingError) throw recordingError;
-          const elapsed = slideshowElapsed(now,start,duration);
+          const elapsed = slideshowRecordingElapsed(now,start,recordingStartedAt,duration);
           draw(elapsed);
           if (elapsed >= duration) { resolve(); return; }
           animation = requestAnimationFrame(frame);
@@ -111,7 +165,7 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
     const blob = await recorded;
     if (!blob.size) throw new Error('الفيديو الناتج فارغ.');
     if (blob.size > 25 * 1024 * 1024) throw new Error('الفيديو أكبر من حد الحفظ 25 ميجابايت. قلل عدد الصور أو مدتها.');
-    return blob;
+    return finalizeVideoDuration(blob,duration);
   } finally {
     cancelAnimationFrame(animation);
     if (recorder && recorder.state !== 'inactive') recorder.stop();
