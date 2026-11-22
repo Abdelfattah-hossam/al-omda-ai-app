@@ -96,11 +96,24 @@ function mapTask(row: DbTask) {
   };
 }
 
-function sameStep(left: DbTask["steps"][number], right: DbTask["steps"][number]): boolean {
-  return left.id === right.id && left.text === right.text && left.output === right.output && left.complete === right.complete && left.state === right.state && left.result === right.result && left.executedAt === right.executedAt && left.executionStatus === right.executionStatus && left.executionError === right.executionError;
+/** Compare two datetimes by instant: Postgres serializes timestamptz inside JSONB as
+ * "2026-11-22T07:11:17.722+00:00" while the workspace GET response normalizes the same
+ * value to "2026-11-22T07:11:17.722Z". A client echoing the normalized value must not
+ * count as a modification of the step. Unparseable values compare verbatim. */
+function sameInstant(left: string | undefined, right: string | undefined): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  const leftTime = Date.parse(left);
+  const rightTime = Date.parse(right);
+  if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) return false;
+  return leftTime === rightTime;
 }
 
-function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
+function sameStep(left: DbTask["steps"][number], right: DbTask["steps"][number]): boolean {
+  return left.id === right.id && left.text === right.text && left.output === right.output && left.complete === right.complete && left.state === right.state && left.result === right.result && sameInstant(left.executedAt, right.executedAt) && left.executionStatus === right.executionStatus && left.executionError === right.executionError;
+}
+
+export function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
   if (
     previous.title !== next.title ||
     previous.request !== next.request ||
@@ -117,7 +130,7 @@ function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
       isRevisionHistoryUnchanged(step.revisionHistory, next.steps[index].revisionHistory);
   });
   if (!commentsOnly) return false;
-  if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || step.executedAt !== next.steps[index]?.executedAt || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
+  if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || !sameInstant(step.executedAt, next.steps[index]?.executedAt) || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
 
   const changedIndices = previous.steps
     .map((step, index) => (sameStep(step, next.steps[index]) ? -1 : index))
@@ -466,7 +479,12 @@ router.put("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> => {
       res.status(404).json({ error: "Task not found." });
       return;
     }
-    res.json(UpdateTaskResponse.parse(mapTask(rows[0])));
+    const savedTask = sanitizeWorkspaceTask(rows[0]);
+    if (!savedTask) {
+      res.status(500).json({ error: "The saved task could not be read back. Refresh the project." });
+      return;
+    }
+    res.json(UpdateTaskResponse.parse(savedTask));
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not update the task.");
   }
@@ -509,7 +527,9 @@ router.post("/tasks/:id/revise-step", requireSameOrigin, async (req, res): Promi
     const response = await supabaseFetch("/rest/v1/tasks?" + query.toString(), { method: "PATCH", headers: { "content-type": "application/json", prefer: "return=representation" }, body: JSON.stringify({ steps: updatedSteps, status: "review" }) }, session.accessToken);
     const rows = await readSupabaseJson<DbTask[]>(response);
     if (!rows[0]) { res.status(409).json({ error: "The task changed while the revision was being saved. Refresh and try again." }); return; }
-    res.json(UpdateTaskResponse.parse(mapTask(rows[0])));
+    const revisedTask = sanitizeWorkspaceTask(rows[0]);
+    if (!revisedTask) { res.status(500).json({ error: "The saved task could not be read back. Refresh the project." }); return; }
+    res.json(UpdateTaskResponse.parse(revisedTask));
   } catch (error) { reportSupabaseError(req, res, error, "Could not request a task revision."); }
 });
 

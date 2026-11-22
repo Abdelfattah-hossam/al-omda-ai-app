@@ -62,6 +62,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/memory-graph.test.ts
       - name: Test chat history artifact and warning persistence
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/chat-history.test.ts
+      - name: Test task stage transition guard
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/workspace-transition.test.ts
       - name: Test source-code artifact validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/source-code-artifact.test.ts
       - name: Test Excel workbook validation
