@@ -9625,3 +9625,42 @@ body:has(.ai-chat-page){
     min-height:2.4em;
   }
 }
+
+
+/* iPhone dashboard follow-up. Non-chat only: preserve the chat's scroll and composer. */
+.app-shell[dir="rtl"]:not([data-chat-active="true"]) :is(.eyebrow,.nav-caption,.brand-sub,.sidebar-workspace-state,.app-launcher-count,.app-launcher-group-title strong,.app-launcher-heading h2) {
+  letter-spacing:normal!important;
+  font-family:var(--app-font-sans,inherit);
+}
+.app-shell:not([data-chat-active="true"]) .app-launcher-copy :is(strong,small) {
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+  line-height:1.65;
+}
+@media(max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) {
+    --workspace-dock-space:calc(144px + env(safe-area-inset-bottom));
+    height:100dvh!important;
+    min-height:100dvh!important;
+    overflow:hidden;
+  }
+  .app-shell:not([data-chat-active="true"]) > .main-area {
+    height:calc(100dvh - var(--workspace-dock-space))!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:contain;
+    padding-bottom:0!important;
+    scroll-padding-bottom:20px;
+  }
+  .app-shell:not([data-chat-active="true"]) .content-wrap {
+    padding-bottom:28px!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar {
+    background:#121012!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    padding-top:calc(7px + env(safe-area-inset-top))!important;
+  }
+}

@@ -793,6 +793,8 @@ function App() {
   const isAr = language === 'ar';
   const defaultDisplayName = isAr ? 'مستخدم العمدة' : 'AL OMDA user';
   const name = saved.name.trim() || defaultDisplayName;
+  const greetingName = saved.name.trim();
+  const hasGreetingName = Boolean(greetingName) && !['مستخدم العمدة', 'AL OMDA user'].includes(greetingName);
   const org = saved.org.trim() || (isAr ? 'مساحة العمل' : 'Workspace');
   const [request, setRequest] = useState('');
   const [planGenerating, setPlanGenerating] = useState(false);
@@ -1828,7 +1830,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const trendPoints=trend.slice().reverse().map((value,index)=>`${24+index*44},${92-(value/trendMax)*72}`).join(' ');
     return <div className="page-enter dashboard-overview" id="dashboard-overview">
       <div className="dashboard-toolbar">
-        <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{t('hello')} {name} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
+        <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{hasGreetingName ? `${t('hello')} ${greetingName}` : (isAr?'مرحباً بك':'Welcome')} · {isAr?'نظرة عامة على نشاط العمدة':'Your AL OMDA activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
       <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
@@ -1843,7 +1845,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <h2 id="app-launcher-title">{isAr?'كل أدواتك في مكان واحد':'Everything you need, one place'}</h2>
             <p>{isAr?'وصول سريع ومنظم إلى الوظائف الأساسية، مع فصل أدوات المتابعة والحساب.':'A clear shortcut grid for core work, analytics, and account tools.'}</p>
           </div>
-          <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أدوات'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
+          <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أداة'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
         </div>
         {appLauncherGroups.map(group=><div key={group.id} className="app-launcher-group">
           <div className="app-launcher-group-title">

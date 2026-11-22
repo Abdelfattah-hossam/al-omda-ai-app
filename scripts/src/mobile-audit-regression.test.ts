@@ -28,3 +28,19 @@ test("provider settings show all configured fallback engines", () => {
  }
  assert.ok(chat.includes("Gemini · Groq · OpenRouter · Cloudflare"));
 });
+
+
+test("Arabic dashboard labels preserve joining and launcher descriptions wrap", () => {
+ assert.ok(css.includes('.app-shell[dir="rtl"]:not([data-chat-active="true"])'));
+ assert.ok(css.includes('letter-spacing:normal!important;'));
+ assert.ok(css.includes('.app-launcher-copy :is(strong,small)'));
+ assert.ok(app.includes("+' أداة')"));
+});
+test("dashboard does not address a placeholder as a saved name", () => {
+ assert.ok(app.includes("const hasGreetingName = Boolean(greetingName)"));
+ assert.ok(app.includes("hasGreetingName ? `${t('hello')} ${greetingName}`"));
+});
+test("mobile workspace scroll area ends above both fixed controls without changing chat", () => {
+ assert.ok(css.includes('--workspace-dock-space:calc(144px + env(safe-area-inset-bottom))'));
+ assert.ok(css.includes('.app-shell:not([data-chat-active="true"]) > .main-area {\n    height:calc(100dvh - var(--workspace-dock-space))'));
+});
