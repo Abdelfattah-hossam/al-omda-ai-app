@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent,
 import { Link, useLocation } from 'wouter';
 // Route-level code splitting: the chat page (with its markdown renderer) and
 // the secondary workspaces only download when their route is visited.
+const MediaStudio = lazy(() => import('./MediaStudio'));
 const AIChatPage = lazy(() => import('./AIChat'));
 const CollaborationWorkspace = lazy(() => import('./CollaborationWorkspace'));
 const AuditLogWorkspace = lazy(() => import('./AuditLogWorkspace'));
@@ -783,6 +784,7 @@ function App() {
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
   const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
@@ -2691,6 +2693,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const categories:Array<{id:'all'|Specialty;name:string}> = [{id:'all',name:isAr?'الكل':'All'},...specialties.map(item=>({id:item.id,name:label(item.id)}))];
     return <div className="page-enter" id="projects-list">
       {pageHeading(isAr?'مساحة العمل':'WORKSPACE',isAr?'المشاريع':'Projects',isAr?'كل مشاريعك المحفوظة وحالات تنفيذها في مكان واحد.':'All saved projects and their execution status in one place.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
+      <div style={{marginBottom:16}}><button type="button" className="button button-primary" onClick={()=>setMediaStudioOpen(true)} disabled={!authUser}><Palette size={16}/>{isAr?'إنشاء صورة أو فيديو':'Create image or video'}</button></div>
       <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المشاريع':'Project filters'}>
         <div className="history-search-wrap">
           <div className="field-group history-search-field"><label className="form-label" htmlFor="projects-search">{isAr?'ابحث في المشاريع':'Search projects'}</label><div className="history-search-control"><Search size={16}/><input id="projects-search" className="field" placeholder={isAr?'اسم المشروع أو وصفه...':'Project name or description...'} value={query} onChange={event=>setQuery(event.target.value)}/></div></div>
@@ -2978,6 +2981,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const dismissGuestNudge = () => { setGuestNudge('dismissed'); try { window.localStorage.setItem('omda-guest-nudge-dismissed', '1'); } catch { /* storage unavailable */ } };
 
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+    {mediaStudioOpen&&<Suspense fallback={null}><MediaStudio ar={isAr} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
     <aside className="sidebar">
       <div className="sidebar-brand-area">
         <Link href={focusedHref("/","dashboard-overview")} className="brand-lockup"><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg" alt={isAr ? "العمدة AL OMDA AI" : "AL OMDA AI"}/></Link>

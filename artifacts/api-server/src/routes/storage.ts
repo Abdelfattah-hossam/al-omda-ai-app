@@ -176,6 +176,8 @@ function isZipContainer(buffer: Buffer): boolean {
   return buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b;
 }
 function hasValidAssetSignature(buffer: Buffer, mime: string): boolean {
+  if (mime === "video/mp4") return buffer.length>=12 && buffer.toString("ascii",4,8)==="ftyp";
+  if (mime === "video/webm") return buffer.length>=4 && buffer.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3]));
   if (mime === "application/pdf") return buffer.subarray(0, 5).toString("ascii") === "%PDF-";
   if (mime === "application/zip" || mime.includes("openxmlformats")) return isZipContainer(buffer);
   if (mime === "image/png") return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));

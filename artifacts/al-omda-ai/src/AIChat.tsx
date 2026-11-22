@@ -5,6 +5,7 @@ import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation"
 import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
 import { useLocation } from "wouter";
 import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play, Square } from "lucide-react";
+import MediaStudio from "./MediaStudio";
 import GeminiLiveVoice from "./GeminiLiveVoice";
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
@@ -237,6 +238,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
+  const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(Boolean(openSettingsInitially));
   const [showModelMenu, setShowModelMenu] = useState(false);
@@ -1475,6 +1477,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
   const runCanvasCode = () => setCanvasPreviewCode(canvasCode);
 
   return <div className="page-enter ai-chat-page">
+    {mediaStudioOpen&&<MediaStudio ar={ar} onClose={()=>setMediaStudioOpen(false)}/>}
     {chatSidebarOpen && <button type="button" className="ai-chat-sidebar-scrim" aria-label={ar ? "إغلاق القائمة" : "Close sidebar"} onClick={()=>setChatSidebarOpen(false)} />}
     <aside className={"ai-chat-sidebar" + (chatSidebarOpen ? " is-open" : "")} dir={ar ? "rtl" : "ltr"}>
       <div className="ai-chat-sidebar-head">
@@ -1483,6 +1486,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       </div>
       <div className="ai-chat-tools-caption">{ar ? "أدوات العمدة" : "AL OMDA TOOLS"}</div>
       <div className="ai-chat-tool-list">
+        <button type="button" onClick={()=>{setChatSidebarOpen(false);setMediaStudioOpen(true);}} disabled={!signedIn}><ImagePlus size={16}/>{ar?"استوديو الصور والفيديو":"Image & video studio"}</button>
         <button type="button" onClick={()=>{activateMode("office");setChatSidebarOpen(false);}}><BriefcaseBusiness size={16}/>{ar ? "حزمة برامج الأوفيس (Office)" : "Office suite"}</button>
         <button type="button" onClick={()=>{setChatSidebarOpen(false);openCodeCanvas();}}><Code2 size={16}/>{ar ? "محرر البرمجة (Code Canvas)" : "Code Canvas"}</button>
         <button type="button" onClick={()=>{setChatSidebarOpen(false);openSettings();}}><Bot size={16}/>{ar ? "ذاكرة العمدة والحد اليومي" : "Memory & daily usage"}</button>

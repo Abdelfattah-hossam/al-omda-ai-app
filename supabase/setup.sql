@@ -717,7 +717,9 @@ values (
     'image/png',
     'image/jpeg',
     'image/webp',
-    'image/gif'
+    'image/gif',
+    'video/mp4',
+    'video/webm'
   ]
 )
 on conflict (id) do update
@@ -908,7 +910,7 @@ begin
        'text/plain', 'text/markdown', 'text/csv', 'application/json', 'text/javascript',
        'text/x-python', 'application/sql', 'text/css', 'application/dxf',
        'text/html', 'application/xml', 'application/zip',
-       'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'
+       'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml', 'video/mp4', 'video/webm'
      )
      or p_file_size is null or p_file_size < 1 or p_file_size > 26214400
      or p_language is null or p_language not in ('ar', 'en') then

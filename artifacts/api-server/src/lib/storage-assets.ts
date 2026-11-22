@@ -40,6 +40,8 @@ export const WORKSPACE_ASSET_MIME_TYPES: Readonly<Record<string, string>> = {
   jpeg: "image/jpeg",
   webp: "image/webp",
   gif: "image/gif",
+  mp4: "video/mp4",
+  webm: "video/webm",
 };
 
 /**
