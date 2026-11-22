@@ -118,3 +118,14 @@ test("accepts a genuinely blank template without filling invented records", () =
   assert.deepEqual(result?.rows, [["", "", ""]]);
   assert.deepEqual(result?.sheets?.[0].rows, [["", "", ""]]);
 });
+
+
+test("rejects formulas overwriting the header row", () => {
+  const bad = { title: "QA", sheets: [{ name: "ملخص", columns: ["المجموع"], rows: [[""]], formulas: { A1: "SUM(بيانات!B2:B3)" } }] };
+  assert.equal(parseExcelWorkbook(json(bad)), null);
+  const good = { title: "QA", sheets: [{ name: "ملخص", columns: ["المجموع"], rows: [[30]], formulas: { A2: "SUM(بيانات!B2:B3)" } }] };
+  const parsed = parseExcelWorkbook(json(good));
+  assert.equal(parsed?.sheets?.[0].columns[0], "المجموع");
+  assert.equal(parsed?.sheets?.[0].formulas?.A2, "SUM(بيانات!B2:B3)");
+  assert.equal(parsed?.sheets?.[0].rows[0][0], 30);
+});

@@ -9587,7 +9587,7 @@ body:has(.ai-chat-page){
   .app-shell:not([data-chat-active="true"]) .section-title { font-size:18px; line-height:1.5; }
   .app-shell:not([data-chat-active="true"]) h1.section-title { font-size:24px; }
   .app-shell:not([data-chat-active="true"]) :is(.section-meta,.page-subtitle) {
-    font-size:13px; line-height:1.85; letter-spacing:normal;
+    font-size:13px; line-height:1.85; letter-spacing:normal; font-family:inherit;
   }
   .app-shell:not([data-chat-active="true"]) .form-label { font-size:13px; line-height:1.6; }
   .app-shell:not([data-chat-active="true"]) :is(input.field,select.field,textarea.field) {

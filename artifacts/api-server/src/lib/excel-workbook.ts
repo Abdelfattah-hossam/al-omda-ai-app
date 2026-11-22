@@ -4,6 +4,7 @@ export const EXCEL_DATA_INTEGRITY_RULES = [
   "A schema example is not customer data. Never copy example names, products, prices, or records from instructions into the workbook.",
   "If the customer requests a populated business workbook but has not supplied the required records, create the requested headers and leave every unknown data cell blank. Add a clearly named Required data / البيانات المطلوبة area listing the missing inputs; do not fabricate sample rows.",
   "Use sample data only when the customer explicitly asks for sample/demo data. Clearly label every affected sheet and sample record as SAMPLE / بيانات تجريبية.",
+  "WORKSHEET COORDINATES: columns are written as Excel row 1. Data rows start at Excel row 2. Formula targets must be row 2 or later and must never overwrite column headers. Formula references use actual Excel addresses including that header offset.",
   "For a blank template, keep all data cells blank. Formulas may be included only when they are requested or necessary for the requested calculations; never fabricate input values.",
 ].join(" ");
 
@@ -37,7 +38,7 @@ function validSheet(raw: unknown): raw is ExcelSheet {
       if (normalizedAddresses.has(normalizedAddress)) return false;
       normalizedAddresses.add(normalizedAddress);
       const match = address.match(CELL_REF);
-      if (!match || colIndex(match[1]) >= columns.length || Number(match[2]) > s.rows.length + 1) return false;
+      if (!match || colIndex(match[1]) >= columns.length || Number(match[2]) < 2 || Number(match[2]) > s.rows.length + 1) return false;
       if (typeof rawFormula !== "string" || !rawFormula.trim() || rawFormula.length > 500 || BLOCKED.test(rawFormula)) return false;
       const formula = rawFormula.trim().replace(/^=/, "");
       // Allow Unicode letters/numbers so formulas can reference sheets with
