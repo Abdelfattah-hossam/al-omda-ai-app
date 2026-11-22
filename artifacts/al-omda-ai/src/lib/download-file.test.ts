@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectIosDevice } from "./download-file";
+import { detectIosDevice, downloadBlobAsFile } from "./download-file";
+import {serializeCsv} from './csv-export';
+import {readFileSync} from 'node:fs';
 
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const IPAD_UA = "Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
@@ -22,4 +24,59 @@ test("does not flag desktop or Android browsers", () => {
   assert.equal(detectIosDevice(DESKTOP_MAC_UA, "MacIntel", 0), false);
   assert.equal(detectIosDevice(WINDOWS_UA, "Win32", 0), false);
   assert.equal(detectIosDevice(ANDROID_UA, "Linux armv8l", 5), false);
+});
+
+test('CSV export uses a real BOM, CRLF rows, and CSV quoting',()=>{
+ const csv=serializeCsv([['Metric','Value'],['عربي','a,"b"'],['Multiline','first\nsecond'],['Nullable',null]]);
+ assert.equal(csv.charCodeAt(0),0xFEFF);
+ assert.equal(csv,'\uFEFF"Metric","Value"\r\n"عربي","a,""b"""\r\n"Multiline","first\nsecond"\r\n"Nullable",""');
+ assert.ok(!csv.includes('\\r\\n'));
+});
+
+async function withBrowser(navigatorValue:Record<string,unknown>,check:(state:{anchors:{name:string;url:string}[];timers:number[]})=>Promise<void>){
+ const anchors:{name:string;url:string}[]=[];const timers:number[]=[];
+ const patches:[object,string,unknown][]=[
+  [globalThis,'navigator',navigatorValue],
+  [globalThis,'window',{setTimeout:(_callback:()=>void,delay:number)=>{timers.push(delay);return 0;}}],
+  [globalThis,'document',{body:{appendChild:()=>{}},createElement:()=>{const a={href:'',download:'',remove:()=>{},click:()=>anchors.push({name:a.download,url:a.href})};return a;}}],
+  [URL,'createObjectURL',()=> 'blob:unit-test'],
+ ];
+ const originals=patches.map(([target,key])=>[target,key,Object.getOwnPropertyDescriptor(target,key)]as const);
+ try{for(const[target,key,value]of patches)Object.defineProperty(target,key,{configurable:true,writable:true,value});await check({anchors,timers});}
+ finally{for(const[target,key,descriptor]of originals){if(descriptor)Object.defineProperty(target,key,descriptor);else Reflect.deleteProperty(target,key);}}
+}
+
+test('iOS shares a real named file without opening a blob tab',async()=>{
+ let shared:File|undefined;
+ await withBrowser({userAgent:IPHONE_UA,platform:'iPhone',maxTouchPoints:5,canShare:()=>true,share:async(payload:{files:File[]})=>{shared=payload.files[0];}},async({anchors})=>{
+  await downloadBlobAsFile(new Blob(['test'],{type:'application/test'}),'تقرير-اختبار.docx');
+  assert.equal(shared?.name,'تقرير-اختبار.docx');assert.equal(shared?.type,'application/test');assert.equal(await shared?.text(),'test');assert.equal(anchors.length,0);
+ });
+});
+
+test('iOS share cancellation does not trigger a second download',async()=>{
+ await withBrowser({userAgent:IPHONE_UA,platform:'iPhone',maxTouchPoints:5,share:async()=>{throw new DOMException('Cancelled','AbortError');}},async({anchors})=>{
+  await downloadBlobAsFile(new Blob(['test']),'cancelled.csv');assert.equal(anchors.length,0);
+ });
+});
+
+test('iOS unavailable or rejected sharing keeps a named download fallback',async()=>{
+ for(const share of [undefined,async()=>{throw new Error('Unavailable');}])await withBrowser({userAgent:IPHONE_UA,platform:'iPhone',maxTouchPoints:5,share},async({anchors,timers})=>{
+  await downloadBlobAsFile(new Blob(['test']),'fallback.xlsx');assert.deepEqual(anchors,[{name:'fallback.xlsx',url:'blob:unit-test'}]);assert.deepEqual(timers,[1500]);
+ });
+});
+
+test('desktop continues to download a named file directly',async()=>{
+ await withBrowser({userAgent:WINDOWS_UA,platform:'Win32',maxTouchPoints:0},async({anchors})=>{
+  await downloadBlobAsFile(new Blob(['test']),'report.pdf');assert.deepEqual(anchors,[{name:'report.pdf',url:'blob:unit-test'}]);
+ });
+});
+
+test('workspace exports and search use the same named-file delivery path',()=>{
+ const app=readFileSync(new URL('../App.tsx',import.meta.url),'utf8');
+ const search=app.slice(app.indexOf('const downloadCommandAsset ='),app.indexOf('const label ='));
+ assert.match(search,/await downloadBlobAsFile\(blob,asset.name\)/);
+ assert.ok(!search.includes('createObjectURL'));
+ assert.ok(!app.includes('link.download ='));
+ assert.ok(!app.includes(".join('\\\\r\\\\n')"));
 });

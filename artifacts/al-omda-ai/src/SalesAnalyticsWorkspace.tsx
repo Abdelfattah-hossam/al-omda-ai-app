@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
 import {formatSalesCsvError} from './lib/sales-csv-messages';
+import {downloadBlobAsFile} from './lib/download-file';
 import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
 import { isSalesCsvAssetName, parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
@@ -23,14 +24,9 @@ function money(value: number, currency: string, language: Language): string {
   }
 }
 
-function downloadTemplate(): void {
+async function downloadTemplate(): Promise<void> {
   const content = "\uFEFFdate,amount,currency,status,channel,reference\r\n2026-11-01,125.50,AED,paid,Website,ORDER-001\r\n2026-11-02,25.00,AED,refunded,Store,ORDER-002\r\n2026-11-03,80.00,AED,pending,Marketplace,ORDER-003";
-  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "al-omda-sales-template.csv";
-  anchor.click();
-  URL.revokeObjectURL(url);
+  await downloadBlobAsFile(new Blob([content], { type: "text/csv;charset=utf-8" }),"al-omda-sales-template.csv");
 }
 
 export default function SalesAnalyticsWorkspace({ language, mode }: { language: Language; mode: Mode }) {

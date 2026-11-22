@@ -16,6 +16,7 @@ import { createZipBlob } from './lib/zip';
 import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
 import type { PdfBlock } from './lib/table-pdf';
 import { downloadBlobAsFile } from './lib/download-file';
+import {serializeCsv} from './lib/csv-export';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
 import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
@@ -182,38 +183,8 @@ async function persistTaskArtifact(blob: Blob, filename: string, mimeType: strin
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : "Could not save the generated file to project assets.");
 }
-function triggerArtifactDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url; link.download = filename;
-  document.body.appendChild(link); link.click(); link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
 async function deliverTaskArtifact(blob: Blob, filename: string, mimeType: string): Promise<void> {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (isIOS) {
-    const file = new File([blob], filename, { type: mimeType });
-    if (typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: filename });
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        // If the iOS share sheet is unavailable, fall back to opening the file.
-      }
-    }
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return;
-  }
-  triggerArtifactDownload(blob, filename);
+  await downloadBlobAsFile(blob.type===mimeType?blob:new Blob([blob],{type:mimeType}),filename);
 }
 async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
   // Invoke the browser's native file/share UI directly from the user's click before awaiting upload I/O.
@@ -1627,10 +1598,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       const response = await fetch('/api/storage/assets/download?path='+encodeURIComponent(asset.path),{credentials:'same-origin'});
       if(!response.ok)throw new Error(isAr?'تعذر تنزيل الملف.':'Could not download the file.');
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href=url;link.download=asset.name;document.body.appendChild(link);link.click();link.remove();
-      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+      await downloadBlobAsFile(blob,asset.name);
     } catch(error) {
       setWorkspaceError(error instanceof Error?error.message:(isAr?'تعذر تنزيل الملف.':'Could not download the file.'));
     }
@@ -1644,7 +1612,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const info = platformStatusPages[route as keyof typeof platformStatusPages];
     if (!info) return notFoundPage(isAr?'الصفحة غير موجودة':'Page not found',isAr?'هذا القسم غير متاح.':'This section is unavailable.','/',isAr?'العودة للرئيسية':'Back to dashboard');
     const isActiveUsersPage = route === '/finance/active-users';
-    const exportActiveUsers = () => {
+    const exportActiveUsers = async () => {
       const isLive = Boolean(!authLoading && authUser && liveUserAnalytics);
       const rows = [
         ['Metric','Value','Data status'],
@@ -1652,9 +1620,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         ['Growth vs previous 30 days', isLive && liveUserAnalytics!.growth_percent !== null ? liveUserAnalytics!.growth_percent + '%' : authLoading || authUser ? 'Unavailable' : '8.06%', isLive ? 'Calculated from sign-in activity' : authUser ? 'Live analytics unavailable' : 'Sample guest preview'],
         ['Location data', 'Not collected', 'No user coordinates are stored or exported'],
       ];
-      const csv = '\\uFEFF' + rows.map(row=>row.map(value=>'"'+value.replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
-      const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-      const anchor = document.createElement('a'); anchor.href=url; anchor.download='al-omda-active-users.csv'; anchor.click(); URL.revokeObjectURL(url);
+      const csv = serializeCsv(rows);
+      await downloadBlobAsFile(new Blob([csv],{type:'text/csv;charset=utf-8'}),'al-omda-active-users.csv');
     };
     return <div className="page-enter">
       {pageHeading(isAr?'منصة العمدة':'AL OMDA PLATFORM',isAr?info.ar:info.en,isActiveUsersPage?(isAr?'لوحة تحليلات المستخدمين النشطين.':'Active users analytics dashboard.'):(isAr?'حالة تكامل المنصة ومصادر البيانات.':'Platform integration status and data sources.'))}
@@ -2148,17 +2115,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
       setHttpFlowHistoryError(error instanceof Error ? error.message : (isAr ? "تعذر تحميل سجل HTTPFlow." : "Could not load HTTPFlow history."));
     } finally { setHttpFlowHistoryBusy(false); }
   };
-  const exportHttpFlowHistory = () => {
+  const exportHttpFlowHistory = async () => {
     if (!httpFlowHistory.length) return;
     const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), records: httpFlowHistory }, null, 2)], { type: "application/json" });
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = "omda-httpflow-history.json";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    await downloadBlobAsFile(blob,'omda-httpflow-history.json');
   };
   const clearHttpFlowHistory = async () => {
     if (!window.confirm(isAr ? "هل تريد مسح سجل HTTPFlow المحفوظ؟" : "Clear the saved HTTPFlow audit history?")) return;
@@ -2511,13 +2471,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <p class="muted">AL OMDA AI · ${new Date().toISOString()}</p></body></html>`;
   };
   const reportFileBase = (task:Task) => 'al-omda-' + task.id.replace(/[^a-zA-Z0-9_-]/g,'-');
-  const downloadReportBlob = (blob:Blob, filename:string) => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url; link.download = filename;
-    document.body.appendChild(link); link.click(); link.remove();
-    window.setTimeout(()=>URL.revokeObjectURL(url),1500);
-  };
+  const downloadReportBlob = (blob:Blob, filename:string) => downloadBlobAsFile(blob,filename);
   const loadReportLibrary = async (url:string) => import(/* @vite-ignore */ url);
   const reportParagraphs = (task:Task) => {
     const lines:{text:string;kind:'title'|'heading'|'body'}[] = [
@@ -2532,7 +2486,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       lines.push({text:(isAr?'الحالة: ':'Status: ')+(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review')),kind:'body'});
       lines.push({text:(isAr?'المخرج المتوقع: ':'Expected output: ')+(step.output||'—'),kind:'body'});
       lines.push({text:(isAr?'معيار الاكتمال: ':'Completion check: ')+(step.complete||'—'),kind:'body'});
-      if(step.result) lines.push({text:(isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\\n'+step.result,kind:'body'});
+      if(step.result) lines.push({text:(isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\n'+step.result,kind:'body'});
       if(step.executedAt) lines.push({text:(isAr?'تاريخ التنفيذ: ':'Executed at: ')+step.executedAt,kind:'body'});
       if(step.executionStatus==='failed') lines.push({text:(isAr?'سبب الفشل: ':'Failure reason: ')+(step.executionError||'—'),kind:'body'});
     });
@@ -2551,7 +2505,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       }));
       const doc = new Document({sections:[{properties:{},children}]});
       const blob = await Packer.toBlob(doc);
-      downloadReportBlob(blob,reportFileBase(task)+'.docx');
+      await downloadReportBlob(blob,reportFileBase(task)+'.docx');
     } catch(error) {
       console.error('DOCX export failed',error);
       window.alert(isAr?'تعذر إنشاء ملف DOCX. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.':'Could not create the DOCX file. Check your internet connection and try again.');
@@ -2585,9 +2539,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
         page.addText(body,{x:0.75,y:1.45,w:11.8,h:5.3,fontFace:'Arial',fontSize:17,color:'F1F1EF',margin:0.12,fit:'shrink',valign:'top',align:isAr?'right':'left',rtlMode:isAr,paraSpaceAfterPt:12});
         page.addText('AL OMDA AI',{x:0.7,y:7.05,w:12,h:0.2,fontSize:8,color:'8E9299',align:'center'});
       };
-      addSlide(isAr?'ملخص المشروع':'Project overview',task.title+'\\n\\n'+(isAr?'الطلب: ':'Request: ')+task.request+'\\n\\n'+(isAr?'التخصص: ':'Specialty: ')+label(task.specialty)+' · '+(isAr?'الحالة: ':'Status: ')+statusLabel(task.status));
+      addSlide(isAr?'ملخص المشروع':'Project overview',task.title+'\n\n'+(isAr?'الطلب: ':'Request: ')+task.request+'\n\n'+(isAr?'التخصص: ':'Specialty: ')+label(task.specialty)+' · '+(isAr?'الحالة: ':'Status: ')+statusLabel(task.status));
       task.steps.forEach((step,index)=>{
-        const body=[(isAr?'الحالة: ':'Status: ')+(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review')),(isAr?'المخرج المتوقع: ':'Expected output: ')+(step.output||'—'),(isAr?'معيار الاكتمال: ':'Completion check: ')+(step.complete||'—'),step.result?((isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\\n'+step.result):'',step.executionStatus==='failed'?((isAr?'سبب الفشل: ':'Failure reason: ')+(step.executionError||'—')):''].filter(Boolean).join('\\n\\n');
+        const body=[(isAr?'الحالة: ':'Status: ')+(step.state==='approved'?(isAr?'معتمدة':'Approved'):step.state==='rejected'?(isAr?'مرفوضة':'Rejected'):(isAr?'بانتظار المراجعة':'Pending review')),(isAr?'المخرج المتوقع: ':'Expected output: ')+(step.output||'—'),(isAr?'معيار الاكتمال: ':'Completion check: ')+(step.complete||'—'),step.result?((isAr?'نتيجة التنفيذ: ':'Execution result: ')+'\n'+step.result):'',step.executionStatus==='failed'?((isAr?'سبب الفشل: ':'Failure reason: ')+(step.executionError||'—')):''].filter(Boolean).join('\n\n');
         addSlide((isAr?'الخطوة ':'Step ')+(index+1)+': '+step.text,body);
       });
       await pptx.writeFile({fileName:reportFileBase(task)+'.pptx'});
@@ -2628,7 +2582,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     reportWindow.print();
   };
 
-  const exportTasksSheet = (items:Task[]) => {
+  const exportTasksSheet = async (items:Task[]) => {
     const headers = isAr
       ? ['اسم المشروع','الطلب الأصلي','التخصص','حالة المشروع','رقم الخطوة','الخطوة','حالة الخطوة','المخرج المتوقع','معيار الاكتمال','نتيجة التنفيذ','حالة التنفيذ','سبب الفشل','تاريخ الإنشاء']
       : ['Project','Original request','Specialty','Project status','Step number','Step','Step status','Expected output','Completion check','Execution result','Execution status','Failure reason','Created at'];
@@ -2649,19 +2603,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           task.createdAt,
         ])
       : [[task.title,task.request,label(task.specialty),statusLabel(task.status),'','','','','','','','',task.createdAt]]);
-    const escapeCell = (value:unknown) => '"' + String(value ?? '').replace(/"/g,'""') + '"';
-    const csv = [headers,...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
-    const blob = new Blob(['\uFEFF',csv], { type:'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'al-omda-projects-' + new Date().toISOString().slice(0,10) + '.csv';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    // Keep the object URL alive long enough for iOS Safari and other browsers
-    // to start consuming the generated CSV download.
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    const blob=new Blob([serializeCsv([headers,...rows])],{type:'text/csv;charset=utf-8'});
+    await downloadBlobAsFile(blob,'al-omda-projects-'+new Date().toISOString().slice(0,10)+'.csv');
   };
 
   const historyPage = () => {
