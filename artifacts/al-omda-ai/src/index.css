@@ -628,7 +628,12 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .ai-chat-markdown p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .ai-chat-markdown strong{color:#f0e3c4;font-weight:700}
 .ai-chat-markdown h1,.ai-chat-markdown h2,.ai-chat-markdown h3,.ai-chat-markdown h4{margin:6px 0 0;color:#ecdcbb;font-size:15px;line-height:1.7;white-space:pre-wrap}
-.ai-chat-markdown ul,.ai-chat-markdown ol{margin:0;padding-inline-start:22px;display:grid;gap:5px;white-space:pre-wrap}
+.ai-chat-markdown ul,.ai-chat-markdown ol{margin:0;padding-inline-start:24px;white-space:pre-wrap}
+.ai-chat-markdown ul{list-style:disc}
+.ai-chat-markdown ol{list-style:decimal}
+.ai-chat-markdown li{display:list-item}
+.ai-chat-markdown li+li{margin-top:5px}
+.ai-chat-markdown li>p{display:inline}
 .ai-chat-markdown li::marker{color:#c6a76c}
 .ai-chat-markdown hr{border:0;border-top:1px solid var(--border,#343a44);margin:6px 0}
 .ai-chat-markdown table{border-collapse:collapse;font-size:12px;max-width:100%;overflow:auto;display:block}
