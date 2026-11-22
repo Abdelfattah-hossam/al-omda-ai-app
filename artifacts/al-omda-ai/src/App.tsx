@@ -780,7 +780,7 @@ function App() {
   const [executingStepId, setExecutingStepId] = useState<string | null>(null);
   const [fileActionProposal, setFileActionProposal] = useState<{ taskId:string; stepId:string; displayName:string; inputHash:string; disclosure:string[]; alreadySaved:boolean } | null>(null);
   const [fileActionBusy, setFileActionBusy] = useState(false);
-  const [fileActionMessage, setFileActionMessage] = useState<{ tone:'error'|'ok'; text:string } | null>(null);
+  const [fileActionMessage, setFileActionMessage] = useState<{ taskId:string; stepId:string; tone:'error'|'ok'; text:string } | null>(null);
   const [approvingStepId, setApprovingStepId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string,string>>({});
@@ -1222,7 +1222,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر تجهيز إجراء الحفظ.' : 'Could not prepare the save action.'));
         setFileActionProposal({ taskId:task.id, stepId:step.id, displayName:data.proposal.displayName, inputHash:data.proposal.inputHash, disclosure:data.proposal.disclosure, alreadySaved:Boolean(data.alreadySaved) });
       } catch (error) {
-        setFileActionMessage({ tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر تجهيز إجراء الحفظ.' : 'Could not prepare the save action.') });
+        setFileActionMessage({ taskId:task.id, stepId:step.id, tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر تجهيز إجراء الحفظ.' : 'Could not prepare the save action.') });
       } finally { setFileActionBusy(false); }
     };
     const decideStepFile = async (decision:'approve'|'reject') => {
@@ -1233,12 +1233,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
         const data = await response.json().catch(()=>({}));
         if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : (isAr ? 'تعذر إكمال الإجراء.' : 'Could not complete the action.'));
         setFileActionMessage(decision === 'approve'
-          ? { tone:'ok', text:(isAr ? 'تم حفظ الملف ' : 'Saved file ') + fileActionProposal.displayName + (isAr ? ' في أصول المشروع.' : ' in the project assets.') }
-          : { tone:'ok', text:isAr ? 'تم رفض الإجراء ولم يُكتب أي ملف.' : 'Action rejected. Nothing was written.' });
+          ? { taskId:fileActionProposal.taskId, stepId:fileActionProposal.stepId, tone:'ok', text:(isAr ? 'تم حفظ الملف ' : 'Saved file ') + fileActionProposal.displayName + (isAr ? ' في أصول المشروع.' : ' in the project assets.') }
+          : { taskId:fileActionProposal.taskId, stepId:fileActionProposal.stepId, tone:'ok', text:isAr ? 'تم رفض الإجراء ولم يُكتب أي ملف.' : 'Action rejected. Nothing was written.' });
         setFileActionProposal(null);
         try { const workspace = await getWorkspace(apiRequestOptions); if (authUser) applyWorkspace(workspace, authUser.email); } catch { /* the periodic refresh will catch up */ }
       } catch (error) {
-        setFileActionMessage({ tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر إكمال الإجراء.' : 'Could not complete the action.') });
+        setFileActionMessage({ taskId:fileActionProposal.taskId, stepId:fileActionProposal.stepId, tone:'error', text:error instanceof Error ? error.message : (isAr ? 'تعذر إكمال الإجراء.' : 'Could not complete the action.') });
         setFileActionProposal(null);
       } finally { setFileActionBusy(false); }
     };
@@ -1722,7 +1722,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                    <button type="button" data-testid={`reject-step-file-${step.id}`} className="button button-danger button-small" disabled={fileActionBusy} onClick={()=>void decideStepFile('reject')}><X size={12}/>{isAr?'رفض':'Reject'}</button>
                  </div>
                </div>}
-               {fileActionMessage && <div className={fileActionMessage.tone==='error'?'notice-bar notice-error':'notice-bar'} role={fileActionMessage.tone==='error'?'alert':'status'}>{fileActionMessage.text}</div>}
+               {fileActionMessage?.taskId===task.id && fileActionMessage.stepId===step.id && <div className={fileActionMessage.tone==='error'?'notice-bar notice-error':'notice-bar'} role={fileActionMessage.tone==='error'?'alert':'status'}>{fileActionMessage.text}</div>}
              </div>}
              {step.result && <div className="step-actions" style={{marginTop:10}}><button type="button" data-testid={`request-step-revision-${step.id}`} className="button button-danger button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser || !(commentDrafts[step.id] ?? '').trim()} onClick={()=>void requestStepRevision(task,step)}><RefreshCw size={13}/>{executingStepId===step.id?(isAr?'جارٍ تسجيل طلب التعديل...':'Saving revision request...'):(isAr?'طلب تعديل وإعادة تنفيذ':'Request revision & rerun')}</button></div>}
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}

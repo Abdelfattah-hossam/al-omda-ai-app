@@ -1,12 +1,13 @@
 -- Allow concise plans without padding them to three steps.
 -- Changes only the step-count guard in the existing owner-scoped, quota-checked RPC.
+-- The public function is a wrapper; the private implementation owns this guard.
 -- Existing task data, quota accounting and function attributes are preserved.
 begin;
 do $migration$
 declare
   definition text;
 begin
-  select pg_get_functiondef('public.create_ai_task_with_quota(text,text,text,jsonb,integer)'::regprocedure)
+  select pg_get_functiondef('omda_private.create_ai_task_with_quota(text,text,text,jsonb,integer)'::regprocedure)
     into definition;
   if position('jsonb_array_length(p_steps) not between 3 and 8' in definition) > 0 then
     execute replace(definition,

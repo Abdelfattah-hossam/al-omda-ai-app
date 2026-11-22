@@ -31,6 +31,7 @@ test("setup SQL and the deployment migration agree on the 1-to-8 step range", as
   const earlierSequenceMigration = await readFile(new URL("../../supabase/migrations/20261116174710_restrict_public_sequence_defaults.sql", import.meta.url), "utf8");
   assert.match(earlierSequenceMigration, /preserved because this migration was already applied/i);
   assert.match(migration, /pg_get_functiondef/);
+  assert.match(migration, /omda_private\.create_ai_task_with_quota/);
   assert.match(migration, /Unrecognized project-plan guard/);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const planStepSpec = openapi.slice(openapi.indexOf("    PlanStep:"), openapi.indexOf("    TaskCreateStep:"));

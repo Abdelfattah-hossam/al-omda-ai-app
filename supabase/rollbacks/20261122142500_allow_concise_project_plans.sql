@@ -5,7 +5,7 @@ do $migration$
 declare
   definition text;
 begin
-  select pg_get_functiondef('public.create_ai_task_with_quota(text,text,text,jsonb,integer)'::regprocedure)
+  select pg_get_functiondef('omda_private.create_ai_task_with_quota(text,text,text,jsonb,integer)'::regprocedure)
     into definition;
   if position('jsonb_array_length(p_steps) not between 1 and 8' in definition) > 0 then
     execute replace(definition,
