@@ -90,6 +90,9 @@ importers:
       '@fix-webm-duration/fix':
         specifier: 1.0.1
         version: 1.0.1
+      mediabunny:
+        specifier: 1.66.2
+        version: 1.66.2
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.3.0)(react@19.1.0)
@@ -238,9 +241,6 @@ importers:
       lucide-react:
         specifier: 'catalog:'
         version: 0.545.0(react@19.1.0)
-      mediabunny:
-        specifier: 1.66.2
-        version: 1.66.2
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
