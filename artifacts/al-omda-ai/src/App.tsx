@@ -2854,6 +2854,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   let page:ReactNode;
   if (detailMatch && currentTask) page = taskDetailPage(currentTask);
+  else if (detailMatch && (authLoading || !workspaceLoaded) && !workspaceLoadError) page = <section className="panel panel-pad" role="status" style={{marginTop:24}}><h2 className="section-title">{isAr?'جارٍ تحميل المشروع…':'Loading project…'}</h2><p className="page-subtitle">{isAr?'نتحقق من حسابك ونحمّل بيانات المشروع المحفوظة.':'Checking your account and loading the saved project.'}</p></section>;
+  else if (detailMatch && workspaceLoadError) page = <section className="panel panel-pad" role="alert" style={{marginTop:24}}><h2 className="section-title">{isAr?'تعذر تحميل المشروع':'Could not load project'}</h2><p className="page-subtitle">{workspaceLoadError}</p><Link href={focusedHref('/history','history-list')} className="button button-secondary" style={{marginTop:16}}>{isAr?'العودة إلى سجل المهام':'Back to task history'}</Link></section>;
   else if (detailMatch) page = notFoundPage(
     isAr ? 'المشروع غير موجود' : 'Project not found',
     isAr ? 'المشروع المطلوب غير موجود أو تم حذفه.' : 'The requested project does not exist or has been deleted.',
