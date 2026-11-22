@@ -70,6 +70,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/zip.test.ts
       - name: Test generated Office files
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-ooxml.test.ts
+      - name: Test Excel formula cell preservation
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-formula-cell.test.ts
       - name: Test workspace asset upload MIME normalization
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/asset-upload.test.ts
       - name: Test Word document validation
@@ -92,6 +94,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/collaboration.test.ts
       - name: Test workspace asset validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/storage-assets.test.ts
+      - name: Test workspace response sanitization
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/workspace-sanitize.test.ts
       - name: Test sequential project stage prerequisites
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-stage-sequence.test.ts
       - name: Test Supabase schema security and quota contracts
