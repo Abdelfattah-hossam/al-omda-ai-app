@@ -86,9 +86,10 @@ test("extractXlsxText resolves shared strings and keeps row order", () => {
     },
   ]);
   const text = extractXlsxText(xlsx);
-  assert.ok(text.includes("Sheet: المبيعات"));
-  assert.ok(text.includes("name,alpha"));
-  assert.ok(text.includes("beta,25"));
+  // Exact lines, not substrings: a wrapper tag such as <sst> must never leak
+  // into extracted values (regression: the run pattern matched <sst> as a
+  // prefix-less text run).
+  assert.equal(text, "Sheet: المبيعات\nname,alpha\nbeta,25");
 });
 
 test("extractPptxText extracts slide runs in slide order", () => {

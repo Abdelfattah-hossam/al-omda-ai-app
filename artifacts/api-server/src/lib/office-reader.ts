@@ -80,7 +80,7 @@ function decodeXmlEntities(value: string): string {
 /** Extracts the text of every <...:t> run inside one XML part. */
 function extractTextRuns(xml: string, tagSuffix: string): string[] {
   const runs: string[] = [];
-  const pattern = new RegExp("<[a-z0-9]*:?" + tagSuffix + "(?:\\s[^>]*)?>([\\s\\S]*?)</[a-z0-9]*:?" + tagSuffix + ">", "gi");
+  const pattern = new RegExp("<(?:[a-z0-9]+:)?" + tagSuffix + "(?:\\s[^>]*)?>([\\s\\S]*?)</(?:[a-z0-9]+:)?" + tagSuffix + ">", "gi");
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(xml)) !== null) {
     const text = decodeXmlEntities(match[1]).trim();
