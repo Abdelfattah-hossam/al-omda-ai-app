@@ -124,6 +124,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/workspace-sanitize.test.ts
       - name: Test sequential project stage prerequisites
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/project-stage-sequence.test.ts
+      - name: Test deliverable download-link integrity
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/deliverable-quality.test.ts
       - name: Test mobile audit regressions
         run: pnpm --filter @workspace/scripts exec tsx --test src/mobile-audit-regression.test.ts
       - name: Test Supabase schema security and quota contracts

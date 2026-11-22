@@ -44,3 +44,15 @@ test("mobile workspace scroll area ends above both fixed controls without changi
  assert.ok(css.includes('--workspace-dock-space:calc(144px + env(safe-area-inset-bottom))'));
  assert.ok(css.includes('.app-shell:not([data-chat-active="true"]) > .main-area {\n    height:calc(100dvh - var(--workspace-dock-space))'));
 });
+
+test("project lists paginate without removing projects and keep filters", () => {
+ assert.ok(app.includes('const visibleProjects = projects.slice((currentPage - 1) * 8, currentPage * 8)'));
+ assert.ok(app.includes('{visibleProjects.map(task=>'));
+ assert.ok(app.includes('[query, projectCategoryFilter, historyStatusFilter]'));
+});
+test("chat quality is controlled by prompt rules, not scroll or composer code", () => {
+ const ai = readFileSync('../artifacts/api-server/src/routes/ai.ts', 'utf8');
+ assert.ok(ai.includes('Greetings are greetings'));
+ assert.ok(ai.includes('clear, warm Egyptian Arabic'));
+ assert.ok(ai.includes('executionStyle + conversationalStyle + memoryContext'));
+});

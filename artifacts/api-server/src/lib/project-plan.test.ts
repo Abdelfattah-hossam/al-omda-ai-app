@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseProjectPlan } from "./project-plan.js";
+import { parseProjectPlan, getRequestedPlanStepCount, promisesUnsupportedMedia } from "./project-plan.js";
 
 const step = (index: number) => ({
   text: "Complete project phase " + index,
@@ -47,4 +47,21 @@ test("accepts complete one- and two-step plans without filler", () => {
     const steps = Array.from({ length: count }, (_, index) => step(index + 1));
     assert.equal(parseProjectPlan(JSON.stringify({ title: "Concise task", steps }))?.steps.length, count);
   }
+});
+
+
+test("enforces explicit English and Arabic stage counts without truncating content", () => {
+ for (const request of ["شرح في مرحلة واحدة فقط", "one step only", "single stage", "نفذ ١ خطوة فقط"]) {
+  assert.equal(getRequestedPlanStepCount(request), 1);
+  assert.equal(parseProjectPlan(JSON.stringify({ title: "Test", steps: [step(1), step(2)] }), request), null);
+  assert.equal(parseProjectPlan(JSON.stringify({ title: "Test", steps: [step(1)] }), request)?.steps.length, 1);
+ }
+ assert.equal(getRequestedPlanStepCount("create 8 slides"), null);
+});
+test("rejects unsupported rendered media but permits scripts", () => {
+ for (const output of ["Finished MP4 video.mp4", "فيديو نهائي", "generated image", "poster.png"]) {
+  assert.equal(promisesUnsupportedMedia(output), true);
+  assert.equal(parseProjectPlan(JSON.stringify({ title: "Video", steps: [{...step(1), output}] })), null);
+ }
+ for (const output of ["نص فيديو ومخطط مشاهد", "Video script and storyboard", "عرض شرائح .pptx"]) assert.equal(promisesUnsupportedMedia(output), false);
 });

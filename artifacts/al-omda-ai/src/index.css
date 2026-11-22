@@ -9664,3 +9664,18 @@ body:has(.ai-chat-page){
     padding-top:calc(7px + env(safe-area-inset-top))!important;
   }
 }
+
+.project-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;flex-wrap:wrap;font-size:13px}
+@media(max-width:760px) {
+ .app-shell:not([data-chat-active="true"]) :is(.icon-button,.lang-button,.topbar-quick-link) {min-width:44px!important;min-height:44px!important;}
+ .app-shell:not([data-chat-active="true"]) .topbar {grid-template-columns:44px minmax(0,1fr) auto;}
+ .app-shell:not([data-chat-active="true"]) .top-actions {gap:3px!important;}
+ .app-shell:not([data-chat-active="true"]) :is(.eyebrow,.app-launcher-count,.app-launcher-heading p,.app-launcher-group-title span,.app-launcher-group-title strong) {font-size:12px!important;line-height:1.7;}
+ .app-shell:not([data-chat-active="true"]) .topbar-metric small {font-size:11px!important;}
+}
+@media(max-width:420px) {
+ .app-shell:not([data-chat-active="true"]) .topbar {grid-template-columns:44px minmax(0,1fr);}
+ .app-shell:not([data-chat-active="true"]) .topbar>.crumb {grid-column:2;}
+ .app-shell:not([data-chat-active="true"]) .topbar>.top-actions {grid-column:1 / -1;grid-row:2;justify-content:space-between;}
+ .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics {grid-row:3;}
+}

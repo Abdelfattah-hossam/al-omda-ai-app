@@ -786,6 +786,7 @@ function App() {
   const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
+  const [projectPage, setProjectPage] = useState(1);
   const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
   const [projectCategoryFilter, setProjectCategoryFilter] = useState<'all'|Specialty>('all');
   const { language, tasks } = saved;
@@ -2677,11 +2678,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>;
   };
 
+  useEffect(() => { setProjectPage(1); }, [query, projectCategoryFilter, historyStatusFilter]);
+
   const projectsPage = () => {
     const projects = tasks.filter(task=>!task.demo)
       .filter(task=>historyStatusFilter==='all'||(historyStatusFilter==='review'?(task.status==='review'||task.status==='paused'):task.status===historyStatusFilter))
       .filter(task=>projectCategoryFilter==='all'||task.specialty===projectCategoryFilter)
       .filter(task=>`${task.title} ${task.request} ${label(task.specialty)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+    const pageCount = Math.max(1, Math.ceil(projects.length / 8));
+    const currentPage = Math.min(projectPage, pageCount);
+    const visibleProjects = projects.slice((currentPage - 1) * 8, currentPage * 8);
     const categories:Array<{id:'all'|Specialty;name:string}> = [{id:'all',name:isAr?'الكل':'All'},...specialties.map(item=>({id:item.id,name:label(item.id)}))];
     return <div className="page-enter" id="projects-list">
       {pageHeading(isAr?'مساحة العمل':'WORKSPACE',isAr?'المشاريع':'Projects',isAr?'كل مشاريعك المحفوظة وحالات تنفيذها في مكان واحد.':'All saved projects and their execution status in one place.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
@@ -2702,7 +2708,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </nav>
       </section>
       {projects.length>0?<div className={projectViewMode==='grid'?'dashboard-grid':'history-layout'} style={projectViewMode==='grid'?{gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))'}:undefined}>
-        {projects.map(task=><article className="panel panel-pad" key={task.id}>
+        {visibleProjects.map(task=><article className="panel panel-pad" key={task.id}>
           <div className="section-head"><span className="task-icon">{taskIcon(task.specialty,18)}</span>{statusBadge(task.status)}</div>
           <h2 className="section-title" style={{fontSize:14,margin:'8px 0'}}>{task.title}</h2>
           <p className="page-subtitle" style={{minHeight:42}}>{task.request.slice(0,150)}{task.request.length>150?'…':''}</p>
@@ -2711,6 +2717,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8,marginTop:15}}><span className="section-meta">{dateLabel(task.createdAt,language)}</span><Link href={focusedHref('/history/'+task.id,'task-plan')} className="button button-quiet button-small">{isAr?'فتح المشروع':'Open project'} <ArrowLeft size={13}/></Link></div>
         </article>)}
       </div>:<div className="panel plan-empty"><div><span className="empty-mark"><BriefcaseBusiness size={21}/></span><h3>{isAr?'لا توجد مشاريع مطابقة':'No matching projects'}</h3><p>{isAr?'أنشئ مشروعًا جديدًا أو غيّر عوامل التصفية.':'Create a project or adjust the filters.'}</p><Link href={focusedHref('/workbench','request-input')} className="button button-primary" style={{marginTop:16}}><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link></div></div>}
+      {projects.length>8&&<nav className="project-pagination" aria-label={isAr?'صفحات المشاريع':'Project pages'}><button type="button" className="button button-quiet" disabled={currentPage===1} onClick={()=>setProjectPage(currentPage-1)}>{isAr?'السابق':'Previous'}</button><span aria-live="polite">{isAr?`صفحة ${currentPage} من ${pageCount}`:`Page ${currentPage} of ${pageCount}`}</span><button type="button" className="button button-quiet" disabled={currentPage===pageCount} onClick={()=>setProjectPage(currentPage+1)}>{isAr?'التالي':'Next'}</button></nav>}
     </div>;
   };
 
