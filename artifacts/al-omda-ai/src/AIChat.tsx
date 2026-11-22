@@ -714,7 +714,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
     const rtl = ar;
     const border = { style: "single", size: 1, color: "B8C2D2" };
     const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
-    const makeParagraph = (value: string, bold = false) => {
+    const makeParagraph = (value: string, bold = false, color?: string) => {
       const heading = value.match(/^(#{1,3})\s+(.+)$/);
       const bullet = value.match(/^[-*]\s+(.+)$/);
       const text = heading?.[2] || bullet?.[1] || value;
@@ -724,7 +724,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
         bidirectional: rtl,
         ...(headingLevel ? { heading: headingLevel } : {}),
         ...(bullet ? { bullet: { level: 0 } } : {}),
-        children: [new TextRun({ text, bold: bold || Boolean(heading), font: "Arial", size: heading ? [30, 26, 23][heading[1].length - 1] : 20 })],
+        children: [new TextRun({ text, bold: bold || Boolean(heading), font: "Arial", size: heading ? [30, 26, 23][heading[1].length - 1] : 20, ...(color ? { color } : {}) })],
         spacing: { before: heading ? 160 : 0, after: heading ? 100 : 120 },
       });
     };
@@ -733,28 +733,37 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       ...documentData.paragraphs.map((paragraph) => makeParagraph(paragraph)),
     ];
     if (documentData.columns.length > 0) {
-      // Usable width: A4 11906 twips minus the 800 left/right margins. A pct width of 100 is only 2% in OOXML (50ths of a percent), which is why the old table rendered narrow; use an explicit dxa width with fixed equal columns instead.
+      // Design B (approved by the owner): warm gold header, tinted bold first column, hairline inner borders.
+      // Usable width: A4 11906 twips minus the 800 left/right margins. Explicit dxa widths (a pct width of 100 is only 2% in OOXML).
       const tableWidth = 10306;
-      const columnWidth = Math.floor(tableWidth / documentData.columns.length);
-      const cellBorder = { style: "single", size: 4, color: "D8CBAA" };
-      const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
-      const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
-        width: { size: columnWidth, type: WidthType.DXA },
-        shading: { type: "clear", color: "auto", fill: "F1E5C3" }, verticalAlign: "center", borders: cellBorders, children: [makeParagraph(column, true)],
+      const weights = documentData.columns.map((_, index) => index === 0 ? 0.8 : 1);
+      const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+      const columnWidths = weights.map((weight) => Math.floor((tableWidth * weight) / weightSum));
+      const frame = { style: "single", size: 12, color: "B38B2F" };
+      const inner = { style: "single", size: 4, color: "E7DDBF" };
+      const headRule = { style: "single", size: 18, color: "1A1712" };
+      const cellMargins = { top: 130, bottom: 130, left: 180, right: 180 };
+      const header = new TableRow({ tableHeader: true, height: { value: 520, rule: "atLeast" }, children: documentData.columns.map((column, index) => new TableCell({
+        width: { size: columnWidths[index], type: WidthType.DXA },
+        shading: { type: "clear", color: "auto", fill: "C9A24B" }, verticalAlign: "center", margins: cellMargins,
+        borders: { bottom: headRule },
+        children: [makeParagraph(column, true, "1A1712")],
       })) });
       const bodyRows = documentData.rows.map((row) => new TableRow({
+        height: { value: 480, rule: "atLeast" },
         children: documentData.columns.map((_, index) => new TableCell({
-          width: { size: columnWidth, type: WidthType.DXA },
-          verticalAlign: "center", borders: cellBorders, children: [makeParagraph(String(row[index] ?? ""))],
+          width: { size: columnWidths[index], type: WidthType.DXA },
+          verticalAlign: "center", margins: cellMargins,
+          ...(index === 0 ? { shading: { type: "clear", color: "auto", fill: "F6EDD2" } } : {}),
+          children: [index === 0 ? makeParagraph(String(row[index] ?? ""), true, "5C4513") : makeParagraph(String(row[index] ?? ""))],
         })),
       }));
       children.push(new Table({
         width: { size: tableWidth, type: WidthType.DXA },
         layout: "fixed",
         visuallyRightToLeft: rtl,
-        margins: { top: 70, bottom: 70, left: 110, right: 110 },
-        columnWidths: documentData.columns.map(() => columnWidth),
-        borders: { ...borders, top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder, insideHorizontal: cellBorder, insideVertical: cellBorder },
+        columnWidths,
+        borders: { top: frame, bottom: frame, left: frame, right: frame, insideHorizontal: inner, insideVertical: inner },
         rows: [header, ...bodyRows],
       }));
     }

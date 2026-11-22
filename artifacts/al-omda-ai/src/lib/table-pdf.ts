@@ -65,10 +65,13 @@ export function assemblePdfFromJpegPages(pages: JpegPage[]): Uint8Array {
 export const PDF_THEME = {
   text: "#2B2417",
   muted: "#8A6D2B",
-  headBg: "#1A1712",
-  headText: "#E3C16F",
-  zebra: "#FBF6E7",
-  frame: "#C9A24B",
+  headBg: "#C9A24B",
+  headText: "#1A1712",
+  headRule: "#1A1712",
+  firstColBg: "#F6EDD2",
+  firstColText: "#5C4513",
+  zebra: "#FFFFFF",
+  frame: "#B38B2F",
   inner: "#E7DDBF",
   rule: "#C9A24B",
 };
@@ -192,18 +195,18 @@ export async function createDocumentPdfBlob(blocks: PdfBlock[], rtlOverride?: bo
         if (!isHeader) { drawRow(norm[0], 0, true); }
       }
       row.forEach((_, col) => {
-        ctx.fillStyle = isHeader ? PDF_THEME.headBg : (rowIndex % 2 === 0 ? PDF_THEME.zebra : "#ffffff");
+        ctx.fillStyle = isHeader ? PDF_THEME.headBg : (col === 0 ? PDF_THEME.firstColBg : PDF_THEME.zebra);
         ctx.fillRect(colLeft[col], y, widths[col], rowH);
-        ctx.strokeStyle = isHeader ? PDF_THEME.headBg : PDF_THEME.inner;
+        ctx.strokeStyle = isHeader ? PDF_THEME.frame : PDF_THEME.inner;
         ctx.lineWidth = 0.6;
         ctx.strokeRect(colLeft[col], y, widths[col], rowH);
         setFont(BODY_SIZE, isHeader || col === 0);
-        ctx.fillStyle = isHeader ? PDF_THEME.headText : PDF_THEME.text;
+        ctx.fillStyle = isHeader ? PDF_THEME.headText : (col === 0 ? PDF_THEME.firstColText : PDF_THEME.text);
         const blockH = cellLines[col].length * LINE_H;
         drawLines(cellLines[col], textX(colLeft[col], widths[col], PAD_X), y + (rowH - blockH) / 2, align, LINE_H);
       });
       if (isHeader) {
-        ctx.strokeStyle = PDF_THEME.frame;
+        ctx.strokeStyle = PDF_THEME.headRule;
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(MARGIN, y + rowH); ctx.lineTo(MARGIN + contentW, y + rowH); ctx.stroke();
       }
