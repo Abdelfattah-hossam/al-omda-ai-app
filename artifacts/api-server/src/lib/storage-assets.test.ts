@@ -9,8 +9,17 @@ import {
 
 test("sanitizes filenames and strips path traversal components", () => {
   assert.equal(sanitizeWorkspaceAssetName("../../my report.pdf"), "my-report.pdf");
-  assert.equal(sanitizeWorkspaceAssetName("folder\\\\nested\\\\ملف.docx"), "ملف.docx");
   assert.equal(sanitizeWorkspaceAssetName("..."), "file");
+});
+
+test("folds non-ASCII names into ASCII-only storage keys that Supabase accepts", () => {
+  // Supabase Storage rejects object keys containing non-ASCII characters.
+  assert.equal(sanitizeWorkspaceAssetName("folder\\\\nested\\\\ملف.docx"), "file.docx");
+  assert.equal(sanitizeWorkspaceAssetName("مستند-جديد.docx"), "file.docx");
+  assert.equal(sanitizeWorkspaceAssetName("résumé.docx"), "r-sum.docx");
+  assert.equal(sanitizeWorkspaceAssetName("ملف"), "file");
+  assert.match(sanitizeWorkspaceAssetName("تقرير المبيعات السنوي.xlsx"), /^[\x21-\x7e]+$/);
+  assert.ok(sanitizeWorkspaceAssetName("تقرير المبيعات السنوي.xlsx").endsWith(".xlsx"));
 });
 
 test("allows only the supported workspace file extensions", () => {

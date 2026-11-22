@@ -42,17 +42,26 @@ export const WORKSPACE_ASSET_MIME_TYPES: Readonly<Record<string, string>> = {
   gif: "image/gif",
 };
 
+/**
+ * Normalize an uploaded file name into a safe storage key leaf. Supabase
+ * Storage rejects object keys containing non-ASCII characters ("Invalid
+ * key"), so Unicode letters (e.g. Arabic file names) are folded to dashes
+ * and an extension-only result gets a neutral stem.
+ */
 export function sanitizeWorkspaceAssetName(input: string): string {
   const leaf = input.replace(/\\/g, "/").split("/").pop() ?? "";
-  const normalized = leaf.normalize("NFKC")
+  let normalized = leaf.normalize("NFKC")
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/[^\p{L}\p{N}._ -]/gu, "-")
-    .replace(/\s+/g, "-")
+    .replace(/[^\x21-\x7e]+/g, "-")
     .replace(/\.{2,}/g, ".")
-    .replace(/^\.+/, "")
     .replace(/-+/g, "-")
+    .replace(/-+\./g, ".")
+    .replace(/^-+/, "")
+    .replace(/[.-]+$/, "")
     .trim()
     .slice(0, 120);
+  if (normalized.startsWith(".")) normalized = `file${normalized}`;
   return normalized || "file";
 }
 

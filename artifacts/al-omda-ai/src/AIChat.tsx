@@ -8,6 +8,7 @@ import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
+import { resolveArtifactUploadMime } from "./lib/asset-upload";
 import { previewOfficeDocument } from "./lib/office-preview";
 import { parseModelProviderHealth, providerStatusLabel } from "./lib/model-provider-health";
 import { getLocalAgentOrigin } from "./lib/local-agent-url";
@@ -1196,7 +1197,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
           const blobResponse = await fetch(attachment.url);
           if (!blobResponse.ok) throw new Error(ar ? "تعذر قراءة الملف الناتج لحفظه." : "Could not read the generated file for workspace storage.");
           const artifactBlob = await blobResponse.blob();
-          const mimeType = artifactBlob.type.split(";")[0].trim().toLowerCase();
+          const mimeType = resolveArtifactUploadMime(attachment.name, artifactBlob.type);
           if (!mimeType) throw new Error(ar ? "نوع الملف الناتج غير معروف." : "The generated file type could not be determined.");
 
           let artifactTaskId = assistantMessage.taskId;
