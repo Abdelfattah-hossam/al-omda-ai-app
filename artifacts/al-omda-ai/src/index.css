@@ -43,11 +43,11 @@ button,input,textarea,select { font:inherit; } button { cursor:pointer; } ::sele
 .brand-lockup-logo { display:block; width:188px; max-width:100%; height:auto; max-height:66px; object-fit:contain; object-position:start center; flex:none; }
 .brand-name { font-weight:800; letter-spacing:.11em; font-size:13px; color:#f2ede3; }.brand-sub { color:#8f9297; font-size:10px; letter-spacing:.15em; margin-top:3px; }
 .nav-caption { color:#666d77; font-family:var(--app-font-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; padding:9px 12px 10px; }
-.nav-stack { display:grid; gap:5px; }
-.nav-link { display:flex; align-items:center; gap:12px; min-height:43px; padding:0 12px; border-radius:9px; color:#9da1a8; text-decoration:none; transition:background .18s,color .18s,transform .18s; }
+.nav-stack { display:grid; grid-template-columns:minmax(0,1fr); gap:5px; }
+.nav-link { display:flex; align-items:center; gap:12px; min-width:0; min-height:43px; padding:0 12px; border-radius:9px; color:#9da1a8; text-decoration:none; transition:background .18s,color .18s,transform .18s; }
 .nav-link:hover { color:#f0eadd; background:#1a1e25; transform:translateX(2px); } [dir="rtl"] .nav-link:hover { transform:translateX(-2px); }
 .nav-link.active { color:#e4c17e; background:rgba(204,163,91,.105); box-shadow:inset 2px 0 #d1ad6e; } [dir="rtl"] .nav-link.active { box-shadow:inset -2px 0 #d1ad6e; }
-.nav-link span { font-weight:600; font-size:12px; }.sidebar-bottom { margin-top:auto; }
+.nav-link span { font-weight:600; font-size:12px; min-width:0; }.sidebar-bottom { margin-top:auto; }
 .control-note { padding:14px; border:1px solid #292e36; background:linear-gradient(145deg,#191d24,#15181e); border-radius:12px; }
 .control-note strong { display:block; font-size:11px; margin:8px 0 4px; }.control-note p { color:#8c929b; font-size:10px; line-height:1.7; margin:0; }
 .profile-mini { display:flex; align-items:center; gap:10px; padding:18px 8px 0; }.avatar { display:grid; place-items:center; width:34px; height:34px; flex:none; border-radius:50%; background:#333e43; color:#d5bc8b; font-weight:700; }.profile-mini strong { display:block; font-size:11px; }.profile-mini small { color:#777e87; font-size:10px; }
@@ -624,6 +624,18 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .ai-chat-page>.panel .chat-messages{display:flex;flex:1 1 0!important;flex-direction:column;gap:12px;min-height:160px!important;height:auto!important;max-height:none!important;overflow-y:auto!important;overscroll-behavior:contain;padding:12px 8px 18px!important;scrollbar-gutter:stable}
 .ai-chat-page>.panel .chat-message{flex:none;max-width:min(92%,900px)!important;width:fit-content;min-width:min(42%,220px);padding:14px 16px!important;overflow-wrap:anywhere;line-height:1.8}
 .ai-chat-page>.panel .chat-message p{font-size:14px!important;line-height:1.95!important;white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-chat-markdown{display:grid;gap:10px;min-width:0}
+.ai-chat-markdown p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-chat-markdown strong{color:#f0e3c4;font-weight:700}
+.ai-chat-markdown h1,.ai-chat-markdown h2,.ai-chat-markdown h3,.ai-chat-markdown h4{margin:6px 0 0;color:#ecdcbb;font-size:15px;line-height:1.7;white-space:pre-wrap}
+.ai-chat-markdown ul,.ai-chat-markdown ol{margin:0;padding-inline-start:22px;display:grid;gap:5px;white-space:pre-wrap}
+.ai-chat-markdown li::marker{color:#c6a76c}
+.ai-chat-markdown hr{border:0;border-top:1px solid var(--border,#343a44);margin:6px 0}
+.ai-chat-markdown table{border-collapse:collapse;font-size:12px;max-width:100%;overflow:auto;display:block}
+.ai-chat-markdown th,.ai-chat-markdown td{border:1px solid var(--border,#343a44);padding:5px 9px;text-align:start}
+.ai-chat-markdown th{background:rgba(198,167,108,.1);color:#ecdcbb}
+.ai-chat-markdown blockquote{margin:0;padding-inline-start:11px;border-inline-start:3px solid rgba(198,167,108,.45);color:#c9cfda}
+.ai-chat-inline-code{background:rgba(198,167,108,.12);border:1px solid rgba(198,167,108,.22);border-radius:5px;padding:1px 5px;font-size:12px;direction:ltr;unicode-bidi:embed}
 .ai-chat-page>.panel .chat-message strong{display:block;margin-bottom:7px;line-height:1.6}
 .ai-chat-page>.panel .ai-composer{position:relative!important;inset:auto!important;bottom:auto!important;z-index:15;flex:none!important;width:100%!important;max-width:none!important;margin:8px 0 0!important;padding:10px!important}
 .ai-chat-page>.panel .ai-composer-input{min-height:44px!important;max-height:180px!important;line-height:1.65!important}

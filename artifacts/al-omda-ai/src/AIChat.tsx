@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
 import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
 import { useLocation } from "wouter";
@@ -170,30 +172,26 @@ type MemoryGraphNode = { id: string; node_type: string; label: string; source?: 
 type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
 
 function MessageContent({ content }: { content: string }) {
-  const parts: Array<{ type: "text" | "code"; value: string; language?: string }> = [];
-  const fence = String.fromCharCode(96).repeat(3);
-  const pattern = new RegExp(fence + "([a-zA-Z0-9_+#.-]*)\\n([\\s\\S]*?)" + fence, "g");
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(content)) !== null) {
-    if (match.index > lastIndex) parts.push({ type: "text", value: content.slice(lastIndex, match.index) });
-    parts.push({ type: "code", value: match[2], language: match[1] || "code" });
-    lastIndex = pattern.lastIndex;
-  }
-  if (lastIndex < content.length) parts.push({ type: "text", value: content.slice(lastIndex) });
-  if (parts.length === 0) parts.push({ type: "text", value: content });
-
-  return <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
-    {parts.map((part, index) => part.type === "code"
-      ? <div key={index} className="ai-chat-code-block" style={{ minWidth: 0, border: "1px solid var(--border,#343a44)", borderRadius: 10, overflow: "hidden", background: "#11151b" }}>
-          <div className="ai-chat-code-language" style={{ padding: "6px 10px", color: "#c6a76c", fontSize: 11, borderBottom: "1px solid #343a44" }}>{part.language}</div>
-          <pre className="ai-chat-code-content" dir="ltr" style={{ margin: 0, padding: 12, overflowX: "auto", color: "#e8edf4", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre" }}><code>{part.value.replace(/\n$/, "")}</code></pre>
-        </div>
-      : <p key={index} style={{ margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{part.value}</p>)}
+  return <div className="ai-chat-markdown">
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer noopener">{children}</a>,
+        pre: ({ children }) => <>{children}</>,
+        code: ({ className, children }) => {
+          if (!/language-/.test(className || "")) return <code className="ai-chat-inline-code">{children}</code>;
+          const languageName = (className || "").replace(/^.*language-/, "") || "code";
+          return <div className="ai-chat-code-block" style={{ minWidth: 0, border: "1px solid var(--border,#343a44)", borderRadius: 10, overflow: "hidden", background: "#11151b" }}>
+            <div className="ai-chat-code-language" style={{ padding: "6px 10px", color: "#c6a76c", fontSize: 11, borderBottom: "1px solid #343a44" }}>{languageName}</div>
+            <pre className="ai-chat-code-content" dir="ltr" style={{ margin: 0, padding: 12, overflowX: "auto", color: "#e8edf4", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre" }}><code>{String(children).replace(/\n$/, "")}</code></pre>
+          </div>;
+        },
+      }}
+    >{content}</ReactMarkdown>
   </div>;
 }
 
-export default function AIChatPage({ language, signedIn }: { language: Language; signedIn: boolean }) {
+export default function AIChatPage({ language, signedIn, openSettingsInitially }: { language: Language; signedIn: boolean; openSettingsInitially?: boolean }) {
   const ar = language === "ar";
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -238,7 +236,7 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(Boolean(openSettingsInitially));
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showCodeCanvas, setShowCodeCanvas] = useState(false);
   const [canvasCode, setCanvasCode] = useState('<!doctype html>\n<html lang="ar" dir="rtl">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
@@ -1402,6 +1400,14 @@ export default function AIChatPage({ language, signedIn }: { language: Language;
 
   const percent = usage ? Math.max(0, Math.min(100, usage.remaining / usage.limit * 100)) : 0;
   const openSettings = () => { setShowSettingsModal(true); void loadMemory(); void loadUsage(); };
+  const settingsOpenedInitiallyRef = useRef(false);
+  useEffect(() => {
+    if (!openSettingsInitially || settingsOpenedInitiallyRef.current) return;
+    settingsOpenedInitiallyRef.current = true;
+    void loadMemory();
+    void loadUsage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const activateMode = (mode: "word" | "excel" | "ppt" | "office") => {
     setCurrentMode(mode);
     setShowPlusMenu(false);
