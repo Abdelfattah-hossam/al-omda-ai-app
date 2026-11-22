@@ -626,7 +626,7 @@ body{background:radial-gradient(ellipse at 14% 0%,rgba(50,83,190,.15),transparen
 .ai-chat-page>.panel .chat-message p{font-size:14px!important;line-height:1.95!important;white-space:pre-wrap;overflow-wrap:anywhere}
 .ai-chat-markdown{display:grid;gap:10px;min-width:0}
 .ai-chat-markdown p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
-.ai-chat-markdown strong{color:#f0e3c4;font-weight:700}
+.ai-chat-page>.panel .chat-message .ai-chat-markdown strong,.ai-chat-markdown strong{display:inline;color:#f0e3c4;font-weight:700;font-family:inherit;font-size:inherit;margin:0;line-height:inherit}
 .ai-chat-markdown h1,.ai-chat-markdown h2,.ai-chat-markdown h3,.ai-chat-markdown h4{margin:6px 0 0;color:#ecdcbb;font-size:15px;line-height:1.7;white-space:pre-wrap}
 .ai-chat-markdown ul,.ai-chat-markdown ol{margin:0;padding-inline-start:24px;white-space:pre-wrap}
 .ai-chat-markdown ul{list-style:disc}
