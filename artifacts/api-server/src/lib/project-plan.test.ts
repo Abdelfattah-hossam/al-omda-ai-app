@@ -19,7 +19,7 @@ test("accepts detailed plans with up to eight steps", () => {
 });
 
 test("rejects plans that are too short or exceed the supported detail limit", () => {
-  assert.equal(parseProjectPlan(JSON.stringify({ title: "Too short", steps: [step(1), step(2)] })), null);
+  assert.equal(parseProjectPlan(JSON.stringify({ title: "Too short", steps: [] })), null);
   assert.equal(parseProjectPlan(JSON.stringify({ title: "Too long", steps: Array.from({ length: 9 }, (_, index) => step(index + 1)) })), null);
 });
 
@@ -40,4 +40,11 @@ test("rejects malformed, oversized, and incorrectly typed plan data", () => {
   assert.equal(parseProjectPlan(JSON.stringify({ ...valid, title: "x".repeat(161) })), null);
   assert.equal(parseProjectPlan(JSON.stringify({ ...valid, steps: "not an array" })), null);
   assert.equal(parseProjectPlan("x".repeat(100_001)), null);
+});
+
+test("accepts complete one- and two-step plans without filler", () => {
+  for (const count of [1, 2]) {
+    const steps = Array.from({ length: count }, (_, index) => step(index + 1));
+    assert.equal(parseProjectPlan(JSON.stringify({ title: "Concise task", steps }))?.steps.length, count);
+  }
 });

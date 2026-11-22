@@ -17,7 +17,7 @@ export function parseProjectPlan(raw: string): ProjectPlan | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const plan = value as Record<string, unknown>;
     if (typeof plan.title !== "string" || !plan.title.trim() || plan.title.trim().length > 160 ||
-      !Array.isArray(plan.steps) || plan.steps.length < 3 || plan.steps.length > MAX_PLAN_STEPS) return null;
+      !Array.isArray(plan.steps) || plan.steps.length < 1 || plan.steps.length > MAX_PLAN_STEPS) return null;
     const steps: ProjectPlanStep[] = [];
     for (const item of plan.steps) {
       if (!item || typeof item !== "object" || Array.isArray(item)) return null;

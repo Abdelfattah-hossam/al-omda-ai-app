@@ -15,7 +15,7 @@ export type NewTaskPlanLike = {
 
 export function isValidNewTaskPlan(plan: NewTaskPlanLike): boolean {
   return plan.status === "review" &&
-    plan.steps.length >= 3 &&
+    plan.steps.length >= 1 &&
     plan.steps.length <= 8 &&
     plan.steps.every((step) =>
       step.state === "pending" &&

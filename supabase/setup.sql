@@ -615,7 +615,7 @@ begin
      or p_specialty is null
      or p_specialty not in ('business', 'development', 'design', 'marketing', 'research', 'assistant')
      or jsonb_typeof(p_steps) is distinct from 'array'
-     or jsonb_array_length(p_steps) not between 3 and 8 then
+     or jsonb_array_length(p_steps) not between 1 and 8 then
     raise exception 'Invalid project task request';
   end if;
 

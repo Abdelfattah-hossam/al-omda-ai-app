@@ -487,7 +487,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       "Language: " + (language === "ar" ? "Arabic" : "English"),
       "Return ONLY valid JSON, no Markdown fences, with this exact shape:",
       '{ "title": "short project title", "steps": [{ "text": "actionable step", "output": "specific deliverable", "complete": "objective acceptance check" }] }',
-      "Create a genuinely detailed, execution-ready plan tailored to the exact request. Include 3 to 8 sequential steps when the scope warrants it (never pad a small task), with each step containing a concrete action, a specific deliverable, and an objective acceptance check. Cover discovery/requirements, design or structure, implementation, verification/quality review, and handoff where relevant. Do not collapse an entire multi-part project into one vague step.",
+      "Create a genuinely detailed, execution-ready plan tailored to the exact request. Use 1 to 8 sequential steps, proportional to the request. A small task may need only one or two steps; never pad it, with each step containing a concrete action, a specific deliverable, and an objective acceptance check. Cover discovery/requirements, design or structure, implementation, verification/quality review, and handoff where relevant. Do not collapse an entire multi-part project into one vague step.",
       "Before planning, extract the customer's explicit goals, requested features, quantities, formats, audience, constraints, supplied data, and missing information. Preserve them. Do not invent customer names, products, prices, addresses, dates, business facts, research findings, or other source data. If required information is missing, make the plan say it must be requested or leave the relevant fields blank; never silently fabricate it.",
       "For projects involving Office files, explicitly include the correct real deliverable (.xlsx, .docx, or .pptx) in the final suitable step only when requested, and specify the required sheets/tables/slides and validation. A chat-formatted table is not a substitute for a requested Office file. Each step describes work AL OMDA will carry out, not work the user must do. Avoid duplicate/unrelated files and generic filler. This is a proposed plan only; do not claim execution has happened.",
       "Current project request: " + request,
@@ -510,7 +510,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     let parsed = parseProjectPlan(answer.text);
     if (!parsed) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
-        "Repair your previous project plan. Return ONLY valid JSON with a title and 3 to 8 sequential steps. Every step must contain non-empty text, output, and complete strings.",
+        "Repair your previous project plan. Return ONLY valid JSON with a title and 1 to 8 sequential steps, proportional to the request (one step is valid for a small task). Every step must contain non-empty text, output, and complete strings.",
         "Preserve the exact customer request, constraints, quantities, budget, platform, location, and deadline. Avoid generic filler. Each step must describe work AL OMDA will perform and a clear deliverable.",
         "Required schema: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
         "Original customer request: " + request,
@@ -531,7 +531,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
             role: "user",
             content: [
               "Create a concise, accurate project plan. Return ONLY valid JSON with this exact shape: " + '{"title":"...","steps":[{"text":"...","output":"...","complete":"..."}]}',
-              "Create 3 to 8 sequential steps, each with one concrete result and an objective completion check. Preserve every explicit requirement, quantity, budget, platform, location, deadline, language, and exclusion.",
+              "Create 1 to 8 sequential steps, proportional to the request (one step is valid for a small task), each with one concrete result and an objective completion check. Preserve every explicit requirement, quantity, budget, platform, location, deadline, language, and exclusion.",
               "Do not add generic filler, duplicate work, or unnecessary files. Create downloadable files only if explicitly requested. Each step describes work AL OMDA will perform.",
               "Original request: " + request,
               "Relevant same-project context: " + context,

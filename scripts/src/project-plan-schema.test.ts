@@ -4,7 +4,7 @@ import test from "node:test";
 
 
 const setupUrl = new URL("../../supabase/setup.sql", import.meta.url);
-const migrationUrl = new URL("../../supabase/migrations/20261116173613_allow_eight_project_plan_steps.sql", import.meta.url);
+const migrationUrl = new URL("../../supabase/migrations/20261122142500_allow_concise_project_plans.sql", import.meta.url);
 const sequenceMigrationUrl = new URL("../../supabase/migrations/20261116174738_revoke_all_public_sequence_defaults.sql", import.meta.url);
 const anonMigrationUrl = new URL("../../supabase/migrations/20261116183805_revoke_anon_task_creation.sql", import.meta.url);
 const openapiUrl = new URL("../../lib/api-spec/openapi.yaml", import.meta.url);
@@ -12,7 +12,7 @@ const generatedApiUrl = new URL("../../lib/api-zod/src/generated/api.ts", import
 const workspaceRouteUrl = new URL("../../artifacts/api-server/src/routes/workspace.ts", import.meta.url);
 const taskValidationUrl = new URL("../../artifacts/api-server/src/lib/task-plan-validation.ts", import.meta.url);
 
-test("setup SQL and the deployment migration agree on the 3-to-8 step range", async () => {
+test("setup SQL and the deployment migration agree on the 1-to-8 step range", async () => {
   const [setup, migration, sequenceMigration, openapi, api] = await Promise.all([
     readFile(setupUrl, "utf8"),
     readFile(migrationUrl, "utf8"),
@@ -21,7 +21,7 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
     readFile(generatedApiUrl, "utf8"),
   ]);
   for (const [label, sql] of [["setup.sql", setup], ["migration", migration]] as const) {
-    assert.match(sql, /jsonb_array_length\(p_steps\)\s+not between 3 and 8/i, label + " must allow 3 to 8 project steps");
+    assert.match(sql, /jsonb_array_length\(p_steps\)\s+not between 1 and 8/i, label + " must allow 1 to 8 project steps");
     assert.doesNotMatch(sql, /jsonb_array_length\(p_steps\)\s+not between 3 and 5/i, label + " must not retain the old five-step ceiling");
     assert.match(sql, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from public/i, label + " must revoke public execution");
     assert.match(sql, /grant execute on function public\.create_ai_task_with_quota[\s\S]*?to authenticated/i, label + " must grant only the authenticated application role");
@@ -30,7 +30,8 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   assert.match(sequenceMigration, /revoke all on sequences from anon, authenticated, service_role/i);
   const earlierSequenceMigration = await readFile(new URL("../../supabase/migrations/20261116174710_restrict_public_sequence_defaults.sql", import.meta.url), "utf8");
   assert.match(earlierSequenceMigration, /preserved because this migration was already applied/i);
-  assert.match(migration, /reserved compatibility parameter/i);
+  assert.match(migration, /pg_get_functiondef/);
+  assert.match(migration, /Unrecognized project-plan guard/);
   const taskCreateSpec = openapi.slice(openapi.indexOf("    TaskCreate:"), openapi.indexOf("    TaskUpdateStep:"));
   const planStepSpec = openapi.slice(openapi.indexOf("    PlanStep:"), openapi.indexOf("    TaskCreateStep:"));
   assert.match(planStepSpec, /text:[\s\S]*maxLength: 2000/, "legacy task responses must tolerate longer step text");
@@ -42,7 +43,7 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   assert.match(api, /createTaskResponseOneStepsItemTextMax = 2000/);
   assert.match(api, /updateTaskResponseOneStepsItemTextMax = 2000/);
   const taskUpdateSpec = openapi.slice(openapi.indexOf("    TaskUpdate:"), openapi.indexOf("    Task:"));
-  assert.match(taskCreateSpec, /minItems: 3[\s\S]*maxItems: 8/);
+  assert.match(taskCreateSpec, /minItems: 1[\s\S]*maxItems: 8/);
   assert.match(taskUpdateSpec, /minItems: 1[\s\S]*maxItems: 20/);
   const taskResponseSpec = openapi.slice(openapi.indexOf("    Task:"), openapi.indexOf("    Workspace:"));
   assert.ok(taskResponseSpec.includes('$ref: "#/components/schemas/PlanStep"'), "task responses must retain legacy-compatible optional step guidance");
@@ -53,7 +54,7 @@ test("setup SQL and the deployment migration agree on the 3-to-8 step range", as
   assert.match(anonMigration, /revoke all on function public\.create_ai_task_with_quota[\s\S]*?from anon/i);
 });
 
-test("generated API validators enforce complete 3-to-8-step task plans", async () => {
+test("generated API validators enforce complete 1-to-8-step task plans", async () => {
   const [api, route, validation] = await Promise.all([readFile(generatedApiUrl, "utf8"), readFile(workspaceRouteUrl, "utf8"), readFile(taskValidationUrl, "utf8")]);
   const createStart = api.indexOf("export const CreateTaskBody = zod.object({");
   const createEnd = api.indexOf("export const createTaskResponseOneTitleMax", createStart);
@@ -68,7 +69,7 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     if (label === "create") {
       assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)/, "new step output must be required and non-empty");
       assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)/, "new step completion criteria must be required and non-empty");
-      assert.match(schema, /\)\)\.min\(3\)\.max\([^)]*StepsMax\)/, "new tasks must enforce 3 to 8 steps");
+      assert.match(schema, /\)\)\.min\(1\)\.max\([^)]*StepsMax\)/, "new tasks must enforce 1 to 8 steps");
     } else {
       assert.match(schema, /"output": zod\.string\(\)\.min\(1\)\.max\(1200\)\.optional\(\)/, "legacy output guidance must be optional on update");
       assert.match(schema, /"complete": zod\.string\(\)\.min\(1\)\.max\(1200\)\.optional\(\)/, "legacy completion guidance must be optional on update");
@@ -93,7 +94,7 @@ test("generated API validators enforce complete 3-to-8-step task plans", async (
     assert.ok(!responseSteps.includes("})).max(20)"), name + " must not impose a new maximum count on persisted response data");
   }
   assert.ok(route.includes("isValidNewTaskPlan(plan)"));
-  assert.ok(validation.includes("plan.steps.length >= 3"));
+  assert.ok(validation.includes("plan.steps.length >= 1"));
   assert.ok(validation.includes("plan.steps.length <= 8"));
   assert.ok(validation.includes("new Set(plan.steps.map((step) => step.id)).size === plan.steps.length"));
   assert.ok(validation.includes('!("result" in step) && !("executedAt" in step) && !("executionStatus" in step) && !("executionError" in step)'));

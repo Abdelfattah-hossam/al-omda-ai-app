@@ -1201,7 +1201,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         const details = Array.isArray(data.details) ? data.details.filter((item:unknown)=>typeof item==='string').join(' · ') : '';
         throw new Error([data.error || (isAr ? 'تعذر إنشاء الخطة.' : 'Could not generate the plan.'),details].filter(Boolean).join(' — '));
       }
-      if (!data.title || !Array.isArray(data.steps) || data.steps.length < 3) throw new Error(isAr ? 'الخطة التي وصلت غير مكتملة.' : 'The returned plan is incomplete.');
+      if (!data.title || !Array.isArray(data.steps) || data.steps.length < 1) throw new Error(isAr ? 'الخطة التي وصلت غير مكتملة.' : 'The returned plan is incomplete.');
       const steps:PlanStep[] = data.steps.map((step:{text:string;output?:string;complete?:string}) => ({ id:crypto.randomUUID(), text:step.text, output:step.output || '', complete:step.complete || '', state:'pending' as StepState }));
       const task:Task = { id:'task-'+Date.now(), title:String(data.title).slice(0,120), request:cleanRequest, specialty:selectedSpecialty, steps, status:'review', createdAt:new Date().toISOString() };
       const remote = await apiCreateTask({ title:task.title, request:task.request, specialty:task.specialty, steps:task.steps, status:task.status }, apiRequestOptions);

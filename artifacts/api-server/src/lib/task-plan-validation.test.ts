@@ -17,13 +17,15 @@ const makePlan = (count = 3) => ({
   steps: Array.from({ length: count }, (_, index) => makeStep(index + 1)),
 });
 
-test("accepts complete new task plans with 3 to 8 pending steps", () => {
+test("accepts complete new task plans with 1 to 8 pending steps", () => {
+  assert.equal(isValidNewTaskPlan(makePlan(1)), true);
+  assert.equal(isValidNewTaskPlan(makePlan(2)), true);
   assert.equal(isValidNewTaskPlan(makePlan(3)), true);
   assert.equal(isValidNewTaskPlan(makePlan(8)), true);
 });
 
 test("rejects plans outside the supported step count", () => {
-  assert.equal(isValidNewTaskPlan(makePlan(2)), false);
+  assert.equal(isValidNewTaskPlan(makePlan(0)), false);
   assert.equal(isValidNewTaskPlan(makePlan(9)), false);
 });
 

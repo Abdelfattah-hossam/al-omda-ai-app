@@ -453,7 +453,7 @@ components:
           $ref: "#/components/schemas/Specialty"
         steps:
           type: array
-          minItems: 3
+          minItems: 1
           maxItems: 8
           items:
             $ref: "#/components/schemas/TaskCreateStep"
