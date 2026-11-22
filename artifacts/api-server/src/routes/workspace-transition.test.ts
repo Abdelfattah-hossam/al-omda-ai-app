@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { UpdateTaskBody } from "@workspace/api-zod";
 import { isAllowedTaskTransition } from "./workspace.js";
 
 type Step = {
@@ -163,6 +164,44 @@ test("editing a revision history entry is still rejected", () => {
     ],
   };
   assert.equal(isAllowedTaskTransition(previous, next), false);
+});
+
+test("the PUT body schema preserves revision history so re-approving a revised step survives parsing", () => {
+  // Live bug 2026-11-22 (task fd0991ed): UpdateTaskBody omitted revisionHistory, so
+  // the PUT handler's zod parse silently stripped it from the client echo and the
+  // transition guard saw the audit trail being deleted, rejecting every re-approval
+  // of a revised step with 409. Route the body through the real schema, not a
+  // hand-built object, so the parse layer is covered.
+  const previous = previousTask();
+  const revisedStep: Step = {
+    id: "step-2",
+    text: "Draft the outline",
+    state: "pending",
+    comments: [{ id: "c1", author: "user", text: "طلب مراجعة وإعادة تنفيذ: shorter please", createdAt: "2026-11-22T09:00:00.000+00:00" }],
+    revisionHistory: [{ result: "Old outline", executedAt: "2026-11-22T08:22:56.921+00:00", revisionRequestedAt: "2026-11-22T09:00:00.000+00:00", note: "طلب مراجعة وإعادة تنفيذ: shorter please" }],
+  };
+  previous.steps = [previous.steps[0], revisedStep, previous.steps[2]];
+  const clientBody = {
+    title: previous.title,
+    request: previous.request,
+    specialty: previous.specialty,
+    status: "review" as const,
+    steps: [
+      { ...previous.steps[0], executedAt: "2026-11-22T07:11:17.722Z" },
+      {
+        ...revisedStep,
+        state: "approved" as const,
+        comments: [{ ...revisedStep.comments![0], createdAt: "2026-11-22T09:00:00.000Z" }],
+        revisionHistory: [{ ...revisedStep.revisionHistory![0], executedAt: "2026-11-22T08:22:56.921Z", revisionRequestedAt: "2026-11-22T09:00:00.000Z" }],
+      },
+      previous.steps[2],
+    ],
+  };
+  const parsed = UpdateTaskBody.safeParse(clientBody);
+  assert.equal(parsed.success, true);
+  if (!parsed.success) return;
+  assert.equal(parsed.data.steps[1].revisionHistory?.length, 1);
+  assert.equal(isAllowedTaskTransition(previous, parsed.data), true);
 });
 
 test("stored null execution fields equal omitted client fields", () => {
