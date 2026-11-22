@@ -359,7 +359,16 @@ router.post("/tasks/artifact", requireSameOrigin, async (req, res): Promise<void
   if (session === false) return;
   if (!session) { res.status(401).json({ error: "Sign in to save a chat artifact in Task History." }); return; }
 
-  const filename = sanitizeWorkspaceAssetName(typeof req.body?.filename === "string" ? req.body.filename : "");
+  // The recorded filename is display-only (the storage copy gets its own
+  // ASCII-safe key at upload), so keep the user's original characters and strip
+  // only control bytes and path segments.
+  const filename = (typeof req.body?.filename === "string" ? req.body.filename : "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    ?.trim()
+    .slice(0, 120) ?? "";
   const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType.trim().toLowerCase() : "";
   const size = Number(req.body?.size);
   const title = (typeof req.body?.title === "string" ? req.body.title : filename.replace(/\.[^.]+$/, "")).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 160);
