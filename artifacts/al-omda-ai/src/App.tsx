@@ -1,5 +1,6 @@
 import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import NetworkStatus from './NetworkStatus';
 import { Link, useLocation } from 'wouter';
 // Route-level code splitting: the chat page (with its markdown renderer) and
 // the secondary workspaces only download when their route is visited.
@@ -2991,6 +2992,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   const dismissGuestNudge = () => { setGuestNudge('dismissed'); try { window.localStorage.setItem('omda-guest-nudge-dismissed', '1'); } catch { /* storage unavailable */ } };
 
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+    <NetworkStatus ar={isAr}/>
     {mediaStudioOpen&&<Suspense fallback={null}><MediaStudio ar={isAr} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
     <aside className="sidebar">
       <div className="sidebar-brand-area">

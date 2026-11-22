@@ -1,10 +1,20 @@
-const CACHE_NAME = 'al-omda-shell-v2';
+const CACHE_NAME = 'al-omda-shell-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then(async (cache) => {
+        await cache.addAll(APP_SHELL);
+        // Cache every built route while online. Initial page assets may have
+        // loaded before this worker first gained control of the page.
+        const response = await fetch('/asset-manifest.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Offline asset manifest is unavailable');
+        const manifest = await response.json();
+        const paths = Object.values(manifest).flatMap((entry) => [entry.file, ...(entry.css || []), ...(entry.assets || [])]);
+        const assets = [...new Set(paths.filter((path) => typeof path === 'string' && path.startsWith('assets/')).map((path) => '/' + path))];
+        await cache.addAll(assets);
+      })
       .then(() => self.skipWaiting())
   );
 });
