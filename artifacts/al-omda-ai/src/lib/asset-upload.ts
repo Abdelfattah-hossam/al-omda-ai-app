@@ -5,6 +5,7 @@ export const WORKSPACE_UPLOAD_MIME_BY_EXTENSION: Record<string, string> = {
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   txt: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json",
   html: "text/html", xml: "application/xml", zip: "application/zip",
+  mp4: "video/mp4", webm: "video/webm",
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif",
 };
 

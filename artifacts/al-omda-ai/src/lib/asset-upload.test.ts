@@ -26,3 +26,9 @@ test("keeps specific artifact MIME types and rejects unknown generic artifacts",
   assert.equal(resolveArtifactUploadMime("data.bin", "application/octet-stream"), null);
   assert.equal(resolveArtifactUploadMime("notes.txt", ""), "text/plain");
 });
+
+test('video upload keeps the real extension and MIME rather than renaming formats',()=>{
+ assert.equal(resolveWorkspaceUploadMime('clip.mp4','video/mp4;codecs=avc1'),'video/mp4');
+ assert.equal(resolveWorkspaceUploadMime('clip.webm','video/webm'),'video/webm');
+ assert.equal(resolveWorkspaceUploadMime('clip.mp4','video/webm'),null);
+});

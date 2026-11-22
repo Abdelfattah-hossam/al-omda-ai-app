@@ -710,7 +710,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
       const blob = await fetchAssetBlob(asset.path);
       const mime = asset.mimeType ?? blob.type;
       const extension = asset.name.split('.').pop()?.toLowerCase() ?? '';
-      if (mime.startsWith('image/') || mime === 'application/pdf' || mime === 'text/html') {
+      if (mime.startsWith('image/') || mime.startsWith('video/') || mime === 'application/pdf' || mime === 'text/html') {
         // Sandboxed at render time so uploaded HTML never runs with app access.
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml') {
@@ -742,7 +742,9 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
       </div>
       {previewPath === asset.path && <div style={{marginTop:8}}>
         {previewLoading && <p className="section-meta">{isAr ? 'جارٍ تحميل المعاينة…' : 'Loading preview…'}</p>}
-        {!previewLoading && previewUrl && (asset.mimeType?.startsWith('image/')
+        {!previewLoading && previewUrl && (asset.mimeType?.startsWith('video/')
+          ? <video src={previewUrl} controls playsInline style={{width:'100%',maxHeight:'60vh'}}/>
+          : asset.mimeType?.startsWith('image/')
           ? <img src={previewUrl} alt={asset.name} style={{maxWidth:'100%',maxHeight:'60vh',objectFit:'contain',borderRadius:10}}/>
           : <iframe title={asset.name} src={previewUrl} sandbox="" style={{display:'block',width:'100%',height:'min(60vh,560px)',minHeight:280,border:'1px solid #2a3038',borderRadius:10,background:'#fff'}}/>)}
         {!previewLoading && !previewUrl && previewBlocks && <div dir="auto" style={{display:'grid',gap:10,maxHeight:420,overflow:'auto',background:'#10141b',border:'1px solid #2a3038',borderRadius:10,padding:12,fontSize:13,lineHeight:1.8}}>

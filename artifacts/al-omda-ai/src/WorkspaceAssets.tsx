@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { previewOfficeDocument, previewPowerPointSlideImages } from "./lib/office-preview";
+import { downloadBlobAsFile } from "./lib/download-file";
 import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 type Language = "ar" | "en";
@@ -93,14 +94,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         throw new Error(typeof data?.error === "string" ? data.error : (ar ? "تعذر تنزيل الملف." : "Could not download file."));
       }
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = asset.name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      await downloadBlobAsFile(blob,asset.name);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (ar ? "تعذر تنزيل الملف." : "Could not download file."));
     }
@@ -118,7 +112,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       if (!response.ok) throw new Error(ar ? "تعذر تحميل المعاينة." : "Could not load preview.");
       const blob = await response.blob();
       const mime = asset.mimeType ?? blob.type;
-      if (mime.startsWith("image/") || mime === "application/pdf" || mime === "text/html") {
+      if (mime.startsWith("image/") || mime.startsWith("video/") || mime === "application/pdf" || mime === "text/html") {
         // Render HTML in a sandboxed iframe so users can inspect the page visually
         // without granting the uploaded document same-origin access or script execution.
         setPreviewUrl(URL.createObjectURL(blob));
@@ -171,7 +165,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       <label className="button button-primary" style={{cursor:uploading?"wait":"pointer",opacity:uploading ? 0.65 : 1}}>
         {uploading ? <LoaderCircle size={14} className="animate-spin"/> : <Upload size={14}/>}
         {uploading ? (ar ? "جارٍ الرفع..." : "Uploading...") : (ar ? "رفع ملفات" : "Upload files")}
-        <input type="file" multiple hidden disabled={uploading} accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json,.html,.xml,.zip,.png,.jpg,.jpeg,.webp,.gif" onChange={uploadFiles}/>
+        <input type="file" multiple hidden disabled={uploading} accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json,.html,.xml,.zip,.png,.jpg,.jpeg,.webp,.gif,.mp4,.webm" onChange={uploadFiles}/>
       </label>
     </div>
     <section className="panel panel-pad">
@@ -191,7 +185,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       :assets.length===0?<div className="plan-empty" style={{padding:28}}><span className="empty-mark"><FolderOpen size={21}/></span><h3>{ar?"لا توجد ملفات في هذا المكان":"No files here yet"}</h3><p>{ar?"ارفع مستنداتك أو جداولك أو عروضك أو صورك لتظهر هنا.":"Upload documents, spreadsheets, presentations, or images to see them here."}</p></div>
       :<div className="history-layout">{assets.map(asset=><article className="panel history-item" key={asset.path}>
         <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.name.split(".").pop()?.toUpperCase() || (ar ? "ملف" : "File")}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
-        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
+        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("video/") || asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
   </div>
@@ -199,7 +193,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       <section role="dialog" aria-modal="true" aria-label={ar?"معاينة الملف":"File preview"} className="panel" style={{width:"min(900px,100%)",maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",padding:14}}>
         <header className="section-head"><strong>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
         <div style={{minHeight:180,overflow:"auto",display:"grid",placeItems:"center",padding:8}}>
-          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewSlides.length>0?<div style={{overflow:"auto",maxHeight:"72vh",display:"grid",gap:10}}>{previewSlides.map((src,i)=><img key={i} src={src} alt={(ar?"شريحة ":"Slide ")+(i+1)} style={{width:"100%",borderRadius:8,border:"1px solid var(--border,#343a44)"}}/>)}</div>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
+          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewSlides.length>0?<div style={{overflow:"auto",maxHeight:"72vh",display:"grid",gap:10}}>{previewSlides.map((src,i)=><img key={i} src={src} alt={(ar?"شريحة ":"Slide ")+(i+1)} style={{width:"100%",borderRadius:8,border:"1px solid var(--border,#343a44)"}}/>)}</div>:previewUrl&&previewAsset.mimeType?.startsWith("video/")?<video src={previewUrl} controls playsInline style={{width:"100%",maxHeight:"72vh"}}/>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
         </div>
       </section>
     </div>}
