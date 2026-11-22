@@ -715,18 +715,29 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       ...documentData.paragraphs.map((paragraph) => makeParagraph(paragraph)),
     ];
     if (documentData.columns.length > 0) {
+      // Usable width: A4 11906 twips minus the 800 left/right margins. A pct width of 100 is only 2% in OOXML (50ths of a percent), which is why the old table rendered narrow; use an explicit dxa width with fixed equal columns instead.
+      const tableWidth = 10306;
+      const columnWidth = Math.floor(tableWidth / documentData.columns.length);
+      const cellBorder = { style: "single", size: 4, color: "D8CBAA" };
+      const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
       const header = new TableRow({ tableHeader: true, children: documentData.columns.map((column) => new TableCell({
-        shading: { fill: "E8EDF5" }, verticalAlign: "center", children: [makeParagraph(column, true)],
+        width: { size: columnWidth, type: WidthType.DXA },
+        shading: { type: "clear", color: "auto", fill: "F1E5C3" }, verticalAlign: "center", borders: cellBorders, children: [makeParagraph(column, true)],
       })) });
       const bodyRows = documentData.rows.map((row) => new TableRow({
         children: documentData.columns.map((_, index) => new TableCell({
-          verticalAlign: "center", children: [makeParagraph(String(row[index] ?? ""))],
+          width: { size: columnWidth, type: WidthType.DXA },
+          verticalAlign: "center", borders: cellBorders, children: [makeParagraph(String(row[index] ?? ""))],
         })),
       }));
       children.push(new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        columnWidths: documentData.columns.map(() => Math.floor(9000 / documentData.columns.length)),
-        borders, rows: [header, ...bodyRows],
+        width: { size: tableWidth, type: WidthType.DXA },
+        layout: "fixed",
+        visuallyRightToLeft: rtl,
+        margins: { top: 70, bottom: 70, left: 110, right: 110 },
+        columnWidths: documentData.columns.map(() => columnWidth),
+        borders: { ...borders, top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder, insideHorizontal: cellBorder, insideVertical: cellBorder },
+        rows: [header, ...bodyRows],
       }));
     }
     const header = new Header({ children: [new Paragraph({
