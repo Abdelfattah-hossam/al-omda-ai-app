@@ -693,6 +693,10 @@ function App() {
   useEffect(() => { setPageHelpOpen(false); }, [location]);
   const [workspaceLoadError, setWorkspaceLoadError] = useState('');
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  // In-app confirmation for project deletion: the native window.confirm it
+  // replaces blocked the page main thread and froze remote/headless sessions
+  // (see docs/known-issues.md). The two-step confirm is kept deliberately.
+  const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState<string | null>(null);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
   const [avatarWorking, setAvatarWorking] = useState(false);
@@ -2198,8 +2202,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const handleDeleteTask = async (task:Task) => {
-    const confirmed = window.confirm(isAr ? `هل أنت متأكد من حذف مشروع «${task.title}»؟ لا يمكن التراجع عن الحذف.` : `Delete “${task.title}”? This cannot be undone.`);
-    if (!confirmed) return;
     setDeletingTaskId(task.id);
     setWorkspaceError('');
     try {
@@ -2211,8 +2213,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (path===`/history/${task.id}`) setLocation(focusedHref('/history','history-list'));
     } catch(error) {
       window.alert(error instanceof Error ? error.message : (isAr ? 'تعذر حذف المشروع.' : 'Could not delete project.'));
-    } finally { setDeletingTaskId(null); }
+    } finally { setDeletingTaskId(null); setPendingDeleteTaskId(null); }
   };
+  const pendingDeleteTask = pendingDeleteTaskId ? (saved.tasks.find(item=>item.id===pendingDeleteTaskId) ?? null) : null;
 
   const escapeReportHtml = (value:unknown) => String(value ?? '').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char] ?? char));
   const buildTaskReportHtml = (task:Task) => {
@@ -2416,7 +2419,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <Link href={focusedHref(`/history/${task.id}`,"task-plan")} className="history-item-open">
           <span className="task-icon">{taskIcon(task.specialty)}</span><span className="task-main"><strong>{task.title}</strong><small>{label(task.specialty)} · {dateLabel(task.createdAt,language)} · {count(task)}/{task.steps.length} {t('approvedCount')}{task.demo?` · ${t('demoTask')}`:''}</small></span>{statusBadge(task.status)}<ArrowLeft size={15} className="muted"/>
         </Link>
-        <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>void handleDeleteTask(task)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
+        <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>setPendingDeleteTaskId(task.id)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
       </div>)}
       {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><History size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? (isAr?'جرّب كلمة بحث أخرى أو امسح البحث لعرض كل المهام.':'Try a different search, or clear it to see every task.') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
     </div>;
@@ -2775,6 +2778,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
       {pageHelpOpen && <section className="panel panel-pad" role="region" aria-label={isAr?"مساعدة الصفحة الحالية":"Current page help"} style={{margin:"12px 20px 0",display:"grid",gap:8}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><strong>{isAr?"كيف تستخدم هذه الصفحة؟":"How to use this page"}</strong><button type="button" className="icon-button" onClick={()=>setPageHelpOpen(false)} aria-label={isAr?"إغلاق المساعدة":"Close help"}><X size={15}/></button></div><p style={{margin:0,lineHeight:1.8,color:"var(--text-secondary)"}}>{getPageGuidance(path,isAr)}</p></section>}
       <div className="content-wrap"><Suspense fallback={<div className="panel panel-pad plan-empty" style={{margin:20}}><span className="section-meta">{isAr?'جارٍ تحميل الصفحة…':'Loading page…'}</span></div>}>{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</Suspense></div>
     </main>
+    {pendingDeleteTask&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&deletingTaskId===null)setPendingDeleteTaskId(null);}} style={{position:'fixed',inset:0,zIndex:110,display:'grid',placeItems:'center',padding:16,background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
+      <section role="dialog" aria-modal="true" aria-label={isAr?'تأكيد حذف المشروع':'Confirm project deletion'} className="panel" style={{width:'min(440px,100%)',padding:18,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
+        <h3 style={{margin:'0 0 8px'}}>{isAr?'حذف المشروع':'Delete project'}</h3>
+        <p style={{margin:'0 0 16px',lineHeight:1.8,color:'var(--text-secondary)'}}>{isAr?`هل أنت متأكد من حذف مشروع «${pendingDeleteTask.title}»؟ لا يمكن التراجع عن الحذف.`:`Delete “${pendingDeleteTask.title}”? This cannot be undone.`}</p>
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button type="button" className="button" onClick={()=>setPendingDeleteTaskId(null)} disabled={deletingTaskId!==null} data-testid="button-cancel-delete-task">{isAr?'إلغاء':'Cancel'}</button>
+          <button type="button" className="button button-danger" onClick={()=>void handleDeleteTask(pendingDeleteTask)} disabled={deletingTaskId!==null} data-testid="button-confirm-delete-task"><Trash2 size={14}/>{deletingTaskId===pendingDeleteTask.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'تأكيد الحذف':'Confirm deletion')}</button>
+        </div>
+      </section>
+    </div>}
     {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
       <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
         <div className="history-search-control" style={{marginBottom:12}}><Search size={17}/><input autoFocus className="field" value={commandQuery} onChange={(event)=>setCommandQuery(event.target.value)} placeholder={isAr?'ابحث في الأقسام والمشاريع والملفات والمخرجات...':'Search sections, projects, files, and outputs...'} aria-label={isAr?'ابحث في كل شيء':'Search all available workspace data'} data-testid="input-command-palette"/></div>

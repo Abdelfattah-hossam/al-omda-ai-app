@@ -13,9 +13,11 @@ Found during Phase 4 work. Each entry: symptom, root cause, impact, proposed fix
   in other destructive/action flows.
 - **Impact on real users:** low — a human on a phone/desktop answers the
   dialog normally. Impact on automation and embedding: high (full freeze).
-- **Proposed fix (not yet applied):** replace `window.confirm`/`window.alert`
-  with the app's own in-page confirmation dialog (consistent with the rest
-  of the RTL UI, styleable, non-blocking for embedders). Deleting a project
-  is a destructive action, so keep an explicit two-step confirm; do not
-  remove the confirmation, only its native-modal implementation.
+- **Fix applied (2026-11-22):** the project delete button now opens an
+  in-app RTL confirmation dialog (same overlay/dialog pattern as the global
+  search modal); confirming runs the DELETE, cancelling closes it. The
+  two-step confirm is kept. `window.alert` remains for error notices
+  elsewhere (non-destructive, human-readable only); the stop-task and
+  HTTPFlow-clear flows still use native confirm and are candidates for the
+  same treatment later.
 - **Found during:** Phase 4 slice 1 live verification cleanup, 2026-11-22.
