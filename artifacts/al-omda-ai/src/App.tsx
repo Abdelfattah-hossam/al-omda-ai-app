@@ -2886,6 +2886,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/',
     isAr ? 'العودة للرئيسية' : 'Back to dashboard',
   );
+  if (authLoading && path !== '/ai' && path !== '/ai/usage' && !detailMatch) page = <section className="panel panel-pad" role="status" style={{marginTop:24}}><h2 className="section-title">{isAr?'جارٍ تحميل مساحة العمل…':'Loading workspace…'}</h2><p className="page-subtitle">{isAr?'نتحقق من الحساب قبل عرض بياناتك.':'Checking your account before showing workspace data.'}</p></section>;
   const pageTitleKey = path === '/ai/usage' ? 'aiChat' : path === '/ai' ? 'aiChat' : path === '/agents' ? 'agents' : path === '/workbench' ? 'workbench' : path.startsWith('/history') ? 'history' : path === '/profile' ? 'profile' : 'overview';
   const platformTitle = platformStatusPages[path as keyof typeof platformStatusPages];
   const professionalTitle = professionalSpecialtyPages[path as keyof typeof professionalSpecialtyPages];
