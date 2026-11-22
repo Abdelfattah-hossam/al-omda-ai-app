@@ -84,6 +84,10 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/sales-csv.test.ts
       - name: Test Excel formula cell preservation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-formula-cell.test.ts
+      - name: Test Excel recalculation metadata in exported bytes
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/office-workbook-recalculation.test.ts
+      - name: Test stage-result Markdown rendering
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/task-result-markdown.test.ts
       - name: Test workspace asset upload MIME normalization
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/asset-upload.test.ts
       - name: Test iOS-aware file download helper
