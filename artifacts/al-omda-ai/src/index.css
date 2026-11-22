@@ -9607,3 +9607,10 @@ body:has(.ai-chat-page){
     overflow:hidden; clip-path:inset(50%); white-space:nowrap;
   }
 }
+
+/* Readable structured stage output, without affecting the chat layout. */
+.task-result-markdown{font-size:14px;line-height:1.9;overflow-wrap:anywhere;color:var(--text-primary,#e5e7eb)}
+.task-result-markdown li+li{margin-top:14px}
+.task-result-markdown pre{margin:0;max-width:100%;overflow:auto;padding:12px;border-radius:8px;background:#10151b;direction:ltr;text-align:left;white-space:pre}
+.task-result-markdown code{font-size:12px}
+.task-result-markdown a{color:var(--gold,#c9a55c);text-decoration:underline}
