@@ -164,3 +164,27 @@ test("editing a revision history entry is still rejected", () => {
   };
   assert.equal(isAllowedTaskTransition(previous, next), false);
 });
+
+test("stored null execution fields equal omitted client fields", () => {
+  // Live bug 2026-11-22 (second follow-up): the execute RPC stores
+  // executionError/executionStatus as JSONB null on some paths while the
+  // sanitized GET drops them, so the client echo omitted them and the raw
+  // compare rejected the next approval with 409.
+  const previous = previousTask();
+  (previous.steps[0] as Record<string, unknown>).executionError = null;
+  (previous.steps[2] as Record<string, unknown>).executedAt = null;
+  const next = {
+    title: previous.title,
+    request: previous.request,
+    specialty: previous.specialty,
+    status: "review" as const,
+    steps: previous.steps.map((step, index) =>
+      index === 0
+        ? (({ executionError, ...rest }) => rest)(step as Step & { executionError?: string | null })
+        : index === 1
+          ? { ...step, state: "approved" as const }
+          : (({ executedAt, ...rest }) => rest)(step as Step & { executedAt?: string | null }),
+    ),
+  };
+  assert.equal(isAllowedTaskTransition(previous, next), true);
+});

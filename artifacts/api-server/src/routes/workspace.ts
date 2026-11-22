@@ -100,8 +100,14 @@ function mapTask(row: DbTask) {
  * "2026-11-22T07:11:17.722+00:00" while the workspace GET response normalizes the same
  * value to "2026-11-22T07:11:17.722Z". A client echoing the normalized value must not
  * count as a modification of the step. Unparseable values compare verbatim. */
-function sameInstant(left: string | undefined, right: string | undefined): boolean {
+function absent<T>(value: T | null | undefined): value is null | undefined {
+  return value === null || value === undefined;
+}
+
+function sameInstant(left: string | null | undefined, right: string | null | undefined): boolean {
   if (left === right) return true;
+  // Postgres JSONB round-trips missing values as null; clients omit them.
+  if (absent(left) && absent(right)) return true;
   if (!left || !right) return false;
   const leftTime = Date.parse(left);
   const rightTime = Date.parse(right);
@@ -110,7 +116,7 @@ function sameInstant(left: string | undefined, right: string | undefined): boole
 }
 
 function sameStep(left: DbTask["steps"][number], right: DbTask["steps"][number]): boolean {
-  return left.id === right.id && left.text === right.text && left.output === right.output && left.complete === right.complete && left.state === right.state && left.result === right.result && sameInstant(left.executedAt, right.executedAt) && left.executionStatus === right.executionStatus && left.executionError === right.executionError;
+  return left.id === right.id && left.text === right.text && left.output === right.output && left.complete === right.complete && left.state === right.state && (left.result ?? undefined) === (right.result ?? undefined) && sameInstant(left.executedAt, right.executedAt) && (left.executionStatus ?? undefined) === (right.executionStatus ?? undefined) && (left.executionError ?? undefined) === (right.executionError ?? undefined);
 }
 
 export function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): boolean {
@@ -133,7 +139,7 @@ export function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): bool
       isRevisionHistoryUnchanged(step.revisionHistory, next.steps[index].revisionHistory);
   });
   if (!commentsOnly) return false;
-  if (previous.steps.some((step, index) => step.result !== next.steps[index]?.result || !sameInstant(step.executedAt, next.steps[index]?.executedAt) || step.executionStatus !== next.steps[index]?.executionStatus || step.executionError !== next.steps[index]?.executionError)) return false;
+  if (previous.steps.some((step, index) => (step.result ?? undefined) !== (next.steps[index]?.result ?? undefined) || !sameInstant(step.executedAt, next.steps[index]?.executedAt) || (step.executionStatus ?? undefined) !== (next.steps[index]?.executionStatus ?? undefined) || (step.executionError ?? undefined) !== (next.steps[index]?.executionError ?? undefined))) return false;
 
   const changedIndices = previous.steps
     .map((step, index) => (sameStep(step, next.steps[index]) ? -1 : index))
