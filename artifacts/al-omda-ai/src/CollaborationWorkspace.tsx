@@ -29,6 +29,9 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
   const ar = language === "ar";
   const t = copy[language];
   const labels = t[kind];
+  const statusLabels = kind === "event"
+    ? (ar ? { open: "مجدول", in_progress: "جارٍ الآن", resolved: "انتهى" } : { open: "Scheduled", in_progress: "In progress", resolved: "Completed" })
+    : { open: t.open, in_progress: t.in_progress, resolved: t.resolved };
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [title, setTitle] = useState("");
@@ -135,7 +138,7 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
           <div className="field-group"><label className="form-label" htmlFor="collab-company">{labels.company}</label><input id="collab-company" className="field" maxLength={200} value={company} onChange={event => setCompany(event.target.value)} /></div>
         </div>}
         {kind === "event" && <div className="field-group"><label className="form-label" htmlFor="collab-date">{t.date}</label><input id="collab-date" className="field" type="datetime-local" required value={dueAt} onChange={event => setDueAt(event.target.value)} /></div>}
-        {kind !== "contact" && <div className="field-group"><label className="form-label" htmlFor="collab-status">{t.status}</label><select id="collab-status" className="field" value={status} onChange={event => setStatus(event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
+        {kind !== "contact" && <div className="field-group"><label className="form-label" htmlFor="collab-status">{t.status}</label><select id="collab-status" className="field" value={status} onChange={event => setStatus(event.target.value as RecordItem["status"])}><option value="open">{statusLabels.open}</option><option value="in_progress">{statusLabels.in_progress}</option><option value="resolved">{statusLabels.resolved}</option></select></div>}
         <div className="field-group"><label className="form-label" htmlFor="collab-description">{labels.description}</label><textarea id="collab-description" className="field" rows={3} maxLength={4000} value={description} onChange={event => setDescription(event.target.value)} /></div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="button button-primary" type="submit" disabled={saving || !title.trim()}>{editingId ? <Edit3 size={14}/> : <Plus size={14}/>}{saving ? t.loading : editingId ? labels.update : labels.add}</button><button className="button button-quiet" type="button" onClick={reset}>{t.cancel}</button><button className="button button-quiet" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={14}/>{t.refresh}</button></div>
       </form>
@@ -148,7 +151,7 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
           {kind === "contact" && <p className="section-meta">{[record.metadata.email, record.metadata.phone, record.metadata.company].filter(value => typeof value === "string" && value).join(" · ")}</p>}
           {record.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{record.description}</p>}
           {record.dueAt && <p className="section-meta">{new Date(record.dueAt).toLocaleString(ar ? "ar" : "en")}</p>}
-          {kind !== "contact" && <div className="field-group" style={{ maxWidth: 240, marginTop: 8 }}><label className="form-label" htmlFor={`collab-status-${record.id}`}>{t.status}</label><select id={`collab-status-${record.id}`} className="field" value={record.status} onChange={event => void updateStatus(record, event.target.value as RecordItem["status"])}><option value="open">{t.open}</option><option value="in_progress">{t.in_progress}</option><option value="resolved">{t.resolved}</option></select></div>}
+          {kind !== "contact" && <div className="field-group" style={{ maxWidth: 240, marginTop: 8 }}><label className="form-label" htmlFor={`collab-status-${record.id}`}>{t.status}</label><select id={`collab-status-${record.id}`} className="field" value={record.status} onChange={event => void updateStatus(record, event.target.value as RecordItem["status"])}><option value="open">{statusLabels.open}</option><option value="in_progress">{statusLabels.in_progress}</option><option value="resolved">{statusLabels.resolved}</option></select></div>}
           <small className="muted">{new Date(record.createdAt).toLocaleString(ar ? "ar" : "en")}</small>
         </article>)}
       </div>}

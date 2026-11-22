@@ -9614,3 +9614,14 @@ body:has(.ai-chat-page){
 .task-result-markdown pre{margin:0;max-width:100%;overflow:auto;padding:12px;border-radius:8px;background:#10151b;direction:ltr;text-align:left;white-space:pre}
 .task-result-markdown code{font-size:12px}
 .task-result-markdown a{color:var(--gold,#c9a55c);text-decoration:underline}
+
+/* Keep full section names readable in the narrow mobile menu. */
+@media (max-width:650px) {
+  .app-shell .curtain-launcher-item strong {
+    white-space:normal;
+    overflow-wrap:anywhere;
+    text-overflow:clip;
+    line-height:1.55;
+    min-height:2.4em;
+  }
+}
