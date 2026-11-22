@@ -8,6 +8,7 @@ import {
   supabaseFetch,
 } from "../lib/supabase";
 import {
+  parseWorkspaceAssetOffset,
   getWorkspaceAssetMimeType,
   isValidProjectFolderId,
   isValidWorkspaceAssetPath,
@@ -249,11 +250,13 @@ router.get("/storage/assets", async (req, res): Promise<void> => {
   if (!session) { res.status(401).json({ error: "Sign in to list workspace files." }); return; }
   const folder = requestedAssetFolder(req);
   if (!folder) { res.status(400).json({ error: "Project ID is invalid." }); return; }
+  const offset = parseWorkspaceAssetOffset(req.query.offset);
+  if (offset === null) { res.status(400).json({ error: "File offset is invalid." }); return; }
   try {
     const response = await supabaseFetch(`/storage/v1/object/list/${WORKSPACE_ASSET_BUCKET}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prefix: `${session.user.id}/${folder}/`, limit: 100, offset: 0, sortBy: { column: "created_at", order: "desc" } }),
+      body: JSON.stringify({ prefix: `${session.user.id}/${folder}/`, limit: 100, offset, sortBy: { column: "created_at", order: "desc" } }),
     }, session.accessToken);
     const objects = await readSupabaseJson<Array<{ name?: string; id?: string; created_at?: string; updated_at?: string; metadata?: { size?: number; mimetype?: string } }>>(response);
     res.json(objects.filter((item) => typeof item.name === "string").map((item) => ({

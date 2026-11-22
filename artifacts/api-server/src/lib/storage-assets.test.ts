@@ -1,11 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  parseWorkspaceAssetOffset,
   getWorkspaceAssetMimeType,
   isValidProjectFolderId,
   isValidWorkspaceAssetPath,
   sanitizeWorkspaceAssetName,
 } from "./storage-assets.js";
+
+test('validates storage listing offsets without changing the default',()=>{
+  assert.equal(parseWorkspaceAssetOffset(undefined),0);
+  assert.equal(parseWorkspaceAssetOffset('100'),100);
+  assert.equal(parseWorkspaceAssetOffset('0'),0);
+  for(const invalid of ['-1','1.5','1e2','','Infinity','9007199254740992','2147483648',[],{},100])assert.equal(parseWorkspaceAssetOffset(invalid),null);
+});
 
 test("sanitizes filenames and strips path traversal components", () => {
   assert.equal(sanitizeWorkspaceAssetName("../../my report.pdf"), "my-report.pdf");

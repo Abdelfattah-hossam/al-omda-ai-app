@@ -9,6 +9,7 @@ type Language = "ar" | "en";
 type ProjectOption = { id: string; title: string };
 type WorkspaceAsset = { path: string; name: string; createdAt: string | null; size: number | null; mimeType: string | null };
 
+import {loadAssetPages} from './lib/asset-pages';
 import { resolveWorkspaceUploadMime } from "./lib/asset-upload";
 
 function fileSize(bytes: number | null, ar: boolean): string {
@@ -45,16 +46,23 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     const load = async () => {
       setLoading(true);
+      setAssets([]);
       setError("");
       try {
         const params = new URLSearchParams();
         if (projectId) params.set("projectId", projectId);
-        const response = await fetch("/api/storage/assets" + (params.toString() ? "?" + params.toString() : ""), { credentials: "same-origin" });
-        const data = await response.json().catch(() => []);
-        if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : (ar ? "تعذر تحميل الملفات." : "Could not load files."));
-        if (!cancelled) setAssets(Array.isArray(data) ? data : []);
+        const data = await loadAssetPages<WorkspaceAsset>(async(offset,signal)=>{
+          params.set('offset',String(offset));
+          const response = await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin',signal});
+          const page = await response.json();
+          if(!response.ok)throw new Error(typeof page?.error==='string'?page.error:(ar?'تعذر تحميل الملفات.':'Could not load files.'));
+          if(!Array.isArray(page))throw new Error(ar?'استجابة الملفات غير صالحة.':'Invalid file list.');
+          return page;
+        },controller.signal);
+        if (!cancelled) setAssets(data);
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : (ar ? "تعذر تحميل الملفات." : "Could not load files."));
       } finally {
@@ -62,7 +70,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       }
     };
     void load();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [projectId, refreshVersion, ar]);
 
   const uploadFiles = async (event: ChangeEvent<HTMLInputElement>) => {

@@ -80,6 +80,13 @@ export function isValidWorkspaceAssetPath(path: string, userId: string): boolean
     parts.every((part) => part.length > 0 && part !== "." && part !== ".." && !/[\u0000-\u001f\u007f]/.test(part));
 }
 
+export function parseWorkspaceAssetOffset(value: unknown): number | null {
+  if (value === undefined) return 0;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+  const offset = Number(value);
+  return Number.isSafeInteger(offset) && offset >= 0 && offset <= 2147483647 ? offset : null;
+}
+
 export function isValidProjectFolderId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

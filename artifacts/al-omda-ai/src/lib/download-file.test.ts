@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { detectIosDevice, downloadBlobAsFile } from "./download-file";
 import {serializeCsv} from './csv-export';
+import {loadAssetPages} from './asset-pages';
 import {loadSearchFolders} from './workspace-search';
 import {readFileSync} from 'node:fs';
 
@@ -81,6 +82,21 @@ test('workspace exports and search use the same named-file delivery path',()=>{
  assert.ok(!app.includes('link.download ='));
  assert.ok(!app.includes(".join('\\\\r\\\\n')"));
  assert.ok(!app.includes("tasks.filter(task=>!task.demo).slice(0,15)"));
+});
+
+test('asset pagination reads every page, including an empty final page',async()=>{
+ for(const count of [0,99,100,200,201]){
+  const fixture=Array.from({length:count},(_,i)=>i);const offsets:number[]=[];
+  const found=await loadAssetPages(async offset=>{offsets.push(offset);return fixture.slice(offset,offset+100);});
+  assert.deepEqual(found,fixture);assert.equal(offsets.length,Math.floor(count/100)+1);
+ }
+});
+
+test('asset pagination cancels before scheduling more reads and rejects partial failures',async()=>{
+ const controller=new AbortController();let calls=0;
+ await assert.rejects(loadAssetPages(async()=>{calls++;controller.abort();return Array.from({length:100},(_,i)=>i);},controller.signal),{name:'AbortError'});
+ assert.equal(calls,1);
+ await assert.rejects(loadAssetPages(async offset=>{if(offset===100)throw new Error('Synthetic later-page failure');return Array.from({length:100},(_,i)=>i);}),/later-page failure/);
 });
 
 test('global file lookup visits older folders with at most four active requests',async()=>{

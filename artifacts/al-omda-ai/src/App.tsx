@@ -17,6 +17,7 @@ import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewB
 import type { PdfBlock } from './lib/table-pdf';
 import { downloadBlobAsFile } from './lib/download-file';
 import {serializeCsv} from './lib/csv-export';
+import {loadAssetPages} from './lib/asset-pages';
 import {loadSearchFolders} from './lib/workspace-search';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
@@ -1042,10 +1043,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
         ...projectIds.map(projectId=>({projectId,url:'/api/storage/assets?projectId='+encodeURIComponent(projectId)})),
       ];
       const responses = await loadSearchFolders<CommandAsset>(folders,async folder => {
-        const response = await fetch(folder.url,{credentials:'same-origin',signal:controller.signal});
-        if(!response.ok)return [];
-        const data = await response.json().catch(()=>[]);
-        return Array.isArray(data) ? data.map((item:any)=>({...item,projectId:folder.projectId})) : [];
+        const data = await loadAssetPages<CommandAsset>(async (offset,signal)=>{
+          const response = await fetch(folder.url+(folder.url.includes('?')?'&':'?')+'offset='+offset,{credentials:'same-origin',signal});
+          if(!response.ok)throw new Error('Could not list files.');
+          const page = await response.json();
+          if(!Array.isArray(page))throw new Error('Invalid file list.');
+          return page;
+        },controller.signal);
+        return data.map(item=>({...item,projectId:folder.projectId}));
       },()=>!cancelled);
       if(cancelled)return;
       const unique = new Map<string,CommandAsset>();
