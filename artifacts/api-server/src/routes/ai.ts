@@ -12,7 +12,7 @@ import { parseProjectPlan } from "../lib/project-plan.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
-import { runWithProviderFailover } from "../lib/provider-failover.js";
+import { callWithRateLimitRetry, isRateLimitError, parseRetryAfterSeconds, runWithProviderFailover } from "../lib/provider-failover.js";
 import { ASSET_READ_MAX_BYTES, extractFetchableUrl, runRequestReadTools, type RequestToolDeps, type WorkspaceAssetRef } from "../lib/execution-tools.js";
 import { isValidWorkspaceAssetPath, WORKSPACE_ASSET_BUCKET } from "../lib/storage-assets.js";
 import {
@@ -199,14 +199,32 @@ function chooseProviders(messages: ChatMessage[]) {
   return getHostedProviderOrder(purpose, coding, hasImage).filter((provider) => configured[provider as keyof typeof configured]);
 }
 
+// Best-effort per-provider cooldown: after a rate-limit failure, skip that
+// provider for its own wait window on later requests in this isolate.
+const providerCooldownUntil = new Map<string, number>();
+function filterCoolingProviders(providers: string[]): string[] {
+  const now = Date.now();
+  const usable = providers.filter((provider) => (providerCooldownUntil.get(provider) ?? 0) <= now);
+  return usable.length ? usable : providers;
+}
+function noteProviderFailure(candidate: string, reason: string) {
+  if (isRateLimitError(reason)) {
+    const wait = parseRetryAfterSeconds(reason);
+    providerCooldownUntil.set(candidate, Date.now() + Math.min(wait ?? 60, 300) * 1000);
+  }
+  console.warn("[AI provider failure]", candidate, reason);
+}
+
 async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) throw new Error("Groq is not configured.");
 
-  // Use a fast text model for normal chat and a vision-capable model for image turns.
-  // These are free-tier eligible Groq API models; no paid route is ever requested.
+  // Every entry is a free-tier Groq model with its own per-model rate bucket
+  // (verified 2026-11-22 on console.groq.com/docs/rate-limits: each carries
+  // 30 RPM / 8K TPM / 1K RPD), so a 429 on one model moves to the next bucket
+  // instead of failing the whole provider. No paid route is ever requested.
   const hasImage = messages.some((message) => Boolean(message.image));
-  const model = hasImage ? "qwen/qwen3.8-27b" : "openai/gpt-oss-20b";
+  const models = hasImage ? ["qwen/qwen3.8-27b"] : ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"];
   const groqMessages = [
     { role: "system", content: systemPrompt(isCodingRequest(messages), memory) },
     ...messages.map((message) => message.image ? {
@@ -218,26 +236,35 @@ async function callGroq(messages: ChatMessage[], memory = ""): Promise<{ text: s
     } : { role: message.role, content: message.content }),
   ];
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    signal: AbortSignal.timeout(12000),
-    headers: { authorization: "Bearer " + key, "content-type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: groqMessages,
-      max_completion_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800,
-      temperature: requestTemperature(messages),
-    }),
-  });
-  const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) {
-    const detail = providerErrorMessage(payload);
-    throw new Error("Groq " + response.status + (detail ? ": " + detail : " request failed"));
+  const failures: string[] = [];
+  for (const model of models) {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: AbortSignal.timeout(12000),
+      headers: { authorization: "Bearer " + key, "content-type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: groqMessages,
+        max_completion_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 8192 : 1800,
+        temperature: requestTemperature(messages),
+      }),
+    });
+    const payload = await response.json().catch(() => null) as any;
+    if (!response.ok) {
+      const detail = providerErrorMessage(payload);
+      failures.push(model + " " + response.status + (detail ? ": " + detail : " request failed"));
+      if (response.status === 401 || response.status === 403) break;
+      continue;
+    }
+    const raw = payload?.choices?.[0]?.message?.content;
+    const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
+    if (!text) {
+      failures.push(model + " empty response");
+      continue;
+    }
+    return { text, model: payload?.model || model };
   }
-  const raw = payload?.choices?.[0]?.message?.content;
-  const text = (typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "").trim();
-  if (!text) throw new Error("Groq returned an empty response.");
-  return { text, model: payload?.model || model };
+  throw new Error("Groq " + failures.slice(0, 3).join(" | ").slice(0, 700));
 }
 
 async function callGemini(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
@@ -452,19 +479,23 @@ async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" 
   // OpenRouter already tries several free specialist models internally; retrying its entire
   // rotation would repeat the same failed models and waste the user's time.
   if (provider === "openrouter") return callOpenRouter(messages, memory, excludeModel);
-  if (provider === "groq") return callGroq(messages, memory);
-  if (provider === "cloudflare") return callCloudflare(messages, memory);
+  const invoke = provider === "groq" ? () => callGroq(messages, memory)
+    : provider === "cloudflare" ? () => callCloudflare(messages, memory)
+    : () => callGemini(messages, memory);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await callGemini(messages, memory);
+      // Honor the provider's own retry-after window (Groq per-minute TPM
+      // resets) with one patient retry before failing over.
+      return await callWithRateLimitRetry(invoke);
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
-      // A 429 quota/rate-limit response is not helped by immediately repeating
-      // the same request; let the next configured provider handle the fallback.
+      // Rate-limit failures already waited (or carry a long window): fail over.
+      if (isRateLimitError(message) || attempt === 1) throw error;
+      // A transient 5xx deserves one quick retry before the next provider.
       const temporary = /\b(?:500|502|503|504)\b|empty response|temporarily unavailable|high demand|timeout/i.test(message);
-      if (!temporary || attempt === 1) throw error;
+      if (!temporary) throw error;
       await new Promise((resolve) => setTimeout(resolve, 900));
     }
   }
@@ -493,7 +524,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
       "Current project request: " + request,
       "Earlier conversation context (use only details that clearly belong to this same project; ignore unrelated topics): " + context
     ].join("\n") }];
-    const providers = chooseProviders(messages);
+    const providers = filterCoolingProviders(chooseProviders(messages));
     if (providers.length === 0) { res.status(503).json({ error: "No AI provider is configured." }); return; }
     const usage = await currentUsage(session.accessToken);
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
@@ -501,7 +532,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const planOutcome = await runWithProviderFailover(
       providers,
       (candidate) => callProviderWithRetry(candidate, messages, memory),
-      (candidate, reason) => console.warn("[AI project plan provider failure]", candidate, reason),
+      noteProviderFailure,
     );
     const failures = planOutcome.failures;
     let answer = planOutcome.answer;
@@ -612,7 +643,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       res.status(409).json({ error: "Approve this step and all earlier steps before execution." }); return;
     }
     if (step.result) { res.status(409).json({ error: "This step already has a saved result." }); return; }
-    const providers = chooseProviders([{ role: "user", content: step.text }]);
+    const providers = filterCoolingProviders(chooseProviders([{ role: "user", content: step.text }]));
     if (!providers.length) { res.status(503).json({ error: "No AI provider is configured." }); return; }
     const usage = await currentUsage(session.accessToken);
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
@@ -636,6 +667,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const wordTaskSevenColumnTable = wordStep && isSevenColumnTableRequest(wordTaskMessages);
     const wordTaskTableOnly = wordStep && isTableOnlyRequest(wordTaskMessages);
     const wordTaskTableRequested = wordStep && (wordTaskSevenColumnTable || isWordTableRequest(customerRequest));
+    // Keep prompts under the tightest free-tier per-model TPM bucket (8K
+    // tokens/min): cap each earlier stage's contribution and the total size.
+    const priorOutputs = task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "").slice(0, 1500)).join("\n").slice(0, 6000);
     const prompt = excelStep ? [
       "You are AL OMDA. Generate the actual Excel workbook content for this approved task. Do not provide instructions or Markdown.",
       "Return ONLY valid JSON: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["",""]],"formulas":{}}]}',
@@ -646,7 +680,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Use ONLY information explicitly supplied in the original customer request or approved earlier step outputs. Never invent or guess customer names, company names, products, SKUs, quantities, prices, dates, addresses, suppliers, inventory, or sales. Do not create plausible-looking sample records. If the customer asks for a blank template, keep all data cells blank. If a populated workbook requires missing real-world data, leave those cells blank and clearly label the missing inputs in a dedicated Notes/Required data area; do not make up values. Preserve exact approved columns and supplied sample products only.",
       "Project: " + task.title,
       "Original request: " + task.request,
-      "Prior approved step outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000),
+      "Prior approved step outputs: " + priorOutputs,
       "Approved step: " + step.text,
       "Expected deliverable: " + (step.output || "A complete .xlsx workbook"),
       "Acceptance check: " + (step.complete || "Create a real Excel workbook with the approved columns and formatting."),
@@ -660,7 +694,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Use the original customer request and previously approved steps. Include complete, understandable content, not instructions for the user. Never add unrelated sample files, duplicate deliverables, or invented data.",
       "Original request: " + customerRequest,
       "Approved step: " + step.text,
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+      "Prior approved outputs: " + priorOutputs
     ].join("\n") : codeProjectStep ? [
       "You are AL OMDA, generating a complete multi-file software project, not a Word document and not a single HTML mockup. Return ONLY valid JSON with exactly title, framework, entryPoint, and files.",
       "The files array must contain 3–60 objects, each exactly {path, content}. Include package.json with a safe build script, README.md with setup/build/test instructions, index.html, and a real application entry point such as src/main.tsx plus src/App.tsx. Add all required styles, components, routes, and configuration files so the project forms one coherent application.",
@@ -672,7 +706,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Approved step: " + step.text,
       "Expected output: " + (step.output || ""),
       "Acceptance criteria: " + (step.complete || ""),
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+      "Prior approved outputs: " + priorOutputs
     ] : htmlAppStep ? [
       "You are AL OMDA, building the requested small browser-based app as a deliverable. Return ONLY one complete, self-contained HTML document, with inline CSS and JavaScript. No Markdown fences and no instructions.",
       "The app must work immediately when opened as an .html file and inside a sandboxed preview iframe. Do not use external libraries, network requests, or external assets. Build a genuinely interactive, responsive app with working navigation, forms, search, filters, and local state wherever the request needs them; do not return a static mockup or a generic landing page.",
@@ -681,7 +715,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "For a desktop clock, build a working live clock that updates every second, with clear readable time and useful controls if appropriate. Do not return a tutorial or PowerShell instructions.",
       "Original customer request: " + customerRequest,
       "Approved step: " + step.text,
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+      "Prior approved outputs: " + priorOutputs
     ].join("\n") : powerPointStep ? [
       "You are AL OMDA. Create the actual PowerPoint presentation content for this approved project. Return ONLY valid JSON, no Markdown.",
       'Schema: {"title":"Presentation title","slides":[{"title":"Slide title","bullets":["point"],"notes":"optional speaker notes"}]}',
@@ -691,7 +725,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       "Approved step: " + step.text,
       "Expected deliverable: " + (step.output || "A complete editable .pptx presentation"),
       "Acceptance check: " + (step.complete || "Every requested slide is present and ready to present."),
-      "Prior approved outputs: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+      "Prior approved outputs: " + priorOutputs
     ].join("\n") : [
       "You are AL OMDA, the executor for this approved project step. Produce the actual deliverable now, not a plan telling the user how to do it.",
       "Respond in " + (language === "ar" ? "Arabic" : "English") + ".",
@@ -764,19 +798,24 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       }
       return "\n\nThe " + run.tool + " tool could not retrieve " + target + " (" + run.detail + "). Say so honestly and complete this step without that source.";
     }).join("");
-    const feedback = task.steps.slice(0, stepIndex + 1).flatMap((item, index) => (item.comments ?? []).map((note) => "[Stage " + (index + 1) + ": " + item.text + "][" + note.author + "] " + note.text)).join("\n");
+    const feedback = task.steps.slice(0, stepIndex + 1).flatMap((item, index) => (item.comments ?? []).map((note) => "[Stage " + (index + 1) + ": " + item.text + "][" + note.author + "] " + note.text)).join("\n").slice(0, 3000);
     const messages: ChatMessage[] = [{ role: "user", content: prompt + toolEvidence + (feedback ? "\n\nUser feedback and required corrections for this and earlier stages (must be followed; do not skip or silently disregard):\n" + feedback + "\nIf an earlier deliverable is contradicted or cannot safely be relied on, clearly flag the dependency and request correction rather than proceeding as if it were valid." : "") }];
     const stepOutcome = await runWithProviderFailover(
       providers,
       (candidate) => callProviderWithRetry(candidate, messages, memory),
-      (candidate, reason) => console.warn("[AI step execution provider failure]", candidate, reason),
+      noteProviderFailure,
     );
     const failures = stepOutcome.failures;
     let answer = stepOutcome.answer;
     let provider = stepOutcome.provider;
     if (!answer) {
-      await saveExecutionFailure(failures.slice(0, 2).join("; ") || "AI provider unavailable.");
-      res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
+      const retryAfterSeconds = failures.map((reason) => parseRetryAfterSeconds(reason)).filter((value): value is number => value !== null).sort((a, b) => a - b)[0] ?? null;
+      const unavailableMessage = language === "ar"
+        ? "التنفيذ متوقف مؤقتًا بسبب الضغط على خدمات الذكاء الاصطناعي المجانية. " + (retryAfterSeconds ? "أعد المحاولة بعد نحو " + retryAfterSeconds + " ثانية." : "أعد المحاولة بعد قليل.") + " لم يتغير شيء في مشروعك."
+        : "Execution is temporarily paused because the free AI services are busy. " + (retryAfterSeconds ? "Retry in about " + retryAfterSeconds + " seconds." : "Retry in a moment.") + " Nothing in your project changed.";
+      console.warn("[AI step execution failed]", failures.slice(0, 3).join(" | "));
+      await saveExecutionFailure(unavailableMessage);
+      res.status(503).json({ error: unavailableMessage, retryAfterSeconds });
       return;
     }
     let validatedWordDocument = wordStep ? parseWordDocument(answer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested) : null;
@@ -814,7 +853,7 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
                 "Do not return an explanation, Markdown fence, code, or unrelated files.",
                 "Original request: " + customerRequest,
                 "Approved step: " + step.text,
-                "Previously approved work: " + task.steps.slice(0, stepIndex).map((item) => item.text + ": " + (item.result || "")).join("\n").slice(0, 10000)
+                "Previously approved work: " + priorOutputs
               ].filter(Boolean).join("\n")
             }], memory);
             const alternateDocument = parseWordDocument(alternateAnswer.text, wordTaskSevenColumnTable, wordTaskTableOnly, wordTaskTableRequested);
@@ -1146,7 +1185,7 @@ router.post("/ai/respond-to-step-comment", requireSameOrigin, async (req, res): 
       "Owner's new comment: " + comment.text,
       "Return a useful direct response in no more than 1800 characters."
     ].join("\n");
-    const providers = chooseProviders([{ role: "user", content: prompt }]);
+    const providers = filterCoolingProviders(chooseProviders([{ role: "user", content: prompt }]));
     if (!providers.length) { res.status(503).json({ error: "No AI provider is configured. Your comment is saved; AL OMDA could not generate a reply." }); return; }
     const replyOutcome = await runWithProviderFailover(
       providers,
@@ -1414,7 +1453,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
     ] : modelConversation;
-    const providers = chooseProviders(modelMessages);
+    const providers = filterCoolingProviders(chooseProviders(modelMessages));
     if (providers.length === 0) {
       res.status(503).json({ error: "No AI provider is connected yet. Configure one or more free provider credentials on the Worker." });
       return;

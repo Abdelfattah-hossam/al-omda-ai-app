@@ -1733,7 +1733,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {step.executionStatus === 'failed' && <div className="notice-bar notice-error" role="alert" style={{marginTop:10}}>{isAr?'فشل التنفيذ: ':'Execution failed: '}{step.executionError || (isAr?'حاول التنفيذ مرة أخرى.':'Try executing this step again.')}</div>}
              {step.state === 'approved' && !step.result && <div className="step-actions" style={{marginTop:10}}>
                <button type="button" data-testid={`execute-step-${step.id}`} className="button button-primary button-small" disabled={projectRunning || !!executingStepId || !!approvingStepId || !authUser} onClick={()=>void executeStep(task,step)}>
-                 <Sparkles size={13}/>{executingStepId===step.id?(isAr?'جارٍ التنفيذ...':'Executing...'):(isAr?'نفّذ الخطوة بالذكاء الاصطناعي':'Execute step with AI')}
+                 <Sparkles size={13}/>{executingStepId===step.id?(isAr?'جارٍ التنفيذ...':'Executing...'):step.executionStatus==='failed'?(isAr?'إعادة المحاولة':'Retry'):(isAr?'نفّذ الخطوة بالذكاء الاصطناعي':'Execute step with AI')}
                </button>
              </div>}
              {executionError && <div className="notice-bar notice-error" role="alert" style={{marginTop:9}}>{executionError}</div>}
