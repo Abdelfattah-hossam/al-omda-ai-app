@@ -9007,14 +9007,16 @@ body:has(.ai-chat-page){
   .ai-chat-header-icon,.ai-chat-menu-trigger,.ai-chat-model-button,
   .ai-chat-top-menu button,.ai-chat-model-menu button,.ai-chat-more-menu button,
   .ai-chat-settings-actions button,.ai-chat-live-modal button,
-  .ai-chat-canvas-modal button,.ai-conversation-open,.icon-button,
-  .button-quiet,.button-primary,.ai-chat-auth-gate-button
+  .ai-chat-canvas-modal button,.ai-conversation-open,.icon-button
 ) {
   border-color:rgba(224,181,101,.24)!important;
   color:#eee7da!important;
   box-shadow:none!important;
   text-shadow:none!important;
 }
+
+/* Primary and quiet chat buttons are governed by their dedicated gold rules
+   (dark text on gold gradient; gold text on dark) so labels stay readable. */
 
 .app-shell[data-chat-active="true"] .ai-chat-page :is(
   .ai-chat-new-button,.ai-chat-sidebar-close,.ai-chat-tool-list button:hover,
@@ -9538,3 +9540,15 @@ body:has(.ai-chat-page){
 
 .global-user-metric>small,.global-user-growth>small{font-size:10px;color:#8495a5}
 @media(max-width:700px){.global-user-metrics{grid-template-columns:1fr}}
+/* Chat message-area polish (visual only; scroll/composer behavior untouched). */
+.ai-chat-page .chat-message strong{color:#dcc288;letter-spacing:.14em;text-transform:uppercase;font-size:9px;margin-bottom:3px}
+.ai-chat-page .chat-message.user strong{color:#c9d6f5}
+.ai-chat-page .chat-message.assistant{border-inline-start:2px solid #c8a35f}
+
+/* Attachment action row: comfortable tap targets, even rhythm. */
+.ai-chat-page .artifact-actions{margin-top:4px}
+.ai-chat-page .artifact-actions .button{min-height:36px;font-size:11px;letter-spacing:.01em}
+@media(max-width:650px){
+  .ai-chat-page .artifact-actions{gap:7px}
+  .ai-chat-page .artifact-actions .button{min-height:38px;font-size:11.5px}
+}

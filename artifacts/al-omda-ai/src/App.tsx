@@ -610,7 +610,7 @@ function getPageGuidance(route: string, isAr: boolean): string {
 // Generated files saved under a task's storage folder (artifact fast-path
 // tasks register the produced file there). The task register must let the
 // owner preview and download the actual file, not just read its metadata.
-function TaskGeneratedFiles({ taskId, isAr }: { taskId: string; isAr: boolean }) {
+function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; taskRequest?: string; isAr: boolean }) {
   const [assets, setAssets] = useState<CommandAsset[] | null>(null);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -637,6 +637,11 @@ function TaskGeneratedFiles({ taskId, isAr }: { taskId: string; isAr: boolean })
 
   if (!assets || assets.length === 0) return null;
 
+  // Storage keys are ASCII-safe ids; the friendly name lives in the artifact
+  // task's request metadata. Use it only when it unambiguously maps (one file).
+  const artifactNameMatch = taskRequest?.match(/Generated artifact\s*-\s*([^(\n]+)\(/);
+  const displayName = (asset: CommandAsset) => (assets.length === 1 && artifactNameMatch ? artifactNameMatch[1].trim() : asset.name);
+
   const fetchAssetBlob = async (path: string) => {
     const response = await fetch('/api/storage/assets/download?path=' + encodeURIComponent(path), { credentials: 'same-origin' });
     if (!response.ok) throw new Error(isAr ? 'تعذر تحميل الملف.' : 'Could not load the file.');
@@ -646,7 +651,7 @@ function TaskGeneratedFiles({ taskId, isAr }: { taskId: string; isAr: boolean })
   const downloadAsset = async (asset: CommandAsset) => {
     setError('');
     try {
-      await downloadBlobAsFile(await fetchAssetBlob(asset.path), asset.name);
+      await downloadBlobAsFile(await fetchAssetBlob(asset.path), displayName(asset));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (isAr ? 'تعذر تنزيل الملف.' : 'Could not download the file.'));
     }
@@ -685,7 +690,7 @@ function TaskGeneratedFiles({ taskId, isAr }: { taskId: string; isAr: boolean })
     <div className="section-head"><h2 className="section-title">{isAr ? 'الملفات الناتجة' : 'Generated files'}</h2></div>
     {assets.map((asset) => <div key={asset.path} style={{marginBottom:10}}>
       <div className="setting-row">
-        <div><strong style={{overflowWrap:'anywhere'}}>{asset.name}</strong><small>{asset.size ? (Math.round(asset.size / 102.4) / 10) + ' KB' : ''}</small></div>
+        <div><strong style={{overflowWrap:'anywhere'}}>{displayName(asset)}</strong><small>{asset.size ? (Math.round(asset.size / 102.4) / 10) + ' KB' : ''}</small></div>
         <div style={{display:'flex',gap:8,flexShrink:0,flexWrap:'wrap'}}>
           <button type="button" className="button button-quiet button-small" onClick={()=>void togglePreview(asset)}>{previewPath === asset.path ? (isAr ? 'إغلاق المعاينة' : 'Close preview') : (isAr ? 'معاينة' : 'Preview')}</button>
           <button type="button" className="button button-secondary button-small" onClick={()=>void downloadAsset(asset)}>{isAr ? 'تحميل' : 'Download'}</button>
@@ -2630,7 +2635,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <div className="setting-row"><div><strong>{isAr?'حالة التنفيذ الفعلي':'Actual execution'}</strong><small>{isAr?`نجح ${successfulExecutions} · فشل ${failedExecutions} · متبقٍ ${unexecutedSteps}`:`${successfulExecutions} succeeded · ${failedExecutions} failed · ${unexecutedSteps} awaiting`}</small></div><span className={`status-chip ${failedExecutions>0?'stopped':successfulExecutions>0?'approved':'paused'}`}>{successfulExecutions+failedExecutions>0?(isAr?'مسجل':'Tracked'):(isAr?'لم يبدأ':'Not started')}</span></div>
             <div className="notice-bar" style={{marginTop:14}}><ShieldCheck size={15}/><span>{isAr?'السهم يعكس نتائج تشغيل خطوات الذكاء الاصطناعي المسجلة فقط، ولا يعني اجتياز اختبارات خارجية أو اكتمال المشروع بالكامل.':'The trend reflects recorded AI step runs only; it does not certify external tests or full project completion.'}</span></div>
           </section>
-          <TaskGeneratedFiles taskId={task.id} isAr={isAr}/>
+          <TaskGeneratedFiles taskId={task.id} taskRequest={task.request} isAr={isAr}/>
           <section className="panel panel-pad">
             <div className="section-head"><h2 className="section-title">{t('taskRequest')}</h2></div>
             <p style={{color:'#b7b7b1',fontSize:11,lineHeight:1.9,margin:'0 0 18px',overflowWrap:'anywhere'}}>{task.request}</p>
