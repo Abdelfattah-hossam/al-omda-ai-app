@@ -33,7 +33,7 @@ type DbTask = {
   id: string;
   title: string;
   request: string;
-  specialty: "business" | "development" | "design" | "marketing" | "research" | "assistant";
+  specialty: "business" | "development" | "design" | "marketing" | "research" | "assistant" | "content" | "social" | "education" | "finance";
   steps: Array<{ id: string; text: string; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string; comments?: Array<{id:string;author:"user"|"assistant"|"system";text:string;createdAt:string}>; revisionHistory?: Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; state: "pending" | "approved" | "rejected" }>;
   status: "review" | "paused" | "approved" | "stopped";
   created_at: string;
@@ -397,7 +397,7 @@ router.post("/tasks/artifact", requireSameOrigin, async (req, res): Promise<void
   const request = typeof req.body?.request === "string" ? req.body.request.trim() : "";
   const specialty = req.body?.specialty;
   const language = req.body?.language === "en" ? "en" : "ar";
-  const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant"];
+  const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant", "content", "social", "education", "finance"];
 
   if (!filename || getWorkspaceAssetMimeType(filename) !== mimeType ||
       !Number.isSafeInteger(size) || size < 1 || size > MAX_WORKSPACE_ASSET_BYTES ||

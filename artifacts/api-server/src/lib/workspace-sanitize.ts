@@ -5,7 +5,7 @@
  * schema accepts, and only rows whose identity cannot be recovered are dropped.
  */
 
-const SPECIALTIES = ["business", "development", "design", "marketing", "research", "assistant"] as const;
+const SPECIALTIES = ["business", "development", "design", "marketing", "research", "assistant", "content", "social", "education", "finance"] as const;
 const TASK_STATUSES = ["review", "paused", "approved", "stopped"] as const;
 const STEP_STATES = ["pending", "approved", "rejected"] as const;
 const COMMENT_AUTHORS = ["user", "assistant", "system"] as const;

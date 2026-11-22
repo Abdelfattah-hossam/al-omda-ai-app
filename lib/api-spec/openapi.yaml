@@ -434,7 +434,7 @@ components:
           required: [output, complete, state]
     Specialty:
       type: string
-      enum: [business, development, design, marketing, research, assistant]
+      enum: [business, development, design, marketing, research, assistant, content, social, education, finance]
     TaskStatus:
       type: string
       enum: [review, paused, approved, stopped]

@@ -111,6 +111,10 @@ export const Specialty = {
   marketing: 'marketing',
   research: 'research',
   assistant: 'assistant',
+  content: 'content',
+  social: 'social',
+  education: 'education',
+  finance: 'finance',
 } as const;
 
 export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];

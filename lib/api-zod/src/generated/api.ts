@@ -120,7 +120,7 @@ export const GetWorkspaceResponse = zod.object({
   "tasks": zod.array(zod.object({
   "title": zod.string().min(1).max(getWorkspaceResponseTasksItemOneTitleMax),
   "request": zod.string().min(1).max(getWorkspaceResponseTasksItemOneRequestMax),
-  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant']),
+  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance']),
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(getWorkspaceResponseTasksItemOneStepsItemIdMax),
   "text": zod.string().min(1).max(getWorkspaceResponseTasksItemOneStepsItemTextMax),
@@ -197,7 +197,7 @@ export const createTaskBodyStepsMax = 8;
 export const CreateTaskBody = zod.object({
   "title": zod.string().min(1).max(createTaskBodyTitleMax),
   "request": zod.string().min(1).max(createTaskBodyRequestMax),
-  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant']),
+  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance']),
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(createTaskBodyStepsItemIdMax),
   "text": zod.string().min(1).max(createTaskBodyStepsItemTextMax),
@@ -232,7 +232,7 @@ export const createTaskResponseOneStepsItemTextMax = 2000;
 export const CreateTaskResponse = zod.object({
   "title": zod.string().min(1).max(createTaskResponseOneTitleMax),
   "request": zod.string().min(1).max(createTaskResponseOneRequestMax),
-  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant']),
+  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance']),
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(createTaskResponseOneStepsItemIdMax),
   "text": zod.string().min(1).max(createTaskResponseOneStepsItemTextMax),
@@ -285,7 +285,7 @@ export const updateTaskBodyOneStepsMax = 20;
 export const UpdateTaskBody = zod.object({
   "title": zod.string().min(1).max(updateTaskBodyOneTitleMax),
   "request": zod.string().min(1).max(updateTaskBodyOneRequestMax),
-  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant']),
+  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance']),
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(updateTaskBodyOneStepsItemIdMax),
   "text": zod.string().min(1).max(updateTaskBodyOneStepsItemTextMax),
@@ -326,7 +326,7 @@ export const updateTaskResponseOneStepsItemTextMax = 2000;
 export const UpdateTaskResponse = zod.object({
   "title": zod.string().min(1).max(updateTaskResponseOneTitleMax),
   "request": zod.string().min(1).max(updateTaskResponseOneRequestMax),
-  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant']),
+  "specialty": zod.enum(['business', 'development', 'design', 'marketing', 'research', 'assistant', 'content', 'social', 'education', 'finance']),
   "steps": zod.array(zod.object({
   "id": zod.string().min(1).max(updateTaskResponseOneStepsItemIdMax),
   "text": zod.string().min(1).max(updateTaskResponseOneStepsItemTextMax),

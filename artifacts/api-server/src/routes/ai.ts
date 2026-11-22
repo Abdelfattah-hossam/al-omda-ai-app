@@ -526,7 +526,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const context = typeof req.body?.context === "string" ? req.body.context.trim().slice(0, 5000) : "";
     const specialty = req.body?.specialty;
     const language = req.body?.language === "en" ? "en" : "ar";
-    const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant"];
+    const allowedSpecialties = ["business", "development", "design", "marketing", "research", "assistant", "content", "social", "education", "finance"];
     if (!request || request.length > 5000 || !allowedSpecialties.includes(specialty)) { res.status(400).json({ error: "Provide a valid project request and specialty." }); return; }
     const messages: ChatMessage[] = [{ role: "user", content: [
       "Create a practical project plan for the user request. You are AL OMDA, the executor; the user is the project owner.",
