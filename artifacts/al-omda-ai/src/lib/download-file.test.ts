@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { detectIosDevice, downloadBlobAsFile } from "./download-file";
 import {serializeCsv} from './csv-export';
+import {loadSearchFolders} from './workspace-search';
 import {readFileSync} from 'node:fs';
 
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
@@ -79,4 +80,21 @@ test('workspace exports and search use the same named-file delivery path',()=>{
  assert.ok(!search.includes('createObjectURL'));
  assert.ok(!app.includes('link.download ='));
  assert.ok(!app.includes(".join('\\\\r\\\\n')"));
+ assert.ok(!app.includes("tasks.filter(task=>!task.demo).slice(0,15)"));
+});
+
+test('global file lookup visits older folders with at most four active requests',async()=>{
+ const folders=Array.from({length:24},(_,i)=>({url:'/folder/'+i,projectId:String(i)}));
+ let active=0,maxActive=0;
+ const found=await loadSearchFolders(folders,async folder=>{active++;maxActive=Math.max(maxActive,active);await new Promise(resolve=>setTimeout(resolve,2));active--;return [folder.projectId];});
+ assert.deepEqual(found,folders.map(x=>x.projectId));assert.equal(maxActive,4);assert.ok(found.includes('23'));
+});
+
+test('global file lookup isolates folder failures and stops scheduling after close',async()=>{
+ const folders=Array.from({length:8},(_,i)=>({url:'/folder/'+i,projectId:String(i)}));
+ const found=await loadSearchFolders(folders,async folder=>{if(folder.projectId==='3')throw new Error('Synthetic folder failure');return [folder.projectId];});
+ assert.deepEqual(found,['0','1','2','4','5','6','7']);
+ let keepGoing=true,requested=0;
+ await loadSearchFolders(folders,async()=>{requested++;keepGoing=false;return [];},()=>keepGoing);
+ assert.equal(requested,1);
 });

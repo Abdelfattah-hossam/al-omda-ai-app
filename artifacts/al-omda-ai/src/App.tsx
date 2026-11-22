@@ -17,6 +17,7 @@ import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewB
 import type { PdfBlock } from './lib/table-pdf';
 import { downloadBlobAsFile } from './lib/download-file';
 import {serializeCsv} from './lib/csv-export';
+import {loadSearchFolders} from './lib/workspace-search';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
 import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
@@ -770,6 +771,7 @@ function App() {
   const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
+  const [commandAssetsLoading,setCommandAssetsLoading]=useState(false);
   const [projectPage, setProjectPage] = useState(1);
   const [projectViewMode, setProjectViewMode] = useState<'grid'|'list'>('grid');
   const [projectCategoryFilter, setProjectCategoryFilter] = useState<'all'|Specialty>('all');
@@ -1028,31 +1030,30 @@ pnpm --filter @workspace/scripts agent:runtime`;
     document.documentElement.classList.add('dark');
   }, [language]);
   useEffect(() => {
-    if (!commandPaletteOpen) return;
-    if (!authUser) { setCommandAssets([]); return; }
-    setCommandAssets([]);
+    if (!commandPaletteOpen) {setCommandAssetsLoading(false);return;}
+    if (!authUser) { setCommandAssets([]);setCommandAssetsLoading(false); return; }
+    setCommandAssets([]);setCommandAssetsLoading(true);
     let cancelled = false;
+    const controller=new AbortController();
     const loadCommandAssets = async () => {
-      const projectIds = tasks.filter(task=>!task.demo).slice(0,15).map(task=>task.id);
+      const projectIds = tasks.filter(task=>!task.demo).map(task=>task.id);
       const folders: Array<{projectId:string|null;url:string}> = [
         {projectId:null,url:'/api/storage/assets'},
         ...projectIds.map(projectId=>({projectId,url:'/api/storage/assets?projectId='+encodeURIComponent(projectId)})),
       ];
-      const responses = await Promise.all(folders.map(async folder => {
-        try {
-          const response = await fetch(folder.url,{credentials:'same-origin'});
-          if(!response.ok)return [];
-          const data = await response.json().catch(()=>[]);
-          return Array.isArray(data) ? data.map((item:any)=>({...item,projectId:folder.projectId})) : [];
-        } catch { return []; }
-      }));
+      const responses = await loadSearchFolders<CommandAsset>(folders,async folder => {
+        const response = await fetch(folder.url,{credentials:'same-origin',signal:controller.signal});
+        if(!response.ok)return [];
+        const data = await response.json().catch(()=>[]);
+        return Array.isArray(data) ? data.map((item:any)=>({...item,projectId:folder.projectId})) : [];
+      },()=>!cancelled);
       if(cancelled)return;
       const unique = new Map<string,CommandAsset>();
-      for(const asset of responses.flat()) if(typeof asset.path==='string'&&typeof asset.name==='string') unique.set(asset.path,asset as CommandAsset);
-      setCommandAssets([...unique.values()]);
+      for(const asset of responses) if(typeof asset.path==='string'&&typeof asset.name==='string') unique.set(asset.path,asset as CommandAsset);
+      setCommandAssets([...unique.values()]);setCommandAssetsLoading(false);
     };
     void loadCommandAssets();
-    return ()=>{cancelled=true;};
+    return ()=>{cancelled=true;controller.abort();};
   }, [commandPaletteOpen, authUser?.id, tasks]);
 
   useEffect(() => {
@@ -3050,7 +3051,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
             <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
           </Link>)}
-          {commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+          {commandAssetsLoading&&<p role="status" className="section-meta">{isAr?'جارٍ البحث في ملفات مشروعاتك…':'Searching your project files…'}</p>}
+          {!commandAssetsLoading&&commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
         </div>
         <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
       </section>
