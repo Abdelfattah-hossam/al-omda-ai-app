@@ -144,3 +144,13 @@ export function parseSalesCsv(input: string, maxRows = 10000): SalesCsvParseResu
   });
   return { rows, errors, totalRows: dataRows.length };
 }
+
+/**
+ * Matches workspace asset names that hold sales CSVs. The storage upload
+ * route prefixes every object name with a UUID ("<uuid>-sales-x.csv"), so the
+ * original "sales-" prefix survives only after the first hyphen.
+ */
+export function isSalesCsvAssetName(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.endsWith(".csv") && (lower.startsWith("sales-") || lower.includes("-sales-"));
+}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
 import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
-import { parseSalesCsv, type SalesRow } from "./lib/sales-csv";
+import { isSalesCsvAssetName, parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
 type Language = "ar" | "en";
 type Mode = "overview" | "distribution";
@@ -45,7 +45,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingParse, setPendingParse] = useState<ParseState | null>(null);
 
-  const csvAssets = useMemo(() => assets.filter((asset) => asset.name.toLowerCase().startsWith("sales-") && asset.name.toLowerCase().endsWith(".csv") && (asset.mimeType === "text/csv" || asset.mimeType === null)), [assets]);
+  const csvAssets = useMemo(() => assets.filter((asset) => isSalesCsvAssetName(asset.name) && (asset.mimeType === "text/csv" || asset.mimeType === null)), [assets]);
   const currencies = useMemo(() => [...new Set(parse.rows.map((row) => row.currency))].sort(), [parse.rows]);
   const selectedRows = useMemo(() => parse.rows.filter((row) => row.currency === currency), [parse.rows, currency]);
   const summary = useMemo(() => {
