@@ -1,13 +1,16 @@
 export type SlideshowFrame = { src: string; caption: string };
 
-export function chooseVideoMime(supports: (type: string) => boolean): string | null {
-  return ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'].find(supports) ?? null;
+export function chooseVideoMime(supports: (type: string) => boolean, withAudio = false): string | null {
+  const candidates = withAudio
+    ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp8,opus', 'video/webm']
+    : ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
+  return candidates.find(supports) ?? null;
 }
 
 export async function createSlideshow(frames: SlideshowFrame[], seconds: number, audio: File | null, onProgress: (value: number) => void): Promise<Blob> {
   if (!frames.length || frames.length > 8) throw new Error('اختر من صورة واحدة إلى 8 صور.');
   if (typeof MediaRecorder === 'undefined') throw new Error('هذا المتصفح لا يدعم تسجيل الفيديو. استخدم متصفحًا أحدث.');
-  const mimeType = chooseVideoMime(type => MediaRecorder.isTypeSupported(type));
+  const mimeType = chooseVideoMime(type => MediaRecorder.isTypeSupported(type), Boolean(audio));
   if (!mimeType) throw new Error('لا توجد صيغة فيديو مدعومة في هذا المتصفح.');
   const images = await Promise.all(frames.map(frame => new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
