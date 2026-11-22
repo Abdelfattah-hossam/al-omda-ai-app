@@ -817,7 +817,27 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
       catch (error) { console.warn("[Excel task repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSpreadsheet = parseExcelWorkbook(answer.text);
       if (!validatedSpreadsheet) {
-        await saveExecutionFailure("Excel workbook failed structural validation after one repair attempt.");
+        // Try the other configured provider automatically before failing the step, mirroring the chat Excel flow.
+        const alternateProvider = providers.find((candidate) => candidate !== provider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [{ role: "user", content: [
+              "Create the final Excel workbook now. Return ONLY valid JSON with title and sheets. Every sheet needs a unique Excel-compatible name, 1 to 30 columns, 1 to 500 rows, rows matching the column count, and optional formulas keyed by cell address without a leading equals sign.",
+               EXCEL_DATA_INTEGRITY_RULES,
+              "Original request: " + customerRequest,
+              "Approved step: " + step.text
+            ].join("\n") }], memory);
+            const alternateWorkbook = parseExcelWorkbook(alternateAnswer.text);
+            if (alternateWorkbook) {
+              answer = alternateAnswer;
+              validatedSpreadsheet = alternateWorkbook;
+              provider = alternateProvider;
+            }
+          } catch (error) { console.warn("[Alternate Excel task provider failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
+      if (!validatedSpreadsheet) {
+        await saveExecutionFailure("Excel workbook failed structural validation after repair and an alternate provider attempt.");
         res.status(502).json({ error: "تعذر اعتماد ملف Excel بعد مراجعته. لم يتم خصم وحدات؛ أعد المحاولة." });
         return;
       }
@@ -1466,6 +1486,28 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       try { answer = await callProviderWithRetry(usedProvider as "gemini" | "openrouter" | "groq" | "cloudflare", repairRequest, userMemory); }
       catch (error) { console.warn("[Excel workbook repair failed]", error instanceof Error ? error.message : "Unknown error"); }
       validatedSpreadsheet = parseExcelWorkbook(answer.text);
+      if (!validatedSpreadsheet) {
+        // Try the other configured provider automatically before returning a failure to the user, mirroring the Word and PowerPoint flows.
+        const alternateProvider = providers.find((candidate) => candidate !== usedProvider);
+        if (alternateProvider) {
+          try {
+            const alternateAnswer = await callProviderWithRetry(alternateProvider as "gemini" | "openrouter" | "groq" | "cloudflare", [
+              { role: "user", content: [
+                "Create the final Excel workbook now. Return ONLY valid JSON with this schema: " + '{"title":"Workbook title","sheets":[{"name":"Summary","columns":["Item","Amount"],"rows":[["",""]],"formulas":{}}]}',
+                "Every sheet needs a unique Excel-compatible name, 1 to 30 columns, 1 to 500 rows, and rows matching the column count. Formulas are keyed by cell address such as C2 and omit the leading equals sign.",
+                 EXCEL_DATA_INTEGRITY_RULES,
+                "Original request: " + latestCustomerRequest
+              ].join("\n") }
+            ], userMemory);
+            const alternateWorkbook = parseExcelWorkbook(alternateAnswer.text);
+            if (alternateWorkbook) {
+              answer = alternateAnswer;
+              validatedSpreadsheet = alternateWorkbook;
+              usedProvider = alternateProvider;
+            }
+          } catch (error) { console.warn("[Alternate Excel provider failed]", error instanceof Error ? error.message : "Unknown error"); }
+        }
+      }
       if (!validatedSpreadsheet) {
         res.status(502).json({ error: "لم يتم اعتماد ملف Excel لأن مراجعته البنيوية فشلت. لم يتم خصم وحدات." });
         return;

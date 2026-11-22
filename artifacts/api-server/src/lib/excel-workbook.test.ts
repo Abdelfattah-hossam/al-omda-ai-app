@@ -36,8 +36,31 @@ test("rejects duplicate worksheet names", () => {
   assert.equal(parseExcelWorkbook(json(value)), null);
 });
 
-test("rejects mismatched row widths", () => {
-  const value = { title: "Bad", sheets: [{ name: "Data", columns: ["A", "B"], rows: [["only one"]] }] };
+test("pads short rows with blank cells instead of rejecting the workbook", () => {
+  const value = { title: "Repaired", sheets: [{ name: "Data", columns: ["A", "B", "C"], rows: [["only one"], []] }] };
+  const result = parseExcelWorkbook(json(value));
+  assert.deepEqual(result?.sheets?.[0].rows, [["only one", "", ""], ["", "", ""]]);
+});
+
+test("rejects rows wider than the column count", () => {
+  const value = { title: "Bad", sheets: [{ name: "Data", columns: ["A", "B"], rows: [["one", "two", "three"]] }] };
+  assert.equal(parseExcelWorkbook(json(value)), null);
+});
+
+test("accepts formulas that reference non-ASCII sheet names", () => {
+  const value = {
+    title: "مبيعات",
+    sheets: [
+      { name: "الملخص", columns: ["البند", "القيمة"], rows: [["إجمالي", ""]], formulas: { B2: "SUM('البيانات'!A1:A2)" } },
+      { name: "البيانات", columns: ["المبلغ"], rows: [[100], [200]] }
+    ]
+  };
+  const result = parseExcelWorkbook(json(value));
+  assert.equal(result?.sheets?.[0].formulas?.B2, "SUM('البيانات'!A1:A2)");
+});
+
+test("still rejects dangerous formulas with unicode characters nearby", () => {
+  const value = { title: "Bad", sheets: [{ name: "Data", columns: ["A"], rows: [["1"]], formulas: { A2: "WEBSERVICE('الرابط'!A1)" } }] };
   assert.equal(parseExcelWorkbook(json(value)), null);
 });
 
