@@ -1,10 +1,20 @@
 export type SlideshowFrame = { src: string; caption: string };
 
-export function chooseVideoMime(supports: (type: string) => boolean, withAudio = false): string | null {
-  const candidates = withAudio
+function videoMimeCandidates(withAudio:boolean):string[]{
+  return withAudio
     ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp8,opus', 'video/webm']
     : ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
-  return candidates.find(supports) ?? null;
+}
+export function chooseVideoMime(supports:(type:string)=>boolean,withAudio=false):string|null {
+  return videoMimeCandidates(withAudio).find(supports)??null;
+}
+export function createSupportedVideoRecorder<T>(supports:(type:string)=>boolean,create:(type:string)=>T,withAudio=false):T|null {
+  for(const type of videoMimeCandidates(withAudio)){
+    if(!supports(type))continue;
+    // Some browsers report AAC support but cannot initialize its encoder.
+    try{return create(type);}catch{/* try the next real container/codec */}
+  }
+  return null;
 }
 
 export async function createSlideshow(frames: SlideshowFrame[], seconds: number, audio: File | null, onProgress: (value: number) => void): Promise<Blob> {
@@ -39,7 +49,8 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
       source.connect(destination);
       for (const track of destination.stream.getAudioTracks()) stream.addTrack(track);
     }
-    const activeRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_000_000 });
+    const activeRecorder = createSupportedVideoRecorder(type=>MediaRecorder.isTypeSupported(type),type=>new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:2_000_000}),Boolean(audio));
+    if(!activeRecorder)throw new Error('تعذر تشغيل مسجل فيديو بهذه الصيغ في المتصفح. جرّب متصفحًا آخر أو صدّر دون صوت.');
     recorder = activeRecorder;
     const chunks: BlobPart[] = [];
     let recordingError: Error | null = null;
