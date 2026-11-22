@@ -227,3 +227,37 @@ export async function previewOfficeDocument(file: Blob, extension: string): Prom
   }
   throw new Error("Unsupported Office preview format.");
 }
+
+/**
+ * Renders every slide of a PPTX to a PNG data URL for the workspace visual
+ * preview. Throws when the archive is unreadable so callers can fall back to
+ * the text preview; slides whose canvas render fails are skipped.
+ */
+export async function previewPowerPointSlideImages(file: Blob): Promise<string[]> {
+  const { parseSlideXml, parsePresentationSize, renderSlidePng } = await import("./slide-image");
+  const entries = await readZipEntries(file);
+  const presentation = entries.get("ppt/presentation.xml");
+  const relationsXml = entries.get("ppt/_rels/presentation.xml.rels");
+  if (!presentation || !relationsXml) throw new Error("Presentation slide relationships were not found.");
+  const relations = relationshipMap(relationsXml, "ppt");
+  const presentationDoc = xmlDocument(presentation);
+  const slidePaths = Array.from(presentationDoc.getElementsByTagNameNS("*", "sldId")).map((slide) => {
+    const relationId = slide.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || slide.getAttribute("r:id");
+    const path = relationId ? relations.get(relationId) : undefined;
+    if (!path || !/^ppt\/slides\/[^/]+\.xml$/.test(path) || !entries.has(path)) {
+      throw new Error("A presentation slide could not be resolved safely.");
+    }
+    return path;
+  });
+  if (!slidePaths.length) throw new Error("No readable presentation slides were found.");
+  const size = parsePresentationSize(presentation);
+  const images: string[] = [];
+  for (const path of slidePaths) {
+    const parsed = parseSlideXml(entries.get(path)!);
+    if (!parsed.shapes.length) continue;
+    const image = renderSlidePng(parsed, size);
+    if (image) images.push(image);
+  }
+  if (!images.length) throw new Error("No presentation slides could be rendered.");
+  return images;
+}

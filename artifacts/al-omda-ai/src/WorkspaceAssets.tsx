@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { previewOfficeDocument } from "./lib/office-preview";
+import { previewOfficeDocument, previewPowerPointSlideImages } from "./lib/office-preview";
 import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 type Language = "ar" | "en";
@@ -26,6 +26,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const [previewAsset, setPreviewAsset] = useState<WorkspaceAsset | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewText, setPreviewText] = useState("");
+  const [previewSlides, setPreviewSlides] = useState<string[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const projectOptions = useMemo(() => projects.filter(project => project.id && project.title), [projects]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
@@ -113,6 +114,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     setPreviewAsset(asset);
     setPreviewUrl("");
     setPreviewText("");
+    setPreviewSlides([]);
     setPreviewLoading(true);
     setError("");
     try {
@@ -126,7 +128,14 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith("text/") || ["application/json","application/xml"].includes(mime)) {
         setPreviewText(await blob.text());
-      } else if (["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? "")) {
+      } else if (asset.name.split(".").pop()?.toLowerCase() === "pptx") {
+        try {
+          setPreviewSlides(await previewPowerPointSlideImages(blob));
+        } catch {
+          // Visual slide rendering is best-effort; fall back to the text preview.
+          setPreviewText(await previewOfficeDocument(blob, "pptx"));
+        }
+      } else if (["docx","xlsx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? "")) {
         setPreviewText(await previewOfficeDocument(blob, asset.name.split(".").pop()!.toLowerCase()));
       } else {
         throw new Error(ar ? "المعاينة المباشرة لهذا النوع غير متاحة حاليًا؛ يمكنك تنزيل الملف وفتحه ببرنامجه." : "Inline preview is not available for this file type yet. Download it to open it in its native app.");
@@ -142,6 +151,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl("");
     setPreviewText("");
+    setPreviewSlides([]);
     setPreviewAsset(null);
   };
 
@@ -193,7 +203,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       <section role="dialog" aria-modal="true" aria-label={ar?"معاينة الملف":"File preview"} className="panel" style={{width:"min(900px,100%)",maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",padding:14}}>
         <header className="section-head"><strong>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
         <div style={{minHeight:180,overflow:"auto",display:"grid",placeItems:"center",padding:8}}>
-          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
+          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewSlides.length>0?<div style={{overflow:"auto",maxHeight:"72vh",display:"grid",gap:10}}>{previewSlides.map((src,i)=><img key={i} src={src} alt={(ar?"شريحة ":"Slide ")+(i+1)} style={{width:"100%",borderRadius:8,border:"1px solid var(--border,#343a44)"}}/>)}</div>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
         </div>
       </section>
     </div>}
