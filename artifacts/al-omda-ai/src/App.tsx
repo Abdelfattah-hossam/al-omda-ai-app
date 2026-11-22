@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import AIChatPage from './AIChat';
-import CollaborationWorkspace from './CollaborationWorkspace';
-import AuditLogWorkspace from './AuditLogWorkspace';
-import SalesAnalyticsWorkspace from './SalesAnalyticsWorkspace';
-import WorkspaceAssets from './WorkspaceAssets';
+// Route-level code splitting: the chat page (with its markdown renderer) and
+// the secondary workspaces only download when their route is visited.
+const AIChatPage = lazy(() => import('./AIChat'));
+const CollaborationWorkspace = lazy(() => import('./CollaborationWorkspace'));
+const AuditLogWorkspace = lazy(() => import('./AuditLogWorkspace'));
+const SalesAnalyticsWorkspace = lazy(() => import('./SalesAnalyticsWorkspace'));
+const WorkspaceAssets = lazy(() => import('./WorkspaceAssets'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
 import { readAgentEventStream } from './lib/agent-stream';
@@ -2416,7 +2418,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </Link>
         <button type="button" className="button button-danger button-small task-delete-button" onClick={()=>void handleDeleteTask(task)} disabled={deletingTaskId===task.id} aria-label={isAr?'حذف المشروع':'Delete project'} title={isAr?'حذف المشروع':'Delete project'}><Trash2 size={14}/>{deletingTaskId===task.id?(isAr?'جارٍ الحذف':'Deleting…'):(isAr?'حذف':'Delete')}</button>
       </div>)}
-      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><History size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? t('noTasks') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
+      {filtered.length===0 && <div className="panel plan-empty"><div><span className="empty-mark"><History size={21}/></span><h3>{tasks.length ? t('noTasks') : t('emptyHistory')}</h3><p>{tasks.length ? (isAr?'جرّب كلمة بحث أخرى أو امسح البحث لعرض كل المهام.':'Try a different search, or clear it to see every task.') : t('emptyHistoryText')}</p>{!tasks.length&&<Link href={focusedHref("/workbench","request-input")} className="button button-primary" style={{marginTop:16}}>{t('toWorkbench')}</Link>}</div></div>}</div>
     </div>;
   };
 
@@ -2771,7 +2773,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <Link href={focusedHref("/profile","profile-account-card")} className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
         </div></header>
       {pageHelpOpen && <section className="panel panel-pad" role="region" aria-label={isAr?"مساعدة الصفحة الحالية":"Current page help"} style={{margin:"12px 20px 0",display:"grid",gap:8}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><strong>{isAr?"كيف تستخدم هذه الصفحة؟":"How to use this page"}</strong><button type="button" className="icon-button" onClick={()=>setPageHelpOpen(false)} aria-label={isAr?"إغلاق المساعدة":"Close help"}><X size={15}/></button></div><p style={{margin:0,lineHeight:1.8,color:"var(--text-secondary)"}}>{getPageGuidance(path,isAr)}</p></section>}
-      <div className="content-wrap">{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</div>
+      <div className="content-wrap"><Suspense fallback={<div className="panel panel-pad plan-empty" style={{margin:20}}><span className="section-meta">{isAr?'جارٍ تحميل الصفحة…':'Loading page…'}</span></div>}>{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</Suspense></div>
     </main>
     {commandPaletteOpen&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setCommandPaletteOpen(false);}} style={{position:'fixed',inset:0,zIndex:100,display:'grid',placeItems:'start center',padding:'min(12vh,90px) 16px 24px',background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
       <section role="dialog" aria-modal="true" aria-label={isAr?'البحث الشامل':'Global search'} className="panel" style={{width:'min(680px,100%)',maxHeight:'min(72vh,680px)',overflow:'auto',padding:16,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>
