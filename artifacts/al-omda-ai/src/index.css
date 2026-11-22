@@ -9564,3 +9564,46 @@ body:has(.ai-chat-page){
 @media(max-width:760px){.guest-nudge{inset-inline:12px;max-width:none;bottom:78px}}
 @media(prefers-reduced-motion:no-preference){.guest-nudge{animation:guestNudgeIn .45s ease-out both}}
 @keyframes guestNudgeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* Mobile QA: readable workspace forms without changing the chat route. */
+@media (max-width:760px) {
+  .app-shell:not([data-chat-active="true"]) .topbar {
+    display:grid!important;
+    grid-template-columns:34px minmax(0,1fr) auto;
+    column-gap:6px;
+    row-gap:6px;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar>.curtain-trigger { grid-column:1; grid-row:1; }
+  .app-shell:not([data-chat-active="true"]) .topbar>.crumb {
+    grid-column:2; grid-row:1; order:initial; max-width:none; width:100%; font-size:11px;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar>.top-actions {
+    grid-column:3; grid-row:1; order:initial; margin:0; gap:5px;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics {
+    grid-column:1 / -1; grid-row:2; order:initial; width:100%;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar-metric small { font-size:10px; }
+  .app-shell:not([data-chat-active="true"]) .section-title { font-size:18px; line-height:1.5; }
+  .app-shell:not([data-chat-active="true"]) h1.section-title { font-size:24px; }
+  .app-shell:not([data-chat-active="true"]) :is(.section-meta,.page-subtitle) {
+    font-size:13px; line-height:1.85; letter-spacing:normal;
+  }
+  .app-shell:not([data-chat-active="true"]) .form-label { font-size:13px; line-height:1.6; }
+  .app-shell:not([data-chat-active="true"]) :is(input.field,select.field,textarea.field) {
+    font-size:16px!important; line-height:1.6; min-height:46px;
+  }
+  .app-shell:not([data-chat-active="true"]) .button { min-height:44px; font-size:12px; }
+  .app-shell:not([data-chat-active="true"]) .topbar .button { min-height:34px; }
+  .app-shell:not([data-chat-active="true"]) .plan-empty { min-height:160px; }
+  .app-shell:not([data-chat-active="true"]) .plan-empty p { font-size:13px; line-height:1.8; }
+  .app-shell:not([data-chat-active="true"]) .mobile-chat-launcher {
+    min-width:48px; width:48px; height:48px; padding:0;
+    background:linear-gradient(135deg,#48391f,#211b12)!important;
+    color:#f5dca3!important; border-color:rgba(224,181,101,.5)!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .mobile-chat-launcher span {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip-path:inset(50%); white-space:nowrap;
+  }
+}

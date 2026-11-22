@@ -32,10 +32,6 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   useEffect(() => {
-    if (!projectId && projectOptions.length) setProjectId(projectOptions[0].id);
-  }, [projectOptions, projectId]);
-
-  useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
@@ -186,7 +182,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       <div className="field-group" style={{maxWidth:440,marginBottom:16}}>
         <label className="form-label" htmlFor="assets-project-select">{ar ? "المشروع" : "Project"}</label>
         <select id="assets-project-select" className="field" value={projectId} onChange={event=>setProjectId(event.target.value)}>
-          {projectOptions.length===0&&<option value="">{ar ? "ملفات عامة (بدون مشروع)" : "General files (no project)"}</option>}
+          <option value="">{ar ? "ملفات عامة (بدون مشروع)" : "General files (no project)"}</option>
           {projectOptions.map(project=><option key={project.id} value={project.id}>{project.title}</option>)}
         </select>
       </div>
@@ -194,7 +190,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       {loading?<div className="plan-empty" style={{padding:28}}><LoaderCircle size={20} className="animate-spin"/><p>{ar?"جارٍ تحميل الملفات...":"Loading files..."}</p></div>
       :assets.length===0?<div className="plan-empty" style={{padding:28}}><span className="empty-mark"><FolderOpen size={21}/></span><h3>{ar?"لا توجد ملفات في هذا المكان":"No files here yet"}</h3><p>{ar?"ارفع مستنداتك أو جداولك أو عروضك أو صورك لتظهر هنا.":"Upload documents, spreadsheets, presentations, or images to see them here."}</p></div>
       :<div className="history-layout">{assets.map(asset=><article className="panel history-item" key={asset.path}>
-        <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.mimeType ?? "File"}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
+        <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.name.split(".").pop()?.toUpperCase() || (ar ? "ملف" : "File")}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
         <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
