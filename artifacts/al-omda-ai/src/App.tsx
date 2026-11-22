@@ -1,3 +1,4 @@
+import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 // Route-level code splitting: the chat page (with its markdown renderer) and
@@ -636,6 +637,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   const [assets, setAssets] = useState<CommandAsset[] | null>(null);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [previewHtml, setPreviewHtml] = useState('');
   const [previewText, setPreviewText] = useState('');
   const [previewBlocks, setPreviewBlocks] = useState<OfficePreviewBlock[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -674,7 +676,9 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   const downloadAsset = async (asset: CommandAsset) => {
     setError('');
     try {
-      await downloadBlobAsFile(await fetchAssetBlob(asset.path), displayName(asset));
+      const blob = await fetchAssetBlob(asset.path);
+      const file = asset.mimeType === 'text/html' ? new Blob([blob], {type:'text/html;charset=utf-8'}) : blob;
+      await downloadBlobAsFile(file, displayName(asset));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (isAr ? 'تعذر تنزيل الملف.' : 'Could not download the file.'));
     }
@@ -699,10 +703,11 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   };
 
   const togglePreview = async (asset: CommandAsset) => {
-    if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewText(''); setPreviewBlocks(null); return; }
+    if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewHtml(''); setPreviewText(''); setPreviewBlocks(null); return; }
     setError('');
     setPreviewPath(asset.path);
     setPreviewUrl('');
+    setPreviewHtml('');
     setPreviewText('');
     setPreviewBlocks(null);
     setPreviewLoading(true);
@@ -710,7 +715,9 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
       const blob = await fetchAssetBlob(asset.path);
       const mime = asset.mimeType ?? blob.type;
       const extension = asset.name.split('.').pop()?.toLowerCase() ?? '';
-      if (mime.startsWith('image/') || mime.startsWith('video/') || mime === 'application/pdf' || mime === 'text/html') {
+      if (mime === 'text/html' || extension === 'html' || extension === 'htm') {
+        setPreviewHtml(sandboxedHtmlPreview(await blob.text()));
+      } else if (mime.startsWith('image/') || mime.startsWith('video/') || mime === 'application/pdf') {
         // Sandboxed at render time so uploaded HTML never runs with app access.
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml') {
@@ -742,6 +749,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
       </div>
       {previewPath === asset.path && <div style={{marginTop:8}}>
         {previewLoading && <p className="section-meta">{isAr ? 'جارٍ تحميل المعاينة…' : 'Loading preview…'}</p>}
+        {!previewLoading && previewHtml && <iframe title={asset.name} srcDoc={previewHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{display:'block',width:'100%',height:'min(60vh,560px)',minHeight:280,border:'1px solid #2a3038',borderRadius:10,background:'#111'}}/>}
         {!previewLoading && previewUrl && (asset.mimeType?.startsWith('video/')
           ? <video src={previewUrl} controls playsInline style={{width:'100%',maxHeight:'60vh'}}/>
           : asset.mimeType?.startsWith('image/')
