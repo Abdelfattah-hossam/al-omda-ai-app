@@ -56,3 +56,17 @@ test("chat quality is controlled by prompt rules, not scroll or composer code", 
  assert.ok(ai.includes('clear, warm Egyptian Arabic'));
  assert.ok(ai.includes('executionStyle + conversationalStyle + memoryContext'));
 });
+
+test("iPhone shell avoids the legacy chat height cap and gives dock one bottom inset", () => {
+ assert.ok(css.includes('.app-shell[data-chat-active="true"]>.main-area .ai-chat-page{max-height:100%!important;}'));
+ assert.ok(css.includes('bottom:calc(95px + env(safe-area-inset-bottom))!important;'));
+ assert.ok(css.includes('height:74px!important;min-height:74px!important;max-height:74px!important;padding:8px!important;'));
+ assert.ok(css.includes('padding-top:calc(20px + env(safe-area-inset-top))!important;'));
+});
+test("studio escapes transformed ancestors and retains dark gold controls", () => {
+ const studio = readFileSync('../artifacts/al-omda-ai/src/MediaStudio.tsx', 'utf8');
+ assert.ok(studio.includes('return createPortal('));
+ assert.ok(studio.includes('</section></div>,document.body)'));
+ assert.ok(css.includes('flex:0 1 980px;min-width:0;max-width:100%;overflow-x:hidden;'));
+ assert.ok(css.includes('.media-studio .button-primary{background:linear-gradient(135deg,#f0d18a,#d5a34c)'));
+});

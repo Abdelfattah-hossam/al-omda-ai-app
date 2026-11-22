@@ -9709,3 +9709,8 @@ body:has(.ai-chat-page){
  .app-shell[data-chat-active="true"]>.main-area .ai-chat-page{max-height:100%!important;}
  .app-shell[data-chat-active="true"] .ai-chat-sidebar{box-sizing:border-box;padding-top:calc(16px + env(safe-area-inset-top))!important;}
 }
+/* The body-level studio keeps the same gold/dark controls outside app-shell. */
+.media-studio .button-primary{background:linear-gradient(135deg,#f0d18a,#d5a34c)!important;color:#211707!important;border-color:#d5a34c!important;}
+.media-studio :is(.button-quiet,.icon-button){background:#211b14!important;color:#f5dca3!important;border-color:rgba(224,181,101,.35)!important;}
+.media-studio :is(input,textarea,select){background:#0e0c0f!important;color:#f4efe5!important;border-color:#8e713e!important;}
+.media-studio label:has(input[type="file"]){background:#19161a!important;color:#f5dca3!important;border-color:rgba(224,181,101,.35)!important;}
