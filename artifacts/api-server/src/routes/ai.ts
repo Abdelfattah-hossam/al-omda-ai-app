@@ -12,6 +12,7 @@ import { parseProjectPlan } from "../lib/project-plan.js";
 import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
+import { runWithProviderFailover } from "../lib/provider-failover.js";
 import {
   getOrCreateMemoryGeneration,
   readSupabaseJson,
@@ -495,13 +496,14 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const usage = await currentUsage(session.accessToken);
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up. It will reset at the next UTC day.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
-    const failures: string[] = [];
-    let answer: { text: string; model: string } | null = null;
-    let provider = "";
-    for (const candidate of providers) {
-      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory); provider = candidate; break; }
-      catch (error) { const reason = error instanceof Error ? error.message : "Provider unavailable"; failures.push(reason); console.warn("[AI project plan provider failure]", candidate, reason); }
-    }
+    const planOutcome = await runWithProviderFailover(
+      providers,
+      (candidate) => callProviderWithRetry(candidate, messages, memory),
+      (candidate, reason) => console.warn("[AI project plan provider failure]", candidate, reason),
+    );
+    const failures = planOutcome.failures;
+    let answer = planOutcome.answer;
+    let provider = planOutcome.provider;
     if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. No usage was deducted.", details: failures.slice(0, 2) }); return; }
     let parsed = parseProjectPlan(answer.text);
     if (!parsed) {
@@ -702,20 +704,14 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     ].join("\n");
     const feedback = task.steps.slice(0, stepIndex + 1).flatMap((item, index) => (item.comments ?? []).map((note) => "[Stage " + (index + 1) + ": " + item.text + "][" + note.author + "] " + note.text)).join("\n");
     const messages: ChatMessage[] = [{ role: "user", content: prompt + (feedback ? "\n\nUser feedback and required corrections for this and earlier stages (must be followed; do not skip or silently disregard):\n" + feedback + "\nIf an earlier deliverable is contradicted or cannot safely be relied on, clearly flag the dependency and request correction rather than proceeding as if it were valid." : "") }];
-    const failures: string[] = [];
-    let answer: { text: string; model: string } | null = null;
-    let provider = "";
-    for (const candidate of providers) {
-      try {
-        answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", messages, memory);
-        provider = candidate;
-        break;
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "Provider unavailable";
-        failures.push(reason);
-        console.warn("[AI step execution provider failure]", candidate, reason);
-      }
-    }
+    const stepOutcome = await runWithProviderFailover(
+      providers,
+      (candidate) => callProviderWithRetry(candidate, messages, memory),
+      (candidate, reason) => console.warn("[AI step execution provider failure]", candidate, reason),
+    );
+    const failures = stepOutcome.failures;
+    let answer = stepOutcome.answer;
+    let provider = stepOutcome.provider;
     if (!answer) {
       await saveExecutionFailure(failures.slice(0, 2).join("; ") || "AI provider unavailable.");
       res.status(503).json({ error: "Step execution is temporarily unavailable.", details: failures.slice(0, 2) });
@@ -1056,13 +1052,13 @@ router.post("/ai/respond-to-step-comment", requireSameOrigin, async (req, res): 
     ].join("\n");
     const providers = chooseProviders([{ role: "user", content: prompt }]);
     if (!providers.length) { res.status(503).json({ error: "No AI provider is configured. Your comment is saved; AL OMDA could not generate a reply." }); return; }
-    let answer: { text: string; model: string } | null = null;
-    let provider = "";
-    const failures: string[] = [];
-    for (const candidate of providers) {
-      try { answer = await callProviderWithRetry(candidate as "gemini" | "openrouter" | "groq" | "cloudflare", [{ role: "user", content: prompt }], memory); provider = candidate; break; }
-      catch (error) { failures.push(error instanceof Error ? error.message : "Provider unavailable"); }
-    }
+    const replyOutcome = await runWithProviderFailover(
+      providers,
+      (candidate) => callProviderWithRetry(candidate, [{ role: "user", content: prompt }], memory),
+    );
+    const failures = replyOutcome.failures;
+    const answer = replyOutcome.answer;
+    const provider = replyOutcome.provider;
     const reply = answer?.text.trim().slice(0, 1800);
     if (!reply) { res.status(503).json({ error: "AL OMDA could not respond to this comment. Your comment is saved; try again.", details: failures.slice(0, 2) }); return; }
     const charged = await reserveUnits(session.accessToken, 1);
@@ -1330,20 +1326,14 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
       return;
     }
 
-    let answer: { text: string; model: string } | null = null;
-    let usedProvider = "";
-    const failures: string[] = [];
-    for (const provider of providers) {
-      try {
-        answer = await callProviderWithRetry(provider as "gemini" | "openrouter" | "groq" | "cloudflare", modelMessages, userMemory);
-        usedProvider = provider;
-        break;
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "Provider unavailable";
-        failures.push(reason);
-        console.warn("[AI provider failure]", provider, reason);
-      }
-    }
+    const chatOutcome = await runWithProviderFailover(
+      providers,
+      (candidate) => callProviderWithRetry(candidate, modelMessages, userMemory),
+      (candidate, reason) => console.warn("[AI provider failure]", candidate, reason),
+    );
+    const failures = chatOutcome.failures;
+    let answer = chatOutcome.answer;
+    let usedProvider = chatOutcome.provider;
     if (!answer) {
       const quotaExhausted = failures.some((failure) => /\b429\b|quota|rate limit|free-models-per-day|requests per day/i.test(failure));
       res.status(503).json({
