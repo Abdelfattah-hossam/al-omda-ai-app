@@ -10,3 +10,8 @@ export function parseGeneratedJpeg(result: unknown): string | null {
  const bytes=Buffer.from(image,'base64');
  return bytes.length > 100 && bytes[0]===255 && bytes[1]===216 && bytes[2]===255 ? image : null;
 }
+
+export function parseEnglishImagePrompt(result:unknown):string|null {
+ const text=typeof (result as {response?:unknown})?.response==='string'?(result as {response:string}).response.trim():'';
+ return text.length>=3&&text.length<=1800&&!/[\u0600-\u06ff]/.test(text)?text:null;
+}
