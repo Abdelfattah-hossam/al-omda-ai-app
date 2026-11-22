@@ -261,3 +261,49 @@ export async function previewPowerPointSlideImages(file: Blob): Promise<string[]
   if (!images.length) throw new Error("No presentation slides could be rendered.");
   return images;
 }
+
+export type OfficePreviewBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "table"; rows: string[][] }
+  | { type: "sheet"; name: string; rows: string[][] };
+
+/**
+ * Structured preview for the project register: Word documents keep their
+ * paragraph/table order, Excel workbooks keep rows and cells, so the UI can
+ * render real tables instead of one cell per line of text.
+ * Returns null for formats without a structured view (caller falls back to text).
+ */
+export async function previewOfficeDocumentBlocks(file: Blob, extension: string): Promise<OfficePreviewBlock[] | null> {
+  const entries = await readZipEntries(file);
+  if (extension === "docx") {
+    const xml = entries.get("word/document.xml");
+    if (!xml) throw new Error("Word document content was not found.");
+    const body = xmlDocument(xml).getElementsByTagNameNS("*", "body")[0];
+    if (!body) return null;
+    const blocks: OfficePreviewBlock[] = [];
+    for (const node of Array.from(body.childNodes)) {
+      const name = (node as Element).localName;
+      if (name === "p") {
+        const text = textOf(node as Element).trim();
+        if (text) blocks.push({ type: "paragraph", text });
+      } else if (name === "tbl") {
+        const rows = Array.from((node as Element).getElementsByTagNameNS("*", "tr")).map((row) =>
+          Array.from(row.childNodes).filter((cell) => (cell as Element).localName === "tc").map((cell) =>
+            Array.from((cell as Element).getElementsByTagNameNS("*", "p")).map((paragraph) => textOf(paragraph).trim()).filter(Boolean).join("\n")));
+        if (rows.length) blocks.push({ type: "table", rows });
+      }
+    }
+    return blocks.length ? blocks : null;
+  }
+  if (extension === "xlsx") {
+    const text = await previewOfficeDocument(file, extension);
+    const blocks: OfficePreviewBlock[] = [];
+    for (const section of text.split("\n\n")) {
+      const lines = section.split("\n");
+      const name = lines.shift() ?? "";
+      blocks.push({ type: "sheet", name, rows: lines.map((line) => line.split(" | ")) });
+    }
+    return blocks.length ? blocks : null;
+  }
+  return null;
+}

@@ -9,7 +9,7 @@ const SalesAnalyticsWorkspace = lazy(() => import('./SalesAnalyticsWorkspace'));
 const WorkspaceAssets = lazy(() => import('./WorkspaceAssets'));
 import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-ooxml';
 import { createZipBlob } from './lib/zip';
-import { previewOfficeDocument } from './lib/office-preview';
+import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
 import { downloadBlobAsFile } from './lib/download-file';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
@@ -615,6 +615,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewText, setPreviewText] = useState('');
+  const [previewBlocks, setPreviewBlocks] = useState<OfficePreviewBlock[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -658,11 +659,12 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
   };
 
   const togglePreview = async (asset: CommandAsset) => {
-    if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewText(''); return; }
+    if (previewPath === asset.path) { setPreviewPath(null); setPreviewUrl(''); setPreviewText(''); setPreviewBlocks(null); return; }
     setError('');
     setPreviewPath(asset.path);
     setPreviewUrl('');
     setPreviewText('');
+    setPreviewBlocks(null);
     setPreviewLoading(true);
     try {
       const blob = await fetchAssetBlob(asset.path);
@@ -674,7 +676,8 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
       } else if (mime.startsWith('text/') || mime === 'application/json' || mime === 'application/xml') {
         setPreviewText(await blob.text());
       } else if (['docx', 'xlsx', 'pptx'].includes(extension)) {
-        setPreviewText(await previewOfficeDocument(blob, extension));
+        const blocks = await previewOfficeDocumentBlocks(blob, extension).catch(() => null);
+        if (blocks) setPreviewBlocks(blocks); else setPreviewText(await previewOfficeDocument(blob, extension));
       } else {
         throw new Error(isAr ? 'المعاينة المباشرة لهذا النوع غير متاحة حاليًا؛ يمكنك تنزيل الملف وفتحه ببرنامجه.' : 'Inline preview is not available for this file type yet. Download it to open it in its native app.');
       }
@@ -701,6 +704,14 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
         {!previewLoading && previewUrl && (asset.mimeType?.startsWith('image/')
           ? <img src={previewUrl} alt={asset.name} style={{maxWidth:'100%',maxHeight:'60vh',objectFit:'contain',borderRadius:10}}/>
           : <iframe title={asset.name} src={previewUrl} sandbox="" style={{display:'block',width:'100%',height:'min(60vh,560px)',minHeight:280,border:'1px solid #2a3038',borderRadius:10,background:'#fff'}}/>)}
+        {!previewLoading && !previewUrl && previewBlocks && <div dir="auto" style={{display:'grid',gap:10,maxHeight:420,overflow:'auto',background:'#10141b',border:'1px solid #2a3038',borderRadius:10,padding:12,fontSize:13,lineHeight:1.8}}>
+          {previewBlocks.map((block, blockIndex) => block.type === 'paragraph'
+            ? <p key={blockIndex} style={{margin:0,overflowWrap:'anywhere'}}>{block.text}</p>
+            : <div key={blockIndex} style={{overflowX:'auto'}}>
+                {block.type === 'sheet' && <strong style={{display:'block',margin:'4px 0 6px'}}>{block.name}</strong>}
+                <table dir="auto" style={{width:'100%',borderCollapse:'collapse',tableLayout:'auto'}}><tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => { const Cell = (block.type === 'table' || block.type === 'sheet') && rowIndex === 0 ? 'th' : 'td'; return <Cell key={cellIndex} style={{border:'1px solid #3a3426',padding:'8px 10px',textAlign:'start',whiteSpace:'pre-wrap',overflowWrap:'anywhere',verticalAlign:'top',fontWeight:rowIndex === 0 ? 700 : 400,background:rowIndex === 0 ? 'rgba(190,160,100,.16)' : 'transparent'}}>{cell}</Cell>; })}</tr>)}</tbody></table>
+              </div>)}
+        </div>}
         {!previewLoading && !previewUrl && previewText && <pre dir="auto" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:340,overflow:'auto',background:'#10141b',border:'1px solid #2a3038',borderRadius:10,padding:12,fontSize:12,lineHeight:1.8,margin:0}}>{previewText}</pre>}
       </div>}
     </div>)}
