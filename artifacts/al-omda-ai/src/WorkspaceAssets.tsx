@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {createPortal} from 'react-dom';
+import {sandboxedHtmlPreview} from './lib/html-preview';
 import { previewOfficeDocument, previewPowerPointSlideImages } from "./lib/office-preview";
 import { downloadBlobAsFile } from "./lib/download-file";
 import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
@@ -27,6 +29,15 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const [previewAsset, setPreviewAsset] = useState<WorkspaceAsset | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewText, setPreviewText] = useState("");
+  const [previewHtml,setPreviewHtml]=useState("");
+  const [pendingDelete,setPendingDelete]=useState<WorkspaceAsset|null>(null);
+  const [deleting,setDeleting]=useState(false);
+  const [deleteError,setDeleteError]=useState("");
+  const returnFocus=useRef<HTMLElement|null>(null);
+  useEffect(()=>{
+    if(!pendingDelete)return;
+    return()=>{const previous=returnFocus.current;if(previous?.isConnected)previous.focus();else document.getElementById('assets-project-select')?.focus();};
+  },[pendingDelete]);
   const [previewSlides, setPreviewSlides] = useState<string[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const projectOptions = useMemo(() => projects.filter(project => project.id && project.title), [projects]);
@@ -104,6 +115,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     setPreviewAsset(asset);
     setPreviewUrl("");
     setPreviewText("");
+    setPreviewHtml("");
     setPreviewSlides([]);
     setPreviewLoading(true);
     setError("");
@@ -112,9 +124,10 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       if (!response.ok) throw new Error(ar ? "تعذر تحميل المعاينة." : "Could not load preview.");
       const blob = await response.blob();
       const mime = asset.mimeType ?? blob.type;
-      if (mime.startsWith("image/") || mime.startsWith("video/") || mime === "application/pdf" || mime === "text/html") {
-        // Render HTML in a sandboxed iframe so users can inspect the page visually
-        // without granting the uploaded document same-origin access or script execution.
+      const extension=asset.name.split('.').pop()?.toLowerCase();
+      if(mime==='text/html'||extension==='html'||extension==='htm'){
+        setPreviewHtml(sandboxedHtmlPreview(await blob.text()));
+      } else if (mime.startsWith("image/") || mime.startsWith("video/") || mime === "application/pdf") {
         setPreviewUrl(URL.createObjectURL(blob));
       } else if (mime.startsWith("text/") || ["application/json","application/xml"].includes(mime)) {
         setPreviewText(await blob.text());
@@ -141,21 +154,29 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl("");
     setPreviewText("");
+    setPreviewHtml("");
     setPreviewSlides([]);
     setPreviewAsset(null);
   };
 
-  const deleteAsset = async (asset: WorkspaceAsset) => {
-    if (!window.confirm(ar ? "هل تريد حذف هذا الملف نهائيًا؟" : "Delete this file permanently?")) return;
-    setError("");
+  const requestDelete=(asset:WorkspaceAsset)=>{
+    returnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    setDeleteError('');setPendingDelete(asset);
+  };
+  const deleteAsset = async () => {
+    const asset=pendingDelete;
+    if(!asset||deleting)return;
+    setDeleting(true);setDeleteError('');setError("");
     try {
       const response = await fetch("/api/storage/assets?path=" + encodeURIComponent(asset.path), { method: "DELETE", credentials: "same-origin" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : (ar ? "تعذر حذف الملف." : "Could not delete file."));
       setRefreshVersion(value => value + 1);
+      if(previewAsset?.path===asset.path)closePreview();
+      setPendingDelete(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : (ar ? "تعذر حذف الملف." : "Could not delete file."));
-    }
+      setDeleteError(cause instanceof Error ? cause.message : (ar ? "تعذر حذف الملف." : "Could not delete file."));
+    } finally {setDeleting(false);}
   };
 
   return <>
@@ -185,17 +206,31 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       :assets.length===0?<div className="plan-empty" style={{padding:28}}><span className="empty-mark"><FolderOpen size={21}/></span><h3>{ar?"لا توجد ملفات في هذا المكان":"No files here yet"}</h3><p>{ar?"ارفع مستنداتك أو جداولك أو عروضك أو صورك لتظهر هنا.":"Upload documents, spreadsheets, presentations, or images to see them here."}</p></div>
       :<div className="history-layout">{assets.map(asset=><article className="panel history-item" key={asset.path}>
         <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.name.split(".").pop()?.toUpperCase() || (ar ? "ملف" : "File")}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
-        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("video/") || asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteAsset(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
+        <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("video/") || asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx","html","htm"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>requestDelete(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
     </section>
   </div>
-    {previewAsset&&<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closePreview();}} style={{position:"fixed",inset:0,zIndex:110,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)"}}>
+    {previewAsset&&createPortal(<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closePreview();}} style={{position:"fixed",inset:0,zIndex:110,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)"}}>
       <section role="dialog" aria-modal="true" aria-label={ar?"معاينة الملف":"File preview"} className="panel" style={{width:"min(900px,100%)",maxHeight:"90vh",overflow:"hidden",display:"flex",flexDirection:"column",padding:14}}>
-        <header className="section-head"><strong>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
+        <header className="section-head"><strong style={{minWidth:0,overflowWrap:'anywhere',flex:1}}>{previewAsset.name}</strong><div style={{display:"flex",gap:6}}><button type="button" className="icon-button" onClick={()=>void downloadAsset(previewAsset)} aria-label={ar?"تنزيل":"Download"}><Download size={14}/></button><button type="button" className="icon-button" onClick={closePreview} aria-label={ar?"إغلاق":"Close"}><X size={16}/></button></div></header>
         <div style={{minHeight:180,overflow:"auto",display:"grid",placeItems:"center",padding:8}}>
-          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewSlides.length>0?<div style={{overflow:"auto",maxHeight:"72vh",display:"grid",gap:10}}>{previewSlides.map((src,i)=><img key={i} src={src} alt={(ar?"شريحة ":"Slide ")+(i+1)} style={{width:"100%",borderRadius:8,border:"1px solid var(--border,#343a44)"}}/>)}</div>:previewUrl&&previewAsset.mimeType?.startsWith("video/")?<video src={previewUrl} controls playsInline style={{width:"100%",maxHeight:"72vh"}}/>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
+          {previewLoading?<LoaderCircle size={22} className="animate-spin"/>:previewHtml?<iframe title={previewAsset.name} srcDoc={previewHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{width:'100%',height:'72vh',border:0,background:'#111'}}/>:previewSlides.length>0?<div style={{overflow:"auto",maxHeight:"72vh",display:"grid",gap:10}}>{previewSlides.map((src,i)=><img key={i} src={src} alt={(ar?"شريحة ":"Slide ")+(i+1)} style={{width:"100%",borderRadius:8,border:"1px solid var(--border,#343a44)"}}/>)}</div>:previewUrl&&previewAsset.mimeType?.startsWith("video/")?<video src={previewUrl} controls playsInline style={{width:"100%",maxHeight:"72vh"}}/>:previewUrl&&previewAsset.mimeType?.startsWith("image/")?<img src={previewUrl} alt={previewAsset.name} style={{maxWidth:"100%",maxHeight:"72vh",objectFit:"contain"}}/>:previewUrl?<iframe title={previewAsset.name} src={previewUrl} sandbox="" style={{width:"100%",height:"72vh",border:0,background:"#fff"}}/>:<pre dir="auto" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",width:"100%",maxHeight:"72vh",overflow:"auto",fontSize:12}}>{previewText}</pre>}
         </div>
       </section>
-    </div>}
+    </div>,document.body)}
+    {pendingDelete&&createPortal(<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!deleting)setPendingDelete(null);}} style={{position:'fixed',inset:0,zIndex:120,display:'grid',placeItems:'center',padding:16,background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="asset-delete-title" aria-describedby="asset-delete-description" className="panel" dir={ar?'rtl':'ltr'} style={{width:'min(440px,100%)',padding:18}} onKeyDown={event=>{
+        if(event.key==='Escape'&&!deleting){event.preventDefault();setPendingDelete(null);}
+        if(event.key==='Tab'){const buttons=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];if(!buttons.length){event.preventDefault();return;}const first=buttons[0],last=buttons[buttons.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+      }}>
+        <h3 id="asset-delete-title" style={{margin:'0 0 8px'}}>{ar?'تأكيد حذف الملف':'Confirm file deletion'}</h3>
+        <p id="asset-delete-description" style={{margin:'0 0 16px',lineHeight:1.8,color:'var(--text-secondary)'}}>{ar?'سيُحذف الملف التالي نهائيًا، ولا يمكن التراجع.':'This file will be permanently deleted. This cannot be undone.'}<br/><strong style={{overflowWrap:'anywhere'}}>{pendingDelete.name}</strong></p>
+        {deleteError&&<p role="alert" className="notice-bar notice-error">{deleteError}</p>}
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button autoFocus type="button" className="button" disabled={deleting} onClick={()=>setPendingDelete(null)}>{ar?'إلغاء':'Cancel'}</button>
+          <button type="button" className="button button-danger" disabled={deleting} onClick={()=>void deleteAsset()}>{deleting?(ar?'جارٍ الحذف…':'Deleting…'):(ar?'تأكيد الحذف':'Confirm deletion')}</button>
+        </div>
+      </section>
+    </div>,document.body)}
   </>;
 }

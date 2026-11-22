@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type CSSProperties } from "react";
+import {formatSalesCsvError} from './lib/sales-csv-messages';
 import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
 import { isSalesCsvAssetName, parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
@@ -190,7 +191,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       {pendingFile && pendingParse && <div className="notice-bar" style={{ display: "grid", gap: 8 }}>
         <strong>{isAr ? "معاينة قبل الحفظ" : "Preview before saving"} · {pendingFile.name}</strong>
         <span>{isAr ? pendingParse.rows.length + " صف صالح من " + pendingParse.totalRows : pendingParse.rows.length + " valid rows of " + pendingParse.totalRows}</span>
-        {pendingParse.errors.slice(0, 5).map((item) => <small key={item.row}>{isAr ? "الصف " : "Row "}{item.row}: {item.message}</small>)}
+        {pendingParse.errors.slice(0, 5).map((item) => <small key={item.row}>{isAr ? "الصف " : "Row "}{item.row}: {formatSalesCsvError(item.message,language)}</small>)}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="button button-primary" disabled={uploading || pendingParse.errors.length > 0 || pendingParse.rows.length === 0} onClick={() => void uploadFile()}>{isAr ? "حفظ الملف" : "Save file"}</button>
           <button type="button" className="button button-secondary" onClick={() => { setPendingFile(null); setPendingParse(null); }}>{isAr ? "إلغاء" : "Cancel"}</button>
@@ -201,7 +202,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
 
     {loading ? <section className="panel panel-pad" style={{ marginTop: 16 }}>{isAr ? "جارٍ تحميل البيانات…" : "Loading data…"}</section>
       : !selectedPath ? <section className="panel panel-pad" style={{ marginTop: 16, display: "grid", justifyItems: "center", gap: 10, textAlign: "center" }}><FileSpreadsheet size={30}/><strong>{isAr ? "لا توجد بيانات مبيعات بعد" : "No sales data yet"}</strong><p className="page-subtitle">{isAr ? "نزّل قالب CSV، أضف معاملاتك الحقيقية، ثم استورد الملف لعرض التحليلات." : "Download the CSV template, add your real transactions, then import it to see analytics."}</p></section>
-      : parse.errors.length ? <section className="panel panel-pad" style={{ marginTop: 16 }}><strong>{isAr ? "تعذر تحليل الملف" : "Could not parse this file"}</strong>{parse.errors.slice(0, 10).map((item) => <p key={item.row} className="page-subtitle">{isAr ? "الصف " : "Row "}{item.row}: {item.message}</p>)}</section>
+      : parse.errors.length ? <section className="panel panel-pad" style={{ marginTop: 16 }}><strong>{isAr ? "تعذر تحليل الملف" : "Could not parse this file"}</strong>{parse.errors.slice(0, 10).map((item) => <p key={item.row} className="page-subtitle">{isAr ? "الصف " : "Row "}{item.row}: {formatSalesCsvError(item.message,language)}</p>)}</section>
       : parse.rows.length === 0 ? <section className="panel panel-pad" style={{ marginTop: 16 }}>{isAr ? "لا توجد معاملات في الملف." : "The file contains no transactions."}</section>
       : <>
         <section className="panel panel-pad" style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -229,7 +230,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
           <div style={{ overflowX: "auto", marginTop: 10 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620, fontSize: 13 }}>
               <thead><tr>{[isAr ? "التاريخ" : "Date", isAr ? "المبلغ" : "Amount", isAr ? "الحالة" : "Status", isAr ? "القناة" : "Channel", isAr ? "المرجع" : "Reference"].map((label) => <th key={label} style={{ textAlign: "start", padding: 10, borderBottom: "1px solid var(--border)" }}>{label}</th>)}</tr></thead>
-              <tbody>{selectedRows.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100).map((row, index) => <tr key={(row.reference || "transaction") + "-" + index}>{[row.date, money(row.amount, row.currency, language), row.status, row.channel, row.reference || "—"].map((value, i) => <td key={i} style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{value}</td>)}</tr>)}</tbody>
+              <tbody>{selectedRows.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 100).map((row, index) => <tr key={(row.reference || "transaction") + "-" + index}>{[row.date, money(row.amount, row.currency, language), isAr?({paid:'مدفوعة',refunded:'مستردة',pending:'معلقة',cancelled:'ملغاة'}[row.status]):row.status, row.channel, row.reference || "—"].map((value, i) => <td key={i} style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{value}</td>)}</tr>)}</tbody>
             </table>
           </div>
           <p className="page-subtitle" style={{ marginTop: 10 }}>{isAr ? "يتم استبعاد المعلّق والملغي من إجمالي المبيعات. الاستردادات تخصم من صافي المبيعات. تعرض الصفحة أول 100 معاملة فقط." : "Pending and cancelled rows are excluded from sales totals. Refunds reduce net sales. The table shows the first 100 transactions."}</p>
