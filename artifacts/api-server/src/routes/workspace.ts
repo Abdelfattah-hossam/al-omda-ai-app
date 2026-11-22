@@ -125,7 +125,10 @@ export function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): bool
     const before = step.comments ?? [];
     const after = next.steps[index].comments ?? [];
     return after.length >= before.length &&
-      before.every((note,noteIndex) => JSON.stringify(note) === JSON.stringify(after[noteIndex])) &&
+      before.every((note,noteIndex) => {
+        const candidate = after[noteIndex];
+        return !!candidate && note.id === candidate.id && note.author === candidate.author && note.text === candidate.text && sameInstant(note.createdAt, candidate.createdAt);
+      }) &&
       after.slice(before.length).every(note => note.author === "user" && note.text.trim().length > 0) &&
       isRevisionHistoryUnchanged(step.revisionHistory, next.steps[index].revisionHistory);
   });

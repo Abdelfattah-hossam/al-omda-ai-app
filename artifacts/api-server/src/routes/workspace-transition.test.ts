@@ -12,6 +12,7 @@ type Step = {
   executionStatus?: "succeeded" | "failed";
   executionError?: string;
   comments?: Array<{ id: string; author: "user" | "assistant" | "system"; text: string; createdAt: string }>;
+  revisionHistory?: Array<{ result: string; executedAt?: string; revisionRequestedAt: string; note: string }>;
   state: "pending" | "approved" | "rejected";
 };
 
@@ -104,6 +105,62 @@ test("a genuinely different executedAt instant still counts as a change", () => 
           ? { ...step, state: "approved" as const }
           : { ...step },
     ),
+  };
+  assert.equal(isAllowedTaskTransition(previous, next), false);
+});
+
+test("re-approving a revised step is allowed when comments and revision history datetimes differ only in format", () => {
+  // Live bug 2026-11-22 (follow-up): after a revision request the step carries a
+  // comment and a revisionHistory entry whose datetimes Postgres stores as
+  // "+00:00"; the client echoes the sanitized "Z" form, and raw string compares
+  // rejected the re-approval with 409, leaving revised projects stuck.
+  const previous = previousTask();
+  const revisedStep: Step = {
+    id: "step-2",
+    text: "Draft the outline",
+    state: "pending",
+    comments: [{ id: "c1", author: "user", text: "طلب مراجعة وإعادة تنفيذ: shorter please", createdAt: "2026-11-22T09:00:00.000+00:00" }],
+    revisionHistory: [{ result: "Old outline", executedAt: "2026-11-22T08:22:56.921+00:00", revisionRequestedAt: "2026-11-22T09:00:00.000+00:00", note: "طلب مراجعة وإعادة تنفيذ: shorter please" }],
+  };
+  previous.steps = [previous.steps[0], revisedStep, previous.steps[2]];
+  const next = {
+    title: previous.title,
+    request: previous.request,
+    specialty: previous.specialty,
+    status: "review" as const,
+    steps: [
+      { ...previous.steps[0], executedAt: "2026-11-22T07:11:17.722Z" },
+      {
+        ...revisedStep,
+        state: "approved" as const,
+        comments: [{ ...revisedStep.comments![0], createdAt: "2026-11-22T09:00:00.000Z" }],
+        revisionHistory: [{ ...revisedStep.revisionHistory![0], executedAt: "2026-11-22T08:22:56.921Z", revisionRequestedAt: "2026-11-22T09:00:00.000Z" }],
+      },
+      previous.steps[2],
+    ],
+  };
+  assert.equal(isAllowedTaskTransition(previous, next), true);
+});
+
+test("editing a revision history entry is still rejected", () => {
+  const previous = previousTask();
+  const revisedStep: Step = {
+    id: "step-2",
+    text: "Draft the outline",
+    state: "pending",
+    revisionHistory: [{ result: "Old outline", executedAt: "2026-11-22T08:22:56.921+00:00", revisionRequestedAt: "2026-11-22T09:00:00.000+00:00", note: "original note" }],
+  };
+  previous.steps = [previous.steps[0], revisedStep, previous.steps[2]];
+  const next = {
+    title: previous.title,
+    request: previous.request,
+    specialty: previous.specialty,
+    status: "review" as const,
+    steps: [
+      previous.steps[0],
+      { ...revisedStep, state: "approved" as const, revisionHistory: [{ ...revisedStep.revisionHistory![0], note: "rewritten note" }] },
+      previous.steps[2],
+    ],
   };
   assert.equal(isAllowedTaskTransition(previous, next), false);
 });
