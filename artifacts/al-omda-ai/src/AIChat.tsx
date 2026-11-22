@@ -835,7 +835,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
     workbook.Workbook = workbook.Workbook || {};
     workbook.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
     const rawBytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const bytes = expectedFormulas.length ? ensureWorkbookRecalculation(rawBytes, XLSX.CFB) : rawBytes;
+    const bytes = expectedFormulas.length ? ensureWorkbookRecalculation(rawBytes, (lib as any).CFB ?? XLSX.CFB) : rawBytes;
     const roundTrip = XLSX.read(bytes, { type: "array", cellFormula: true });
     if (roundTrip.SheetNames?.length !== sheets.length) throw new Error(ar ? "فشل التحقق من عدد أوراق Excel." : "Excel worksheet count validation failed.");
     for (const sheet of sheets) {

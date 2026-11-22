@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as XLSX from 'xlsx';
+// @ts-expect-error SheetJS ships types for its package entry, not its ESM subpath.
+import * as XLSX from 'xlsx/xlsx.mjs';
 import { ensureWorkbookRecalculation } from './office-workbook-recalculation';
 
 test('recalculation settings are present in actual ZIP bytes and formulas survive', () => {
