@@ -1,8 +1,14 @@
+import {versionOfflineWorker} from '../../artifacts/al-omda-ai/build/offline-cache-version.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('../../artifacts/al-omda-ai/public/service-worker.js',import.meta.url),'utf8');
+test('asset-only deploys change the worker script and cache version, not just the manifest',()=>{
+ const first=versionOfflineWorker(source,'assets/chat-a.js');const second=versionOfflineWorker(source,'assets/chat-b.js');
+ assert.notEqual(first,second);assert.equal(first,versionOfflineWorker(source,'assets/chat-a.js'));assert.ok(!first.includes('__OMDA_ASSET_VERSION__'));assert.match(first,/al-omda-shell-v4-[a-f0-9]{16}/);
+ assert.throws(()=>versionOfflineWorker('missing marker','assets'));
+});
 async function assetRequest(cachedType:string, networkType:string) {
  const listeners:Record<string,(event:any)=>void>={};let removed=false;let fetched=false;let response:Promise<Response>|undefined;
  const request={url:'https://app.test/assets/old-bundle.js',method:'GET',mode:'cors'};

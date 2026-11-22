@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 const app = readFileSync("../artifacts/al-omda-ai/src/App.tsx", "utf8");
 const collab = readFileSync("../artifacts/al-omda-ai/src/CollaborationWorkspace.tsx", "utf8");
 const css = readFileSync("../artifacts/al-omda-ai/src/index.css", "utf8");
+test("collaboration deletion requires explicit in-app confirmation and preserves cancel and error paths",()=>{
+ assert.ok(!collab.includes('window.confirm('));assert.ok(collab.includes('role="alertdialog"'));assert.ok(collab.includes('requestRemove(record)'));assert.ok(collab.includes('if(!record||deleting)return;'));assert.ok(collab.includes('setDeleteError(cause instanceof Error'));assert.ok(collab.includes('if(editingId===record.id)reset();'));assert.ok(collab.includes('document.body)'));
+});
 test("pipeline progress measures execution, not approval", () => {
  const section = app.slice(app.indexOf("  const pipelinePage ="), app.indexOf("  const assetsPage ="));
  assert.ok(section.includes("executionCount(task)/task.steps.length"));

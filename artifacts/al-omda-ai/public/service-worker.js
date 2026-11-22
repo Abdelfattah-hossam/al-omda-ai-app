@@ -1,4 +1,4 @@
-const CACHE_NAME = 'al-omda-shell-v3';
+const CACHE_NAME = 'al-omda-shell-v4-__OMDA_ASSET_VERSION__';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {

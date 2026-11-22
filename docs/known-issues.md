@@ -64,11 +64,7 @@ Found during Phase 4 work. Each entry: symptom, root cause, impact, proposed fix
 
 - **Context:** repo SQL under supabase/migrations is NOT applied by CI;
   nothing in .github/workflows touches the live database.
-- **Authorized route:** Supabase Management API with the account-level
-  Personal Access Token stored in the owner vault:
-  POST https://api.supabase.com/v1/projects/rzznnrvlqumhymfmmpjk/database/query
-  with {"query": "<sql>"}. Read-only checks (pg_get_functiondef, grants)
-  go through the same endpoint.
+- **Historical method, not authorization:** live database administration was performed through the Supabase Management API. This note grants no permission for future access or changes. Owner approval must be established independently, and credential locations are intentionally omitted here.
 - **Pitfall hit live (2026-11-22):** migration
   20261122142500_allow_concise_project_plans.sql targeted
   public.create_ai_task_with_quota, but since the Nov 17 hardening that
@@ -81,6 +77,4 @@ Found during Phase 4 work. Each entry: symptom, root cause, impact, proposed fix
   hardened RPCs must introspect/target the omda_private function and
   keep the abort guard; always verify with a read-only definition check
   afterward.
-- **Residual:** the committed 20261122142500 file (and its rollback)
-  still names the public wrapper and will abort on replay — retarget it
-  to omda_private.create_ai_task_with_quota.
+- **Source correction verified (2026-11-22):** the committed migration and rollback now target `omda_private.create_ai_task_with_quota`. Their public-wrapper grants remain deliberate. The earlier replay warning is resolved in source; that is not a new claim about live database state.

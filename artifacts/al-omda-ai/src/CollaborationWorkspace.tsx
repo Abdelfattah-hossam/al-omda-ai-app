@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import {createPortal} from "react-dom";
 import { CalendarDays, Contact, Edit3, Plus, RefreshCw, Trash2, Ticket, UserRound } from "lucide-react";
 
 type Kind = "contact" | "event" | "ticket";
@@ -46,6 +47,14 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingDelete,setPendingDelete]=useState<RecordItem|null>(null);
+  const [deleting,setDeleting]=useState(false);
+  const [deleteError,setDeleteError]=useState("");
+  const returnFocus=useRef<HTMLElement|null>(null);
+  useEffect(()=>{
+    if(!pendingDelete)return;
+    return()=>{const previous=returnFocus.current;if(previous?.isConnected)previous.focus();else document.getElementById('collab-title')?.focus();};
+  },[pendingDelete]);
 
   const load = useCallback(async (offset = 0, append = false) => {
     setLoading(true); setError("");
@@ -112,15 +121,24 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
     } catch (cause) { setError(cause instanceof Error ? cause.message : t.failed); }
   }
 
-  async function remove(record: RecordItem) {
-    if (!window.confirm(ar ? "هل تريد حذف هذا السجل نهائيًا؟" : "Permanently delete this record?")) return;
-    setError("");
+  function requestRemove(record:RecordItem) {
+    returnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    setDeleteError("");setPendingDelete(record);
+  }
+
+  async function remove() {
+    const record=pendingDelete;
+    if(!record||deleting)return;
+    setDeleting(true);setDeleteError("");setError("");
     try {
       const response = await fetch("/api/collaboration/" + kind + "/" + record.id, { method: "DELETE", credentials: "same-origin", headers: { accept: "application/json" } });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : t.failed);
       setRecords(current => current.filter(item => item.id !== record.id));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : t.failed); }
+      if(editingId===record.id)reset();
+      setPendingDelete(null);setNotice(ar?"تم حذف السجل.":"Record deleted.");
+    } catch (cause) { setDeleteError(cause instanceof Error ? cause.message : t.failed); }
+    finally {setDeleting(false);}
   }
 
   const Icon = kind === "contact" ? Contact : kind === "event" ? CalendarDays : Ticket;
@@ -147,7 +165,7 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
       <div className="section-head"><strong>{ar ? "السجلات المحفوظة" : "Saved records"}</strong><span className="status-chip">{records.length}</span></div>
       {loading ? <p className="section-meta" role="status">{t.loading}</p> : records.length === 0 ? <div className="plan-empty"><UserRound size={24}/><p>{labels.empty}</p></div> : <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
         {records.map(record => <article className="panel panel-pad" key={record.id}>
-          <div className="section-head"><strong style={{ overflowWrap: "anywhere" }}>{record.title}</strong><div style={{ display: "flex", gap: 6 }}><button type="button" className="icon-button" onClick={() => startEdit(record)} aria-label={labels.update} title={labels.update}><Edit3 size={15}/></button><button type="button" className="icon-button" onClick={() => void remove(record)} aria-label={t.delete} title={t.delete}><Trash2 size={15}/></button></div></div>
+          <div className="section-head"><strong style={{ overflowWrap: "anywhere" }}>{record.title}</strong><div style={{ display: "flex", gap: 6 }}><button type="button" className="icon-button" onClick={() => startEdit(record)} aria-label={labels.update} title={labels.update}><Edit3 size={15}/></button><button type="button" className="icon-button" onClick={() => requestRemove(record)} aria-label={t.delete} title={t.delete}><Trash2 size={15}/></button></div></div>
           {kind === "contact" && <p className="section-meta">{[record.metadata.email, record.metadata.phone, record.metadata.company].filter(value => typeof value === "string" && value).join(" · ")}</p>}
           {record.description && <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{record.description}</p>}
           {record.dueAt && <p className="section-meta">{new Date(record.dueAt).toLocaleString(ar ? "ar" : "en")}</p>}
@@ -157,5 +175,19 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
       </div>}
       {nextOffset !== null && <button type="button" className="button button-quiet" style={{ marginTop: 12 }} onClick={() => void load(nextOffset, true)} disabled={loading}>{loading ? t.loading : (ar ? "تحميل المزيد" : "Load more")}</button>}
     </section>
+    {pendingDelete&&createPortal(<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!deleting)setPendingDelete(null);}} style={{position:'fixed',inset:0,zIndex:120,display:'grid',placeItems:'center',padding:16,background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="collab-delete-title" aria-describedby="collab-delete-description" className="panel" dir={ar?'rtl':'ltr'} style={{width:'min(440px,100%)',padding:18,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onKeyDown={event=>{
+        if(event.key==='Escape'&&!deleting){event.preventDefault();setPendingDelete(null);}
+        if(event.key==='Tab'){const buttons=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];if(!buttons.length){event.preventDefault();return;}const first=buttons[0],last=buttons[buttons.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+      }}>
+        <h3 id="collab-delete-title" style={{margin:'0 0 8px'}}>{ar?'تأكيد حذف السجل':'Confirm record deletion'}</h3>
+        <p id="collab-delete-description" style={{margin:'0 0 16px',lineHeight:1.8,color:'var(--text-secondary)'}}>{ar?'سيُحذف السجل التالي نهائيًا، ولا يمكن التراجع.':'This record will be permanently deleted. This cannot be undone.'}<br/><strong style={{overflowWrap:'anywhere'}}>{pendingDelete.title}</strong></p>
+        {deleteError&&<p role="alert" className="notice-bar notice-error">{deleteError}</p>}
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button autoFocus type="button" className="button" disabled={deleting} onClick={()=>setPendingDelete(null)}>{t.cancel}</button>
+          <button type="button" className="button button-danger" disabled={deleting} onClick={()=>void remove()}>{deleting?(ar?'جارٍ الحذف…':'Deleting…'):(ar?'تأكيد الحذف':'Confirm deletion')}</button>
+        </div>
+      </section>
+    </div>,document.body)}
   </div>;
 }

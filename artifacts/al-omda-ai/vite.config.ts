@@ -1,4 +1,6 @@
 import path from 'path';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {versionOfflineWorker} from './build/offline-cache-version.mjs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
@@ -19,6 +21,16 @@ const basePath = process.env.BASE_PATH ?? '/';
 export default defineConfig({
   base: basePath,
   plugins: [
+    {
+      name:'version-offline-worker',
+      apply:'build',
+      closeBundle(){
+        const output=path.resolve(import.meta.dirname,'dist/public');
+        const assets=['asset-manifest.json','index.html','manifest.webmanifest','favicon.svg'].map(file=>readFileSync(path.join(output,file),'utf8')).join('\n');
+        const worker=path.join(output,'service-worker.js');
+        writeFileSync(worker,versionOfflineWorker(readFileSync(worker,'utf8'),assets));
+      },
+    },
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
