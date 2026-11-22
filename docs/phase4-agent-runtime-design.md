@@ -1,7 +1,17 @@
 # Phase 4 design sketch — AL OMDA agent runtime (register section 8)
 
-Status: design only. No implementation yet. Written 2026-11-22 as the
-starting point for the Phase 4 workstream.
+Status: historical design, superseded by the implemented local runtime.
+Updated 2026-11-22. See `agent-runtime.md` for current setup, security boundaries,
+tool approvals, MCP, specialist skills and supervisor behavior. The original
+sketch below is retained as design history, not a current feature-status report.
+
+Current verification: the local runtime/supervisor integration suite passed
+36 tests on 2026-11-22 using actual local processes and HTTP endpoints with
+controlled model and MCP fixtures. This is not production-model acceptance or
+a test on the owner's computer. The hosted web app does not run arbitrary
+operating-system commands or silently control a physical device.
+
+## Historical sketch
 
 ## What exists today (do not rebuild)
 
