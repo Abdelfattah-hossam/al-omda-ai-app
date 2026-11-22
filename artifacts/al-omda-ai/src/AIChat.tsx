@@ -168,7 +168,7 @@ type Usage = {
   remaining: number;
   limit: number;
   resetAt: string;
-  providers?: { gemini: boolean; openrouter: boolean };
+  providers?: { gemini: boolean; openrouter: boolean; groq?: boolean; cloudflare?: boolean };
 };
 type MemoryGraphNode = { id: string; node_type: string; label: string; source?: string; confidence?: number };
 type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
@@ -1511,8 +1511,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
         <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "العمدة · التوجيه التلقائي" : "AL OMDA · Auto routing"}</span><i>⌄</i></button>
         {showModelMenu && <div className="ai-chat-model-menu">
           <div className="ai-chat-menu-caption">{ar ? "المحركات المجانية المهيأة" : "Configured free engines"}</div>
-          <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "متصل · متاح للتوجيه" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.gemini ? "is-ready" : ""}/></div>
-          <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free</strong><small>{usage?.providers?.openrouter ? (ar ? "متصل · متاح للتوجيه" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.openrouter ? "is-ready" : ""}/></div>
+          <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "مهيأ · متاح للتوجيه" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.gemini ? "is-ready" : ""}/></div>
+          <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free</strong><small>{usage?.providers?.openrouter ? (ar ? "مهيأ · متاح للتوجيه" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.openrouter ? "is-ready" : ""}/></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Groq</strong><small>{usage?.providers?.groq ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Cloudflare Workers AI</strong><small>{usage?.providers?.cloudflare ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
           <p>{ar ? "العمدة يختار النموذج الأنسب تلقائيًا ويجرّب البدائل عند التعطل." : "AL OMDA chooses the best available model and tries alternatives."}</p>
         </div>}
       </div>
@@ -1691,9 +1693,11 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
               <div className="ai-chat-settings-progress"><i style={{width:percent + "%"}}/></div>
               {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US",{hour:"2-digit",minute:"2-digit",timeZone:"UTC",timeZoneName:"short"})}</small>}
             </section>
-            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{copy.providers}</strong><span>Gemini · OpenRouter</span></div>
-              <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "متصل" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
-              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free Models</strong><small>{usage?.providers?.openrouter ? (ar ? "متصل" : "Connected") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{copy.providers}</strong><span>Gemini · Groq · OpenRouter · Cloudflare</span></div>
+              <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free Models</strong><small>{usage?.providers?.openrouter ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Groq</strong><small>{usage?.providers?.groq ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
+              <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Cloudflare Workers AI</strong><small>{usage?.providers?.cloudflare ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
               <small className="muted">{copy.voiceNote}</small>
             </section>
              <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "ذاكرة العمدة الخاصة بك" : "Your AL OMDA memory"}</strong><span>{memory.length}/6000</span></div>

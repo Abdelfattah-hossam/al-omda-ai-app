@@ -20,3 +20,11 @@ test("drawer labels can wrap on mobile", () => {
 test("analytics error copy is gated on an actual error", () => {
  assert.ok(app.includes("liveUserAnalyticsError ? (isAr?'تعذر تحميل التحليلات"));
 });
+
+test("provider settings show all configured fallback engines", () => {
+ const chat = readFileSync("../artifacts/al-omda-ai/src/AIChat.tsx", "utf8");
+ for (const provider of ["groq", "cloudflare"]) {
+  assert.ok(chat.includes("usage?.providers?." + provider));
+ }
+ assert.ok(chat.includes("Gemini · Groq · OpenRouter · Cloudflare"));
+});
