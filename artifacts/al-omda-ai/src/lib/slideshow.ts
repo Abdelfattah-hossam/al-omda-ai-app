@@ -1,3 +1,4 @@
+import {encodeSlideshowFrames} from './slideshow-webcodecs';
 import { fixWebmDuration } from '@fix-webm-duration/fix';
 
 // Only rewrite the small metadata header. The parser intentionally treats
@@ -74,9 +75,6 @@ export function createSupportedVideoRecorder<T>(supports:(type:string)=>boolean,
 
 export async function createSlideshow(frames: SlideshowFrame[], seconds: number, audio: File | null, onProgress: (value: number) => void): Promise<Blob> {
   if (!frames.length || frames.length > 8) throw new Error('اختر من صورة واحدة إلى 8 صور.');
-  if (typeof MediaRecorder === 'undefined') throw new Error('هذا المتصفح لا يدعم تسجيل الفيديو. استخدم متصفحًا أحدث.');
-  const mimeType = chooseVideoMime(type => MediaRecorder.isTypeSupported(type), Boolean(audio));
-  if (!mimeType) throw new Error('لا توجد صيغة فيديو مدعومة في هذا المتصفح.');
   const images = await Promise.all(frames.map(frame => new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -87,7 +85,41 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
   canvas.width = 720;
   canvas.height = 1280;
   const ctx = canvas.getContext('2d');
-  if (!ctx || !canvas.captureStream) throw new Error('تسجيل لوحة الرسم غير مدعوم.');
+  if (!ctx) throw new Error('تسجيل لوحة الرسم غير مدعوم.');
+    const duration = Math.max(2, Math.min(10, seconds)) * frames.length * 1000;
+    const draw = (elapsed: number, reportProgress=true) => {
+      const index = Math.min(frames.length - 1, Math.floor(elapsed / (duration / frames.length)));
+      const img = images[index];
+      const local = (elapsed % (duration / frames.length)) / (duration / frames.length);
+      const scale = Math.max(canvas.width / img.width, canvas.height / img.height) * (1 + local * .07);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 0, 720, 1280);
+      ctx.drawImage(img, (720 - img.width * scale) / 2, (1280 - img.height * scale) / 2, img.width * scale, img.height * scale);
+      const caption = frames[index].caption.trim();
+      if (caption) {
+        ctx.fillStyle = 'rgba(0,0,0,.7)';
+        ctx.fillRect(0, 990, 720, 250);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 38px Arial';
+        ctx.textAlign = 'center';
+        ctx.direction = /[\u0600-\u06ff]/.test(caption) ? 'rtl' : 'ltr';
+        const lines: string[] = [];
+        let line = '';
+        for (const word of caption.split(/\s+/)) {
+          if (ctx.measureText(line + ' ' + word).width > 640 && line) { lines.push(line); line = word; }
+          else line += (line ? ' ' : '') + word;
+        }
+        if (line) lines.push(line);
+        lines.slice(0, 4).forEach((value, i) => ctx.fillText(value, 360, 1040 + i * 48));
+      }
+      if(reportProgress)onProgress(Math.min(100, Math.round(elapsed / duration * 100)));
+    };
+  const encoded=await encodeSlideshowFrames(canvas,elapsed=>draw(elapsed,false),duration,audio,onProgress);
+  if(encoded)return encoded;
+  if (typeof MediaRecorder === 'undefined') throw new Error('هذا المتصفح لا يدعم تسجيل الفيديو. استخدم متصفحًا أحدث.');
+  const mimeType = chooseVideoMime(type => MediaRecorder.isTypeSupported(type), Boolean(audio));
+  if (!mimeType) throw new Error('لا توجد صيغة فيديو مدعومة في هذا المتصفح.');
+  if(!canvas.captureStream)throw new Error('تسجيل لوحة الرسم غير مدعوم.');
   const stream = canvas.captureStream(24);
   let audioContext: AudioContext | null = null;
   let source: AudioBufferSourceNode | null = null;
@@ -114,34 +146,6 @@ export async function createSlideshow(frames: SlideshowFrame[], seconds: number,
       activeRecorder.onerror = () => { recordingError = new Error('فشل تسجيل الفيديو.'); };
       activeRecorder.onstop = () => resolve(new Blob(chunks, { type: activeRecorder.mimeType }));
     });
-    const duration = Math.max(2, Math.min(10, seconds)) * frames.length * 1000;
-    const draw = (elapsed: number) => {
-      const index = Math.min(frames.length - 1, Math.floor(elapsed / (duration / frames.length)));
-      const img = images[index];
-      const local = (elapsed % (duration / frames.length)) / (duration / frames.length);
-      const scale = Math.max(canvas.width / img.width, canvas.height / img.height) * (1 + local * .07);
-      ctx.fillStyle = '#111';
-      ctx.fillRect(0, 0, 720, 1280);
-      ctx.drawImage(img, (720 - img.width * scale) / 2, (1280 - img.height * scale) / 2, img.width * scale, img.height * scale);
-      const caption = frames[index].caption.trim();
-      if (caption) {
-        ctx.fillStyle = 'rgba(0,0,0,.7)';
-        ctx.fillRect(0, 990, 720, 250);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 38px Arial';
-        ctx.textAlign = 'center';
-        ctx.direction = /[\u0600-\u06ff]/.test(caption) ? 'rtl' : 'ltr';
-        const lines: string[] = [];
-        let line = '';
-        for (const word of caption.split(/\s+/)) {
-          if (ctx.measureText(line + ' ' + word).width > 640 && line) { lines.push(line); line = word; }
-          else line += (line ? ' ' : '') + word;
-        }
-        if (line) lines.push(line);
-        lines.slice(0, 4).forEach((value, i) => ctx.fillText(value, 360, 1040 + i * 48));
-      }
-      onProgress(Math.min(100, Math.round(elapsed / duration * 100)));
-    };
     draw(0);
     let recordingStartedAt: number | null = null;
     activeRecorder.onstart = () => { recordingStartedAt = performance.now(); };

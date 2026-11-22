@@ -1,6 +1,16 @@
+import {slideshowFrameTimes} from './slideshow-webcodecs.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chooseVideoMime,createSupportedVideoRecorder,slideshowElapsed,slideshowRecordingElapsed,finalizeVideoDuration,firstWebmClusterOffset} from './slideshow.js';
+test('explicit video frames cover the full duration without wall-clock or encoder-readiness gaps',()=>{
+ const frames=slideshowFrameTimes(6);assert.equal(frames.length,144);assert.equal(frames[0].timestamp,0);assert.equal(frames[72].timestamp,3);assert.equal(frames.at(-1)!.timestamp+frames.at(-1)!.duration,6);
+ assert.ok(frames.every(frame=>frame.duration>0));assert.ok(Math.abs(frames.reduce((sum,frame)=>sum+frame.duration,0)-6)<1e-10);
+ const partial=slideshowFrameTimes(2.01);assert.equal(partial.at(-1)!.timestamp+partial.at(-1)!.duration,2.01);
+});
+test('invalid explicit video timelines are rejected rather than creating empty or unbounded output',()=>{
+ for(const duration of [0,-1,NaN,Infinity])assert.throws(()=>slideshowFrameTimes(duration));
+ for(const fps of [0,-1,1.5,NaN])assert.throws(()=>slideshowFrameTimes(6,fps));
+});
 test('video export chooses MP4 when the browser supports it, not by renaming WebM',()=>{
  assert.equal(chooseVideoMime(type=>type==='video/mp4'),'video/mp4');
  assert.equal(chooseVideoMime(type=>type==='video/webm'),'video/webm');

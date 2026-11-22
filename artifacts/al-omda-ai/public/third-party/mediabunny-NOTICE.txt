@@ -1,0 +1,10 @@
+Third-party video export component
+
+Mediabunny 1.66.2, Copyright (c) 2026-present, Vanilagy and contributors, is used without source modifications under the Mozilla Public License 2.0. The application's own code is separate and keeps its own license.
+
+License: mediabunny-LICENSE.txt in this directory.
+Complete original package, including source: mediabunny-1.66.2-source.tgz in this directory.
+Upstream package: https://registry.npmjs.org/mediabunny/-/mediabunny-1.66.2.tgz
+Project: https://mediabunny.dev/
+
+The component encodes video locally in a supported browser. It does not send source images or audio to a video service, and it does not add a paid service.
