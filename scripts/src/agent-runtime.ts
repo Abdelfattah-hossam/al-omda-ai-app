@@ -31,7 +31,8 @@ import { createHttpFlowHistoryRecord, normalizeHttpFlowHistory, type CreateHttpF
 import { createAgentProposalDirectory, isAllowedProposalPath, listAgentProposalFiles, writeAgentProposal, writeDelegationManifest, type ProposalBudget } from "./agent-proposals.js";
 import { assertBrowserUrlAllowed, normalizeBrowserWorkspacePolicy, type BrowserWorkspacePolicy } from "./browser-workspace.js";
 import { getDelegationRunStatus, type DelegationTaskStatus } from "./agent-delegation-status.js";
-import { ensureAssistantToolCallMessage } from "./agent-history.js";
+import { assertResumeInstructionAllowed, ensureAssistantToolCallMessage } from "./agent-history.js";
+import { reviewFinalAnswer } from "./agent-quality-review.js";
 import { buildToolCallingOptions, getModelTemperature, getProfessionalOperatingGuidance, inferAgentDomain } from "./agent-purpose-guidance.js";
 
 const HOST = "127.0.0.1";
@@ -744,7 +745,7 @@ async function callMcpTool(serverName: string, toolName: string, args: Record<st
 
 type AgentToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type PendingMcpTool = { serverName: string; toolName: string };
-type AgentState = { messages: Array<Record<string, unknown>>; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; createdAt: string; purpose?: ModelPurpose; toolFailures?: AgentToolFailureSummary[] };
+type AgentState = { messages: Array<Record<string, unknown>>; goal?: string; pendingToolCalls?: AgentToolCall[]; pendingMcpTools?: Record<string, PendingMcpTool>; createdAt: string; purpose?: ModelPurpose; toolFailures?: AgentToolFailureSummary[] };
 function recordAgentToolFailure(state: AgentState, call: AgentToolCall, message: unknown): void {
   const failures = state.toolFailures ??= [];
   if (failures.some((failure) => failure.callId === call.id)) return;
@@ -1009,8 +1010,57 @@ async function runAgentLoop(id: string, state: AgentState, onProgress?: (event: 
     const calls = Array.isArray(completion.message.tool_calls) ? completion.message.tool_calls as AgentToolCall[] : [];
     if (calls.length) ensureAssistantToolCallMessage(state.messages, calls);
     if (!calls.length) {
+      let finalContent = typeof completion.message.content === "string" ? completion.message.content : "";
+      const originalRequest = state.goal || String(state.messages.find((message) => message.role === "user")?.content || "");
+      if (!state.goal && originalRequest) state.goal = originalRequest;
+      if (finalContent.trim()) {
+        onProgress?.({ type: "status", status: "quality_audit", phase: "auditing" });
+        try {
+          const finalIndex = state.messages.length - 1;
+          const evidence = state.messages.filter((message) => message.role === "tool").slice(-12).map((message) => String(message.content ?? ""));
+          const review = await reviewFinalAnswer({
+            request: originalRequest,
+            draft: finalContent,
+            evidence,
+            signal,
+            call: (messages, reviewSignal) => modelCompletion(messages, [], undefined, "review", reviewSignal),
+            onPhase: (phase) => onProgress?.({ type: "status", status: "quality_audit", phase }),
+            measureCheckpointBytes: (candidate) => {
+              const candidateMessages = state.messages.map((message, index) =>
+                index === finalIndex ? { ...completion.message, content: candidate } : message,
+              );
+              return new TextEncoder().encode(JSON.stringify({
+                id,
+                updatedAt: new Date().toISOString(),
+                state: { ...state, messages: candidateMessages },
+              })).byteLength;
+            },
+          });
+          for (const reviewCall of review.calls) {
+            totalDurationMs += reviewCall.durationMs;
+            totalGenerationDurationMs += reviewCall.generationDurationMs;
+            lastProvider = reviewCall.provider;
+            if (typeof reviewCall.usage?.prompt_tokens === "number") totalPromptTokens += reviewCall.usage.prompt_tokens;
+            const reviewTokens = typeof reviewCall.usage?.completion_tokens === "number" ? reviewCall.usage.completion_tokens : null;
+            if (reviewTokens !== null) totalCompletionTokens += reviewTokens;
+            addThroughputSample(throughput, reviewTokens, reviewCall.generationDurationMs);
+          }
+          tokensPerSecond = calculateTokensPerSecond(throughput);
+          finalContent = review.content;
+          state.messages[finalIndex] = { ...completion.message, content: finalContent };
+          if (review.status === "unavailable") onProgress?.({ type: "status", status: "quality_audit_unavailable" });
+          if (review.status === "refinement_incomplete") onProgress?.({ type: "status", status: "quality_audit_refinement_incomplete" });
+        } catch (error) {
+          if (signal?.aborted) {
+            await saveAgentState(id, state);
+            onProgress?.({ type: "status", status: "cancelled" });
+            return { status: "cancelled", sessionId: id, message: "The Agent was stopped during its final quality review. The original draft and latest checkpoint are saved.", turns: turn + 1, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
+          }
+          throw error;
+        }
+      }
       await saveAgentState(id, state);
-      return { status: "completed", sessionId: id, message: typeof completion.message.content === "string" ? completion.message.content : "", turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
+      return { status: "completed", sessionId: id, message: finalContent, turns: turn + 1, ...summarizeAgentToolFailures(state.toolFailures || []), usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, averageTokensPerSecond: tokensPerSecond ?? 0, tokensPerSecond, generationDurationMs: totalGenerationDurationMs, requestDurationMs: totalDurationMs, provider: lastProvider } };
     }
     onProgress?.({ type: "status", status: "using_tools", tools: calls.map((call) => call.function?.name || "tool") });
     const imageQueue: McpImageObservation[] = [];
@@ -1216,6 +1266,7 @@ async function startAgent(body: Json, onProgress?: (event: Json) => void): Promi
   const purpose = inferModelPurpose(goal);
   const state: AgentState = {
     createdAt: new Date().toISOString(),
+    goal,
     purpose,
     toolFailures: [],
     messages: [
@@ -1272,10 +1323,16 @@ async function resumeAgent(body: Json, onProgress?: (event: Json) => void): Prom
   const id = typeof body.sessionId === "string" ? body.sessionId : "";
   return await withAgentSessionAbort(id, "This agent session is already being processed. Wait for that request to finish.", async (signal) => {
     const state = await loadAgentState(id);
-    if (typeof body.goal === "string" && body.goal.trim()) {
-      if (body.goal.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
-      state.messages.push({ role: "user", content: body.goal.trim() });
-      state.purpose = inferModelPurpose(body.goal.trim());
+    const resumeInstruction = typeof body.goal === "string" ? body.goal.trim() : "";
+    if (resumeInstruction.length > 12000) throw new Error("Resume instruction must be 12,000 characters or fewer.");
+    assertResumeInstructionAllowed(Boolean(state.pendingToolCalls?.length), resumeInstruction);
+    if (!state.goal) {
+      const originalGoal = state.messages.find((message) => message.role === "user")?.content;
+      if (typeof originalGoal === "string") state.goal = originalGoal;
+    }
+    if (resumeInstruction) {
+      state.messages.push({ role: "user", content: resumeInstruction });
+      state.purpose = inferModelPurpose(resumeInstruction);
     } else if (!state.pendingToolCalls?.length) {
       state.messages.push({ role: "user", content: "Resume this saved task from its last checkpoint. Inspect the previous tool results and continue safely." });
     }

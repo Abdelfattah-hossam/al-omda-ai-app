@@ -40,3 +40,17 @@ export function getProfessionalOperatingGuidance(domain: AgentDomain): string {
 export function buildToolCallingOptions<T>(tools: T[]): { tools: T[]; tool_choice: "auto" } | Record<string, never> {
   return tools.length ? { tools, tool_choice: "auto" } : {};
 }
+
+export function shouldAuditFinalAnswer(goal: string): boolean {
+  const domain = inferAgentDomain(goal);
+  return domain === "legal" || domain === "engineering" || domain === "medical" || domain === "finance" || domain === "software";
+}
+
+export function parseAuditIssues(response: string): string[] {
+  return response.split(/\\r?\\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^(?:ISSUE|BLOCKER|FAIL)\\s*:/i.test(line))
+    .map((line) => line.slice(line.indexOf(":") + 1).trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
