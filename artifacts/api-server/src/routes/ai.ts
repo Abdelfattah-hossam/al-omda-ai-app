@@ -1249,7 +1249,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         return null;
       }),
     ]);
-    console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
+    // Gated behind an explicit debug flag: this fires on every chat request and
+    // each emitted log line counts toward the Workers observability daily event budget.
+    if (process.env.OMDA_DEBUG_LOGS === "1") console.info("[AI memory context]", { loaded: Boolean(userMemory.trim()), characters: userMemory.length });
     const latestIntent = classifyLatestChatIntent(messages);
     const latestCustomerRequest = latestIntent.request;
     const standaloneGreeting = latestIntent.kind === "greeting";
