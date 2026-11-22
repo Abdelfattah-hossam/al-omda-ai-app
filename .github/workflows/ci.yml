@@ -52,6 +52,7 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/ai-model-policy.test.ts
       - name: Test AI provider failover chain
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/provider-failover.test.ts
+        pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/execution-tools.test.ts
       - name: Test private memory graph validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/memory-graph.test.ts
       - name: Test chat history artifact and warning persistence
