@@ -1150,7 +1150,11 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
         : continuesExistingProject && !linkedProjectMessage?.taskId
           ? detectProjectSpecialty([text, projectRequestContext].filter(Boolean).join("\n\n"))
           : null;
-      if (projectSpecialty) {
+      // When the reply already carries a finished file, the work is delivered, not
+      // proposed: register the honest artifact record below instead of a gated plan
+      // whose pending steps would contradict the delivered file.
+      const hasGeneratedFile = Boolean(assistantMessage.attachment);
+      if (projectSpecialty && !hasGeneratedFile) {
         try {
           const planResponse = await fetch("/api/ai/project-plan", {
             method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
@@ -1191,7 +1195,6 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
           assistantMessage = { ...assistantMessage, content: assistantMessage.content + (ar ? "\n\nملاحظة: اكتمل الرد، لكن لم أتمكن من تسجيل المشروع في سجل المهام: " : "\n\nNote: The reply is ready, but the project could not be added to Task History: ") + detail };
         }
       }
-      const hasGeneratedFile = Boolean(assistantMessage.attachment);
       if (hasGeneratedFile && assistantMessage.attachment) {
         let taskLogCreated = Boolean(assistantMessage.taskId);
         try {

@@ -280,7 +280,26 @@ router.get("/storage/assets/download", async (req, res): Promise<void> => {
       return;
     }
     const mime = response.headers.get("content-type")?.split(";")[0].trim() ?? "application/octet-stream";
-    const filename = path.split("/").pop() ?? "download";
+    let filename = path.split("/").pop() ?? "download";
+    // Storage keys are ASCII-safe folds (Supabase Storage does not support
+    // non-ASCII object keys). Artifact tasks record the original filename in
+    // every step output; serve the download under that real name when it
+    // matches the object's type.
+    try {
+      const folder = path.split("/")[1] ?? "";
+      if (isValidProjectFolderId(folder)) {
+        const taskQuery = new URLSearchParams({ id: `eq.${folder}`, user_id: `eq.${session.user.id}`, select: "steps" });
+        const taskResponse = await supabaseFetch(`/rest/v1/tasks?${taskQuery}`, {}, session.accessToken);
+        const rows = await readSupabaseJson<Array<{ steps?: Array<{ output?: unknown }> }>>(taskResponse);
+        const outputs = (rows[0]?.steps ?? []).map((item) => (typeof item?.output === "string" ? item.output : ""));
+        const recorded = outputs.length > 0 && outputs.every((output) => output === outputs[0]) ? outputs[0] : "";
+        if (recorded && recorded.length <= 160 && !recorded.includes("/") && /\.[A-Za-z0-9]{2,5}$/.test(recorded) && getWorkspaceAssetMimeType(recorded) === mime) {
+          filename = recorded;
+        }
+      }
+    } catch {
+      // Keep the storage-key filename when the lookup is unavailable.
+    }
     res.setHeader("content-type", mime);
     res.setHeader("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.setHeader("cache-control", "private, no-store");

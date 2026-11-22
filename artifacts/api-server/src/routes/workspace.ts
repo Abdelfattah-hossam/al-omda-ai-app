@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { isRevisionHistoryUnchanged } from "../lib/task-history.js";
-import { getWorkspaceAssetMimeType, MAX_WORKSPACE_ASSET_BYTES, sanitizeWorkspaceAssetName } from "../lib/storage-assets.js";
+import { getWorkspaceAssetMimeType, MAX_WORKSPACE_ASSET_BYTES, sanitizeWorkspaceAssetName, WORKSPACE_ASSET_BUCKET } from "../lib/storage-assets.js";
 import { sanitizeWorkspaceProfile, sanitizeWorkspaceTask } from "../lib/workspace-sanitize.js";
 import {
   UpdateProfileResponse,
@@ -530,7 +530,33 @@ router.delete("/tasks/:id", requireSameOrigin, async (req, res): Promise<void> =
       res.status(404).json({ error: "Task not found or you do not have permission to delete it." });
       return;
     }
-    res.json({ ok: true, id: params.data.id });
+    // Cascade: remove the project's stored files so deleting a project does not
+    // leave orphaned objects that the Assets UI can no longer reach. Cleanup
+    // failures never fail the completed task deletion; they are reported instead.
+    let assetsRemoved = 0;
+    let assetsFailed = 0;
+    try {
+      const prefix = `${session.user.id}/${params.data.id}/`;
+      const listResponse = await supabaseFetch(`/storage/v1/object/list/${WORKSPACE_ASSET_BUCKET}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prefix, limit: 200, offset: 0 }),
+      }, session.accessToken);
+      const objects = await readSupabaseJson<Array<{ name?: string }>>(listResponse);
+      for (const object of objects) {
+        if (typeof object.name !== "string" || !object.name) continue;
+        // No content-type on a bodyless DELETE: Supabase Storage rejects it.
+        const objectPath = (prefix + object.name).split("/").map((part) => encodeURIComponent(part)).join("/");
+        const deleteResponse = await supabaseFetch(`/storage/v1/object/${WORKSPACE_ASSET_BUCKET}/${objectPath}`, { method: "DELETE" }, session.accessToken);
+        await deleteResponse.arrayBuffer().catch(() => null);
+        if (deleteResponse.ok) assetsRemoved += 1;
+        else assetsFailed += 1;
+      }
+    } catch (cleanupError) {
+      assetsFailed += 1;
+      console.warn("[Task asset cleanup failed]", params.data.id, cleanupError instanceof Error ? cleanupError.message : "Unknown error");
+    }
+    res.json({ ok: true, id: params.data.id, assetsRemoved, ...(assetsFailed ? { assetsFailed } : {}) });
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not delete the task.");
   }

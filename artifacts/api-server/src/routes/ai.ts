@@ -794,6 +794,9 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         if (reviewedDocument) {
           validatedWordDocument = reviewedDocument;
           answer = reviewAnswer;
+          // The delivered text now comes from the reviewer; keep the reported
+          // provider honest so the label matches the actual model.
+          provider = reviewProvider;
         } else {
           console.warn("[Task Word quality review] Invalid review structure; retaining validated draft.");
         }
@@ -1459,6 +1462,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         if (reviewedDocument) {
           validatedWordDocument = reviewedDocument;
           answer = reviewAnswer;
+          // The delivered text now comes from the reviewer; keep the reported
+          // provider honest so the chat label matches the actual model.
+          usedProvider = reviewProvider;
         } else {
           console.warn("[Word quality review] Reviewer returned invalid structure; retaining the validated draft.");
         }
