@@ -1,3 +1,5 @@
+/* A named important layer keeps legacy unlayered theme rules from changing this design. */
+@layer omda-chat-design {
 /* User-supplied November 22 chat design. Existing scroll and composer handlers stay intact. */
 body .app-shell[data-chat-active="true"]{--chat-bg:#0b0b0b;--chat-text:#ececec;--chat-line:#242424;--chat-line-strong:#383838;--chat-gold:#ececec;--chat-gold-light:#fff;--omda-chat-line:#242424;--omda-chat-muted:#9ca3af;--border:#2a2a2a;background:#0b0b0b!important;width:100%!important;max-width:none!important;height:100dvh!important;min-height:0!important;margin:0!important;}
 body .app-shell[data-chat-active="true"]>.main-area{display:flex!important;flex-direction:column!important;width:100%!important;max-width:none!important;height:100dvh!important;min-height:0!important;margin:0!important;padding:0!important;background:#0b0b0b!important;}
@@ -30,7 +32,7 @@ body .app-shell[data-chat-active="true"] .ai-chat-account-avatar{width:32px!impo
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-account strong{font-size:12px!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-account small{font-size:10px!important;color:#9ca3af!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-main{min-width:0!important;padding:0!important;gap:0!important;border:0!important;border-radius:0!important;background:#0b0b0b!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-topbar{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;flex:0 0 56px!important;min-height:56px!important;height:56px!important;padding:0 20px!important;gap:8px!important;background:#0b0b0b!important;border:0!important;border-bottom:1px solid #1f1f1f!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{display:flex!important;flex-wrap:nowrap!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;flex:0 0 56px!important;min-height:56px!important;height:56px!important;padding:0 20px!important;gap:8px!important;background:#0b0b0b!important;border:0!important;border-bottom:1px solid #1f1f1f!important;border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-topbar::before,body .app-shell[data-chat-active="true"] .ai-chat-topbar::after{display:none!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-brand{display:none!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-back{order:0!important;display:flex!important;width:38px!important;height:46px!important;min-width:38px!important;border:1px solid #282828!important;border-radius:12px!important;color:#e5e7eb!important;background:#161616!important;box-shadow:none!important;}
@@ -129,4 +131,6 @@ body .app-shell[data-chat-active="true"] .ai-chat-live-end{background:#dc2626!im
  body .app-shell[data-chat-active="true"] :is(.ai-attach-image-button,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button,.ai-send-button){width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;}
  body .app-shell[data-chat-active="true"] .ai-chat-canvas-modal>header{padding:8px!important;gap:6px!important;}
  body .app-shell[data-chat-active="true"] .ai-chat-canvas-modal>header strong{font-size:11px!important;}
+}
+
 }

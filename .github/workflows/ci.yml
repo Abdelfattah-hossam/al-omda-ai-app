@@ -131,7 +131,7 @@ jobs:
       - name: Test deployment cache recovery
         run: pnpm --filter @workspace/scripts exec tsx --test src/service-worker-cache.test.ts
       - name: Test mobile audit regressions
-        run: pnpm --filter @workspace/scripts exec tsx --test src/mobile-audit-regression.test.ts
+        run: pnpm --filter @workspace/scripts exec tsx --test src/mobile-audit-regression.test.ts src/chat-design.test.ts
       - name: Test Supabase schema security and quota contracts
         run: pnpm --filter @workspace/scripts exec tsx --test ../supabase/setup.test.ts
 
