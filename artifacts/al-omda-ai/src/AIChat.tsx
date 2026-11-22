@@ -11,6 +11,7 @@ import { detectProjectSpecialty } from "./lib/project-intent";
 import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
 import { createDocxBlob, createXlsxBlob } from "./lib/office-ooxml";
 import { buildFormulaWorksheetCell } from "./lib/office-formula-cell";
+import { ensureWorkbookRecalculation } from "./lib/office-workbook-recalculation";
 import { resolveArtifactUploadMime } from "./lib/asset-upload";
 import { downloadFileFromUrl } from "./lib/download-file";
 import { previewOfficeDocument } from "./lib/office-preview";
@@ -821,7 +822,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
           throw new Error(ar ? "تم رفض صيغة Excel غير آمنة." : "An unsafe Excel formula was rejected.");
         }
         const cell = XLSX.utils.decode_cell(address);
-        if (cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
+        if (cell.r < 1 || cell.r > sheet.rows.length || cell.c >= sheet.columns.length) throw new Error(ar ? "صيغة Excel تشير إلى خلية خارج نطاق الجدول." : "An Excel formula points outside the worksheet data range.");
         const canonicalAddress = XLSX.utils.encode_cell(cell);
         // buildFormulaWorksheetCell keeps the model's cached value (or a placeholder) next
         // to the formula: XLSX.write drops a formula-only cell entirely, which then fails
@@ -833,7 +834,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
     }
     workbook.Workbook = workbook.Workbook || {};
     workbook.Workbook.CalcPr = { calcMode: "auto", fullCalcOnLoad: true, forceFullCalc: true };
-    const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const rawBytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const bytes = expectedFormulas.length ? ensureWorkbookRecalculation(rawBytes, XLSX.CFB) : rawBytes;
     const roundTrip = XLSX.read(bytes, { type: "array", cellFormula: true });
     if (roundTrip.SheetNames?.length !== sheets.length) throw new Error(ar ? "فشل التحقق من عدد أوراق Excel." : "Excel worksheet count validation failed.");
     for (const sheet of sheets) {
