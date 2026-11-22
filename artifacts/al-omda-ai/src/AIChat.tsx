@@ -194,7 +194,7 @@ function MessageContent({ content }: { content: string }) {
   </div>;
 }
 
-export default function AIChatPage({ language, signedIn, openSettingsInitially }: { language: Language; signedIn: boolean; openSettingsInitially?: boolean }) {
+export default function AIChatPage({ language, signedIn, openSettingsInitially, displayName, onToggleLanguage, onPageHelp }: { language: Language; signedIn: boolean; openSettingsInitially?: boolean; displayName?: string; onToggleLanguage?:()=>void; onPageHelp?:()=>void }) {
   const ar = language === "ar";
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -240,10 +240,18 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
   const [showLiveVoice, setShowLiveVoice] = useState(false);
   const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(Boolean(openSettingsInitially));
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showCodeCanvas, setShowCodeCanvas] = useState(false);
-  const [canvasCode, setCanvasCode] = useState('<!doctype html>\n<html lang="ar" dir="rtl">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>\n<body style="font-family:system-ui;background:#111827;color:#f8fafc;padding:32px;text-align:center"><h1>معاينة كود العمدة</h1><p>اكتب HTML أو CSS أو JavaScript ثم اضغط تشغيل ومعاينة.</p></body></html>');
+  const [canvasCode, setCanvasCode] = useState(`<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="background:#111;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:40px 16px">
+<h2>معاينة كود العمدة</h2><p>الكود يعمل مباشرة داخل التطبيق.</p>
+<button onclick="document.getElementById('canvas-status').textContent='تم التشغيل بنجاح!'" style="padding:10px 20px;background:#10b981;border:0;color:white;border-radius:8px;cursor:pointer">اختبار الزر</button>
+<p id="canvas-status" role="status" aria-live="polite"></p>
+</body></html>`);
   const [canvasPreviewCode, setCanvasPreviewCode] = useState('');
   const [currentMode, setCurrentMode] = useState<null | "word" | "excel" | "ppt" | "office">(null);
   const chatTopbarRef = useRef<HTMLElement | null>(null);
@@ -528,8 +536,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
     }
   };
 
-  const saveMemory = async () => {
-    if (memorySaving || memoryLoading || !signedIn) return;
+  const saveMemory = async (): Promise<boolean> => {
+    if (memorySaving || memoryLoading || !signedIn) return false;
     setMemorySaving(true);
     setError("");
     try {
@@ -542,8 +550,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
       setError(ar ? "تم حفظ ذاكرة العمدة الخاصة بحسابك." : "Your private AL OMDA memory was saved.");
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
+      return false;
     } finally {
       setMemorySaving(false);
     }
@@ -1476,7 +1486,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
   };
   const runCanvasCode = () => setCanvasPreviewCode(canvasCode);
 
-  return <div className="page-enter ai-chat-page">
+  return <div className={"page-enter ai-chat-page" + (desktopSidebarCollapsed ? " is-sidebar-collapsed" : "")}>
     {mediaStudioOpen&&<MediaStudio ar={ar} onClose={()=>setMediaStudioOpen(false)}/>}
     {chatSidebarOpen && <button type="button" className="ai-chat-sidebar-scrim" aria-label={ar ? "إغلاق القائمة" : "Close sidebar"} onClick={()=>setChatSidebarOpen(false)} />}
     <aside className={"ai-chat-sidebar" + (chatSidebarOpen ? " is-open" : "")} dir={ar ? "rtl" : "ltr"}>
@@ -1503,11 +1513,11 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
         <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
         <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
       </button>
-      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span><strong>{ar ? "حساب العمدة" : "AL OMDA account"}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
+      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar" aria-hidden="true">{Array.from(displayName?.trim() || (ar ? "ع" : "A"))[0]}</span><span><strong>{displayName?.trim() || (ar ? "حساب العمدة" : "AL OMDA account")}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
     </aside>
     <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
-      <button type="button" className="ai-chat-back" onClick={()=>setChatSidebarOpen(true)} aria-label={ar ? "فتح القائمة الجانبية" : "Open sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
+      <button type="button" className="ai-chat-back" onClick={()=>{if(window.matchMedia('(min-width:768px)').matches)setDesktopSidebarCollapsed(value=>!value);else setChatSidebarOpen(true);}} aria-label={ar ? "إظهار أو إخفاء القائمة الجانبية" : "Toggle sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
       <div className="ai-chat-brand" aria-label="AL OMDA AI"><span className="ai-chat-brand-mark"><img src="/brand/al-omda-mark.svg" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة AI" : "AL OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
       {!signedIn && <button type="button" id="ai-chat-login-cta" className="ai-chat-login-cta" onClick={()=>setLocation("/profile?focus=profile-account-card")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
@@ -1528,6 +1538,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
       <button type="button" className="ai-chat-header-icon" onClick={openSettings} title={ar ? "الاستخدام والذاكرة" : "Usage & memory"}><Settings2 size={16}/></button>
       <button type="button" className="ai-chat-menu-trigger" aria-label={ar ? "قائمة الشات" : "Chat menu"} aria-expanded={showChatMenu} onClick={()=>{setShowPlusMenu(false);setShowChatMenu(v=>!v)}}><MoreHorizontal size={21}/></button>
       {showChatMenu && <div className="ai-chat-top-menu" role="menu">
+        {onToggleLanguage && <button type="button" onClick={()=>{onToggleLanguage();setShowChatMenu(false);}}>{ar ? "English · تغيير اللغة" : "العربية · Change language"}</button>}
+        {onPageHelp && <button type="button" onClick={()=>{onPageHelp();setShowChatMenu(false);}}>{ar ? "مساعدة الصفحة" : "Page help"}</button>}
         <button type="button" onClick={()=>{setShowRoutingInfo(v=>!v);setShowChatMenu(false)}}><Bot size={16}/>{ar ? "التوجيه التلقائي" : "Auto routing"}</button>
         <button type="button" onClick={()=>{setShowConversationList(v=>!v);setShowChatMenu(false)}}><History size={16}/>{ar ? "المحادثات السابقة" : "Conversation history"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);void createConversation()}} disabled={loading || historyLoading}><Plus size={16}/>{ar ? "محادثة جديدة" : "New chat"}</button>
@@ -1568,10 +1580,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
             <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to AL OMDA"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
-              <button type="button" onClick={() => void sendMessage(undefined, ar ? "أنشئ مستند Word منسقًا واحترافيًا عن: " : "Create a polished, professionally formatted Word document about: ")}><FileText size={17}/><span><strong>{ar ? "إنشاء مستند" : "Create a document"}</strong><small>{ar ? "جهّز ملف Word قابلًا للتحميل" : "Prepare a downloadable Word file"}</small></span></button>
-              <button type="button" onClick={() => void sendMessage(undefined, ar ? "حلل البيانات التالية، ونظمها في جدول واضح مع أهم المؤشرات: " : "Analyze the following data and organize it into a clear table with key insights: ")}><Sheet size={17}/><span><strong>{ar ? "تحليل البيانات" : "Analyze data"}</strong><small>{ar ? "رتّب البيانات واستخرج المؤشرات" : "Organize data and find insights"}</small></span></button>
-              <button type="button" onClick={() => void sendMessage(undefined, ar ? "اكتب حلًا برمجيًا واضحًا وقابلًا للتشغيل من أجل: " : "Write a clear, runnable coding solution for: ")}><Code2 size={17}/><span><strong>{ar ? "مساعدة برمجية" : "Coding help"}</strong><small>{ar ? "اكتب كودًا واشرح طريقة تشغيله" : "Write code and explain how to run it"}</small></span></button>
-              <button type="button" onClick={() => void sendMessage(undefined, ar ? "ساعدني في تخطيط مشروع جديد، وحدد الهدف والمراحل والمهام المطلوبة: " : "Help me plan a new project, defining its goal, phases, and required tasks: ")}><Bot size={17}/><span><strong>{ar ? "تخطيط مشروع" : "Plan a project"}</strong><small>{ar ? "حوّل فكرتك إلى خطة عمل" : "Turn an idea into an action plan"}</small></span></button>
+              <button type="button" onClick={() => activateMode('word')}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند نصي جاهز" : "Create an editable document"}</small></span></button>
+              <button type="button" onClick={() => activateMode('excel')}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تصدير جدول بيانات XLSX" : "Export an editable XLSX workbook"}</small></span></button>
+              <button type="button" onClick={openCodeCanvas}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح وتشغيل الكود في Canvas" : "Open and run code in Canvas"}</small></span></button>
+              <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "AL OMDA memory"}</strong><small>{ar ? "تخصيص الذاكرة والوكيل المحلي" : "Memory and local Agent settings"}</small></span></button>
             </div>
           </div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
@@ -1671,14 +1683,16 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
                 <div className="ai-chat-menu-caption">{ar ? "برامج الأوفيس الكاملة" : "Office tools"}</div>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("word")}><FileText size={16}/><span>{ar ? "مستند Word (مع زر تحميل)" : "Word document"}</span></button>
                 <button type="button" className="ai-plus-option" onClick={()=>activateMode("excel")}><Sheet size={16}/><span>{ar ? "جدول Excel (مع زر تحميل)" : "Excel workbook"}</span></button>
-                <button type="button" className="ai-plus-option" onClick={()=>activateMode("ppt")}><Presentation size={16}/><span>{ar ? "عرض PowerPoint (محتوى الشرائح)" : "PowerPoint slide content"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>activateMode("ppt")}><Presentation size={16}/><span>{ar ? "عرض PowerPoint (مع زر تحميل)" : "PowerPoint presentation"}</span></button>
                 <div className="ai-chat-menu-divider"/>
                 <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);openCodeCanvas();}}><Code2 size={16}/><span>{ar ? "محرر ومعاين الأكواد (Canvas)" : "Code editor & preview"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);void sendMessage(undefined, ar ? "حلل البيانات التالية، ونظمها في جدول واضح مع أهم المؤشرات: " : "Analyze the following data: ");}}><Sheet size={16}/><span>{ar ? "تحليل البيانات" : "Analyze data"}</span></button>
+                <button type="button" className="ai-plus-option" onClick={()=>{setShowPlusMenu(false);void sendMessage(undefined, ar ? "ساعدني في تخطيط مشروع جديد، وحدد الهدف والمراحل والمهام المطلوبة: " : "Help me plan a new project: ");}}><Bot size={16}/><span>{ar ? "تخطيط مشروع" : "Plan a project"}</span></button>
               </div>}
             </div>
             <textarea ref={inputRef} id="ai-chat-input" className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
             <button type="button" className={"ai-chat-mic-button" + (listening ? " is-listening" : "")} aria-label={listening ? copy.stop : copy.mic} title={listening ? copy.stop : copy.mic} onClick={toggleVoiceInput} disabled={!signedIn || loading || historyLoading}><Mic size={17}/></button>
-            {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
+            {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage || pendingFile ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
           </div>
 
           <div className="ai-composer-footer">
@@ -1692,6 +1706,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
         <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات العمدة" : "AL OMDA settings"}>
           <header><strong><Settings2 size={16}/>{ar ? "إعدادات العمدة" : "AL OMDA settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <div className="ai-chat-settings-body">
+            {error && <p className={"ai-chat-settings-feedback" + (/تعذر|فشل|خطأ|error|failed|could not/i.test(error) ? " is-error" : "")} role="status">{error}</p>}
             <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span>{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
               <div className="ai-chat-settings-stats"><div><small>{ar ? "المتبقي اليوم" : "Remaining"}</small><strong>{usage?.remaining ?? "—"}</strong></div><div><small>{ar ? "المستخدم" : "Used"}</small><strong>{usage?.used ?? "—"}</strong></div><div><small>{ar ? "الحد اليومي" : "Daily limit"}</small><strong>{usage?.limit ?? "—"}</strong></div></div>
               <div className="ai-chat-settings-progress"><i style={{width:percent + "%"}}/></div>
@@ -1749,7 +1764,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially }
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
           </div>
-          <footer><button type="button" className="button button-primary" onClick={()=>{void saveMemory();setShowSettingsModal(false);}}>{ar ? "إغلاق وحفظ الذاكرة" : "Close & save memory"}</button></footer>
+          <footer><button type="button" className="button button-primary" onClick={()=>{void saveMemory().then(saved=>{if(saved)setShowSettingsModal(false);});}} disabled={memorySaving || memoryLoading}>{memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "إغلاق وحفظ الكل" : "Save & close")}</button></footer>
         </section>
       </div>}
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>

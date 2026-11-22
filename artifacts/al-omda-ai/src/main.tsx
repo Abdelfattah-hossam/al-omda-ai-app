@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
+import './chat-design.css';
 
 // Cache the production app shell so AL OMDA can open while the device is offline.
 // API-backed actions still require a connection and are never cached.

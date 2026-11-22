@@ -2935,8 +2935,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     '/history',
     isAr ? 'العودة إلى سجل المهام' : 'Back to task history',
   );
-  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} openSettingsInitially />;
-  else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} />;
+  else if (path === '/ai/usage') page = <AIChatPage language={language} signedIn={Boolean(authUser)} displayName={name} onToggleLanguage={toggleLanguage} onPageHelp={()=>setPageHelpOpen(value=>!value)} openSettingsInitially />;
+  else if (path === '/ai') page = <AIChatPage language={language} signedIn={Boolean(authUser)} displayName={name} onToggleLanguage={toggleLanguage} onPageHelp={()=>setPageHelpOpen(value=>!value)} />;
   else if (path === '/agents') page = agentsPage();
   else if (path in professionalSpecialtyPages) page = professionalSpecialtyPage(path);
   else if (path === '/workbench') page = workbenchPage();
