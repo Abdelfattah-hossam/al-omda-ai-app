@@ -14,6 +14,12 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
+  // Keyless Workers AI fallback for the chat/provider chain. On the Workers
+  // Free plan this uses the included 10k neurons/day allocation and cannot
+  // bill; no account ID or API token secret is required.
+  "ai": {
+    "binding": "AI"
+  },
   // Stay well under the 200k/day Workers observability event budget on the free
   // plan: sample 10% of requests for logs and skip automatic per-request
   // invocation events. Exceptions are still captured; raise the rate temporarily

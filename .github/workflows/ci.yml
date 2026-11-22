@@ -52,6 +52,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/ai-model-policy.test.ts
       - name: Test AI provider failover chain
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/provider-failover.test.ts
+      - name: Test Cloudflare Workers AI binding fallback
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/cloudflare-ai.test.ts
       - name: Test execution tool registry (fetch_url)
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/execution-tools.test.ts
       - name: Test Office file text extraction (read_workspace_asset)

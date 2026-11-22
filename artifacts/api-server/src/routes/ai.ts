@@ -13,6 +13,7 @@ import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose } from "../lib/ai-model-policy.js";
 import { callWithRateLimitRetry, isRateLimitError, parseRetryAfterSeconds, runWithProviderFailover } from "../lib/provider-failover.js";
+import { getWorkersAiBinding } from "../lib/cloudflare-ai.js";
 import { ASSET_READ_MAX_BYTES, extractFetchableUrl, runRequestReadTools, type RequestToolDeps, type WorkspaceAssetRef } from "../lib/execution-tools.js";
 import { isValidWorkspaceAssetPath, WORKSPACE_ASSET_BUCKET } from "../lib/storage-assets.js";
 import {
@@ -58,7 +59,8 @@ function getProviders() {
     gemini: Boolean(process.env.GEMINI_API_KEY?.trim()),
     openrouter: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
     groq: Boolean(process.env.GROQ_API_KEY?.trim()),
-    cloudflare: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID?.trim() && process.env.CLOUDFLARE_API_TOKEN?.trim()),
+    // The Workers AI binding is keyless: it works without stored secrets.
+    cloudflare: Boolean(getWorkersAiBinding()) || Boolean(process.env.CLOUDFLARE_ACCOUNT_ID?.trim() && process.env.CLOUDFLARE_API_TOKEN?.trim()),
   };
 }
 
@@ -443,25 +445,38 @@ async function callOpenRouter(messages: ChatMessage[], memory = "", excludeModel
 }
 
 async function callCloudflare(messages: ChatMessage[], memory = ""): Promise<{ text: string; model: string }> {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
-  if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
   if (messages.some((message) => message.image)) {
     throw new Error("Cloudflare fallback currently supports text requests only; trying the next provider.");
   }
   const model = "@cf/meta/llama-3.1-8b-instruct-fast";
+  const chatMessages = [
+    { role: "system", content: systemPrompt(isCodingRequest(messages), memory) },
+    ...messages.map((message) => ({ role: message.role, content: message.content })),
+  ];
+  const maxTokens = isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600;
+  const temperature = requestTemperature(messages);
+  // Prefer the keyless Workers AI binding (included allocation on the Workers
+  // Free plan); fall back to the REST API when only the secrets are configured.
+  const binding = getWorkersAiBinding();
+  if (binding) {
+    const payload = (await binding.run(model, { messages: chatMessages, max_tokens: maxTokens, temperature })) as any;
+    const rawBinding = payload?.response ?? payload?.result?.response ?? payload?.choices?.[0]?.message?.content;
+    const bindingText = (typeof rawBinding === "string" ? rawBinding : "").trim();
+    if (!bindingText) throw new Error("Cloudflare Workers AI returned an empty response.");
+    return { text: bindingText, model: typeof payload?.model === "string" ? payload.model : model };
+  }
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !apiToken) throw new Error("Cloudflare Workers AI is not configured.");
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`, {
     method: "POST",
     signal: AbortSignal.timeout(18000),
     headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: systemPrompt(isCodingRequest(messages), memory) },
-        ...messages.map((message) => ({ role: message.role, content: message.content })),
-      ],
-      max_tokens: isCodingRequest(messages) || needsLongStructuredOutput(messages) ? 4096 : 1600,
-      temperature: requestTemperature(messages),
+      messages: chatMessages,
+      max_tokens: maxTokens,
+      temperature,
     }),
   });
   const payload = await response.json().catch(() => null) as any;
