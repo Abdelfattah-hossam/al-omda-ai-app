@@ -54,6 +54,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/provider-failover.test.ts
       - name: Test execution tool registry (fetch_url)
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/execution-tools.test.ts
+      - name: Test Office file text extraction (read_workspace_asset)
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/office-reader.test.ts
       - name: Test private memory graph validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/memory-graph.test.ts
       - name: Test chat history artifact and warning persistence

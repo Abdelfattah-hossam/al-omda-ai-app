@@ -5,6 +5,8 @@
  * ToolRun shape is the seam later tools (and MCP) plug into.
  */
 
+import { extractOfficeText, officeKindFromMime } from "./office-reader.js";
+
 export type ToolRiskClass = "read" | "write" | "external" | "destructive";
 
 export type ToolRun = {
@@ -163,6 +165,8 @@ export type WorkspaceAssetRef = {
 };
 
 export const ASSET_READ_MAX_BYTES = 256 * 1024;
+/** Office files are zip containers; allow larger reads, extraction stays capped. */
+export const ASSET_OFFICE_READ_MAX_BYTES = 4 * 1024 * 1024;
 export const ASSET_EVIDENCE_MAX_CHARS = 15000;
 export const ASSET_MENTION_MAX_MATCHES = 2;
 
@@ -212,6 +216,8 @@ export function findAssetMentions(
 
 export type ReadAssetDeps = {
   readAssetText: (path: string) => Promise<{ text: string; bytes: number }>;
+  /** Binary reads for Office files (xlsx/docx/pptx); optional so text-only callers stay simple. */
+  readAssetBytes?: (path: string) => Promise<Buffer>;
 };
 
 /** Runs the read-only read_workspace_asset tool against one matched asset. */
@@ -219,6 +225,32 @@ export async function runReadAssetTool(asset: WorkspaceAssetRef, deps: ReadAsset
   const started = Date.now();
   const base = { tool: "read_workspace_asset", riskClass: "read" as const };
   const displayName = assetDisplayName(asset.name);
+  const officeKind = officeKindFromMime(asset.mimeType);
+  if (officeKind) {
+    if (!deps.readAssetBytes) {
+      return { ...base, ok: false, detail: "binary reading is unavailable for " + displayName, durationMs: Date.now() - started };
+    }
+    if (asset.size != null && asset.size > ASSET_OFFICE_READ_MAX_BYTES) {
+      return { ...base, ok: false, detail: "file too large for inline evidence (" + Math.round(asset.size / 1024) + " KB > " + Math.round(ASSET_OFFICE_READ_MAX_BYTES / 1024) + " KB)", durationMs: Date.now() - started };
+    }
+    try {
+      const bytes = await deps.readAssetBytes(asset.path);
+      const evidence = extractOfficeText(officeKind, bytes).trim().slice(0, ASSET_EVIDENCE_MAX_CHARS);
+      if (!evidence) {
+        return { ...base, ok: false, detail: "no readable text content in " + displayName, durationMs: Date.now() - started };
+      }
+      return {
+        ...base,
+        ok: true,
+        detail: displayName + ", " + (bytes.length / 1024).toFixed(1) + " KB",
+        durationMs: Date.now() - started,
+        data: evidence,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "read failed";
+      return { ...base, ok: false, detail: displayName + ": " + message, durationMs: Date.now() - started };
+    }
+  }
   if (!isTextAssetMime(asset.mimeType)) {
     return { ...base, ok: false, detail: "unsupported content type for text evidence: " + (asset.mimeType ?? "unknown"), durationMs: Date.now() - started };
   }

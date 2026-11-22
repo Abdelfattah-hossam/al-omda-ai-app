@@ -745,6 +745,16 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
         if (buffer.length > ASSET_READ_MAX_BYTES) throw new Error("file too large for inline evidence");
         return { text: buffer.toString("utf-8"), bytes: buffer.length };
       },
+      readAssetBytes: async (assetPath) => {
+        if (!isValidWorkspaceAssetPath(assetPath, session.user.id)) throw new Error("asset path is invalid");
+        const objectPath = assetPath.split("/").map(encodeURIComponent).join("/");
+        const fileResponse = await supabaseFetch(`/storage/v1/object/${WORKSPACE_ASSET_BUCKET}/${objectPath}`, {}, session.accessToken);
+        if (!fileResponse.ok) {
+          await fileResponse.arrayBuffer();
+          throw new Error("HTTP " + fileResponse.status);
+        }
+        return Buffer.from(await fileResponse.arrayBuffer());
+      },
     };
     const toolRuns = await runRequestReadTools(customerRequest, toolDeps);
     const toolEvidence = toolRuns.map((run) => {
