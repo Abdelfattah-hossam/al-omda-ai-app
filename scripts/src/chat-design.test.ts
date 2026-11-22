@@ -11,6 +11,11 @@ test("the supplied design is scoped to chat, not the rest of the app", () => {
  assert.ok(css.includes("#0b0b0b"));
  assert.ok(!css.includes("scroll-behavior"));
 });
+test("mobile header reserves the notch with the same selector specificity as desktop", () => {
+ assert.equal((css.match(/\.ai-chat-main>\.ai-chat-topbar\{/g) || []).length, 2);
+ assert.ok(css.includes('padding:env(safe-area-inset-top) 12px 0!important'));
+ assert.ok(css.includes('margin-bottom:max(8px,env(safe-area-inset-bottom))!important'));
+});
 test("document-only attachments expose Send", () => {
  assert.ok(chat.includes("input.trim() || pendingImage || pendingFile ? <button type=\"submit\""));
 });
