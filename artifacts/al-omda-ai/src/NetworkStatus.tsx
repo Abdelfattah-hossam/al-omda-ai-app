@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './NetworkStatus.css';
 
 export default function NetworkStatus({ ar }: { ar: boolean }) {
   const [offline, setOffline] = useState(() => !navigator.onLine);

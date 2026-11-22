@@ -88,6 +88,7 @@ body .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-ca
 body .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal)>header button{color:#9ca3af!important;background:transparent!important;border-color:#2c2c2c!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-settings-body{padding:16px!important;gap:20px!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-settings-section{padding:14px!important;border:1px solid #282828!important;border-radius:16px!important;background:#1a1a1a!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-settings-modal strong,body .app-shell[data-chat-active="true"] .ai-chat-canvas-modal>header strong{color:#e5e7eb!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-settings-section-title strong{font-size:12px!important;color:#e5e7eb!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-settings-section-title>span{font-size:11px!important;color:#9ca3af!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-settings-stats>div{background:#121212!important;border:1px solid #242424!important;border-radius:12px!important;}

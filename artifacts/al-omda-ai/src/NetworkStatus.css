@@ -1,0 +1,2 @@
+/* Dialog controls must stay visible. The connection notice returns on close. */
+body:has(.ai-chat-modal-backdrop, .media-studio-scrim) .network-status { display:none; }
