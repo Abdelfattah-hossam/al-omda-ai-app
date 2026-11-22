@@ -147,3 +147,12 @@ export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessa
 export function hasChatMessagePayload(content: string, hasImage: boolean): boolean {
   return content.trim().length > 0 || hasImage;
 }
+
+/**
+ * The project planner appends "Relevant earlier project context" from older projects
+ * to a task's stored request. That borrowed context must never steer deliverable
+ * classification or execution prompts, so strip it and keep the customer's own words.
+ */
+export function extractOriginalProjectRequest(request: string): string {
+  return request.split(/\n\s*Relevant earlier project context(?:\s*\(only details that apply\))?\s*:/)[0].trim();
+}

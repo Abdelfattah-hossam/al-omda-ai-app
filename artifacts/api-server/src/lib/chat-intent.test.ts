@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "node:test";
-import { classifyLatestChatIntent, getLatestUserRequest, hasChatMessagePayload, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
+import { classifyLatestChatIntent, extractOriginalProjectRequest, getLatestUserRequest, hasChatMessagePayload, isExcelFileRequest, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isStandaloneGreeting, isWordFileRequest } from "./chat-intent.js";
 
 describe("chat artifact intent", () => {
   test("does not create files for questions, comparisons, or ordinary mentions", () => {
@@ -294,5 +294,19 @@ describe("chat message payload validation", () => {
     assert.equal(hasChatMessagePayload("Describe this", false), true);
     assert.equal(hasChatMessagePayload("", false), false);
     assert.equal(hasChatMessagePayload("   ", false), false);
+  });
+});
+
+describe("extractOriginalProjectRequest", () => {
+  test("strips appended earlier-project context so it cannot steer deliverable format", () => {
+    const stored = "أنشئ عرض تقديمي PowerPoint (PPTX) عربي من 8 شرائح عن أساسيات إدارة المشاريع، بتصميم مناسب للعربية\n\nRelevant earlier project context (only details that apply):\nأعد المحاولة: ملف Excel (XLSX) بسيط، ورقة واحدة، أعمدة: البند والمبلغ والتاريخ";
+    const original = extractOriginalProjectRequest(stored);
+    assert.equal(original, "أنشئ عرض تقديمي PowerPoint (PPTX) عربي من 8 شرائح عن أساسيات إدارة المشاريع، بتصميم مناسب للعربية");
+    assert.equal(isExcelFileRequest(original), false);
+    assert.equal(isPowerPointFileRequest(original), true);
+    assert.equal(isExcelFileRequest(stored), true);
+  });
+  test("keeps a plain request unchanged", () => {
+    assert.equal(extractOriginalProjectRequest("اعمل ملف Excel بالميزانية"), "اعمل ملف Excel بالميزانية");
   });
 });

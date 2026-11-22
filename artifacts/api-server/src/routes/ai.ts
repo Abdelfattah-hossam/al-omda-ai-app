@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { classifyLatestChatIntent, extractOriginalProjectRequest, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
@@ -663,8 +663,8 @@ router.post("/ai/execute-step", requireSameOrigin, async (req, res): Promise<voi
     const usage = await currentUsage(session.accessToken);
     if (usage.remaining <= 0) { res.status(429).json({ error: "Your shared daily AI limit is used up.", usage }); return; }
     const memory = await loadUserMemory(session.accessToken, session.user.id);
-    // Select the file format from the customer's original request only. Planner-generated titles, steps, and acceptance text must never turn an unrelated task into Excel.
-    const customerRequest = task.request || "";
+    // Select the file format from the customer's original request only. Planner-generated titles, steps, acceptance text, and earlier-project context appended at plan time must never turn an unrelated task into Excel.
+    const customerRequest = extractOriginalProjectRequest(task.request || "");
     const isFinalDeliverableStep = stepIndex === task.steps.length - 1;
     const excelStep = isFinalDeliverableStep && isExcelRequest([{ role: "user", content: customerRequest }]);
     const wordStep = isFinalDeliverableStep && !excelStep && isExplicitWordFileRequest(customerRequest);
