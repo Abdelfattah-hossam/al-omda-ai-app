@@ -310,3 +310,23 @@ describe("extractOriginalProjectRequest", () => {
     assert.equal(extractOriginalProjectRequest("اعمل ملف Excel بالميزانية"), "اعمل ملف Excel بالميزانية");
   });
 });
+
+describe('runnable browser apps and excluded output formats', () => {
+ test('routes the fresh Arabic clock request to HTML rather than the excluded Excel format', () => {
+  const request = 'اصنع ساعة مكتبية رقمية تعمل على الكمبيوتر داخل المتصفح، تعرض الوقت الحالي والثواني وتاريخ اليوم، بتصميم داكن وذهبي. أريد تطبيق HTML حقيقي قابلًا للتنزيل والتشغيل دون إنترنت، وليس ملف Excel أو جدول بيانات. اسم التطبيق «ساعة القراءة».';
+  assert.equal(isExcelFileRequest(request), false);
+  assert.equal(classifyLatestChatIntent([{role:'user',content:request}]).kind, 'html_app');
+ });
+ test('exclusions apply to the named format, without suppressing the requested format', () => {
+  for(const request of ['Create a Word document, not an Excel workbook', 'أنشئ ملف Word وليس ملف Excel']) {
+   assert.equal(isExcelFileRequest(request), false);
+   assert.equal(classifyLatestChatIntent([{role:'user',content:request}]).kind, 'word_file');
+  }
+  assert.equal(classifyLatestChatIntent([{role:'user',content:'Create an Excel workbook, not a Word document'}]).kind, 'excel_file');
+ });
+ test('a working HTML app precedes source code but ordinary explanations remain chat', () => {
+  assert.equal(classifyLatestChatIntent([{role:'user',content:'Create a working HTML clock app for download, without an Excel spreadsheet'}]).kind, 'html_app');
+  assert.equal(classifyLatestChatIntent([{role:'user',content:'Create a file named app.ts'}]).kind, 'source_code_file');
+  assert.equal(classifyLatestChatIntent([{role:'user',content:'How do I build a clock app?'}]).kind, 'how_to');
+ });
+});

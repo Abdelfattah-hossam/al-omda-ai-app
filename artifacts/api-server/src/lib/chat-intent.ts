@@ -36,6 +36,16 @@ const OFFICE_EXPORT_TARGETS: Record<OfficeFormat, RegExp> = {
   powerpoint: /\b(?:powerpoint|power\s*point|pptx|presentation|slide\s*deck)\b|عرض\s*(?:تقديمي|بوربوينت)|بوربوينت|شرائح/i,
 };
 
+/** A named format in an exclusion is not the requested deliverable. */
+function isExcludedOfficeFormat(text: string, format: OfficeFormat): boolean {
+  const exclusion = /(?:^|[\s،,؛;])(?:وليس|وليست|ليس|ليست|مش|موش|بدون|غير|not|without|no|rather\s+than)\s+(?:(?:a|an|any|as|in|using|ملف|مستند|مصنف|شيت|بصيغة)\s+){0,3}([^،,؛;.?!؟\n]+)/gi;
+  for (const match of text.matchAll(exclusion)) {
+    const excluded = match[1].split(/\s+(?:لكن|بل|but|instead)\s+/i)[0];
+    if (OFFICE_EXPORT_TARGETS[format].test(excluded)) return true;
+  }
+  return false;
+}
+
 /** Only treat an office format as an export target when it follows an explicit export verb in the same sentence. */
 function hasExplicitOfficeFileExport(text: string, format: OfficeFormat): boolean {
   return text.split(/[.!?؟;\n]+/).some((clause) => {
@@ -57,7 +67,7 @@ function hasExplicitSourceFileExport(text: string): boolean {
 /** Detect explicit Excel workbook/spreadsheet creation or export requests. */
 export function isExcelFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "excel"))) return false;
+  if (!text || isExcludedOfficeFormat(text, "excel") || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "excel"))) return false;
   const mentionsExcelFormat = /\b(excel|xlsx|spreadsheet|workbook)\b|إكسل|اكسيل|اكسل/i.test(text);
   const namesFileDeliverable = /(?:ملف|شيت|مصنف|جدول|spreadsheet|workbook|excel\s*file|xlsx\s*file)/i.test(text);
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|حوّل|حول|صدّر|صدر|export|create|generate|make|build|prepare|download)/i.test(text);
@@ -69,7 +79,7 @@ export function isExcelFileRequest(request: string): boolean {
 /** Detect explicit PowerPoint creation/export requests; explanatory and comparison-only turns remain chat. */
 export function isPowerPointFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "excel") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "powerpoint"))) return false;
+  if (!text || isExcludedOfficeFormat(text, "powerpoint") || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "word") || hasExplicitOfficeFileExport(text, "excel") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "powerpoint"))) return false;
   const mentionsPresentation = /(?:powerpoint|power\s*point|pptx|عرض\s*(?:تقديمي|بوربوينت)|presentation|slide\s*deck|شرائح)/i.test(text);
   if (!mentionsPresentation) return false;
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|صمم|صمّم|اعرض|ابني|نفذ|نفّذ|create|make|build|generate|prepare|design|produce|export|download)/i.test(text);
@@ -80,7 +90,7 @@ export function isPowerPointFileRequest(request: string): boolean {
 /** Detect explicit Word document creation/export requests without inheriting older turns. */
 export function isWordFileRequest(request: string): boolean {
   const text = normalizeRequest(request);
-  if (!text || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "excel") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "word"))) return false;
+  if (!text || isExcludedOfficeFormat(text, "word") || isHowToRequest(text) || isNegatedFileCreationRequest(text) || hasExplicitOfficeFileExport(text, "excel") || hasExplicitOfficeFileExport(text, "powerpoint") || (isComparisonOnlyRequest(text) && !hasExplicitOfficeFileExport(text, "word"))) return false;
   const mentionsWordFormat = /(?:و?ورد|\bword\b|\bdocx?\b)/i.test(text);
   const namesFileDeliverable = /(?:ملف|مستند|document|file|docx?)/i.test(text);
   const asksToCreate = /(?:اعمل|اعملي|اعمللي|اعمل\s+لي|تعمل|تعملي|اكتب|اكتبلي|أنشئ|انشئ|تنشئ|إنشاء|جهز|جهزلي|جهز\s+لي|حوّل|حول|صدّر|صدر|create|generate|make|prepare|download|export)/i.test(text);
@@ -117,12 +127,26 @@ export function isExplicitSourceCodeFileRequest(request: string): boolean {
 }
 
 
+export function isBrowserAppRequest(request: string): boolean {
+  if (isHowToRequest(request)) return false;
+  const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
+  const desktopClock = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
+  const directBuild = /(?:اصنع|اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?|(?:a|an|the)\s+)?\s*(?:(?:working|runnable|self-contained|simple|digital|offline|live|responsive|html)\s+){0,4}(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter|app|website|web app|mobile app|application|software|html\s+(?:file|page|app)|project|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized);
+  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:مشروع|تطبيق|برنامج|موقع|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter|app|application|website|web app|software|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized) ||
+    /\b(?:i want|i need|i'd like|please build|please create|build me|create me)\s+(?:(?:a|an|the)\s+)?(?:website|web app|web application|app|application|software|html file|html page|html app|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|project|system)\b/i.test(normalized);
+  const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
+  if (planningOnly && !directBuild && !directAppRequest) return false;
+  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|سوق\s*إلكتروني|متجر|marketplace|dashboard|portal|html\s+(?:file|page|app)|ساعة|clock|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter/i.test(normalized);
+  return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
+}
+
 export type LatestChatIntent =
   | { kind: "greeting"; request: string }
   | { kind: "how_to"; request: string }
   | { kind: "word_file"; request: string }
   | { kind: "excel_file"; request: string }
   | { kind: "powerpoint_file"; request: string }
+  | { kind: "html_app"; request: string }
   | { kind: "source_code_file"; request: string }
   | { kind: "conversation"; request: string };
 
@@ -130,7 +154,7 @@ export type LatestChatIntent =
  * One authoritative, latest-turn-only intent decision for chat artifact routing.
  * Earlier turns may resolve references, but may not independently trigger a new file.
  * Multi-format requests use the deterministic priority: Excel, then Word, PowerPoint,
- * then source code. Only the first matching format is routed by this endpoint.
+ * then a runnable browser app, then source code. Only the first matching format is routed by this endpoint.
  */
 export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessage>): LatestChatIntent {
   const request = getLatestUserRequest(messages);
@@ -139,6 +163,7 @@ export function classifyLatestChatIntent(messages: ReadonlyArray<ChatIntentMessa
   if (isExcelFileRequest(request)) return { kind: "excel_file", request };
   if (isWordFileRequest(request)) return { kind: "word_file", request };
   if (isPowerPointFileRequest(request)) return { kind: "powerpoint_file", request };
+  if (isBrowserAppRequest(request)) return { kind: "html_app", request };
   if (isExplicitSourceCodeFileRequest(request)) return { kind: "source_code_file", request };
   return { kind: "conversation", request };
 }

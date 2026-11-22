@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { classifyLatestChatIntent, extractOriginalProjectRequest, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
+import { isBrowserAppRequest as isDesktopAppRequest, classifyLatestChatIntent, extractOriginalProjectRequest, getLatestUserRequest, isExcelFileRequest, hasChatMessagePayload, isExplicitSourceCodeFileRequest, isHowToRequest, isPowerPointFileRequest, isWordFileRequest } from "../lib/chat-intent.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { parseSourceCodeFile } from "../lib/source-code-artifact.js";
 import { EXCEL_DATA_INTEGRITY_RULES, parseExcelWorkbook } from "../lib/excel-workbook.js";
@@ -85,18 +85,6 @@ function isExplicitWordFileRequest(request: string): boolean {
 function isWordTableRequest(request: string): boolean {
   if (/(?:بدون|من غير|لا تضف|لا تعمل|مش عايز|مش محتاج|without|no)\s*(?:أي\s*)?(?:جدول|table)/i.test(request)) return false;
   return /جدول|table|(?:7|سبع)\s*(?:خانات|أعمدة|اعمدة|حقول|columns)/i.test(request);
-}
-function isDesktopAppRequest(request: string): boolean {
-  if (isHowToRequest(request)) return false;
-  const normalized = request.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g, "");
-  const desktopClock = /desktop|سطح\s*(?:ال)?مكتب|نافذة سطح المكتب/i.test(normalized) && /ساعة|clock|hour|watch|وقت|time/i.test(normalized);
-  const directBuild = /(?:اعمل|اعملي|تعمل|تعملي|أنشئ|انشئ|ابني|ابنيلي|صمم|صمّم|برمج|نفذ|نفّذ|طور|build|create|develop|make|implement|generate)\s*(?:لي|لنا|ال|me\s+(?:a\s+)?|(?:a|an|the)\s+)?\s*(?:مشروع|موقع|تطبيق|برنامج|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter|app|website|web app|mobile app|application|software|html\s+(?:file|page|app)|project|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized);
-  const directAppRequest = /(?:عايز|عاوز|محتاج|اريد|أريد)\s+(?:لي\s*)?(?:مشروع|تطبيق|برنامج|موقع|متجر|نظام|منصة|لوحة\s*تحكم|سوق\s*إلكتروني|ساعة|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter|app|application|website|web app|software|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|platform|system|clock)/i.test(normalized) ||
-    /\b(?:i want|i need|i'd like|please build|please create|build me|create me)\s+(?:(?:a|an|the)\s+)?(?:website|web app|web application|app|application|software|html file|html page|html app|store|marketplace|e-commerce|ecommerce|dashboard|portal|crm|erp|saas|project|system)\b/i.test(normalized);
-  const planningOnly = /خطة|تخطيط|دراسة|استراتيجية|مقترح|أفكار|شرح|مقارنة|بحث|تحليل|plan|planning|strategy|proposal|ideas|explain|compare|research|analysis/i.test(normalized);
-  if (planningOnly && !directBuild && !directAppRequest) return false;
-  const appNoun = /تطبيق|برنامج|app|application|موقع|website|نظام|مشروع|لوحة\s*تحكم|سوق\s*إلكتروني|متجر|marketplace|dashboard|portal|html\s+(?:file|page|app)|ساعة|clock|آلة حاسبة|حاسبة|مؤقت|calculator|timer|stopwatch|countdown|unit converter/i.test(normalized);
-  return (desktopClock && (directBuild || directAppRequest)) || (appNoun && (directBuild || directAppRequest));
 }
 const parseHtmlApp = parseHtmlAppArtifact;
 function isWordDocumentRequest(messages: ChatMessage[]): boolean {
@@ -1464,7 +1452,7 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
     const wordDocumentRequest = latestIntent.kind === "word_file" && isWordDocumentRequest(latestUserMessages);
     const powerPointRequest = latestIntent.kind === "powerpoint_file" && isPowerPointRequest(latestUserMessages);
     const sourceCodeFileRequest = latestIntent.kind === "source_code_file";
-    const desktopAppRequest = !excelRequest && !wordDocumentRequest && !powerPointRequest && !sourceCodeFileRequest && isDesktopAppRequest(latestCustomerRequest);
+    const desktopAppRequest = latestIntent.kind === "html_app";
     const sevenColumnTable = wordDocumentRequest && isSevenColumnTableRequest(messages);
     const tableOnly = wordDocumentRequest && isTableOnlyRequest(messages);
     const wordTableRequested = wordDocumentRequest && (sevenColumnTable || isWordTableRequest(latestCustomerRequest));
