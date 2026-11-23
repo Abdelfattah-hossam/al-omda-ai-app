@@ -818,6 +818,9 @@ function App() {
   const [editComplete, setEditComplete] = useState('');
   const [profileName, setProfileName] = useState(name === defaultDisplayName ? '' : name);
   const [profileOrg, setProfileOrg] = useState(org);
+  const profileDraftRef = useRef({name:false,org:false,revision:0});
+  const [profileSaving,setProfileSaving] = useState(false);
+  const profileSavingRef=useRef(false);
   const [savedToast, setSavedToast] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<'checking'|'unconfigured'|'configured'|'offline'>('checking');
@@ -850,6 +853,19 @@ function App() {
       .finally(() => window.clearTimeout(timeout));
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout); };
   }, [authLoading, authUser?.id]);
+  const profilePageRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const page=profilePageRef.current;const viewport=window.visualViewport;
+    if(!page||!viewport)return;
+    const shell=page.closest<HTMLElement>('.app-shell');
+    const update=()=>{
+      const focused=page.contains(document.activeElement)&&document.activeElement?.matches('input,textarea,select');
+      const keyboard=Boolean(focused&&window.innerHeight-viewport.height>120);
+      if(shell){shell.dataset.profileKeyboard=String(keyboard);shell.style.setProperty('--profile-visual-height',viewport.height+'px');}
+    };
+    viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);document.addEventListener('focusin',update);document.addEventListener('focusout',update);update();
+    return()=>{viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',update);if(shell)delete shell.dataset.profileKeyboard;};
+  },[location,authLoading,workspaceLoaded]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login'|'signup'>('login');
@@ -1083,7 +1099,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       );
     } catch { /* The database remains the source of truth if local storage is unavailable. */ }
   }, [authUser?.id, saved.tasks]);
-  const applyWorkspace = (workspace:ApiWorkspace, email:string) => {
+  const applyWorkspace = (workspace:ApiWorkspace, email:string, expectedRevision=profileDraftRef.current.revision) => {
     setWorkspaceLoaded(true);
     setWorkspaceLoadError('');
     const storedDisplayName = workspace.profile.displayName.trim();
@@ -1098,8 +1114,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (prev.name === remoteName && prev.org === remoteOrg && sameTasks) return prev;
       return { ...prev, name:remoteName, org:remoteOrg, tasks:remoteTasks };
     });
-    setProfileName((current) => current === profileInputName ? current : profileInputName);
-    setProfileOrg((current) => current === remoteOrg ? current : remoteOrg);
+    if(!profileSavingRef.current && expectedRevision===profileDraftRef.current.revision){
+      if(!profileDraftRef.current.name)setProfileName((current) => current === profileInputName ? current : profileInputName);
+      if(!profileDraftRef.current.org)setProfileOrg((current) => current === remoteOrg ? current : remoteOrg);
+    }
     setAvatarPath((current) => current === workspace.profile.avatarPath ? current : workspace.profile.avatarPath);
   };
   useEffect(() => {
@@ -1153,8 +1171,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const refreshWorkspace = async () => {
       if (cancelled || document.visibilityState !== "visible" || taskWriteQueue.current.size > 0) return;
       try {
+        const revision=profileDraftRef.current.revision;
         const workspace = await getWorkspace(apiRequestOptions);
-        if (!cancelled) applyWorkspace(workspace, authUser.email);
+        if (!cancelled) applyWorkspace(workspace, authUser.email,revision);
       } catch {
         // Keep the current task list visible if a background refresh is temporarily unavailable.
       }
@@ -1407,26 +1426,22 @@ pnpm --filter @workspace/scripts agent:runtime`;
     }
   };
   const handleSaveProfile = async () => {
-    const displayName = profileName.trim();
-    const organization = profileOrg.trim() || org;
-    setWorkspaceError('');
-    if (authUser) {
-      try {
-        const profile = await apiUpdateProfile({ displayName, organization }, apiRequestOptions);
-        setProfileName(profile.displayName);
-        setProfileOrg(profile.organization);
-        setSaved((prev) => ({ ...prev, name:profile.displayName.trim() || defaultDisplayName, org:profile.organization.trim() || org }));
-        setAuthNotice(t('profileSaved'));
-      } catch (error) {
-        setWorkspaceError(readApiError(error, t('saveTaskFailed')));
-        return;
+    if(profileSavingRef.current)return;
+    const displayName=profileName.trim();const organization=profileOrg.trim()||org;
+    const revision=profileDraftRef.current.revision;
+    profileSavingRef.current=true;setProfileSaving(true);setWorkspaceError('');
+    try{
+      const profile=authUser?await apiUpdateProfile({displayName,organization},apiRequestOptions):{displayName,organization};
+      setSaved(prev=>({...prev,name:profile.displayName.trim()||defaultDisplayName,org:profile.organization.trim()||org}));
+      // A save response must not erase text typed while the request was running.
+      if(profileDraftRef.current.revision===revision){
+        setProfileName(profile.displayName);setProfileOrg(profile.organization);
+        profileDraftRef.current={name:false,org:false,revision:revision+1};
       }
-    } else {
-      setProfileName(displayName);
-      setSaved((prev) => ({ ...prev, name:displayName || defaultDisplayName, org:organization }));
-    }
-    setSavedToast(true);
-    window.setTimeout(() => setSavedToast(false), 2200);
+      if(authUser)setAuthNotice(t('profileSaved'));
+      setSavedToast(true);window.setTimeout(()=>setSavedToast(false),2200);
+    }catch(error){setWorkspaceError(readApiError(error,t('saveTaskFailed')));}
+    finally{profileSavingRef.current=false;setProfileSaving(false);}
   };
   const handleAvatarUpload = async (event:ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -2783,7 +2798,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     {id:'sunset',name:isAr?'غروب':'Sunset',background:'linear-gradient(135deg,#24151a,#49302d 55%,#1c2432)'},
     {id:'graphite',name:isAr?'جرافيت':'Graphite',background:'linear-gradient(135deg,#111315,#292d32 55%,#171b20)'},
   ];
-  const profilePage = () => <div className="page-enter profile-settings-page">
+  const profilePage = () => <div ref={profilePageRef} className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <section className="profile-welcome" aria-label={isAr?'ملخص الحساب':'Account overview'}>
       <div className="profile-welcome-identity">
@@ -2830,10 +2845,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><UserRound size={19}/></span></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || (isAr?'لم تضف اسمًا بعد':'No display name yet')}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
         <div className="profile-fields-grid">
-          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} maxLength={100} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/>{!profileName.trim()&&<small className="account-hint">{isAr?'لا يوجد اسم عرض محفوظ. اكتب الاسم الذي تريد ظهوره ثم اضغط حفظ الملف.':'No display name is saved. Enter the name you want shown, then choose Save profile.'}</small>}</div>
-          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" name="displayName" autoComplete="nickname" className="field" value={profileName} maxLength={100} onChange={(event)=>{profileDraftRef.current.name=true;profileDraftRef.current.revision++;setProfileName(event.target.value);}} placeholder={t('updateName')} data-testid="input-profile-name"/>{!profileName.trim()&&<small className="account-hint">{isAr?'لا يوجد اسم عرض محفوظ. اكتب الاسم الذي تريد ظهوره ثم اضغط حفظ الملف.':'No display name is saved. Enter the name you want shown, then choose Save profile.'}</small>}</div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" name="organization" autoComplete="organization" className="field" value={profileOrg} onChange={(event)=>{profileDraftRef.current.org=true;profileDraftRef.current.revision++;setProfileOrg(event.target.value);}} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
         </div>
-        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
+        <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} disabled={profileSaving} data-testid="button-save-profile"><Check size={14}/>{profileSaving?t('authWorking'):savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
         {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
       </section>
               <details open className="panel panel-pad profile-setting-card profile-accordion" id="profile-preferences">
@@ -3088,7 +3103,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </aside>
     </div>}
     {path !== '/ai' && path !== '/ai/usage' && path !== '/profile' && <Link href={navigationHref("/ai")} className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
-    {!authLoading && !authUser && guestNudge === 'shown' && <GuestWelcomeNudge isAr={isAr} onSignup={()=>setLocation(focusedHref('/profile','profile-account-card'))} onDismiss={dismissGuestNudge}/>}
+    {!authLoading && !authUser && guestNudge === 'shown' && <GuestWelcomeNudge isAr={isAr} onSignup={()=>{dismissGuestNudge();setAuthMode('signup');setAuthError('');setAuthNotice('');setLocation(focusedHref('/profile','profile-account-card'));window.setTimeout(()=>document.querySelector<HTMLInputElement>('#auth-email')?.focus(),150);}} onDismiss={dismissGuestNudge}/>}
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
 }

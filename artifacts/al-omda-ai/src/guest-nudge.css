@@ -1,0 +1,20 @@
+/* Anonymous welcome is non-modal: only its visible rectangle receives taps.
+   Keep it above the dock's 74px height + 7px inset + 12px clear gap.
+   Drawers and blocking dialogs retain their higher stacking layers. */
+.app-shell>.guest-nudge {
+ z-index:120;
+ box-sizing:border-box;
+ max-height:calc(100dvh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ overflow-y:auto;
+ overscroll-behavior:contain;
+ pointer-events:auto;
+ padding-top:64px;
+}
+.app-shell>.guest-nudge>strong {padding-inline-end:44px;}
+.app-shell>.guest-nudge>.guest-nudge-close {width:44px;height:44px;top:6px;inset-inline-end:6px;touch-action:manipulation;}
+.app-shell>.guest-nudge .guest-nudge-actions {position:sticky;bottom:-14px;padding-block:10px 2px;background:#13131b;}
+.app-shell>.guest-nudge .guest-nudge-actions>.button {min-height:44px;white-space:normal;touch-action:manipulation;}
+@media(max-width:800px) {
+ .app-shell>.guest-nudge {inset-inline:12px;max-width:none;bottom:calc(93px + env(safe-area-inset-bottom));max-height:calc(100dvh - 117px - env(safe-area-inset-bottom) - env(safe-area-inset-top));}
+ .app-shell[data-chat-active="true"]>.guest-nudge {bottom:calc(116px + env(safe-area-inset-bottom));max-height:calc(100dvh - 140px - env(safe-area-inset-bottom) - env(safe-area-inset-top));}
+}

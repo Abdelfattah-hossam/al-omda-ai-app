@@ -192,3 +192,9 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 - Free bounded similarity research found the broad three-part triangle family is common (Drive/Alchemy). B breaks the three-blade symmetry. No exclusivity or legal trademark clearance claimed.
 - Full local CI command set run. All specialized suites pass. Base scripts suite224 pass/1 skip/1 network-deadline failure in pinned-http.test.ts, a pre-existing environment-dependent condition. Typecheck/build pass.
 - Physical iOS home-screen icon refresh is not established by browser emulation. Existing installed shortcut may require re-add after new artwork deploys.
+
+## Physical iPhone guest sheet and profile draft fixes
+- Root causes: guest nudge z60 and bottom78 versus dock z80, height74, bottom7+safe-area. Signup merely routed to profile, appearing inert when already there. Nudge now z120 with93px+safe-area bottom,44px controls, scroll-constrained height and dedicated close row; signup dismisses and opens signup mode. No backdrop added.
+- applyWorkspace refreshed profile fields every7sec and focus/visibility, erasing drafts. Per-field dirty refs and request revision guard preserve edits until explicit Save. In-flight save responses do not erase newer typing.
+- Profile autocomplete nickname/organization and dark WebKit autofill styling. visualViewport keyboard sizing scoped to profile; dock hidden during keyboard, no chat scroll/composer changes. Safari keyboard accessory is browser UI, not an app toast.
+- Local native touch/hit tests on390x844,320x568,375x667 across profile/home/agents/history/workbench/chat. All3nudge controls reachable, nav remains touchable, signup opens mode, auth field focuses. Drafts survive accelerated polling/focus at390/320; only explicit save writes synthetic API. Keyboard-resize branch checked with synthetic visualViewport signal, not physical iPhone proof.

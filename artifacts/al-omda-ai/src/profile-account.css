@@ -118,3 +118,22 @@
  min-height:12px!important;display:block!important;line-height:12px!important;white-space:nowrap!important;
 }
 }
+
+/* Keep Safari autofill readable without disabling useful autofill metadata. */
+.profile-settings-page input.field {color-scheme:dark;caret-color:#c9acff;scroll-margin-block:96px;}
+.profile-settings-page input.field:-webkit-autofill,
+.profile-settings-page input.field:-webkit-autofill:hover,
+.profile-settings-page input.field:-webkit-autofill:focus {
+ -webkit-text-fill-color:#eee7f7!important;
+ -webkit-box-shadow:0 0 0 1000px #1a1729 inset!important;
+ box-shadow:0 0 0 1000px #1a1729 inset!important;
+ caret-color:#c9acff!important;
+}
+.profile-settings-page input.field:autofill {background:#1a1729!important;color:#eee7f7!important;}
+@media(max-width:800px){
+ body .app-shell[data-profile-keyboard="true"] {bottom:auto!important;height:var(--profile-visual-height)!important;}
+ .app-shell[data-profile-keyboard="true"]>.mobile-nav,
+ .app-shell[data-profile-keyboard="true"]>.guest-nudge {display:none!important;}
+ .app-shell[data-profile-keyboard="true"] .content-wrap {padding-bottom:24px!important;}
+ .profile-settings-page .profile-actions-row {scroll-margin-block:96px 24px;}
+}

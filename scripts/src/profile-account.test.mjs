@@ -73,3 +73,24 @@ test('short voice screens keep end button in scroll flow',()=>{
  const layout=readFileSync('../artifacts/al-omda-ai/src/voice-experience.css','utf8');
  assert.ok(layout.includes('.ai-chat-live-modal>.ai-chat-live-end{position:static!important'));
 });
+
+test('unsaved profile drafts survive workspace polls and in-flight save responses',()=>{
+ assert.ok(app.includes('if(!profileDraftRef.current.name)setProfileName'));
+ assert.ok(app.includes('if(!profileDraftRef.current.org)setProfileOrg'));
+ assert.ok(app.includes('expectedRevision===profileDraftRef.current.revision'));
+ assert.ok(app.includes('profileDraftRef.current.revision===revision'));
+ assert.ok(app.includes('profileDraftRef.current.name=true;profileDraftRef.current.revision++'));
+ assert.ok(app.includes('profileDraftRef.current.org=true;profileDraftRef.current.revision++'));
+ assert.ok(app.includes('autoComplete="nickname"'));
+ assert.ok(app.includes('autoComplete="organization"'));
+ assert.ok(css.includes('input.field:-webkit-autofill'));
+ assert.ok(css.includes('data-profile-keyboard="true"'));
+});
+test('welcome is above dock and signup works even when already on profile',()=>{
+ const nudge=readFileSync('../artifacts/al-omda-ai/src/guest-nudge.css','utf8');
+ assert.ok(nudge.includes('bottom:calc(93px + env(safe-area-inset-bottom))'));
+ assert.ok(nudge.includes('z-index:120'));
+ assert.ok(nudge.includes('width:44px;height:44px'));
+ assert.ok(app.includes("onSignup={()=>{dismissGuestNudge();setAuthMode('signup')"));
+ assert.ok(!nudge.includes('inset:0'));
+});
