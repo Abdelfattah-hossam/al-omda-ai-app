@@ -6,6 +6,7 @@ export type SalesRow = {
   status: SalesStatus;
   channel: string;
   reference: string;
+  country?: string;
 };
 export type SalesCsvParseResult = {
   rows: SalesRow[];
@@ -75,6 +76,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   currency: ["currency", "currency_code"],
   status: ["status", "payment_status", "state"],
   channel: ["channel", "source", "sales_channel", "platform"],
+  country: ["country", "country_code", "billing_country", "shipping_country"],
   reference: ["reference", "transaction_id", "order_id", "id"],
 };
 
@@ -111,6 +113,7 @@ export function parseSalesCsv(input: string, maxRows = 10000): SalesCsvParseResu
     status: findColumn(headers, "status"),
     channel: findColumn(headers, "channel"),
     reference: findColumn(headers, "reference"),
+    country: findColumn(headers, "country"),
   };
   const missing = (["date", "amount", "currency", "status"] as const).filter((key) => columns[key] < 0);
   if (missing.length) return { rows: [], errors: [{ row: 1, message: "Missing required columns: " + missing.join(", ") }], totalRows: parsed.rows.length - 1 };
@@ -140,7 +143,7 @@ export function parseSalesCsv(input: string, maxRows = 10000): SalesCsvParseResu
       errors.push({ row: rowNumber, message: problems.join("; ") });
       return;
     }
-    rows.push({ date: date!, amount, currency, status: status!, channel, reference });
+    rows.push({ date: date!, amount, currency, status: status!, channel, reference, ...(columns.country>=0?{country:(cells[columns.country]??"").trim().slice(0,100)}:{}) });
   });
   return { rows, errors, totalRows: dataRows.length };
 }

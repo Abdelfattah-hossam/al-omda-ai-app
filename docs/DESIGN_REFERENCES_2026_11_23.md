@@ -81,3 +81,15 @@ areas, composer placement, keyboard and scrolling code are unchanged. Local
 checks at 320/390/1280 confirm all four glyph translations, desktop unaffected,
 charcoal preserved and file preview working. At 390x844, composer remains
 x10/y749/w370/h87. Requires physical-iPhone acceptance.
+
+## Interactive country map
+
+Added to Sales Distribution, matching the reference's dark map/glass card with
+colored countries only when imported transactions supply a country. No country
+is inferred from currency. Old CSVs still work; optional country/country_code/
+billing_country/shipping_country fields accept geometry dataset codes/names.
+Pending/cancelled excluded, refunds subtract, unknown countries stay unassigned.
+176 bundled Natural Earth country/area shapes; no paid services or runtime tiles.
+Country picker, tap, hover/focus, arrow keyboard navigation, zoom and drag pan.
+No data shows a clear empty state, not zero-sales claims. Local Arabic/English
+320/390/1280 checks passed with 33 focused tests; physical-device acceptance pending.

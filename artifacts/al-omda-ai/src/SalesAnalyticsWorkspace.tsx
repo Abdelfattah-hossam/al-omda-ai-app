@@ -4,6 +4,8 @@ import {downloadBlobAsFile} from './lib/download-file';
 import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
 import { isSalesCsvAssetName, parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
+import WorldSalesMap from './WorldSalesMap';
+
 type Language = "ar" | "en";
 type Mode = "overview" | "distribution";
 type Asset = { path: string; name: string; createdAt: string | null; size: number | null; mimeType: string | null };
@@ -183,7 +185,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       <select className="field" value={selectedPath} onChange={(event) => setSelectedPath(event.target.value)} disabled={loading || csvAssets.length === 0} aria-label={isAr ? "ملف بيانات المبيعات" : "Sales data file"}>
         {csvAssets.length === 0 ? <option value="">{isAr ? "لا توجد ملفات CSV مستوردة" : "No CSV files imported"}</option> : csvAssets.map((asset) => <option key={asset.path} value={asset.path}>{asset.name} · {formatBytes(asset.size, isAr)}</option>)}
       </select>
-      <p className="page-subtitle">{isAr ? "الأعمدة المطلوبة: date, amount, currency, status. القنوات والمرجع اختياريان. الحالات: paid, refunded, pending, cancelled." : "Required columns: date, amount, currency, status. Channel and reference are optional. Status values: paid, refunded, pending, cancelled."}</p>
+      <p className="page-subtitle">{isAr ? "الأعمدة المطلوبة: date, amount, currency, status. القنوات والمرجع والدولة (country) اختيارية. الحالات: paid, refunded, pending, cancelled." : "Required columns: date, amount, currency, status. Channel, reference and country are optional. Status values: paid, refunded, pending, cancelled."}</p>
       {pendingFile && pendingParse && <div className="notice-bar" style={{ display: "grid", gap: 8 }}>
         <strong>{isAr ? "معاينة قبل الحفظ" : "Preview before saving"} · {pendingFile.name}</strong>
         <span>{isAr ? pendingParse.rows.length + " صف صالح من " + pendingParse.totalRows : pendingParse.rows.length + " valid rows of " + pendingParse.totalRows}</span>
@@ -195,6 +197,8 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       </div>}
       {error && <p role="alert" className="notice-bar">{error}</p>}
     </section>
+
+    {!isOverview&&<WorldSalesMap language={language} rows={parse.errors.length||loading?[]:selectedRows} currency={currency}/>}
 
     {loading ? <section className="panel panel-pad" style={{ marginTop: 16 }}>{isAr ? "جارٍ تحميل البيانات…" : "Loading data…"}</section>
       : !selectedPath ? <section className="panel panel-pad" style={{ marginTop: 16, display: "grid", justifyItems: "center", gap: 10, textAlign: "center" }}><FileSpreadsheet size={30}/><strong>{isAr ? "لا توجد بيانات مبيعات بعد" : "No sales data yet"}</strong><p className="page-subtitle">{isAr ? "نزّل قالب CSV، أضف معاملاتك الحقيقية، ثم استورد الملف لعرض التحليلات." : "Download the CSV template, add your real transactions, then import it to see analytics."}</p></section>
