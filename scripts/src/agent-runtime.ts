@@ -1,3 +1,4 @@
+import {normalizeLocalModelConfig} from './local-model-config.js';
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -895,10 +896,21 @@ function isLocalModelProvider(base: string): boolean {
   } catch { return false; }
 }
 
+const LOCAL_MODEL_CONFIG=".omda/local-model.json";
+async function loadLocalModelConfig():Promise<{baseUrl:string;model:string}|null>{
+ try{const path=await resolveExistingPath(LOCAL_MODEL_CONFIG);const info=await stat(path);if(!info.isFile()||info.size>4096)throw new Error("Invalid local model settings file.");return normalizeLocalModelConfig(JSON.parse(await readFile(path,"utf8")));}
+ catch(e){if((e as NodeJS.ErrnoException).code==="ENOENT")return null;throw e;}
+}
+async function saveLocalModelConfig(value:unknown){
+ const config=normalizeLocalModelConfig(value);const path=await resolveWritePath(LOCAL_MODEL_CONFIG);
+ try{const prior=await readFile(path);await writeFile(path+".backup-"+randomUUID(),prior,{mode:0o600,flag:"wx"});}catch(e){if((e as NodeJS.ErrnoException).code!=="ENOENT")throw e;}
+ const temporary=path+"."+randomUUID()+".tmp";await writeFile(temporary,JSON.stringify(config),{encoding:"utf8",mode:0o600,flag:"wx"});await rename(temporary,path);return config;
+}
 async function getModelProviders(purpose: ModelPurpose | "all" = "general"): Promise<ModelProviderConfig[]> {
   const configuredProviders = await loadAdditionalModelProviders();
+  const localConfig=await loadLocalModelConfig();
   const candidates: ModelProviderConfig[] = [
-    { base: MODEL_BASE_URL, model: MODEL_NAME, key: process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all" as const], priority: 0 },
+    { base: localConfig?.baseUrl??MODEL_BASE_URL, model: localConfig?.model??MODEL_NAME, key: localConfig?"":process.env.OMDA_AGENT_MODEL_API_KEY?.trim() || "", name: "primary", purposes: ["all" as const], priority: 0 },
     ...configuredProviders,
     { base: FALLBACK_MODEL_BASE_URL, model: FALLBACK_MODEL_NAME, key: process.env.OMDA_AGENT_FALLBACK_MODEL_API_KEY?.trim() || "", name: "fallback", purposes: ["all" as const], priority: 1000 },
   ];
@@ -1400,6 +1412,9 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
   if (!authenticated(req)) { send(res, 401, { error: "Unauthorized local agent client." }); return; }
+  if(req.method==="GET"&&url.pathname==="/v1/models/local-config"){
+    let config=await loadLocalModelConfig();if(!config){try{config=normalizeLocalModelConfig({baseUrl:MODEL_BASE_URL,model:MODEL_NAME});}catch{config={baseUrl:"http://127.0.0.1:1234/v1",model:""};}}send(res,200,{...config,execution:EXECUTION_MODE});return;
+  }
   if (req.method === "GET" && url.pathname === "/v1/models/providers") {
     const providers = await getModelProviders("all");
     send(res, 200, { providers: providers.map((item) => ({ name: item.name, model: item.model, kind: isLocalModelProvider(item.base) ? "local" : "remote", hasApiKey: Boolean(item.key), purposes: item.purposes, priority: item.priority })) }); return;
@@ -1612,6 +1627,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   if (req.method !== "POST") { send(res, 405, { error: "Method not allowed." }); return; }
   const body = await readBody(req);
+  if(url.pathname==="/v1/models/local-config"){const config=await saveLocalModelConfig(body);send(res,200,{...config,execution:EXECUTION_MODE});return;}
   if (url.pathname === "/v1/agent/cancel") { send(res, 200, await cancelAgent(body)); return; }
   if (url.pathname === "/v1/browser/policy") {
     const policy = await saveBrowserWorkspacePolicy(body);

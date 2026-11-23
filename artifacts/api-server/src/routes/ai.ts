@@ -1379,6 +1379,26 @@ router.post("/ai/speech", requireSameOrigin, async (req, res): Promise<void> => 
   }
 });
 
+// Connection diagnostics never return credentials or raw upstream errors.
+router.get("/ai/connections", async (req,res):Promise<void>=>{
+ try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:"Sign in first."});return;}
+ res.setHeader("cache-control","no-store");res.json({providers:Object.entries(getProviders()).map(([id,configured])=>({id,configured})),scope:"new_chat_messages",freeOnly:true});
+ }catch{res.status(503).json({error:"Connection status is unavailable."});}
+});
+router.post("/ai/connections/test",requireSameOrigin,async(req,res):Promise<void>=>{
+ try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:"سجّل الدخول الأول."});return;}
+ const selection=req.body?.provider??"auto";const configured=getProviders();
+ if(!["auto","groq","gemini","openrouter","cloudflare"].includes(selection)){res.status(400).json({error:"Invalid provider."});return;}
+ const usage=await currentUsage(session.accessToken);if(usage.remaining<1){res.status(429).json({error:"حصتك اليومية خلصت. جرّب بعد التجديد."});return;}
+ const messages:ChatMessage[]=[{role:"user",content:"Reply with OK only."}];
+ const providers=selection==="auto"?chooseProviders(messages):(configured[selection as keyof typeof configured]?[selection]:[]);
+ if(!providers.length){res.status(409).json({error:"المزود ده مش معد على خدمة التطبيق."});return;}
+ const start=Date.now();const result=await runWithProviderFailover(providers,c=>callProviderWithRetry(c,messages),()=>undefined);
+ if(!result.answer){res.status(503).json({error:"التوليد الفعلي ما نجحش دلوقتي. ممكن الحصة المجانية خلصت أو الخدمة مش متاحة. لم يتم خصم وحدة."});return;}
+ await reserveUnits(session.accessToken,1);res.setHeader("cache-control","no-store");res.json({provider:result.provider,model:result.answer.model,latencyMs:Date.now()-start,generated:true});
+ }catch{res.status(503).json({error:"تعذر إكمال الاختبار. حاول لاحقًا."});}
+});
+
 router.get("/ai/usage", async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);
@@ -1509,7 +1529,9 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         "Original user request: " + getLatestUserRequest(messages)
       ].join("\n") }
     ] : modelConversation;
-    const providers = filterCoolingProviders(chooseProviders(modelMessages));
+    const requestedProvider=req.body?.provider??"auto";
+    if(!["auto","groq","gemini","openrouter","cloudflare"].includes(requestedProvider)){res.status(400).json({error:"Invalid provider selection."});return;}
+    const providers = requestedProvider==="auto" ? filterCoolingProviders(chooseProviders(modelMessages)) : chooseProviders(modelMessages).filter(provider=>provider===requestedProvider);
     if (providers.length === 0) {
       res.status(503).json({ error: "No AI provider is connected yet. Configure one or more free provider credentials on the Worker." });
       return;

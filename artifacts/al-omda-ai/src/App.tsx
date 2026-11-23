@@ -1,3 +1,6 @@
+import LocalModelSettings from './LocalModelSettings';
+import HostedConnections from './HostedConnections';
+import './agent-connections.css';
 import ProfileUsage from './ProfileUsage';
 import './sales-dashboard.css';
 import {sandboxedHtmlPreview} from "./lib/html-preview";
@@ -2129,14 +2132,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
     try {
       const result = await callLocalAgentRuntime("/v1/browser/policy", "POST", next);
       setBrowserWorkspace((current) => current ? { ...current, policy: result.policy } : current);
-    } catch (error) { setBrowserWorkspaceError(error instanceof Error ? error.message : (isAr ? "تعذر حفظ صلاحيات المتصفح." : "Could not save browser permissions.")); }
+      return true;
+    } catch (error) { setBrowserWorkspaceError(error instanceof Error ? error.message : (isAr ? "تعذر حفظ صلاحيات المتصفح." : "Could not save browser permissions.")); return false; }
     finally { setBrowserWorkspaceBusy(false); }
   };
   const addBrowserSite = async () => {
     const host = browserSiteInput.trim().toLowerCase();
     if (!host || !browserWorkspace) return;
-    await saveBrowserWorkspace({ ...browserWorkspace.policy, allowedHosts: [...browserWorkspace.policy.allowedHosts, host] });
-    setBrowserSiteInput("");
+    const saved=await saveBrowserWorkspace({ ...browserWorkspace.policy, allowedHosts: [...browserWorkspace.policy.allowedHosts, host] });
+    if(saved)setBrowserSiteInput("");
   };
   const removeBrowserSite = async (host: string) => {
     if (!browserWorkspace) return;
@@ -2244,10 +2248,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <details className="panel panel-pad agent-advanced-tools">
       <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
       <div className="agent-advanced-tools-content">
+      <HostedConnections ar={isAr}/>
+      <aside className="connection-local-notice"><Monitor size={20}/><div><strong>{isAr?'الأدوات اللي تحت دي محتاجة كمبيوتر':'The tools below need a computer'}</strong><p>{isAr?'تشغيل الملفات والأوامر والتحكم في المتصفح وسطح المكتب يتم على جهازك فقط. على الآيفون، localhost يعني الآيفون نفسه، مش الكمبيوتر. افتح الصفحة على نفس الكمبيوتر اللي عليه Runtime. المفتاح يبقى في ذاكرة الصفحة فقط ومش بيتحفظ.':'Files, commands, browser and desktop control run on your own computer. On iPhone, localhost is the phone, not your computer. Open this page on the computer running the runtime. The token stays in page memory only, never saved.'}</p></div></aside>
     <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
       <div className="section-head">
         <div><span className="eyebrow">LOCAL EXECUTION</span><h2 className="section-title">{isAr?'الوكيل الذكي المحلي':'Local AI Agent'}</h2><p className="section-meta">{isAr?'وصّل بيئة التنفيذ على جهازك ليقرأ المشروع وينفذ المهام بموافقتك.':'Connect the runtime on your computer to inspect projects and execute approved tasks.'}</p></div>
-        <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'online-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
+        <span className="status-chip"><span className={localAgentStatus==='ready'?'online-dot':localAgentStatus==='error'?'offline-dot':'connection-idle-dot'}/>{localAgentStatus==='ready'?(isAr?'متصل':'Connected'):localAgentStatus==='checking'?(isAr?'جارٍ الاتصال':'Connecting'):localAgentStatus==='running'?(isAr?'يعمل':'Running'):localAgentStatus==='approval'?(isAr?'موافقة مطلوبة':'Approval required'):localAgentStatus==='error'?(isAr?'غير متصل':'Offline'):(isAr?'غير موصل':'Not connected')}</span>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,250px),1fr))',gap:12,marginTop:14}}>
         <label className="field-group"><span className="form-label">{isAr?'عنوان التشغيل المحلي':'Local runtime URL'}</span><input className="field" type="url" value={localAgentUrl} disabled={localAgentBusy} onChange={event=>{setLocalAgentUrl(event.target.value);setLocalAgentStatus("idle");setLocalAgentMessage("");}} placeholder="http://127.0.0.1:4318"/></label>
@@ -2386,6 +2392,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </section>
     <section className="panel panel-pad" id="model-router" style={{marginBottom:20}}>
       <div className="section-head"><div><span className="eyebrow">MODEL ROUTER</span><h2 className="section-title">{isAr?'مزودو الموديلات':'Model providers'}</h2><p className="section-meta">{isAr?'المزود الأساسي والإضافي والاحتياطي. مفاتيح الدخول تبقى في بيئة Runtime المحلية.':'Primary, additional, and fallback providers. API keys stay in the local runtime environment.'}</p></div><button type="button" className="button button-quiet button-small" onClick={loadLocalModelHealth} disabled={!localAgentToken.trim()||modelHealthBusy}>{modelHealthBusy?(isAr?'جارٍ الفحص…':'Checking…'):(isAr?'فحص المزودين':'Test providers')}</button></div>
+      <LocalModelSettings ar={isAr} call={callLocalAgentRuntime} connected={localAgentStatus==='ready'}/>
       {modelProvidersError&&<p className="section-meta" role="status">{modelProvidersError}</p>}
       {modelHealthError&&<p className="section-meta" role="alert">{modelHealthError}</p>}
       {localModelProviders.length>0&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,230px),1fr))',gap:10,marginTop:12}}>{localModelProviders.map((provider)=>{const health=localModelHealth.find((item)=>item.name===provider.name);return <div className="panel panel-pad" key={provider.name}><div className="section-head"><strong>{provider.name}</strong><span className="status-chip">{providerStatusLabel(health,isAr)}</span></div><p className="section-meta" style={{overflowWrap:'anywhere'}}>{provider.model}</p><small className="muted">{provider.hasApiKey?(isAr?'مفتاح متاح':'API key available'):(isAr?'بدون مفتاح':'No API key')} · {provider.kind}</small><p className="section-meta">{isAr?'الأولوية':'Priority'}: {provider.priority ?? 0} · {(provider.purposes || ['all']).join(', ')}</p>{health&&<><p className="section-meta">{isAr?'زمن الاستجابة':'Latency'}: {health.latencyMs} ms · HTTP {health.status ?? '—'}</p>{health.discoveredModels.length>0&&<p className="section-meta" style={{overflowWrap:'anywhere'}}>{isAr?'النماذج المكتشفة':'Discovered models'}: {health.discoveredModels.join(', ')}</p>}</>}</div>})}</div>}

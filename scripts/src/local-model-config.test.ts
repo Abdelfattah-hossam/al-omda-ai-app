@@ -1,0 +1,3 @@
+import {test} from 'node:test';import {strict as assert} from 'node:assert';import {normalizeLocalModelConfig as parse} from './local-model-config.js';
+test('accepts local free endpoint and trims model',()=>assert.deepEqual(parse({baseUrl:'http://127.0.0.1:1234/v1/',model:' qwen '}),{baseUrl:'http://127.0.0.1:1234/v1',model:'qwen'}));
+test('rejects remote, credentials, API keys, empty model and query endpoints',()=>{for(const data of [{baseUrl:'https://api.openai.com/v1',model:'x'},{baseUrl:'http://key:secret@localhost:1234/v1',model:'x'},{baseUrl:'http://localhost:1234/v1?key=secret',model:'x'},{baseUrl:'http://localhost:1234/v1',model:''},{baseUrl:'http://localhost:1234/v1',model:'x',apiKey:'secret'}])assert.throws(()=>parse(data));});

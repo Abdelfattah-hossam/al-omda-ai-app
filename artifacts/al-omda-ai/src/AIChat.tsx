@@ -1,3 +1,4 @@
+import {HOSTED_PROVIDER_KEY} from './HostedConnections';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -1149,7 +1150,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: buildBoundedChatContext(next, { maxMessages: fileForRequest ? 8 : 12, maxMessageChars: 8000, maxTotalChars: 30000 }).map((message, index, list) => ({
+        body: JSON.stringify({ provider: (()=>{try{return localStorage.getItem(HOSTED_PROVIDER_KEY)||"auto"}catch{return "auto"}})(), messages: buildBoundedChatContext(next, { maxMessages: fileForRequest ? 8 : 12, maxMessageChars: 8000, maxTotalChars: 30000 }).map((message, index, list) => ({
           role: message.role,
           content: index === list.length - 1 ? requestText : fileForRequest ? message.content.slice(-2500) : message.content,
           ...(index === list.length - 1 && imageForRequest ? { image: { mimeType: imageForRequest.mimeType, data: imageForRequest.data } } : {}),
