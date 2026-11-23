@@ -7,10 +7,10 @@ test('hosted connections require auth and origin, test actual generation and san
  const headers={origin,cookie:'omda_access=qa-token','content-type':'application/json'};
  try{
  assert.equal((await old(origin+'/ai/connections')).status,401);
- const inventory=await(await old(origin+'/ai/connections',{headers})).json();assert.equal(inventory.providers.find((x:any)=>x.id==='cloudflare').configured,true);assert.ok(!JSON.stringify(inventory).includes('qa-token'));
+ const inventory:any=await(await old(origin+'/ai/connections',{headers})).json();assert.equal(inventory.providers.find((x:any)=>x.id==='cloudflare').configured,true);assert.ok(!JSON.stringify(inventory).includes('qa-token'));
  assert.equal((await old(origin+'/ai/connections/test',{method:'POST',headers:{...headers,origin:'https://evil.example'},body:'{}'})).status,403);
  assert.equal((await old(origin+'/ai/connections/test',{method:'POST',headers,body:'{"provider":"paid-provider"}'})).status,400);
- const result=await old(origin+'/ai/connections/test',{method:'POST',headers,body:'{"provider":"cloudflare"}'});assert.equal(result.status,200);const data=await result.json();assert.equal(data.generated,true);assert.equal(runs,1);assert.equal(units,1);assert.equal(data.provider,'cloudflare');
+ const result=await old(origin+'/ai/connections/test',{method:'POST',headers,body:'{"provider":"cloudflare"}'});assert.equal(result.status,200);const data:any=await result.json();assert.equal(data.generated,true);assert.equal(runs,1);assert.equal(units,1);assert.equal(data.provider,'cloudflare');
  setWorkersAiBinding({async run(){throw new Error('secret-value-must-never-leak')}});
  const failure=await old(origin+'/ai/connections/test',{method:'POST',headers,body:'{"provider":"cloudflare"}'});assert.equal(failure.status,503);assert.ok(!(await failure.text()).includes('secret-value'));assert.equal(units,1);
  }finally{setWorkersAiBinding(null);globalThis.fetch=old;process.env=env;server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));}
