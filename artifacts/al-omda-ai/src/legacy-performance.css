@@ -1,0 +1,8 @@
+/* Old Huawei/Android compositors: keep the palette, skip repaint-heavy decor.
+   No overflow, positioning, scroll behavior or chat geometry changes. */
+@supports not (height:100dvh){
+ .app-shell:not([data-chat-active="true"]),.app-shell:not([data-chat-active="true"])::before,.app-shell:not([data-chat-active="true"])::after{animation:none!important;background-attachment:scroll!important}
+ .app-shell:not([data-chat-active="true"]) .panel,.app-shell:not([data-chat-active="true"]) .history-item,.app-shell:not([data-chat-active="true"]) .app-launcher-tile,.app-shell:not([data-chat-active="true"]) .agent-card{animation:none!important;transition:none!important;box-shadow:none!important}
+ .app-shell:not([data-chat-active="true"]) .panel::before,.app-shell:not([data-chat-active="true"]) .panel::after,.app-shell:not([data-chat-active="true"]) .history-item::before,.app-shell:not([data-chat-active="true"]) .history-item::after{animation:none!important;filter:none!important}
+ .app-shell:not([data-chat-active="true"]) .topbar,.app-shell:not([data-chat-active="true"]) .mobile-nav,.app-shell:not([data-chat-active="true"]) .app-curtain{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
+}

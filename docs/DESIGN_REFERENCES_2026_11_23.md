@@ -274,3 +274,11 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 ### Huawei history/project continuation follow-up
 
 User reports the same error after opening an Angular interview project from history and continuing work. Did not open or execute that real project. Added old-browser-task.py: local synthetic history card, saved markdown result, simulated execute-step response, then rendered new markdown table, with hasOwn/fromEntries/at/findLast/replaceAll/structuredClone/timeout removed before startup and Chrome88 desktop-mode UA. Passed without error boundary. Same global polyfill covers TaskResultMarkdown's react-markdown dependency. No additional missing API found on this simulated path. Actual Huawei acceptance still pending reload of5ac2c157; a persistent error needs its new expanded details/build. No production task mutations or provider calls.
+
+
+## 2026-11-23: Huawei performance after physical crash acceptance
+
+- User confirms the app works on Huawei Nova7i, but scrolling and task creation feel slow. No physical profiling available.
+- Local6xCPU-throttled production fixture: cold chat decoded JS1.150MB before to0.926MB after, about224KB/19.5% lower. Main gzip247KB to192KB. Single-pass script time0.65s to0.53s and heap5.9MB to5.1MB are simulated/noisy, not a claimed device speedup.
+- Focused standard polyfill imports retain audited Chrome79/Safari13 runtime coverage rather than all315stable modules; old-API removal tests still pass. Voice/media tools lazy-load only when opened. Unchanged message markdown memoized to avoid reparsing old messages on each composer keystroke. Old-engine workspace decorative animations/blur/shadows disabled without changing palette or any scrolling/geometry handlers.
+- Build/13focused tests; missing APIs and synthetic task continuation; modern320/390/1280composer/sides unchanged. Real generation/server waiting was not benchmarked and is not claimed faster. Physical scroll/creation acceptance still needed.

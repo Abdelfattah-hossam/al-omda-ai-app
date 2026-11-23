@@ -1,13 +1,13 @@
 import {HOSTED_PROVIDER_KEY} from './HostedConnections';
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, memo, lazy, Suspense, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
 import { getWordArtifactExpectedText } from "./lib/office-artifact-text";
 import { useLocation } from "wouter";
 import { LockKeyhole, Bot, Copy, LoaderCircle, Send, Trash2, Volume2, VolumeX, Mic, Plus, Settings2, X, BriefcaseBusiness, Code2, Palette, FileText, Sheet, Presentation, Search, PenLine, History, MessageSquareText, ArrowLeft, ImagePlus, MoreHorizontal, Share2, Pin, Pencil, Headphones, Sparkles, Play, Square } from "lucide-react";
-import MediaStudio from "./MediaStudio";
-import GeminiLiveVoice from "./GeminiLiveVoice";
+const MediaStudio=lazy(()=>import("./MediaStudio"));
+const GeminiLiveVoice=lazy(()=>import("./GeminiLiveVoice"));
 import { readAgentEventStream } from "./lib/agent-stream";
 import { detectProjectSpecialty } from "./lib/project-intent";
 import { buildBoundedChatContext, combineReplyAndPlan, getChatMessageSyncSignature, hasConversationUpdatedAtChanged, hasConversationListChanged } from "./lib/chat-context";
@@ -175,7 +175,7 @@ type Usage = {
 type MemoryGraphNode = { id: string; node_type: string; label: string; source?: string; confidence?: number };
 type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
 
-function MessageContent({ content }: { content: string }) {
+const MessageContent=memo(function MessageContent({ content }: { content: string }) {
   return <div className="ai-chat-markdown">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -193,7 +193,7 @@ function MessageContent({ content }: { content: string }) {
       }}
     >{content}</ReactMarkdown>
   </div>;
-}
+});
 
 export default function AIChatPage({ language, signedIn, openSettingsInitially, displayName, onToggleLanguage, onPageHelp }: { language: Language; signedIn: boolean; openSettingsInitially?: boolean; displayName?: string; onToggleLanguage?:()=>void; onPageHelp?:()=>void }) {
   const ar = language === "ar";
@@ -1507,7 +1507,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   const runCanvasCode = () => setCanvasPreviewCode(canvasCode);
 
   return <div className={"page-enter ai-chat-page" + (desktopSidebarCollapsed ? " is-sidebar-collapsed" : "")}>
-    {mediaStudioOpen&&<MediaStudio ar={ar} onClose={()=>setMediaStudioOpen(false)}/>}
+    {mediaStudioOpen&&<Suspense fallback={<div role="status">{ar?"جارٍ تحميل الاستوديو…":"Loading studio…"}</div>}><MediaStudio ar={ar} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
     {chatSidebarOpen && <button type="button" className="ai-chat-sidebar-scrim" aria-label={ar ? "إغلاق القائمة" : "Close sidebar"} onClick={()=>setChatSidebarOpen(false)} />}
     <aside className={"ai-chat-sidebar" + (chatSidebarOpen ? " is-open" : "")} dir={ar ? "rtl" : "ltr"}>
       <div className="ai-chat-sidebar-head">
@@ -1790,7 +1790,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
         <section className="ai-chat-live-modal" role="dialog" aria-modal="true" aria-label={ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}>
           <header><span><i/> {ar ? "التحدث الصوتي مع العمدة" : "Talk with Al OMDA AI"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
-          <GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/>
+          <Suspense fallback={<p role="status">{ar?"جارٍ تحميل المحادثة الصوتية…":"Loading live voice…"}</p>}><GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/></Suspense>
           <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إنهاء المحادثة الصوتية وإغلاق النافذة" : "End voice conversation and close"}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
         </section>
       </div>}

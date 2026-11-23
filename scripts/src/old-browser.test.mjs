@@ -11,6 +11,6 @@ test('runtime polyfills evaluate before the application dependency graph',()=>{
  const main=readFileSync(new URL('../../artifacts/al-omda-ai/src/main.tsx',import.meta.url),'utf8');
  const polyfills=readFileSync(new URL('../../artifacts/al-omda-ai/src/polyfills.ts',import.meta.url),'utf8');
  assert.ok(main.startsWith("import './polyfills';"));
- assert.ok(polyfills.includes("import 'core-js/stable'"));
+ assert.ok(polyfills.includes("import 'core-js/stable/object/has-own'"));
  assert.ok(polyfills.includes("typeof AbortSignal.timeout !== 'function'"));
 });

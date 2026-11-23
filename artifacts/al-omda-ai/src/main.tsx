@@ -36,3 +36,5 @@ createRoot(document.getElementById('root')!, {
     <App />
   </ErrorBoundary>,
 );
+
+import './legacy-performance.css';
