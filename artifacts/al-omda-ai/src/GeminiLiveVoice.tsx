@@ -43,6 +43,41 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const [speaking, setSpeaking] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
+  const [thinking,setThinking]=useState(false);
+  const visualRef=useRef<HTMLDivElement|null>(null);
+  const micAnalyserRef=useRef<AnalyserNode|null>(null);
+  const outputAnalyserRef=useRef<AnalyserNode|null>(null);
+  const animationRef=useRef(0);
+  const stopVisualizer=()=>{
+    cancelAnimationFrame(animationRef.current);
+    micAnalyserRef.current?.disconnect();outputAnalyserRef.current?.disconnect();
+    micAnalyserRef.current=null;outputAnalyserRef.current=null;
+    visualRef.current?.style.setProperty('--voice-level','0');
+    visualRef.current?.querySelectorAll<HTMLElement>('.voice-wave-bar').forEach(bar=>bar.style.setProperty('--bar-level','0'));
+  };
+  const startVisualizer=(context:AudioContext,source:MediaStreamAudioSourceNode)=>{
+    const mic=context.createAnalyser();mic.fftSize=256;mic.smoothingTimeConstant=.72;
+    const output=context.createAnalyser();output.fftSize=256;output.smoothingTimeConstant=.72;
+    source.connect(mic);output.connect(context.destination);
+    micAnalyserRef.current=mic;outputAnalyserRef.current=output;
+    const bins=new Uint8Array(128);let last=0;
+    const draw=(time:number)=>{
+      if(time-last>40){
+        last=time;
+        const analyser=pendingPcmPlaybackRef.current>0?output:mic;
+        if(fallbackUtteranceRef.current)bins.fill(0);else analyser.getByteFrequencyData(bins);
+        const energy=bins.reduce((n,v)=>n+v,0)/bins.length/255;
+        visualRef.current?.style.setProperty('--voice-level',String(Math.min(1,energy*3)));
+        visualRef.current?.querySelectorAll<HTMLElement>('.voice-wave-bar').forEach((bar,i)=>{
+          const start=Math.floor(i*bins.length/28),end=Math.floor((i+1)*bins.length/28);
+          let sum=0;for(let j=start;j<end;j++)sum+=bins[j];
+          bar.style.setProperty('--bar-level',String(Math.min(1,sum/Math.max(1,end-start)/150)));
+        });
+      }
+      animationRef.current=requestAnimationFrame(draw);
+    };
+    animationRef.current=requestAnimationFrame(draw);
+  };
   const socketRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -88,6 +123,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const cleanup = (expectedSessionId?: number) => {
     if (expectedSessionId !== undefined && sessionIdRef.current !== expectedSessionId) return;
     sessionIdRef.current += 1;
+    stopVisualizer();
+    if(mountedRef.current)setThinking(false);
     setConnectingState(false);
     setActiveState(false);
     sessionReadyRef.current = false;
@@ -116,6 +153,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      stopVisualizer();
       sessionIdRef.current += 1;
       connectingRef.current = false;
       activeRef.current = false;
@@ -249,6 +287,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
       sourceRef.current = source;
+      startVisualizer(context,source);
       processorRef.current = processor;
       processor.onaudioprocess = (event) => {
         if (!isCurrentSession()) return;
@@ -262,6 +301,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         if (hasSpeech) {
           if (!speechActiveRef.current) {
             // A new user utterance opens exactly one new assistant response cycle.
+            setThinking(false);
             assistantTurnCompleteRef.current = false;
             userTranscriptRef.current = "";
             assistantTranscriptRef.current = "";
@@ -288,6 +328,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
             speechActiveRef.current = false;
             silenceFramesRef.current = 0;
+            setThinking(true);
             setStatus(ar ? "جاري تجهيز رد العمدة..." : "Preparing AL OMDA's reply...");
           }
         }
@@ -352,7 +393,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             for (let i = 0; i < pcm.length; i++) channel[i] = pcm[i] / 32768;
             const player = context.createBufferSource();
             player.buffer = buffer;
-            player.connect(context.destination);
+            player.connect(outputAnalyserRef.current??context.destination);
             const startAt = Math.max(context.currentTime + 0.03, nextPlayTimeRef.current);
             pendingPcmPlaybackRef.current += 1;
             // Keep the turn-complete latch set until the next user utterance.
@@ -371,11 +412,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
             receivedAudioChunks++;
-            if (mountedRef.current) { setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
+            if (mountedRef.current) { setThinking(false);setStatus(ar ? "العمدة بيتكلم..." : "AL OMDA is speaking..."); setSpeaking(true); }
           }
         }
         if (serverContent.turnComplete && !assistantTurnCompleteRef.current) {
           // Gemini may deliver repeated turnComplete frames. Process each voice turn once.
+          setThinking(false);
           assistantTurnCompleteRef.current = true;
           if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
           const userText = userTranscriptRef.current.trim();
@@ -456,14 +498,18 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     setStatus(ar ? "انتهت المحادثة الصوتية." : "Voice conversation ended.");
   };
 
-  return <div className="omda-live-voice" data-active={active} data-speaking={speaking} data-connecting={connecting}>
+  return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
+    <span className="voice-mode-kicker">{ar?"العمدة · مساعدك الصوتي":"AL OMDA · VOICE ASSISTANT"}</span>
     <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
       <div className="omda-voice-orb"><span/><span/><span/><i/></div>
     </div>
+    <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
+    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(ar?"يسمعك":"Listening"):(ar?"المس للتحدث":"Tap to talk")}</span>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
     <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
-      {connecting ? labels.connecting : active ? labels.stop : labels.start}
+      <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>
     </button>
+    <small className="voice-privacy-note">{ar?"الميكروفون يعمل بعد البدء فقط. أنهِ المحادثة لإيقافه.":"Microphone starts only when you begin. End the chat to stop it."}</small>
   </div>;
 }

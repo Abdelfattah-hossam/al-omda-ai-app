@@ -118,3 +118,19 @@ container and trailing safe-area padding. Root background is workspace ink on
 non-chat routes. This targets Safari standalone viewport sizing but cannot be
 confirmed on physical Safari here. Local workspace and unchanged chat geometry
 checks passed. Do not mark physical-device acceptance complete.
+
+## Speech-reactive voice reference
+
+Chose the third supplied voice reference: a focused lavender/blue morphing orb,
+waveform and centered microphone, which fits the app without crowding the chat.
+The existing live voice transport, microphone gating, transcripts and controls
+are retained. Added Web Audio analysers to the existing mic source and PCM
+playback path, updating orb intensity and 28 frequency bars. Explicit idle,
+connecting, listening, thinking and speaking states. Cleanup cancels animation
+frames and disconnects analysers. Reduced-motion removes orb movement and uses
+static-height level-opacity bars. Device speech-synthesis fallback cannot be
+analysed through Web Audio, so it has a speaking label without fake waveform.
+Local 320/390/1280 Arabic/English checks used fake mic + synthetic WebSocket/PCM,
+not a real paid provider session. 38 focused tests + typecheck/build pass; chat
+composer geometry is unchanged. Real-iPhone mic, audio routing and provider
+acceptance remain unverified. No new paid service or credential introduced.
