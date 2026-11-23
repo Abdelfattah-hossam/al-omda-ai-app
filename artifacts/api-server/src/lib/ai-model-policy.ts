@@ -17,17 +17,17 @@ export function getHostedModelTemperature(request: string, hasImage = false): nu
 }
 
 export function getHostedProviderOrder(purpose: HostedModelPurpose, coding = false, hasImage = false): string[] {
-  if (hasImage) return ["groq", "gemini", "openrouter"];
-  if (coding) return ["groq", "cloudflare", "gemini", "openrouter"];
-  if (purpose === "precision") return ["groq", "gemini", "openrouter", "cloudflare"];
-  if (purpose === "research") return ["openrouter", "groq", "cloudflare", "gemini"];
-  return ["groq", "cloudflare", "openrouter", "gemini"];
+  // Groq won the practical latency/reliability balance in live smoke tests.
+  // Keep the same primary for all text purposes, with independent free fallbacks.
+  // Quality across Arabic dialects has not been benchmarked; do not imply otherwise.
+  if (hasImage) return ["groq", "openrouter", "gemini"];
+  return ["groq", "openrouter", "gemini", "cloudflare"];
 }
 
 /**
  * Groq's free tier shares an 8K tokens-per-minute bucket per model, so very
  * large prompts are likely to hit a 429 there even when the account is quiet.
- * Lead with the next quota bucket instead of spending the request on a likely
+ * Lead with the OpenRouter free model pool instead of spending the request on a likely
  * rate-limit failure. Arabic text tokenizes denser than English; chars/3 is a
  * safe upper estimate.
  */
@@ -36,6 +36,6 @@ export function estimatePromptTokens(texts: readonly string[]): number {
 }
 
 export function reorderProvidersForPromptSize(order: readonly string[], estimatedTokens: number): string[] {
-  if (estimatedTokens <= 5500 || order[0] !== "groq" || !order.includes("cloudflare")) return [...order];
-  return ["cloudflare", ...order.filter((provider) => provider !== "cloudflare")];
+  if (estimatedTokens <= 5500 || order[0] !== "groq" || !order.includes("openrouter")) return [...order];
+  return ["openrouter", ...order.filter((provider) => provider !== "openrouter")];
 }

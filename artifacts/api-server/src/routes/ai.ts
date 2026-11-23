@@ -1382,7 +1382,7 @@ router.post("/ai/speech", requireSameOrigin, async (req, res): Promise<void> => 
 // Connection diagnostics never return credentials or raw upstream errors.
 router.get("/ai/connections", async (req,res):Promise<void>=>{
  try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:"Sign in first."});return;}
- res.setHeader("cache-control","no-store");res.json({providers:Object.entries(getProviders()).map(([id,configured])=>({id,configured})),scope:"new_chat_messages",freeOnly:true});
+ res.setHeader("cache-control","no-store");res.json({providers:Object.entries(getProviders()).map(([id,configured])=>({id,configured})),scope:"new_chat_messages",autoOrder:getHostedProviderOrder("general"),freeOnly:true});
  }catch{res.status(503).json({error:"Connection status is unavailable."});}
 });
 router.post("/ai/connections/test",requireSameOrigin,async(req,res):Promise<void>=>{

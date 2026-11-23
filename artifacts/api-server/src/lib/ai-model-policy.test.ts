@@ -30,17 +30,16 @@ test("keeps research, general, and image requests within the low-temperature ran
   assert.equal(getHostedModelTemperature("Describe this image", true), 0.3);
 });
 
-test("prioritizes free hosted providers by request purpose and image capability", () => {
-  assert.deepEqual(getHostedProviderOrder("precision"), ["groq", "gemini", "openrouter", "cloudflare"]);
-  assert.deepEqual(getHostedProviderOrder("research"), ["openrouter", "groq", "cloudflare", "gemini"]);
-  assert.deepEqual(getHostedProviderOrder("general"), ["groq", "cloudflare", "openrouter", "gemini"]);
-  assert.deepEqual(getHostedProviderOrder("precision", true), ["groq", "cloudflare", "gemini", "openrouter"]);
-  assert.deepEqual(getHostedProviderOrder("precision", false, true), ["groq", "gemini", "openrouter"]);
+test("Auto leads with Groq and retains independent free providers for every text purpose",()=>{
+ for(const purpose of ["precision","research","general"] as const){
+  assert.deepEqual(getHostedProviderOrder(purpose),["groq","openrouter","gemini","cloudflare"]);
+  assert.deepEqual(getHostedProviderOrder(purpose,true),["groq","openrouter","gemini","cloudflare"]);
+ }
+ assert.deepEqual(getHostedProviderOrder("general",false,true),["groq","openrouter","gemini"]);
 });
-
-test("leads with the next quota bucket when a prompt would likely bust Groq's free TPM", () => {
-  assert.deepEqual(reorderProvidersForPromptSize(["groq", "cloudflare", "openrouter", "gemini"], 6638), ["cloudflare", "groq", "openrouter", "gemini"]);
-  assert.deepEqual(reorderProvidersForPromptSize(["groq", "cloudflare", "openrouter", "gemini"], 1200), ["groq", "cloudflare", "openrouter", "gemini"]);
-  assert.deepEqual(reorderProvidersForPromptSize(["groq", "gemini", "openrouter"], 9000), ["groq", "gemini", "openrouter"]);
-  assert.ok(estimatePromptTokens(["abc"]) >= 1);
+test("long contexts lead with OpenRouter's free pool without dropping other providers",()=>{
+ assert.deepEqual(reorderProvidersForPromptSize(["groq","openrouter","gemini","cloudflare"],6638),["openrouter","groq","gemini","cloudflare"]);
+ assert.deepEqual(reorderProvidersForPromptSize(["groq","openrouter","gemini","cloudflare"],1200),["groq","openrouter","gemini","cloudflare"]);
+ assert.deepEqual(reorderProvidersForPromptSize(["groq","gemini"],9000),["groq","gemini"]);
+ assert.ok(estimatePromptTokens(["abc"])>=1);
 });

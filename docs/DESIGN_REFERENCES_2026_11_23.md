@@ -215,3 +215,7 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 - Reproduced user's short Arabic exchange at390x844 before/after. Old user turn89.5px and assistant139.5px were caused by visible role labels, flex gap11px, large padding, framed action row.
 - User bubble now44.25px for one line, assistant69.25px including40px accessible action targets. Assistant is flowing text with no enclosing card or divider. Role labels remain visually hidden for accessibility; message text, copy and listen actions retained.
 - Lavender palette and charcoal canvas kept; buttons icon-only and transparent.320px wrapping inspected, desktop1280 inspected. Composer box unchanged at390:10,749,370,56. No scroll handler or composer changes. Physical Safari acceptance still not verified.
+
+## Auto provider priority
+- User requested ordering after all4real generation smoke tests succeeded. Text primary Groq, fallback OpenRouter, Gemini, Cloudflare. Images skip unsupported Cloudflare; long context leads OpenRouter to reduce low-TPM pressure on Groq.
+- Measured smoke latency:Groq790ms,OpenRouter1078ms,Cloudflare601ms,Gemini16335ms. These are one short fixed-prompt sample each, not quality/dialect or sustained-load benchmarks. Kept Cloudflare small model last as conservative quality default, not a measured quality ranking.
