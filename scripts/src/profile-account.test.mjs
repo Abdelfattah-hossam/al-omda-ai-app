@@ -27,3 +27,12 @@ test('remaining gold studio and failure UI use the lavender family',()=>{
  assert.ok(!index.includes('#d5a34c'));
  assert.ok(!error.includes('#d4ae69'));
 });
+
+test('physical profile feedback keeps empty name honest and privacy readable',()=>{
+ assert.ok(app.includes('No display name is saved'));
+ assert.ok(app.includes('No display name yet'));
+ assert.ok(app.includes('profile-privacy-card'));
+ assert.ok(app.includes("path !== '/profile' && <Link"));
+ assert.ok(css.includes('float:none!important'));
+ assert.ok(css.includes('padding-bottom:calc(120px + env(safe-area-inset-bottom))'));
+});

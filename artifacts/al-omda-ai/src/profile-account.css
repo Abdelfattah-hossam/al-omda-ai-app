@@ -63,3 +63,16 @@
 .profile-settings-page .profile-welcome-copy{text-align:start!important}
 .profile-settings-page .profile-welcome-stats>div{box-shadow:none!important}
 .profile-settings-page .profile-account-first .account-mode-button.is-active{color:#e5dbfc!important;background:#3a2e4f!important}
+
+/* Physical-iPhone follow-up: no floating content obstruction, explicit disclosure. */
+.profile-settings-page .profile-accordion-summary{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:0!important;list-style:none!important}
+.profile-settings-page .profile-accordion-summary .profile-section-heading{flex:1!important;padding-inline-end:0!important;margin:0!important}
+.profile-settings-page .profile-accordion-summary::after{position:static!important;float:none!important;display:block!important;margin:8px 0 0!important;flex:none!important;align-self:flex-start!important;font-size:22px!important;line-height:1!important}
+.profile-settings-page .profile-accordion-summary::-webkit-details-marker{display:none!important}
+.profile-settings-page details[open]>.profile-accordion-summary{padding-bottom:16px!important;margin-bottom:10px!important}
+.profile-settings-page .profile-chat-link{margin-top:8px}
+@media(max-width:760px){
+ .app-shell:not([data-chat-active="true"]) .content-wrap:has(.profile-settings-page){padding-bottom:calc(120px + env(safe-area-inset-bottom))!important;scroll-padding-block:110px calc(120px + env(safe-area-inset-bottom))}
+ .profile-settings-page{padding-bottom:24px!important}
+ .profile-settings-page .profile-settings-side>.profile-privacy-card{margin-bottom:0!important}
+}

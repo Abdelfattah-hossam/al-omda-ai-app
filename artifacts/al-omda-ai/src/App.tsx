@@ -2790,7 +2790,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="profile-welcome-avatar">{authUser && avatarPath ? <img src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')}/> : <span>{profileName.trim().charAt(0)||'ع'}</span>}</div>
         <div className="profile-welcome-copy">
           <span className="eyebrow">{isAr?'مساحتك الشخصية':'YOUR PERSONAL SPACE'}</span>
-          <h2>{isAr?'أهلاً بك، ': 'Welcome, '}{profileName.trim() || defaultDisplayName}</h2>
+          <h2>{profileName.trim()?(isAr?'أهلاً بك، ': 'Welcome, '):''}{profileName.trim() || (isAr?'أكمل ملفك الشخصي':'Complete your profile')}</h2>
           <p>{isAr?'كل تفاصيل حسابك ونشاطك وإعدادات تجربتك في مكان واحد.':'Your account details, activity, and experience settings in one place.'}</p>
           <span className={'profile-account-state '+(authUser?'is-connected':'is-local')}><i/>{authUser?(isAr?'الحساب متصل':'Account connected'):(isAr?'تستخدم العمدة كزائر':'Using AL OMDA locally')}</span>
         </div>
@@ -2801,6 +2801,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><strong>{tasks.filter(item=>!item.demo && item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
       </div>
     </section>
+    <Link href={navigationHref('/ai')} className="button button-quiet profile-chat-link"><Bot size={17}/>{isAr?'افتح الشات الذكي':'Open AI chat'}</Link>
     <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
     <div className="profile-settings-layout">
               <section className="panel panel-pad profile-account-profile-card profile-account-first" id="profile-account-card">
@@ -2827,9 +2828,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </section>
       <section className="panel panel-pad profile-main-card" id="profile-personal">
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
-        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || defaultDisplayName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
+        <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || (isAr?'لم تضف اسمًا بعد':'No display name yet')}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
         <div className="profile-fields-grid">
-          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} maxLength={100} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/></div>
+          <div className="field-group"><label className="form-label" htmlFor="profile-name">{t('displayName')}</label><input id="profile-name" className="field" value={profileName} maxLength={100} onChange={(event)=>setProfileName(event.target.value)} placeholder={t('updateName')} data-testid="input-profile-name"/>{!profileName.trim()&&<small className="account-hint">{isAr?'لا يوجد اسم عرض محفوظ. اكتب الاسم الذي تريد ظهوره ثم اضغط حفظ الملف.':'No display name is saved. Enter the name you want shown, then choose Save profile.'}</small>}</div>
           <div className="field-group"><label className="form-label" htmlFor="profile-org">{t('organization')}</label><input id="profile-org" className="field" value={profileOrg} onChange={(event)=>setProfileOrg(event.target.value)} placeholder={t('updateOrg')} data-testid="input-profile-org"/></div>
         </div>
         <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
@@ -2863,7 +2864,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </section>
 
 
-        <details className="panel panel-pad profile-setting-card profile-accordion">
+        <details open className="panel panel-pad profile-setting-card profile-accordion profile-privacy-card">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الخصوصية والتحكم':'PRIVACY & CONTROL'}</span><h2>{isAr?'كيف يعمل حسابك':'How your account works'}</h2><p>{isAr?'معلومات واضحة عن حفظ البيانات وصلاحيات التطبيق.':'Clear information about data storage and app permissions.'}</p></div><ShieldCheck size={18}/></div></summary>
           {[isAr?'بيانات الملف والمهام المرتبطة بحسابك تُحفظ في مساحة حسابك عند تسجيل الدخول.':'Profile details and tasks are saved to your account when signed in.',isAr?'تفضيلات المظهر واللغة والتنبيهات تُحفظ على هذا الجهاز.':'Appearance, language, and notification preferences are saved on this device.',isAr?'لا يتم تنفيذ إجراءات خارجية دون موافقتك.':'No external action is taken without your approval.'].map((item,index)=><div className="setting-row profile-trust-row" key={index}><span className="specialty-icon"><Check size={14}/></span><strong>{item}</strong></div>)}
         </details>
@@ -3086,7 +3087,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>
       </aside>
     </div>}
-    {path !== '/ai' && path !== '/ai/usage' && <Link href={navigationHref("/ai")} className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
+    {path !== '/ai' && path !== '/ai/usage' && path !== '/profile' && <Link href={navigationHref("/ai")} className="mobile-chat-launcher" aria-label={t('aiChat')} data-testid="link-mobile-chat"><Bot size={22} strokeWidth={1.9}/><span>{t('aiChat')}</span></Link>}
     {!authLoading && !authUser && guestNudge === 'shown' && <GuestWelcomeNudge isAr={isAr} onSignup={()=>setLocation(focusedHref('/profile','profile-account-card'))} onDismiss={dismissGuestNudge}/>}
     <nav className="mobile-nav" aria-label={t('menu')}>{mobileNavItems.map((item)=>navLink(item,true))}</nav>
   </div>;
