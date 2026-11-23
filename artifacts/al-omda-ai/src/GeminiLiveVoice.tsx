@@ -1,3 +1,4 @@
+import {VoiceActivityGate} from './lib/voice-activity-gate';
 import { useEffect, useRef, useState } from "react";
 import { Mic, PhoneOff } from "lucide-react";
 
@@ -45,6 +46,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const [status, setStatus] = useState("");
   const [thinking,setThinking]=useState(false);
   const [heardSpeech,setHeardSpeech]=useState(false);
+  const [turnArmed,setTurnArmed]=useState(false);
+  const turnArmedRef=useRef(false);
+  const validTurnRef=useRef(false);
+  const gateRef=useRef(new VoiceActivityGate());
   const captureTimerRef=useRef(0);
   const silentGainRef=useRef<GainNode|null>(null);
   const peakInputRef=useRef(0);
@@ -137,6 +142,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     if(mountedRef.current){setThinking(false);setHeardSpeech(false);}
     setConnectingState(false);
     setActiveState(false);
+    turnArmedRef.current=false;validTurnRef.current=false;gateRef.current.reset();
+    if(mountedRef.current)setTurnArmed(false);
     sessionReadyRef.current = false;
     speechActiveRef.current = false;
     silenceFramesRef.current = 0;
@@ -270,7 +277,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               outputAudioTranscription: {},
               realtimeInputConfig: { automaticActivityDetection: { disabled: true } },
               systemInstruction: {
-                parts: [{ text: "You are AL OMDA AI, a warm and capable voice assistant. Respond naturally in the user's language. When the user speaks Egyptian Arabic, reply in clear Egyptian Arabic. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking." }]
+                parts: [{ text: `You are AL OMDA AI, a warm and capable voice assistant. Respond naturally in the user's language. When the user speaks Egyptian Arabic, reply in clear Egyptian Arabic. Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; prioritize that language for input transcription. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
               }
             }
           }));
@@ -329,13 +336,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         const rms = Math.sqrt(energy / Math.max(1, input.length));
         inputFramesRef.current++;
         peakInputRef.current=Math.max(peakInputRef.current,rms);
-        // A fixed .012 gate discarded quiet iPhone speech before it reached the server.
-        const hasSpeech = rms > 0.0015;
+        const durationMs=input.length/context.sampleRate*1000;
+        const hasSpeech=turnArmedRef.current && gateRef.current.process(rms,durationMs);
         if(inputFramesRef.current%12===0){
           const track=stream.getAudioTracks()[0];
           setMicDiagnostic((ar?'مستوى الميكروفون: ':'Mic level: ')+Math.round(Math.min(100,peakInputRef.current*10000))+'%'+(track?.muted?(ar?' · المسار مكتوم':' · track muted'):''));
         }
 
+        if(!turnArmedRef.current)return;
         if (hasSpeech) {
           setHeardSpeech(true);
           window.clearTimeout(captureTimerRef.current);
@@ -365,6 +373,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         if (!hasSpeech) {
           silenceFramesRef.current += 1;
           if (silenceFramesRef.current >= 8) {
+            validTurnRef.current=gateRef.current.voicedMs>=350;
+            turnArmedRef.current=false;setTurnArmed(false);
             socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
             speechActiveRef.current = false;
             silenceFramesRef.current = 0;
@@ -386,7 +396,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       sessionReadyRef.current = true;
       setConnectingState(false);
       setActiveState(true);
-      setStatus(labels.listening);
+      setStatus(ar?'متصل. اضغط «دور كلام جديد» ثم انتظر لحظة قبل التحدث.':'Connected. Tap New speaking turn, pause briefly, then speak.');
 
       let receivedAudioChunks = 0;
       socket.onmessage = async (event) => {
@@ -406,6 +416,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         }
         const serverContent = message.serverContent;
         if (!serverContent) return;
+        // Unsolicited/noise-only server content never enters the chat or playback.
+        if(!validTurnRef.current)return;
         if (serverContent.interrupted) nextPlayTimeRef.current = context.currentTime;
         const inputText = serverContent.inputTranscription?.text;
         if (typeof inputText === "string" && inputText.trim()) userTranscriptRef.current += inputText;
@@ -519,6 +531,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           userTranscriptRef.current = "";
           assistantTranscriptRef.current = "";
           receivedAudioChunks = 0;
+          validTurnRef.current=false;
         }
       };
       socket.onclose = () => {
@@ -552,8 +565,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
-    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(heardSpeech?(ar?"رصدنا صوتك":"Voice detected"):(ar?"الميكروفون جاهز":"Microphone ready")):(ar?"المس للتحدث":"Tap to talk")}</span>
+    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(turnArmed?heardSpeech?(ar?"رصدنا صوتك":"Voice detected"):(ar?"انتظر ثم تكلّم":"Pause, then speak"):(ar?"اضغط لفتح دور كلام":"Tap to open a speaking turn")):(ar?"المس للتحدث":"Tap to talk")}</span>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
+    {active&&<button type="button" className="ai-chat-live-test" disabled={turnArmed||speaking||thinking} onClick={()=>{
+      gateRef.current.reset();validTurnRef.current=false;turnArmedRef.current=true;setTurnArmed(true);setHeardSpeech(false);
+      setStatus(ar?'انتظر لحظة لمعايرة الضجيج، ثم تكلّم. لن تُرسل الضوضاء وحدها.':'Pause briefly for noise calibration, then speak. Noise alone is not sent.');
+    }}>{turnArmed?(ar?'دور الكلام مفتوح':'Speaking turn open'):(ar?'دور كلام جديد':'New speaking turn')}</button>}
     <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>

@@ -45,8 +45,11 @@ test('dictation waits for native start, times out and explains Safari abort',()=
  assert.ok(chat.includes('className="ai-dictation-status" role="status"'));
 });
 
-test('quiet iPhone speech is not discarded by the previous fixed gate',()=>{
- assert.ok(voice.includes('const hasSpeech = rms > 0.0015'));
+test('iPhone capture keeps routing diagnostics and explicit noise gate',()=>{
+ assert.ok(voice.includes('turnArmedRef.current && gateRef.current.process'));
+ assert.ok(voice.includes('if(!validTurnRef.current)return'));
+ assert.ok(voice.includes('New speaking turn'));
+ assert.ok(voice.includes('Only transcribe actual intelligible speech'));
  assert.ok(voice.includes('audio: true'));
  assert.ok(voice.includes("audioSession.type='play-and-record'"));
  assert.ok(voice.includes('mic.connect(silent)'));
