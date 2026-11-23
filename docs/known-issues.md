@@ -115,3 +115,13 @@ Found during Phase 4 work. Each entry: symptom, root cause, impact, proposed fix
 - Error boundary now stores the last error name/message/build/path/browser/time locally and offers expandable production details for a screenshot. No error text, route, browser or account content is transmitted automatically. Existing console logging retained. Error fallback uses vh, not dvh.
 - Checks: full build,16focused tests, missing newer APIs across home/chat/agents/profile, combined degraded-CSS layout, modern compact chat at320/390/1280 with390composer unchanged[10,749,370,56]. Forced invalid-date error verifies local diagnostics and expandable error UI.
 - Physical Huawei acceptance remains open. If another error appears, expand details and capture the message/build/path to identify it rather than guessing.
+
+
+## 2026-11-23: Confirmed Huawei /ai Object.hasOwn crash
+
+- Physical-device error details finally identify TypeError Object.hasOwn is not a function, path /ai, build2946cfe3, Chromium88 desktop-mode UA. Earlier missing-API tests did not remove Object.hasOwn and missed this dependency requirement.
+- React19/Vite7 app: react-markdown10.1.0 uses Object.hasOwn in three places in the shared markdown bundle. Sales analytics dependency has one guarded fallback use. No direct first-party Object.hasOwn call needed replacing. Audited every built JS asset, not server-only node_modules.
+- First entry import now loads core-js3.49 stable API polyfills before app/dependency evaluation. Covers hasOwn, at/findLast, replaceAll, fromEntries, structuredClone and other standardized ES APIs through recent editions. Added guarded AbortSignal.timeout Web API fallback separately. Native APIs are not blindly overwritten. Third-party calls now work without patching node_modules.
+- Explicit browserslist matches existing syntax target Chrome79/Edge79/Firefox78/Safari13/iOS13. Syntax lowering and runtime APIs are separate. core-js postinstall is not needed and is ignored, no build permissions broadened.
+- Tests remove Object.hasOwn, fromEntries, at/findLast, replaceAll, structuredClone and AbortSignal.timeout before production startup. Home/chat/agents/profile render; markdown paragraphs visible; restored functions verified. Combined missing APIs + degraded CSS360/390/412 also pass. Modern chat320/390/1280 unchanged,390composer[10,749,370,56]. Full build/17focused tests;16built assets parse ES2020 including logical-assignment lowering. Not an actual Chromium88 binary or physical Huawei acceptance.
+- Stable polyfill bundle adds about87KB gzip to main entry. This is a deliberate compatibility cost. Physical Huawei must reload and recheck, expanded error details remain available if a different API fails.

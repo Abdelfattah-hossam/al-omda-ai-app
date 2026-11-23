@@ -2,6 +2,7 @@
   "name": "@workspace/al-omda-ai",
   "version": "0.0.0",
   "private": true,
+  "browserslist": ["Chrome >= 79", "Edge >= 79", "Firefox >= 78", "Safari >= 13", "iOS >= 13"],
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
@@ -77,6 +78,7 @@
   },
   "dependencies": {
     "@fix-webm-duration/fix": "1.0.1",
+    "core-js": "3.49.0",
     "mediabunny": "1.66.2",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"

@@ -78,11 +78,15 @@ try:
   pos=evaluate('(()=>{const e=document.querySelector('+json.dumps(sel)+');let r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,hit:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})()');assert pos['hit'],pos
   cmd('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':pos['x'],'y':pos['y']}]});cmd('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]});cmd('Input.insertText',{'text':value})
  cmd('Emulation.setDeviceMetricsOverride',{'width':390,'height':710,'deviceScaleFactor':1,'mobile':True})
- cmd('Page.addScriptToEvaluateOnNewDocument',{'source':'String.prototype.replaceAll=undefined;Array.prototype.at=undefined;window.structuredClone=undefined;crypto.randomUUID=undefined;'});
+ cmd('Page.addScriptToEvaluateOnNewDocument',{'source':'Object.hasOwn=undefined;Object.fromEntries=undefined;String.prototype.replaceAll=undefined;Array.prototype.at=undefined;Array.prototype.findLast=undefined;Array.prototype.findLastIndex=undefined;window.structuredClone=undefined;AbortSignal.timeout=undefined;AbortSignal.any=undefined;crypto.randomUUID=undefined;'});
  for route in ['/','/ai','/agents','/profile']:
   cmd('Page.navigate',{'url':origin+route});time.sleep(.8)
   print('OLD_API_RESULT',route,evaluate('({error:document.body.innerText.includes("تعذر عرض هذه الصفحة"),text:document.body.innerText.slice(-300)})'))
   assert not evaluate('document.body.innerText.includes("تعذر عرض هذه الصفحة")'),route
+  assert evaluate('typeof Object.hasOwn==="function"&&typeof Object.fromEntries==="function"&&typeof Array.prototype.at==="function"&&typeof Array.prototype.findLast==="function"&&typeof String.prototype.replaceAll==="function"&&typeof structuredClone==="function"&&typeof AbortSignal.timeout==="function"'),route
+  if route=='/ai':
+   assert evaluate('document.querySelectorAll(".ai-chat-markdown p").length>0')
+   print('CHAT_SCREEN',screenshot('omda-huawei-hasown-after-chat.png'))
   print('PASS old APIs missing',route)
   if route=='/':
    print('AFTER_SCREEN',screenshot('omda-huawei-js-after-home.png'))
