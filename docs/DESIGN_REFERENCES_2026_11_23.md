@@ -233,3 +233,12 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 - Lavender/charcoal palette preserved. Chat markup, composer, scroll anchoring, task execution, and account data are unchanged. External integration presence is not described as a connected status.
 - Validation: full typecheck/build; 22 focused tests; local browser layout at 320, 390, and 1280 widths; all 26 home/mobile-menu links equal; six groups; search and reset; finance visible; no horizontal overflow; advanced connection and media launcher deep links.
 - Acceptance: Chrome emulation is not physical-iPhone acceptance. Live verification recorded separately after deployment.
+
+
+## 2026-11-23: Huawei Browser blank chat body
+
+- Real user screenshot from Huawei Nova, Huawei Browser, version unknown: app header visible, dark body, no composer.
+- Reproduced the same appearance by removing CSS features unavailable in older engines: cascade layers, dynamic viewport units, and :has. Chat page collapsed to 1px; main area was 66px. This is a confirmed CSS compatibility failure mode, not a confirmed browser-version diagnosis.
+- Added an unlayered baseline guarded by lack of dvh support. Uses vh and explicit flex ancestor heights, message overflow and a visible composer. Modern browsers keep the existing layered design untouched.
+- Degraded-CSS browser checks at 360/390/412 widths: page fills viewport, messages visible, composer inside viewport, no horizontal overflow. Modern 320/390/1280 compact-turn/sides checks still pass; modern390 composer unchanged at [10,749,370,56].
+- No chat messages sent, AI generations, account writes, or real tasks executed during testing. Physical Huawei acceptance remains open until the user reloads and tests on that device. JavaScript/CSS simulation is not an actual old-browser binary.

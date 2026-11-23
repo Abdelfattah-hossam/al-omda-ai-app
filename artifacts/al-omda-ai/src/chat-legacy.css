@@ -1,0 +1,30 @@
+/* Baseline must remain outside @layer and avoid dvh/:has dependencies.
+   Older Huawei browsers drop an unknown layer, including its entire layout.
+   Modern browsers retain the important design layer above these declarations. */
+@supports not (height:100dvh){
+body .app-shell[data-chat-active="true"]{height:100vh!important;min-height:0!important;max-height:none!important;background:#0b0b0b!important;color:#ececec!important}
+body .app-shell[data-chat-active="true"]>.main-area{display:flex!important;flex-direction:column!important;height:100vh!important;max-height:none!important;min-height:0!important;width:100%!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#0b0b0b!important}
+body .app-shell[data-chat-active="true"]>.main-area>.topbar,body .app-shell[data-chat-active="true"]>.mobile-nav{display:none!important}
+body .app-shell[data-chat-active="true"]>.main-area>.content-wrap{display:flex!important;flex-direction:column!important;flex:1 1 0!important;height:0!important;min-height:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;overflow:hidden!important}
+body .app-shell[data-chat-active="true"] .ai-chat-page{display:flex!important;flex-direction:row!important;flex:1 1 0!important;height:100%!important;max-height:none!important;min-height:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;border:0!important;border-radius:0!important;background:#0b0b0b!important;transform:none!important;animation:none!important}
+body .app-shell[data-chat-active="true"] .ai-chat-main{display:flex!important;flex:1 1 0!important;flex-direction:column!important;min-width:0!important;min-height:0!important;height:100%!important;padding:0!important;gap:0!important;border:0!important;background:#0b0b0b!important}
+body .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{display:flex!important;flex:0 0 56px!important;height:56px!important;min-height:56px!important;box-sizing:border-box!important;padding:0 12px!important;gap:8px!important;background:#0b0b0b!important;color:#ececec!important}
+body .app-shell[data-chat-active="true"] .ai-chat-main>.panel{display:flex!important;flex-direction:column!important;flex:1 1 0!important;height:0!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;gap:0!important;overflow:hidden!important;border:0!important;border-radius:0!important;background:transparent!important}
+body .app-shell[data-chat-active="true"] .chat-messages{display:flex!important;flex-direction:column!important;flex:1 1 0!important;height:0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;width:100%!important;box-sizing:border-box!important;padding:16px 12px!important;gap:12px!important;background:transparent!important;color:#ececec!important}
+body .app-shell[data-chat-active="true"] .ai-composer{display:block!important;position:relative!important;flex:0 0 auto!important;width:calc(100% - 20px)!important;max-width:768px!important;box-sizing:border-box!important;margin:0 auto 8px!important;padding:0!important;border:0!important;background:#0b0b0b!important}
+body .app-shell[data-chat-active="true"] .ai-composer-tools{display:flex!important;align-items:center!important;box-sizing:border-box!important;width:100%!important;min-height:56px!important;padding:6px!important;gap:6px!important;border:1px solid #51415f!important;border-radius:28px!important;background:#19151f!important}
+body .app-shell[data-chat-active="true"] .ai-composer-input{flex:1 1 0!important;min-width:0!important;min-height:42px!important;box-sizing:border-box!important;padding:11px 4px!important;line-height:20px!important;font-size:16px!important;color:#ececec!important;background:transparent!important;border:0!important}
+body .app-shell[data-chat-active="true"] .ai-chat-sidebar{height:100%!important;max-height:none!important;background:#151218!important;color:#ececec!important}
+body .app-shell[data-chat-active="true"] .ai-chat-sidebar-scrim{position:fixed!important;inset:0!important}
+@media(max-width:767px){body .app-shell[data-chat-active="true"] .ai-chat-sidebar{position:fixed!important;top:0!important;bottom:0!important;height:100vh!important;z-index:90!important}}
+
+body .app-shell[data-chat-active="true"] .chat-message{flex:none!important;min-height:0!important;min-width:0!important;display:block!important;margin-top:0!important;margin-bottom:0!important;line-height:1.7!important}
+body .app-shell[data-chat-active="true"] .chat-message>strong{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important}
+body .app-shell[data-chat-active="true"] .chat-message.user{width:fit-content!important;max-width:85%!important;align-self:flex-start!important;margin-left:0!important;margin-right:auto!important;padding:8px 14px!important;border:1px solid #493a5b!important;border-radius:20px!important;background:#241d2d!important}
+body .app-shell[data-chat-active="true"] .chat-message.assistant{width:fit-content!important;max-width:100%!important;align-self:flex-end!important;margin-left:auto!important;margin-right:0!important;padding:0 2px!important;border:0!important;border-radius:0!important;background:transparent!important;text-align:right!important;box-shadow:none!important}
+body .app-shell[data-chat-active="true"] .chat-message .ai-chat-markdown p{font-size:15px!important;line-height:1.75!important;margin:0 0 10px!important}
+body .app-shell[data-chat-active="true"] .chat-message .ai-chat-markdown>:last-child{margin-bottom:0!important}
+body .app-shell[data-chat-active="true"] .chat-message.assistant .ai-message-actions{margin-left:auto!important;margin-right:0!important;border:0!important}
+body .app-shell[data-chat-active="true"] .chat-message .ai-message-action{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;padding:10px!important;border:0!important;background:transparent!important;color:#d3b9f2!important}
+
+}
