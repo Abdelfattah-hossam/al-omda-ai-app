@@ -5,6 +5,7 @@ import LocalModelSettings from './LocalModelSettings';
 import HostedConnections from './HostedConnections';
 import './agent-connections.css';
 import ProfileUsage from './ProfileUsage';
+import AppDownloads from './AppDownloads';
 import './sales-dashboard.css';
 import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
@@ -1907,6 +1908,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{hasGreetingName ? `${t('hello')} ${greetingName}` : (isAr?'مرحباً بك':'Welcome')} · {isAr?'نظرة عامة على نشاط AL OMDA Ai':'Your AL OMDA Ai activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
+      <AppDownloads isAr={isAr}/>
       <section className="app-launcher-section home-app-directory" id="home-app-directory" aria-labelledby="app-launcher-title">
         <div className="app-launcher-heading">
           <div>
@@ -2895,6 +2897,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </section>
     {adminAllowed&&<section className="panel" data-testid="profile-admin-section" style={{padding:16,display:'grid',gap:12}}><button type="button" className="button button-small" aria-expanded={adminProfileOpen} onClick={()=>setLocation(adminProfileOpen?'/profile':'/profile?admin=1')}>{isAr?'إدارة التطبيق':'App administration'}</button>{adminProfileOpen&&<Suspense fallback={<p>{isAr?'جارٍ تحميل الإدارة…':'Loading administration…'}</p>}><AdminWorkspace language={language}/></Suspense>}</section>}
+    <AppDownloads isAr={isAr}/>
     <Link href={navigationHref('/ai')} className="button button-quiet profile-chat-link"><Bot size={17}/>{isAr?'افتح الشات الذكي':'Open AI chat'}</Link>
     <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
     <div className="profile-settings-layout">
