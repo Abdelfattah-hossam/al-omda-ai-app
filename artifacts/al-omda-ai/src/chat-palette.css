@@ -1,0 +1,36 @@
+/* Shared lavender accents on charcoal chat. Colors only, no layout or scroll rules. */
+@layer omda-chat-palette {
+body .app-shell[data-chat-active="true"] {
+ --chat-gold:#b79aef!important;--chat-gold-light:#e0d2ff!important;
+ --omda-accent:#b79aef!important;--omda-accent-2:#d2c3fa!important;
+ --omda-glow:183,154,239!important;--profile-accent:#b79aef!important;
+ --primary:260 73% 77%!important;--primary-foreground:250 27% 9%!important;
+ --ring:260 73% 77%!important;
+}
+body .app-shell[data-chat-active="true"] :is(.button-primary,.ai-send-button:not(:disabled)) {
+ background:linear-gradient(135deg,#d9c8ff,#b79aef)!important;color:#191124!important;border-color:#c3a9f6!important;box-shadow:none!important;
+}
+body .app-shell[data-chat-active="true"] :is(.button-quiet,.ai-chat-live-test) {
+ background:#292333!important;color:#e0d2ff!important;border-color:#625074!important;box-shadow:none!important;
+}
+body .app-shell[data-chat-active="true"] :is(.button-primary,.button-quiet):hover {box-shadow:0 4px 16px #b79aef22!important;border-color:#c3a9f6!important;}
+body .app-shell[data-chat-active="true"] :is(.chat-message.assistant,.ai-chat-attachment-preview,.notice-bar,.ai-agent-runtime,.ai-chat-live-panel) {border-color:#4a3b5e!important;}
+body .app-shell[data-chat-active="true"] :is(.chat-message.assistant strong,.ai-chat-welcome-logo,.ai-plus-option>svg,.ai-chat-live-mode-label,.ai-voice-button.active) {color:#d6c3ff!important;}
+body .app-shell[data-chat-active="true"] :is(.notice-bar:not(.notice-error),.ai-chat-attachment-preview) {background:#24202b!important;}
+body .app-shell[data-chat-active="true"] :is(a,button):focus-visible {outline-color:#d5bcff!important;box-shadow:0 0 0 3px #b79aef33!important;}
+body .app-shell[data-chat-active="true"] .artifact-actions .button-primary svg {color:#191124!important;}
+body .media-studio .button-primary {background:linear-gradient(135deg,#d9c8ff,#b79aef)!important;color:#191124!important;border-color:#c3a9f6!important;}
+body .media-studio :is(.button-quiet,.icon-button,label:has(input[type="file"])) {background:#292333!important;color:#e0d2ff!important;border-color:#625074!important;}
+body .media-studio :is(input,textarea,select) {background:#16131c!important;color:#f1eff9!important;border-color:#625074!important;}
+body .media-studio {border-color:#625074!important;}
+body .media-studio :is(article,.media-studio-note) {background:#24202b!important;border-color:#625074!important;color:#e0d2ff!important;}
+body .media-studio progress {accent-color:#b79aef!important;}
+
+body .app-shell[data-chat-active="true"] .chat-message [style*="--omda-accent"] {color:#d6c3ff!important;}
+body .app-shell[data-chat-active="true"] .chat-message :is(pre,code) {color:#e2d8ef!important;border-color:#493a5b!important;}
+body .app-shell[data-chat-active="true"] .chat-message .icon-button {color:#d6c3ff!important;background:#24202b!important;border-color:#493a5b!important;box-shadow:none!important;}
+
+body .app-shell[data-chat-active="true"] .ai-message-actions button {color:#d6c3ff!important;background:#24202b!important;border-color:#493a5b!important;box-shadow:none!important;}
+
+body .app-shell[data-chat-active="true"] .ai-message-actions {border-color:#493a5b!important;}
+}

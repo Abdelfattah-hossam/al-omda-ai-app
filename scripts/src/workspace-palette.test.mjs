@@ -16,3 +16,12 @@ test('palette is color only and preserves semantic status colors',()=>{
  assert.ok(css.includes('.status-chip.stopped'));
  assert.doesNotMatch(css,/(?:^|[;{\s])(?:height|width|position|display|overflow|padding|margin|scroll-behavior|touch-action)\s*:/);
 });
+
+const chatPalette=readFileSync('../artifacts/al-omda-ai/src/chat-palette.css','utf8');
+test('chat lavender accents change only colors and preserve charcoal layout',()=>{
+ assert.ok(chatPalette.includes('--chat-gold:#b79aef!important'));
+ assert.ok(chatPalette.includes('.button-primary'));
+ assert.ok(chatPalette.includes('.ai-message-actions button'));
+ assert.doesNotMatch(chatPalette,/(?:^|[;{\s])(?:height|width|position|display|overflow|padding|margin|scroll-behavior|touch-action)\s*:/);
+ assert.ok(!chatPalette.includes('background:#b79aef!important;}'));
+});

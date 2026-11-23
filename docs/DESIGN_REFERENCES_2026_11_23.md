@@ -48,3 +48,16 @@ Home, workbench, profile and charcoal chat were rendered at 390 and 1280.
 Screenshots were inspected and a first-pass leftover gold surface corrected.
 This is browser emulation, not physical iPhone/Android acceptance.
 The previous broad-suite network-timeout caveat still applies.
+
+## Chat accent unification follow-up
+
+The owner asked at 07:17 Dubai to unify remaining gold chat accents with the
+new workspace palette. A color-only chat layer now covers file preview/download,
+secondary artifact actions, response copy/audio actions, preview labels/code,
+active send controls and the body-level media studio. Charcoal #0b0b0b remains.
+No chat layout, composer or scroll handlers changed. Existing semantic success,
+error and tool-category colors remain. No file content is recolored or rewritten.
+22 focused tests pass and the full typecheck/build passes. Synthetic-account
+Chrome renders at 320/390/1280 confirm lavender artifact buttons, working local
+preview and no page overflow. Screenshots inspected at mobile and desktop sizes.
+No paid services or real AI execution were used for this change.
