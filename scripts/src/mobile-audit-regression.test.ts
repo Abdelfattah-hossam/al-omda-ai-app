@@ -56,7 +56,8 @@ test("project lists paginate without removing projects and keep filters", () => 
 test("chat quality is controlled by prompt rules, not scroll or composer code", () => {
  const ai = readFileSync('../artifacts/api-server/src/routes/ai.ts', 'utf8');
  assert.ok(ai.includes('Greetings are greetings'));
- assert.ok(ai.includes('clear, warm Egyptian Arabic'));
+ assert.ok(ai.includes('all Arabic dialects'));
+ assert.ok(ai.includes('warm everyday Egyptian')); 
  assert.ok(ai.includes('executionStyle + conversationalStyle + memoryContext'));
 });
 
