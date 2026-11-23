@@ -61,8 +61,8 @@ type StepState = 'pending' | 'approved' | 'rejected';
 type TaskStatus = 'review' | 'paused' | 'approved' | 'stopped';
 type Specialty = 'business' | 'development' | 'design' | 'marketing' | 'research' | 'assistant' | 'content' | 'social' | 'education' | 'finance';
 type PlanStepNote = { id:string; author:'user'|'assistant'|'system'; text:string; createdAt:string };
-type PlanStep = { id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
-type Task = { id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
+type PlanStep = { hasResult?:boolean; id: string; text: string; state: StepState; comments?:PlanStepNote[]; revisionHistory?:Array<{result:string;executedAt?:string;revisionRequestedAt:string;note:string}>; output?: string; complete?: string; result?: string; executedAt?: string; executionStatus?: "succeeded" | "failed"; executionError?: string };
+type Task = { summary?:boolean; updatedAt?:string; id: string; title: string; request: string; specialty: Specialty; steps: PlanStep[]; status: TaskStatus; createdAt: string; demo?: boolean };
 type CommandAsset = { path:string; name:string; mimeType?:string|null; size?:number|null; projectId?:string|null };
 
 type TaskCodeProject = { title: string; framework: string; entryPoint: string; files: Array<{ path: string; content: string }>; buildCommand: string; testCommand?: string; buildStatus: "not_run"; testStatus: "not_run" };
@@ -806,6 +806,7 @@ function App() {
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   useEffect(()=>setHeaderActionsOpen(false),[location]);
   const [commandQuery, setCommandQuery] = useState('');
+  const [commandFullTasks,setCommandFullTasks]=useState<Task[]>([]);
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
   const [commandAssetsLoading,setCommandAssetsLoading]=useState(false);
   const [projectPage, setProjectPage] = useState(1);
@@ -986,6 +987,14 @@ function App() {
   const path = location.split('?')[0];
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
+  const [taskDetailError,setTaskDetailError]=useState('');
+  const [taskDetailRetry,setTaskDetailRetry]=useState(0);
+  useEffect(()=>{
+   if(!authUser||!currentTask?.summary||(!detailMatch&&path!=='/workbench'))return;
+   let cancelled=false;const controller=new AbortController();setTaskDetailError('');
+   void fetch('/api/tasks/'+encodeURIComponent(currentTask.id),{credentials:'same-origin',cache:'no-store',signal:controller.signal}).then(async r=>{if(!r.ok)throw new Error('Could not load project.');return await r.json();}).then(d=>{if(cancelled||!d.task)return;setSaved(prev=>({...prev,tasks:prev.tasks.map(t=>t.id===currentTask.id?{...d.task,summary:false,updatedAt:currentTask.updatedAt}:t)}));}).catch(e=>{if(!cancelled)setTaskDetailError(e instanceof Error?e.message:'Could not load project.');});
+   return()=>{cancelled=true;controller.abort();};
+  },[authUser?.id,currentTask?.id,currentTask?.summary,currentTask?.updatedAt,path,taskDetailRetry]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
   const focusTarget = new URLSearchParams(locationSearch).get('focus');
   const adminProfileOpen=new URLSearchParams(locationSearch).get('admin')==='1';
@@ -1109,7 +1118,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
   useEffect(() => {
     if (!commandPaletteOpen) {setCommandAssetsLoading(false);return;}
     if (!authUser) { setCommandAssets([]);setCommandAssetsLoading(false); return; }
-    setCommandAssets([]);setCommandAssetsLoading(true);
+    setCommandAssets([]);setCommandFullTasks([]);setCommandAssetsLoading(true);
+    let fullSearchCancelled=false;
+    void loadWorkspacePages(async offset=>{const r=await fetch('/api/workspace?offset='+offset,{...apiRequestOptions,cache:'no-store'});if(!r.ok)throw new Error('Could not search project outputs.');return await r.json();}).then(workspace=>{if(!fullSearchCancelled)setCommandFullTasks(workspace.tasks as Task[]);}).catch(()=>{if(!fullSearchCancelled)setCommandFullTasks([]);});
     let cancelled = false;
     const controller=new AbortController();
     const loadCommandAssets = async () => {
@@ -1134,7 +1145,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       setCommandAssets([...unique.values()]);setCommandAssetsLoading(false);
     };
     void loadCommandAssets();
-    return ()=>{cancelled=true;controller.abort();};
+    return ()=>{fullSearchCancelled=true;cancelled=true;controller.abort();};
   }, [commandPaletteOpen, authUser?.id, tasks]);
 
   useEffect(() => {
@@ -1161,7 +1172,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     let revision='';
     try{const r=await fetch('/api/workspace/revision',{...options,cache:'no-store'});if(r.ok){const d=await r.json();if(typeof d.revision==='string')revision=d.revision;}}catch{/* Full load remains available if a probe fails. */}
     const workspace=await loadWorkspacePages(async offset=>{
-      const r=await fetch(offset?'/api/workspace?offset='+offset:'/api/workspace',{...options,cache:'no-store'});
+      const r=await fetch('/api/workspace?summary=1&offset='+offset,{...options,cache:'no-store'});
       if(!r.ok)throw new Error(language==='ar'?'تعذر تحميل مساحة العمل.':'Could not load workspace.');
       return await r.json() as WorkspacePage;
     });
@@ -1178,9 +1189,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     // Workspace polling runs in the background. Do not replace React state with
     // freshly parsed but identical API data, which needlessly re-renders the whole app.
     setSaved((prev) => {
-      const sameTasks = JSON.stringify(prev.tasks) === JSON.stringify(remoteTasks);
+      const mergedTasks=remoteTasks.map(remote=>{const old=prev.tasks.find(t=>t.id===remote.id);return remote.summary&&old&&!old.summary&&old.updatedAt&&old.updatedAt===remote.updatedAt?old:remote;});
+      const sameTasks = JSON.stringify(prev.tasks) === JSON.stringify(mergedTasks);
       if (prev.name === remoteName && prev.org === remoteOrg && sameTasks) return prev;
-      return { ...prev, name:remoteName, org:remoteOrg, tasks:remoteTasks };
+      return { ...prev, name:remoteName, org:remoteOrg, tasks:mergedTasks };
     });
     if(!profileSavingRef.current && expectedRevision===profileDraftRef.current.revision){
       if(!profileDraftRef.current.name)setProfileName((current) => current === profileInputName ? current : profileInputName);
@@ -1680,7 +1692,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [commandQuery, isAr]);
   const commandMatches = useMemo(() => {
     const needle = commandQuery.trim().toLocaleLowerCase();
-    const realTasks = tasks.filter(task=>!task.demo);
+    const realTasks = (commandFullTasks.length?commandFullTasks:tasks).filter(task=>!task.demo);
     const matches = realTasks.flatMap(task => {
       const taskMatch = !needle || `${task.title} ${task.request}`.toLocaleLowerCase().includes(needle);
       const outputMatches = task.steps.filter(step=>needle && `${step.text} ${step.output ?? ''} ${step.result ?? ''}`.toLocaleLowerCase().includes(needle));
@@ -1688,7 +1700,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       return outputMatches.map(step=>({task,detail:(isAr?'مخرج: ':'Output: ')+step.text}));
     });
     return matches.slice(0,12);
-  }, [tasks, commandQuery, isAr]);
+  }, [tasks, commandFullTasks, commandQuery, isAr]);
   const downloadCommandAsset = async (asset:CommandAsset) => {
     try {
       await downloadStoredAsset(asset.path,asset.name);
@@ -1698,7 +1710,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const label = (id:Specialty) => t(specialtyKey(id));
   const count = (task:Task) => task.steps.filter((step) => step.state === 'approved').length;
-  const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && Boolean(step.result)).length;
+  const executionCount = (task:Task) => task.steps.filter((step) => step.executionStatus === 'succeeded' && (task.summary?step.hasResult===true:Boolean(step.result))).length;
 
   const pageHeading = (eyebrow:string, title:string, subtitle:string, action?:ReactNode) => <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1 className="page-title">{title}</h1><p className="page-subtitle">{subtitle}</p></div>{action}</div>;
   const platformStatusPage = (route:string) => {
@@ -2502,7 +2514,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const workbenchPage = () => {
-    const active = currentTask && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
+    const active = currentTask && !currentTask.summary && (currentTask.status === 'review' || currentTask.status === 'paused' || currentTask.status === 'approved') ? currentTask : null;
     const workflowStage = planGenerating ? 1 : active?.status === 'approved' ? 2 : active ? 1 : 0;
     return <div className="page-enter">
       {pageHeading(t('workbenchTag'),t('workbench'),t('workbenchSub'),<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}><button type="button" className="button button-primary button-small" onClick={()=>{setSelectedTaskId(null);setRequest('');setLocation(focusedHref('/workbench','request-input'));}} data-testid="button-new-project"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</button><span className="status-chip"><LockKeyhole size={12}/>{t('privacy')}</span></div>)}
@@ -2692,6 +2704,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
 
   const exportTasksSheet = async (items:Task[]) => {
+    try{
+     const full:Task[]=[];
+     for(const task of items){if(!task.summary){full.push(task);continue;}const r=await fetch('/api/tasks/'+encodeURIComponent(task.id),{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(isAr?'تعذر تحميل مشروع للتصدير. لم يُنشأ ملف ناقص.':'Could not load a project. No partial export was created.');const d=await r.json();if(!d.task)throw new Error('Invalid project.');full.push(d.task);}
+     items=full;
+    }catch(error){setWorkspaceError(error instanceof Error?error.message:'Could not export.');return;}
+
     const headers = isAr
       ? ['اسم المشروع','الطلب الأصلي','التخصص','حالة المشروع','رقم الخطوة','الخطوة','حالة الخطوة','المخرج المتوقع','معيار الاكتمال','نتيجة التنفيذ','حالة التنفيذ','سبب الفشل','تاريخ الإنشاء']
       : ['Project','Original request','Specialty','Project status','Step number','Step','Step status','Expected output','Completion check','Execution result','Execution status','Failure reason','Created at'];
@@ -2791,8 +2809,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const activeTasks = tasks.filter((task) => !task.demo);
     const columns: Array<{ id:string; title:string; tasks:Task[] }> = [
       { id:'review', title:isAr?'بانتظار المراجعة':'Needs review', tasks:activeTasks.filter(task=>task.status==='review') },
-      { id:'in-progress', title:isAr?'قيد التنفيذ':'In progress', tasks:activeTasks.filter(task=>task.status==='approved' && !task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
-      { id:'completed', title:isAr?'مكتملة':'Completed', tasks:activeTasks.filter(task=>task.status==='approved' && task.steps.length>0 && task.steps.every(step=>step.executionStatus==='succeeded' && Boolean(step.result))) },
+      { id:'in-progress', title:isAr?'قيد التنفيذ':'In progress', tasks:activeTasks.filter(task=>task.status==='approved' && !task.steps.every(step=>step.executionStatus==='succeeded' && (task.summary?step.hasResult===true:Boolean(step.result)))) },
+      { id:'completed', title:isAr?'مكتملة':'Completed', tasks:activeTasks.filter(task=>task.status==='approved' && task.steps.length>0 && task.steps.every(step=>step.executionStatus==='succeeded' && (task.summary?step.hasResult===true:Boolean(step.result)))) },
       { id:'paused', title:isAr?'متوقفة أو معلّقة':'Paused or stopped', tasks:activeTasks.filter(task=>task.status==='paused' || task.status==='stopped') },
     ];
     return <div className="page-enter" id="pipeline-board">
@@ -2992,7 +3010,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
   );
 
   let page:ReactNode;
-  if (detailMatch && currentTask) page = taskDetailPage(currentTask);
+  if (detailMatch && currentTask?.summary) page=<section className="panel panel-pad" role={taskDetailError?'alert':'status'}><h2 className="section-title">{taskDetailError?(isAr?'تعذر تحميل المشروع':'Could not load project'):(isAr?'جارٍ تحميل تفاصيل المشروع…':'Loading project details…')}</h2>{taskDetailError&&<button className="button button-quiet" onClick={()=>setTaskDetailRetry(v=>v+1)}>{isAr?'إعادة المحاولة':'Retry'}</button>}</section>;
+  else if (detailMatch && currentTask) page = taskDetailPage(currentTask);
   else if (detailMatch && (authLoading || !workspaceLoaded) && !workspaceLoadError) page = <section className="panel panel-pad" role="status" style={{marginTop:24}}><h2 className="section-title">{isAr?'جارٍ تحميل المشروع…':'Loading project…'}</h2><p className="page-subtitle">{isAr?'نتحقق من حسابك ونحمّل بيانات المشروع المحفوظة.':'Checking your account and loading the saved project.'}</p></section>;
   else if (detailMatch && workspaceLoadError) page = <section className="panel panel-pad" role="alert" style={{marginTop:24}}><h2 className="section-title">{isAr?'تعذر تحميل المشروع':'Could not load project'}</h2><p className="page-subtitle">{workspaceLoadError}</p><Link href={focusedHref('/history','history-list')} className="button button-secondary" style={{marginTop:16}}>{isAr?'العودة إلى سجل المهام':'Back to task history'}</Link></section>;
   else if (detailMatch) page = notFoundPage(

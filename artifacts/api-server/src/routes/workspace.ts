@@ -197,6 +197,14 @@ router.get("/workspace/revision", async (req,res):Promise<void>=>{
  }catch(error){reportSupabaseError(req,res,error,"Could not check workspace changes.");}
 });
 
+router.get("/tasks/:id", async(req,res):Promise<void>=>{
+ const session=await sessionOrReport(req,res);if(session===false)return;if(!session){res.status(401).json({error:"Sign in required."});return;}
+ res.setHeader('Cache-Control','private, no-store');
+ try{const row=await getTaskById(req.params.id,session);if(!row){res.status(404).json({error:'Project not found.'});return;}
+ const task=sanitizeWorkspaceTask(row);if(!task){res.status(422).json({error:'Invalid project record.'});return;}
+ res.json({task});}catch(error){reportSupabaseError(req,res,error,'Could not load project.');}
+});
+
 router.get("/workspace", async (req, res): Promise<void> => {
   const session = await sessionOrReport(req, res);
   if (session === false) return;
@@ -220,9 +228,10 @@ router.get("/workspace", async (req, res): Promise<void> => {
       limit: String(WORKSPACE_PAGE_SIZE+1),
       offset: String(offset),
     });
+    const summaries=req.query.summary==='1';
     const [profileResponse, tasksResponse] = await Promise.all([
       supabaseFetch(`/rest/v1/profiles?${profileQuery}`, {}, session.accessToken),
-      supabaseFetch(`/rest/v1/tasks?${tasksQuery}`, {}, session.accessToken),
+      summaries?supabaseFetch('/rest/v1/rpc/get_workspace_summaries',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_offset:offset})},session.accessToken):supabaseFetch(`/rest/v1/tasks?${tasksQuery}`, {}, session.accessToken),
     ]);
     const [profiles, taskRows] = await Promise.all([
       readSupabaseJson<DbProfile[]>(profileResponse),
@@ -240,7 +249,14 @@ router.get("/workspace", async (req, res): Promise<void> => {
       avatarPath: profiles[0].avatar_path,
     });
     const nextOffset=taskRows.length>WORKSPACE_PAGE_SIZE?offset+WORKSPACE_PAGE_SIZE:null;
-    const sendWorkspace=(value:unknown)=>res.json({...value as object,nextOffset});
+    const sendWorkspace=(value:unknown)=>{
+     const result=value as {profile:unknown;tasks:Array<{id:string;steps:Array<{id:string}>}>};
+     if(summaries){
+      const rows=taskRows as Array<{id:string;updated_at?:string;steps?:Array<{id:string;hasResult?:boolean}>}>;
+      return res.json({...result,nextOffset,tasks:result.tasks.map(task=>{const raw=rows.find(r=>r.id===task.id);return{...task,summary:true,updatedAt:raw?.updated_at,steps:task.steps.map(step=>({...step,hasResult:raw?.steps?.find(s=>s.id===step.id)?.hasResult===true}))};})});
+     }
+     return res.json({...result,nextOffset});
+    };
     const tasks = taskRows.slice(0,WORKSPACE_PAGE_SIZE)
       .map((row, index) => {
         const task = sanitizeWorkspaceTask(row);
