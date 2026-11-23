@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import assistedRecoveryRouter from './assisted-recovery';
 import passwordRecoveryRouter from "./password-recovery";
 import adminRouter from "./admin";
 import healthRouter from "./health";
@@ -15,6 +16,7 @@ import toolActionsRouter from "./tool-actions";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(assistedRecoveryRouter);
 router.use(adminRouter);
 router.use(authRouter);
 router.use(passwordRecoveryRouter);

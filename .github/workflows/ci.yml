@@ -124,6 +124,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/storage-assets.test.ts
       - name: Test section navigation focus
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/page-navigation.test.ts
+      - name: Test assisted recovery proxy
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/assisted-recovery.test.ts
       - name: Test password recovery
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/password-recovery.test.ts
       - name: Test admin boundaries
