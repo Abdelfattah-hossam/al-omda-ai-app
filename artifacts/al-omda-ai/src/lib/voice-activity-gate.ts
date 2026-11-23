@@ -1,4 +1,4 @@
-// Client-side noise gate. A fresh user-armed turn calibrates before accepting speech.
+// Client-side noise gate. A fresh listening turn calibrates before accepting speech.
 export class VoiceActivityGate {
  calibrationMs=0; noise=0; consecutiveMs=0; voicedMs=0;
  reset(){this.calibrationMs=0;this.noise=0;this.consecutiveMs=0;this.voicedMs=0;}

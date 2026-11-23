@@ -7,7 +7,7 @@ test('voice visuals read actual microphone and PCM playback analysers',()=>{
  assert.ok(voice.includes('source.connect(mic)'));
  assert.ok(voice.includes('player.connect(outputAnalyserRef.current??context.destination)'));
  assert.ok(voice.includes('analyser.getByteFrequencyData(bins)'));
- assert.ok(voice.includes('pendingPcmPlaybackRef.current>0?output:mic'));
+ assert.ok(voice.includes('pendingPcmPlaybackRef.current>0||freeSpeechCancelRef.current?output:mic'));
  assert.ok(voice.includes('cancelAnimationFrame(animationRef.current)'));
  assert.ok(voice.includes('micAnalyserRef.current?.disconnect()'));
  assert.ok(voice.includes('outputAnalyserRef.current?.disconnect()'));
@@ -16,7 +16,7 @@ test('voice has honest states and reduced-motion path without composer rules',()
  for(const state of ['connecting','speaking','thinking','listening','idle'])assert.ok(voice.includes('"'+state+'"'));
  assert.ok(css.includes('prefers-reduced-motion:reduce'));
  assert.doesNotMatch(css,/ai-chat-composer|chat-messages|(?:^|[;{\s])scroll-behavior\s*:/);
- assert.ok(voice.includes('if(fallbackUtteranceRef.current)bins.fill(0)'));
+ assert.ok(voice.includes('freeSpeechCancelRef.current?.()'));
 });
 test('iOS audio unlock runs in tap before asynchronous permission and token work',()=>{
  const start=voice.slice(voice.indexOf('const start = async'));
@@ -48,7 +48,10 @@ test('dictation waits for native start, times out and explains Safari abort',()=
 test('iPhone capture keeps routing diagnostics and explicit noise gate',()=>{
  assert.ok(voice.includes('turnArmedRef.current && gateRef.current.process'));
  assert.ok(voice.includes('if(!validTurnRef.current)return'));
- assert.ok(voice.includes('New speaking turn'));
+ assert.ok(voice.includes('Listening automatically.'));
+ assert.ok(voice.includes('if(!assistantResponseActiveRef.current)resumeListening()'));
+ assert.ok(voice.includes('pendingPcmPlaybackRef.current>0||freeSpeechCancelRef.current'));
+ assert.ok(!voice.includes('Tap New speaking turn'));
  assert.ok(voice.includes('Only transcribe actual intelligible speech'));
  assert.ok(voice.includes('noiseSuppression:{ideal:true}'));
  assert.ok(voice.includes('autoGainControl:{ideal:false}'));
