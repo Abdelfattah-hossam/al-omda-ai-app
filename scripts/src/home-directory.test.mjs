@@ -20,3 +20,10 @@ test('directory is ahead of performance and has search and group navigation',()=
  assert.ok(app.includes('id="media-studio-launcher"'));
  assert.ok(app.includes('parsed.searchParams.has("focus")'));
 });
+
+test('directory icon and copy share center alignment',()=>{
+ const css=readFileSync(new URL('../../artifacts/al-omda-ai/src/home-directory.css',import.meta.url),'utf8');
+ assert.ok(css.includes('align-items:center!important'));
+ assert.ok(css.includes('text-align:center!important'));
+ assert.ok(css.includes('.directory-card-head{flex-direction:column!important'));
+});

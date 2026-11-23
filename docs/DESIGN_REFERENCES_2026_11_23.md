@@ -242,3 +242,10 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 - Added an unlayered baseline guarded by lack of dvh support. Uses vh and explicit flex ancestor heights, message overflow and a visible composer. Modern browsers keep the existing layered design untouched.
 - Degraded-CSS browser checks at 360/390/412 widths: page fills viewport, messages visible, composer inside viewport, no horizontal overflow. Modern 320/390/1280 compact-turn/sides checks still pass; modern390 composer unchanged at [10,749,370,56].
 - No chat messages sent, AI generations, account writes, or real tasks executed during testing. Physical Huawei acceptance remains open until the user reloads and tests on that device. JavaScript/CSS simulation is not an actual old-browser binary.
+
+
+## 2026-11-23: Consistent centered card alignment
+
+- Real iPhone screenshots showed centered icons but right-aligned titles/descriptions on home tiles. Explicit user request: put icon and text in the center together.
+- All26 home directory tiles now use one center axis for icon, title and description, at every width. Group headings/subtitles centered too. Related specialist directory cards on home and Agent Network use the same centered icon/title/description layout; status sits below the icon rather than pulling it to one side.
+- Palette, destinations, data and chat layout unchanged. Browser geometry checks measure icon/copy/title/description center within1.5px of each tile center at320/390/1280. Physical iPhone recheck remains open.
