@@ -268,7 +268,7 @@ export const CreateTaskResponse = zod.object({
  * @summary Save an approved or edited plan step
  */
 export const UpdateTaskParams = zod.object({
-  "id": zod.coerce.string().uuid()
+  "id": zod.coerce.string().pipe(zod.string().uuid())
 })
 
 export const updateTaskBodyOneTitleMax = 160;
