@@ -43,3 +43,21 @@ test('icon glyphs do not inherit active card tiles or Safari compositing effects
  assert.ok(palette.includes('.mobile-nav svg,.profile-settings-page svg'));
  assert.ok(palette.includes('filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important'));
 });
+
+test('profile and navigation use equal aligned icon slots, preserving lavender surfaces',()=>{
+ const palette=readFileSync('../artifacts/al-omda-ai/src/workspace-palette.css','utf8');
+ assert.ok(app.includes('className="profile-heading-icon"'));
+ assert.ok(usage.includes('className="profile-heading-icon"'));
+ assert.ok(app.includes('className="mobile-nav-icon"'));
+ assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 40px 40px!important'));
+ assert.ok(css.includes('width:40px!important;height:40px!important;margin:0!important'));
+ assert.ok(palette.includes('transform:none!important;gap:3px!important'));
+ assert.ok(palette.includes('background:#373044!important;border:1px solid #645079!important'));
+});
+test('voice screenshot identifies release and input independent of speech gate',()=>{
+ const voice=readFileSync('../artifacts/al-omda-ai/src/GeminiLiveVoice.tsx','utf8');
+ assert.ok(voice.includes('data-testid="voice-capture-diagnostic"'));
+ assert.ok(voice.includes('VITE_APP_BUILD_ID'));
+ assert.ok(voice.includes("'frames='+inputFramesRef.current"));
+ assert.ok(voice.indexOf('inputFramesRef.current++')<voice.indexOf('if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;'));
+});

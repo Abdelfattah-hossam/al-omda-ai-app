@@ -57,6 +57,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const silenceDurationRef=useRef(0);
   const currentInputRef=useRef(0);
   const [micDiagnostic,setMicDiagnostic]=useState('');
+  const [captureDiagnostic,setCaptureDiagnostic]=useState('frames=0 · rms=0.00000 · audio=idle · track=none');
+  useEffect(()=>{
+    const timer=window.setInterval(()=>{
+      const track=streamRef.current?.getAudioTracks()[0];
+      setCaptureDiagnostic('frames='+inputFramesRef.current+' · rms='+currentInputRef.current.toFixed(5)+' · audio='+(contextRef.current?.state??'idle')+' · track='+(track?(track.muted?'muted':track.readyState):'none'));
+    },500);
+    return()=>window.clearInterval(timer);
+  },[]);
   const visualRef=useRef<HTMLDivElement|null>(null);
   const micAnalyserRef=useRef<AnalyserNode|null>(null);
   const outputAnalyserRef=useRef<AnalyserNode|null>(null);
@@ -336,13 +344,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           setStatus(ar ? "توقف صوت الميكروفون. أنهِ المحادثة ثم ابدأ مرة أخرى." : "Microphone audio paused. End the chat and start again.");
           cleanup(sessionId);return;
         }
-        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         let energy = 0;
         for (let i = 0; i < input.length; i++) energy += input[i] * input[i];
         const rms = Math.sqrt(energy / Math.max(1, input.length));
         inputFramesRef.current++;
         peakInputRef.current=Math.max(peakInputRef.current,rms);currentInputRef.current=rms;
+        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
         const durationMs=input.length/context.sampleRate*1000;
         const spectrum=new Uint8Array(micAnalyserRef.current?.frequencyBinCount??128);
         micAnalyserRef.current?.getByteFrequencyData(spectrum);
@@ -570,6 +578,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   };
 
   return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
+    <small className="voice-capture-diagnostic" dir="ltr" data-testid="voice-capture-diagnostic">build {import.meta.env.VITE_APP_BUILD_ID} · {connecting?"connecting":speaking?"speaking":thinking?"thinking":active?(turnArmed?"armed":"ready"):"idle"}<br/>{captureDiagnostic}</small>
     <span className="voice-mode-kicker">{ar?"العمدة · مساعدك الصوتي":"AL OMDA · VOICE ASSISTANT"}</span>
     <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
       <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>

@@ -1,4 +1,5 @@
 import path from 'path';
+import {execFileSync} from 'node:child_process';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {versionOfflineWorker} from './build/offline-cache-version.mjs';
 import react from '@vitejs/plugin-react';
@@ -18,7 +19,10 @@ if (Number.isNaN(port) || port <= 0) {
 // Pages build this app at the domain root, so use "/" when it is not provided.
 const basePath = process.env.BASE_PATH ?? '/';
 
+const appBuildId=process.env.GITHUB_SHA?.slice(0,8)||execFileSync('git',['rev-parse','--short=8','HEAD'],{encoding:'utf8'}).trim();
+
 export default defineConfig({
+  define:{'import.meta.env.VITE_APP_BUILD_ID':JSON.stringify(appBuildId)},
   base: basePath,
   plugins: [
     {

@@ -78,3 +78,28 @@
 }
 
 /* Profile and calibrated voice release verified together after test-build repair. */
+
+/* One shared title/icon/disclosure grid for RTL and LTR card headers. */
+.app-shell .profile-settings-page .profile-section-heading {
+ display:grid!important;grid-template-columns:minmax(0,1fr) 40px 40px!important;
+ align-items:center!important;gap:10px!important;justify-content:normal!important;
+}
+.app-shell .profile-settings-page .profile-section-heading>div {grid-column:1;min-width:0;}
+.app-shell .profile-settings-page .profile-heading-icon {
+ display:grid!important;place-items:center!important;width:40px!important;height:40px!important;
+ box-sizing:border-box!important;border-radius:12px!important;flex:none!important;padding:0!important;margin:0!important;
+}
+.app-shell .profile-settings-page .profile-heading-icon>svg {display:block!important;width:20px!important;height:20px!important;padding:0!important;margin:0!important;}
+.app-shell .profile-settings-page .profile-section-heading>.profile-heading-icon {grid-column:2;}
+.app-shell .profile-settings-page .profile-accordion-summary {
+ display:grid!important;grid-template-columns:minmax(0,1fr) 40px!important;gap:10px!important;align-items:center!important;
+}
+.app-shell .profile-settings-page .profile-accordion-summary .profile-section-heading {grid-template-columns:minmax(0,1fr) 40px!important;}
+.app-shell .profile-settings-page .profile-accordion-summary::after {
+ display:grid!important;place-items:center!important;align-self:center!important;box-sizing:border-box!important;
+ width:40px!important;height:40px!important;margin:0!important;border-radius:12px!important;
+}
+.app-shell .profile-settings-page .profile-data-card>.setting-row {
+ display:grid!important;grid-template-columns:minmax(0,1fr) 40px 40px!important;gap:10px!important;align-items:center!important;
+}
+.app-shell .profile-settings-page .profile-data-card>.setting-row>.profile-heading-icon {grid-column:2;}
