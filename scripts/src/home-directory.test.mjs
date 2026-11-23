@@ -5,7 +5,7 @@ const app=readFileSync(new URL('../../artifacts/al-omda-ai/src/App.tsx',import.m
 const directory=app.slice(app.indexOf('const appLauncherGroups:'),app.indexOf('const appLauncherGroups:')+11000).split('\n];')[0];
 test('directory preserves all menu domains plus existing tool entry points',()=>{
  for(const route of ['/projects','/pipeline','/assets','/workbench','/history','/agents','/finance/sales-overview','/finance/sales-distribution','/finance/payment-gateways','/finance/active-users','/collaboration/contacts','/ai','/collaboration/calendar','/collaboration/email','/collaboration/tickets','/system/security','/profile','/specialties/legal','/specialties/engineering','/specialties/healthcare','/specialties/accounting','/specialties/maintenance','/specialties/education','/ai/usage'])assert.ok(directory.includes(`path:'${route}'`),route);
- assert.ok(directory.includes("target:'hosted-connections'"));assert.ok(directory.includes("target:'media-studio-launcher'"));
+ assert.ok(directory.includes("target:'advanced-connections'"));assert.ok(directory.includes("target:'media-studio-launcher'"));
  assert.equal((directory.match(/path:'/g)||[]).length,26);
 });
 test('home, sidebar and mobile menu read one shared directory',()=>{

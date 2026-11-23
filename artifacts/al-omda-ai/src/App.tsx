@@ -496,7 +496,7 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
   ]},
   { id:'tools',titleAr:'الوكلاء والأدوات',titleEn:'AGENTS & TOOLS',subtitleAr:'التخصصات والذكاء الاصطناعي وإعدادات الربط',subtitleEn:'Specialists, AI, and connection settings',items:[
     {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
-    {path:'/agents',target:'hosted-connections',ar:'ربط الوكلاء والأدوات المتقدمة',en:'Advanced connections',subtitleAr:'اختيار المزود وفحصه وأدوات الكمبيوتر المحلي',subtitleEn:'Provider selection, diagnostics and local computer tools',icon:Settings2},
+    {path:'/agents',target:'advanced-connections',ar:'ربط الوكلاء والأدوات المتقدمة',en:'Advanced connections',subtitleAr:'اختيار المزود وفحصه وأدوات الكمبيوتر المحلي',subtitleEn:'Provider selection, diagnostics and local computer tools',icon:Settings2},
     {path:'/projects',target:'media-studio-launcher',ar:'استوديو الصور والفيديو',en:'Image & Video Studio',subtitleAr:'إنشاء وسائط من وصفك بعد تسجيل الدخول',subtitleEn:'Create media from your prompt after sign-in',icon:Palette},
     {path:'/ai/usage',ar:'الاستخدام والذاكرة',en:'Usage & Memory',subtitleAr:'حصتك اليومية والذاكرة المحفوظة',subtitleEn:'Daily quota and saved memory',icon:Activity},
   ]},
@@ -2261,7 +2261,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </details>
     <details className="panel panel-pad agent-advanced-tools">
       <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
-      <div className="agent-advanced-tools-content">
+      <div className="agent-advanced-tools-content" id="advanced-connections">
       <HostedConnections ar={isAr}/>
       <aside className="connection-local-notice"><Monitor size={20}/><div><strong>{isAr?'الأدوات اللي تحت دي محتاجة كمبيوتر':'The tools below need a computer'}</strong><p>{isAr?'تشغيل الملفات والأوامر والتحكم في المتصفح وسطح المكتب يتم على جهازك فقط. على الآيفون، localhost يعني الآيفون نفسه، مش الكمبيوتر. افتح الصفحة على نفس الكمبيوتر اللي عليه Runtime. المفتاح يبقى في ذاكرة الصفحة فقط ومش بيتحفظ.':'Files, commands, browser and desktop control run on your own computer. On iPhone, localhost is the phone, not your computer. Open this page on the computer running the runtime. The token stays in page memory only, never saved.'}</p></div></aside>
     <section className="panel panel-pad" id="local-agent-runtime" style={{marginBottom:20}}>
