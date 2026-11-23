@@ -27,3 +27,24 @@ Adapt the structure of the eleven supplied reference images to AL OMDA's existin
 ## Not claimed
 
 No independent live-agent running state, success rate, spending, new agent builder, working service connection, new voice capability, or real-device acceptance is inferred from the reference pictures. Those controls are not fabricated for appearance.
+
+
+## Authorized palette follow-up
+
+The owner explicitly allowed changing colors at 06:20 Dubai, November 23.
+The dark purple reference is now the non-chat workspace palette:
+- Ink canvas #12101c, purple-gray cards #302b41 to #211f2c.
+- Lavender #b79aef, pale lavender #e0d2ff, cool white #f1eff9.
+- Muted labels #b9b3ca; success remains green and errors remain rose/red.
+- The existing brand logo remains its original image.
+
+Implementation is a color-only important cascade layer, scoped to
+`.app-shell:not([data-chat-active="true"])`. It changes no layout dimensions,
+scroll rules, handlers or chat CSS. Both /ai and /ai/usage retain chat scope.
+21 focused tests pass, including palette scope and color-only regression tests.
+Typecheck and build pass. Synthetic-account Chrome checks cover 320, 390 and
+1280 widths, Arabic and English, directory interactions and navigation.
+Home, workbench, profile and charcoal chat were rendered at 390 and 1280.
+Screenshots were inspected and a first-pass leftover gold surface corrected.
+This is browser emulation, not physical iPhone/Android acceptance.
+The previous broad-suite network-timeout caveat still applies.
