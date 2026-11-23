@@ -222,3 +222,14 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 
 ## Explicit chat sides
 - User requested physical left for their messages, right for AI. Physical auto margins enforce this in RTL and LTR. Compact44px user turns and unframed assistant text retained, no composer/scroll changes. Tested320/390/1280 geometry and RTL/LTR sides.
+
+
+## 2026-11-23: Home must explain the whole app
+
+- User iPhone report: menu sections were not discoverable enough from home. The 23-item directory already existed but looked secondary under activity summaries.
+- Changed home to show the app directory before performance summaries, with descriptions, search, six group jump buttons, and no hidden/collapsed section groups.
+- Preserved all existing sections and added direct entries for Usage & Memory, advanced connections, and the existing image/video creation button. Total: 26 entries. Media links focus the existing projects-page launcher, not an invented service or a generation call.
+- Desktop sidebar and mobile menu now use the same directory as home, preventing menu-only destinations. Deep links preserve explicit focus and open the advanced section automatically.
+- Lavender/charcoal palette preserved. Chat markup, composer, scroll anchoring, task execution, and account data are unchanged. External integration presence is not described as a connected status.
+- Validation: full typecheck/build; 22 focused tests; local browser layout at 320, 390, and 1280 widths; all 26 home/mobile-menu links equal; six groups; search and reset; finance visible; no horizontal overflow; advanced connection and media launcher deep links.
+- Acceptance: Chrome emulation is not physical-iPhone acceptance. Live verification recorded separately after deployment.

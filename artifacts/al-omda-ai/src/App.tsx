@@ -1,3 +1,4 @@
+import './home-directory.css';
 import LocalModelSettings from './LocalModelSettings';
 import HostedConnections from './HostedConnections';
 import './agent-connections.css';
@@ -466,15 +467,15 @@ const navItems: { path:string; key:TranslationKey; icon:LucideIcon }[] = [
   { path:'/', key:'overview', icon:LayoutDashboard }, { path:'/agents', key:'agentNetwork', icon:Compass },
   { path:'/workbench', key:'workbench', icon:BriefcaseBusiness }, { path:'/history', key:'history', icon:History },
 ];
-type DashboardShortcut = { path:string; ar:string; en:string; subtitleAr:string; subtitleEn:string; icon:LucideIcon };
+type DashboardShortcut = { target?:string; path:string; ar:string; en:string; subtitleAr:string; subtitleEn:string; icon:LucideIcon };
 const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr:string; subtitleEn:string; items:DashboardShortcut[] }[] = [
   { id:'core', titleAr:'مساحة العمل', titleEn:'WORKSPACE', subtitleAr:'إنشاء المشاريع ومتابعة تنفيذها', subtitleEn:'Create projects and track execution', items:[
-    {path:'/projects',ar:'المشاريع',en:'Projects',subtitleAr:'كل مشاريعك المحفوظة',subtitleEn:'All saved projects',icon:BriefcaseBusiness},
+    {path:'/projects',ar:'المشاريع',en:'Projects',subtitleAr:'مشاريعك المحفوظة وإنشاء الصور والفيديو',subtitleEn:'Saved projects, image and video creation',icon:BriefcaseBusiness},
     {path:'/pipeline',ar:'مسار العمل',en:'Pipeline',subtitleAr:'مراحل التنفيذ والموافقات',subtitleEn:'Execution stages and approvals',icon:Activity},
     {path:'/assets',ar:'الأصول والملفات',en:'Assets',subtitleAr:'ملفات ومخرجات المشاريع',subtitleEn:'Project files and deliverables',icon:FileText},
     {path:'/workbench',ar:'مشروع جديد',en:'New Project',subtitleAr:'ابدأ مشروعًا أو مهمة',subtitleEn:'Start a project or task',icon:Plus},
     {path:'/history',ar:'سجل المهام',en:'Task History',subtitleAr:'النتائج وسجل التنفيذ',subtitleEn:'Results and execution history',icon:History},
-    {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
+
   ]},
   { id:'analytics', titleAr:'المالية والتحليلات', titleEn:'FINANCE & ANALYTICS', subtitleAr:'لوحات المتابعة والبيانات المتصلة', subtitleEn:'Dashboards and connected data', items:[
     {path:'/finance/sales-overview',ar:'نظرة عامة على المبيعات',en:'Sales Overview',subtitleAr:'مؤشرات المبيعات',subtitleEn:'Sales metrics',icon:TrendingUp},
@@ -492,6 +493,12 @@ const appLauncherGroups: { id:string; titleAr:string; titleEn:string; subtitleAr
   { id:'system', titleAr:'النظام والإعدادات', titleEn:'SYSTEM & SETTINGS', subtitleAr:'الأمان وإدارة الحساب', subtitleEn:'Security and account settings', items:[
     {path:'/system/security',ar:'الأمان والسجلات',en:'Security & Logs',subtitleAr:'سجلات الأمان والتدقيق',subtitleEn:'Security and audit logs',icon:ShieldCheck},
     {path:'/profile',ar:'الإعدادات',en:'Settings',subtitleAr:'تفضيلات التطبيق والحساب',subtitleEn:'App and account preferences',icon:Settings2},
+  ]},
+  { id:'tools',titleAr:'الوكلاء والأدوات',titleEn:'AGENTS & TOOLS',subtitleAr:'التخصصات والذكاء الاصطناعي وإعدادات الربط',subtitleEn:'Specialists, AI, and connection settings',items:[
+    {path:'/agents',ar:'شبكة الوكلاء',en:'Agent Network',subtitleAr:'التخصصات والوكلاء',subtitleEn:'Specialties and agents',icon:Compass},
+    {path:'/agents',target:'hosted-connections',ar:'ربط الوكلاء والأدوات المتقدمة',en:'Advanced connections',subtitleAr:'اختيار المزود وفحصه وأدوات الكمبيوتر المحلي',subtitleEn:'Provider selection, diagnostics and local computer tools',icon:Settings2},
+    {path:'/projects',target:'media-studio-launcher',ar:'استوديو الصور والفيديو',en:'Image & Video Studio',subtitleAr:'إنشاء وسائط من وصفك بعد تسجيل الدخول',subtitleEn:'Create media from your prompt after sign-in',icon:Palette},
+    {path:'/ai/usage',ar:'الاستخدام والذاكرة',en:'Usage & Memory',subtitleAr:'حصتك اليومية والذاكرة المحفوظة',subtitleEn:'Daily quota and saved memory',icon:Activity},
   ]},
   { id:'professionals', titleAr:'التخصصات المهنية', titleEn:'PROFESSIONAL SPECIALTIES', subtitleAr:'أيقونات المجالات المهنية المتاحة ضمن شبكة الوكلاء', subtitleEn:'Professional fields represented in the agent network', items:[
     {path:'/specialties/legal',ar:'المحامي والخدمات القانونية',en:'Lawyer & Legal',subtitleAr:'استشارات وصياغة ومراجعة قانونية',subtitleEn:'Legal research, drafting, and review',icon:Scale},
@@ -815,6 +822,7 @@ function App() {
     return status === 'review' || status === 'approved' || status === 'stopped' ? status : 'all';
   });
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [homeDirectorySearch,setHomeDirectorySearch]=useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [editOutput, setEditOutput] = useState('');
@@ -966,7 +974,9 @@ function App() {
     return `${url.pathname}${url.search}${url.hash}`;
   };
   const navigationHref = (href:string) => {
-    const pathname = new URL(href, window.location.origin).pathname;
+    const parsed=new URL(href,window.location.origin);
+    if(parsed.searchParams.has("focus"))return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    const pathname = parsed.pathname;
     const target = pathname === '/ai' ? (authUser ? 'ai-chat-input' : 'ai-chat-login-cta')
       : pathname === '/workbench' ? 'request-input'
       : pathname === '/agents' ? 'agent-marketplace-grid'
@@ -1867,27 +1877,26 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{hasGreetingName ? `${t('hello')} ${greetingName}` : (isAr?'مرحباً بك':'Welcome')} · {isAr?'نظرة عامة على نشاط العمدة':'Your Al OMDA AI activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
-      <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
-        <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
-        <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
-        <Link href={active>0?focusedHref('/history?status=review','history-list'):focusedHref('/workbench','request-input')} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
-      </section>
-      <section className="app-launcher-section" aria-labelledby="app-launcher-title">
+      <section className="app-launcher-section home-app-directory" id="home-app-directory" aria-labelledby="app-launcher-title">
         <div className="app-launcher-heading">
           <div>
             <span className="eyebrow">{isAr?'مساحة التطبيقات':'APP LAUNCHER'}</span>
-            <h2 id="app-launcher-title">{isAr?'كل أدواتك في مكان واحد':'Everything you need, one place'}</h2>
-            <p>{isAr?'وصول سريع ومنظم إلى الوظائف الأساسية، مع فصل أدوات المتابعة والحساب.':'A clear shortcut grid for core work, analytics, and account tools.'}</p>
+            <h2 id="app-launcher-title">{isAr?'اكتشف كل أقسام العمدة':'Explore every part of Al OMDA AI'}</h2>
+            <p>{isAr?'نفس أقسام القائمة، مرتبة هنا. اعرف وظيفة كل قسم وافتحه مباشرة، من غير ما تدور عليه.':'The same groups as the menu, explained here. See what each section does and open it directly.'}</p>
           </div>
           <span className="app-launcher-count">{isAr?(appLauncherGroups.reduce((n,g)=>n+g.items.length,0)+' أداة'):(String(appLauncherGroups.reduce((n,g)=>n+g.items.length,0))+' TOOLS')}</span>
         </div>
-        {appLauncherGroups.map(group=><div key={group.id} className="app-launcher-group">
+        <label className="home-directory-search"><Search size={18}/><input className="field" type="search" value={homeDirectorySearch} onChange={e=>setHomeDirectorySearch(e.target.value)} placeholder={isAr?'دور على قسم: مبيعات، ملفات، ذاكرة…':'Find a section: sales, files, memory…'} aria-label={isAr?'ابحث في كل أقسام التطبيق':'Search all app sections'}/></label>
+        <nav className="home-directory-jumps" aria-label={isAr?'مجموعات التطبيق':'App groups'}>{appLauncherGroups.map(group=><button type="button" key={group.id} onClick={()=>{setHomeDirectorySearch('');window.setTimeout(()=>document.getElementById('home-group-'+group.id)?.scrollIntoView({behavior:saved.reduceMotion?'auto':'smooth',block:'start'}),0)}}>{isAr?group.titleAr:group.titleEn}<span>{group.items.length}</span></button>)}</nav>
+        <p className="home-directory-note">{isAr?'وجود القسم هنا مش معناه إن خدمة خارجية متصلة. كل صفحة بتوضح البيانات المتاحة أو اللي محتاج ربط، من غير أرقام وهمية.':'A listed section does not mean an external service is connected. Each page shows available data or its connection requirements, never invented figures.'}</p>
+        {!appLauncherGroups.some(group=>group.items.some(item=>[item.ar,item.en,item.subtitleAr,item.subtitleEn].join(' ').toLocaleLowerCase().includes(homeDirectorySearch.trim().toLocaleLowerCase())))&&<p role="status">{isAr?'مفيش قسم مطابق. جرّب اسم تاني.':'No matching section. Try another name.'}</p>}
+        {appLauncherGroups.map(group=>({...group,items:group.items.filter(item=>[item.ar,item.en,item.subtitleAr,item.subtitleEn].join(' ').toLocaleLowerCase().includes(homeDirectorySearch.trim().toLocaleLowerCase()))})).filter(group=>group.items.length>0).map(group=><div key={group.id} id={'home-group-'+group.id} data-directory-group={group.id} className="app-launcher-group">
           <div className="app-launcher-group-title">
             <strong>{isAr?group.titleAr:group.titleEn}</strong>
             <span>{isAr?group.subtitleAr:group.subtitleEn}</span>
           </div>
           <div className="app-launcher-grid">
-            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}}} className="app-launcher-tile">
+            {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={item.target?focusedHref(item.path,item.target):navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}}} className="app-launcher-tile">
               <span className="app-launcher-icon"><Icon size={20} strokeWidth={1.8}/></span>
               <span className="app-launcher-copy"><strong>{isAr?item.ar:item.en}</strong><small>{isAr?item.subtitleAr:item.subtitleEn}</small></span>
               <ArrowUpLeft size={14} className="app-launcher-arrow"/>
@@ -1900,6 +1909,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="stats-grid dashboard-kpis">
           {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:focusedHref('/history?status=review','history-list'),tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:focusedHref('/history?status=approved','history-list'),tone:'teal'},{label:isAr?'قوالب تخصص متاحة':'Specialty templates',value:specialties.length,foot:isAr?'قوالب التخصصات المتاحة':'Available specialty templates',icon:Bot,href:focusedHref('/agents','agent-marketplace-grid'),tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:focusedHref('/history','history-list'),tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
         </div>
+      </section>
+      <section className="dashboard-pulse" aria-label={isAr?'ملخص حالة مساحة العمل':'Workspace status summary'}>
+        <div className="dashboard-pulse-copy"><span className="eyebrow">{isAr?'حالة مساحة العمل':'WORKSPACE PULSE'}</span><strong>{active>0?(isAr?'لديك مهام تحتاج انتباهك':'Some tasks need your attention'):(isAr?'مساحة عملك تحت السيطرة':'Your workspace is up to date')}</strong><p>{isAr?'تابع المهام وارجع مباشرة إلى الخطوة التالية.':'Keep your work moving and jump straight to the next step.'}</p></div>
+        <div className="dashboard-pulse-metrics"><div><strong>{active}</strong><span>{isAr?'تحتاج متابعة':'Needs attention'}</span></div><div><strong>{approved}</strong><span>{isAr?'معتمدة':'Approved'}</span></div><div><strong>{total}</strong><span>{isAr?'كل المهام':'All tasks'}</span></div></div>
+        <Link href={active>0?focusedHref('/history?status=review','history-list'):focusedHref('/workbench','request-input')} className="button button-quiet dashboard-pulse-action">{active>0?(isAr?'راجع المهام':'Review tasks'):(isAr?'ابدأ مهمة':'Start a task')}<ArrowLeft size={14}/></Link>
       </section>
       <AgentDirectory compact specialties={directorySpecialties} tasks={tasks} ar={isAr} onSelect={selectDirectorySpecialty}/>
       <div className="dashboard-analytics-grid">
@@ -2694,7 +2708,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     const categories:Array<{id:'all'|Specialty;name:string}> = [{id:'all',name:isAr?'الكل':'All'},...specialties.map(item=>({id:item.id,name:label(item.id)}))];
     return <div className="page-enter" id="projects-list">
       {pageHeading(isAr?'مساحة العمل':'WORKSPACE',isAr?'المشاريع':'Projects',isAr?'كل مشاريعك المحفوظة وحالات تنفيذها في مكان واحد.':'All saved projects and their execution status in one place.',<Link href={focusedHref('/workbench','request-input')} className="button button-primary"><Plus size={14}/>{isAr?'مشروع جديد':'New project'}</Link>)}
-      <div style={{marginBottom:16}}><button type="button" className="button button-primary" onClick={()=>setMediaStudioOpen(true)} disabled={!authUser}><Palette size={16}/>{isAr?'إنشاء صورة أو فيديو':'Create image or video'}</button></div>
+      <div style={{marginBottom:16}}><button type="button" className="button button-primary" id="media-studio-launcher" onClick={()=>setMediaStudioOpen(true)} disabled={!authUser}><Palette size={16}/>{isAr?'إنشاء صورة أو فيديو':'Create image or video'}</button></div>
       <section className="history-toolbar" aria-label={isAr?'أدوات تصفية المشاريع':'Project filters'}>
         <div className="history-search-wrap">
           <div className="field-group history-search-field"><label className="form-label" htmlFor="projects-search">{isAr?'ابحث في المشاريع':'Search projects'}</label><div className="history-search-control"><Search size={16}/><input id="projects-search" className="field" placeholder={isAr?'اسم المشروع أو وصفه...':'Project name or description...'} value={query} onChange={event=>setQuery(event.target.value)}/></div></div>
@@ -3003,50 +3017,11 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
       <div className="sidebar-scroll">
         <label className="sidebar-search"><Search size={14}/><input value={sidebarSearch} onChange={(event)=>setSidebarSearch(event.target.value)} placeholder={isAr?'ابحث هنا...':'Search here...'} aria-label={isAr?'ابحث في أقسام التطبيق':'Search app sections'} data-testid="sidebar-search"/><kbd>⌘K</kbd></label>
-        <section className="sidebar-nav-group" aria-label={isAr?'مساحة العمل':'Workspace'}>
-          <div className="nav-caption">{isAr?'مساحة العمل':'WORKSPACE'}</div>
-          <nav className="nav-stack">
-            {[{path:'/',label:isAr?'لوحة التحكم':'Dashboard',icon:LayoutDashboard,target:'dashboard-overview'},{path:'/projects',label:isAr?'المشاريع':'Projects',icon:BriefcaseBusiness,target:'history-list'},{path:'/pipeline',label:isAr?'مسار العمل':'Pipeline',icon:Activity,target:'pipeline-board'},{path:'/assets',label:isAr?'الأصول والملفات':'Assets',icon:FileText,target:'assets-list'},{path:'/workbench',label:isAr?'مشروع جديد':'New Project',icon:Plus,target:'request-input'},{path:'/history',label:isAr?'سجل المهام':'Task History',icon:History,target:'history-list'}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/'?path==='/':path===item.path;return <Link key={item.path} href={focusedHref(item.path,item.target)} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17} strokeWidth={1.8}/><span>{item.label}</span></Link>;})}
-          </nav>
-        </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'المالية والتحليلات':'Finance and analytics'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'المالية والتحليلات':'FINANCE & ANALYTICS'}</div>
-          <nav className="nav-stack">
-            {[
-              {path:'/finance/sales-overview',label:isAr?'نظرة عامة على المبيعات':'Sales Overview',icon:TrendingUp},
-              {path:'/finance/sales-distribution',label:isAr?'توزيع المبيعات':'Sales Distribution',icon:Globe},
-              {path:'/finance/payment-gateways',label:isAr?'بوابات الدفع':'Payment Gateways',icon:Activity},
-              {path:'/finance/active-users',label:isAr?'المستخدمون النشطون':'Active Users',icon:Users},
-            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
-          </nav>
-        </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'التعاون والتطبيقات':'Collaboration and apps'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'التعاون والتطبيقات':'COLLABORATION & APPS'}</div>
-          <nav className="nav-stack">
-            {[
-              {path:'/collaboration/contacts',label:isAr?'جهات الاتصال':'Contacts',icon:UserRound},
-              {path:'/ai',label:isAr?'المحادثات':'Chats',icon:MessageSquareText},
-              {path:'/collaboration/calendar',label:isAr?'التقويم':'Calendar',icon:History},
-              {path:'/collaboration/email',label:isAr?'البريد الإلكتروني':'Email',icon:Send},
-              {path:'/collaboration/tickets',label:isAr?'التذاكر والدعم':'Tickets',icon:FileText},
-            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=item.path==='/ai'?path==='/ai':path===item.path;return <Link key={item.path} href={item.path==='/ai'?navigationHref('/ai'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
-          </nav>
-        </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'النظام والإعدادات':'System and settings'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'النظام والإعدادات':'SYSTEM & SETTINGS'}</div>
-          <nav className="nav-stack">
-            {[
-              {path:'/system/security',label:isAr?'الأمان والسجلات':'Security & Logs',icon:ShieldCheck},
-              {path:'/profile',label:isAr?'الإعدادات':'Settings',icon:Settings2},
-            ].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path==='/profile'?focusedHref('/profile','profile-account-card'):item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
-          </nav>
-        </section>
-        <section className="sidebar-nav-group" aria-label={isAr?'الأنظمة والأدوات':'Specialists and tools'}>
-          <div className="nav-caption sidebar-group-caption">{isAr?'الوكلاء والأدوات':'AGENTS & TOOLS'}</div>
-          <nav className="nav-stack">
-            {[{path:'/agents',label:isAr?'شبكة الوكلاء':'Agent Network',icon:Compass}].filter(item=>!sidebarSearch.trim()||item.label.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).map(item=>{const Icon=item.icon;const active=path===item.path;return <Link key={item.path} href={item.path} className={'nav-link'+(active?' active':'')} aria-current={active?'page':undefined}><Icon size={17}/><span>{item.label}</span></Link>;})}
-          </nav>
-        </section>
+        <nav className="nav-stack"><Link href={focusedHref('/','dashboard-overview')} className={'nav-link'+(path==='/'?' active':'')}><LayoutDashboard size={17}/><span>{isAr?'الرئيسية':'Home'}</span></Link></nav>
+        {appLauncherGroups.map(group=>({...group,items:group.items.filter(item=>!sidebarSearch.trim()||[item.ar,item.en,item.subtitleAr,item.subtitleEn].join(' ').toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase()))})).filter(group=>group.items.length>0).map(group=><section key={group.id} className="sidebar-nav-group" aria-label={isAr?group.titleAr:group.titleEn}>
+          <div className="nav-caption sidebar-group-caption">{isAr?group.titleAr:group.titleEn}</div>
+          <nav className="nav-stack">{group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={item.target?focusedHref(item.path,item.target):navigationHref(item.path)} className={'nav-link'+(path===item.path&&!item.target?' active':'')} aria-current={path===item.path&&!item.target?'page':undefined}><Icon size={17}/><span>{isAr?item.ar:item.en}</span></Link>})}</nav>
+        </section>)}
         <section className="sidebar-nav-group sidebar-recent-group" aria-label={isAr?'المهام الأخيرة':'Recent tasks'}>
           <div className="nav-caption sidebar-group-caption">{isAr?'المهام الأخيرة':'RECENT ACTIVITY'}</div>
           <nav className="nav-stack sidebar-recents">{tasks.filter(task=>!sidebarSearch.trim()||task.title.toLocaleLowerCase().includes(sidebarSearch.trim().toLocaleLowerCase())).slice(0,6).map(task=><Link key={task.id} href={focusedHref('/history/'+task.id,"task-plan")} className="nav-link recent-nav-link" aria-label={task.title}><FileText size={15}/><span>{task.title}</span></Link>)}</nav>
@@ -3124,7 +3099,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">
             <div className="curtain-caption">{isAr?group.titleAr:group.titleEn}</div>
             <nav className="curtain-launcher-grid" aria-label={isAr?group.titleAr:group.titleEn}>
-              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}setCurtainOpen(false);}} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
+              {group.items.map((item,index)=>{const Icon=item.icon;return <Link key={group.id+':'+index} href={item.target?focusedHref(item.path,item.target):navigationHref(item.path)} onClick={()=>{if(item.path==='/workbench'){setSelectedTaskId(null);setRequest('');}setCurtainOpen(false);}} aria-current={path===item.path?'page':undefined} className={'curtain-launcher-item '+(path===item.path?'active':'')}><span className="curtain-launcher-icon"><Icon size={19}/></span><strong>{isAr?item.ar:item.en}</strong></Link>})}
             </nav>
           </section>)}
         </div>
