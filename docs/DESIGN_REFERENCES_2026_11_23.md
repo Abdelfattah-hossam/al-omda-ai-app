@@ -73,3 +73,11 @@ fills the viewport behind the dock; end padding keeps the last content reachable
 No overflow mode, scroll handler or chat rule changed. Local checks cover 320,
 390, 1280, menu open/help/close and scrolling to last content. Physical iPhone
 acceptance remains pending; the supplied screenshot is the bug evidence.
+
+## Typing-bar icon follow-up
+
+Raised only image/plus/mic/headphones SVG glyphs by 3px below 768px. Button hit
+areas, composer placement, keyboard and scrolling code are unchanged. Local
+checks at 320/390/1280 confirm all four glyph translations, desktop unaffected,
+charcoal preserved and file preview working. At 390x844, composer remains
+x10/y749/w370/h87. Requires physical-iPhone acceptance.

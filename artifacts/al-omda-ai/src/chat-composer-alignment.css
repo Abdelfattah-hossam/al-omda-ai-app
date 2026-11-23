@@ -1,0 +1,8 @@
+/* iPhone request: lift only glyphs inside the typing bar, not the bar or hit targets. */
+@layer omda-chat-design {
+ @media(max-width:767px) {
+  body .app-shell[data-chat-active="true"] .ai-chat-composer :is(.ai-attach-image-button,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button)>svg {
+   translate:0 -3px;
+  }
+ }
+}

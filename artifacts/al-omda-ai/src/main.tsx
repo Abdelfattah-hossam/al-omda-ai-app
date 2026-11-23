@@ -8,6 +8,7 @@ import './chat-palette.css';
 import './chat-design.css';
 import './workspace-palette.css';
 import './mobile-workspace.css';
+import './chat-composer-alignment.css';
 
 // Cache the production app shell so AL OMDA can open while the device is offline.
 // API-backed actions still require a connection and are never cached.
