@@ -125,6 +125,7 @@ test("audit API returns a user-scoped page and a stable microsecond cursor", asy
   process.env.SUPABASE_ANON_KEY = "test-anon-key";
   globalThis.fetch = (async (input) => {
     const url = new URL(String(input));
+    if (url.pathname === "/rest/v1/rpc/omda_account_access") return Response.json({admin:false,suspended:false});
     if (url.pathname === "/auth/v1/user") {
       return new Response(JSON.stringify({ id: userId, email: "audit-test@example.com" }), { status: 200, headers: { "content-type": "application/json" } });
     }
