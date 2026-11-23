@@ -112,6 +112,7 @@ export const getWorkspaceResponseTasksItemOneStepsItemTextMax = 2000;
 
 
 export const GetWorkspaceResponse = zod.object({
+  "nextOffset": zod.number().int().nonnegative().nullable().optional(),
   "profile": zod.object({
   "displayName": zod.string().max(getWorkspaceResponseProfileDisplayNameMax),
   "organization": zod.string().max(getWorkspaceResponseProfileOrganizationMax),

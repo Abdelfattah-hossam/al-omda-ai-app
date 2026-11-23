@@ -155,6 +155,7 @@ export type Task = TaskCreate & {
 };
 
 export interface Workspace {
+  nextOffset?: number | null;
   profile: Profile;
   tasks: Task[];
 }

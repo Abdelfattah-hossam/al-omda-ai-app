@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import {WORKSPACE_PAGE_SIZE,workspaceOffset} from "../lib/workspace-pages.js";
 import { isValidNewTaskPlan } from "../lib/task-plan-validation.js";
 import { hasCompletedPriorProjectStages } from "../lib/project-stage-sequence.js";
 import { isRevisionHistoryUnchanged } from "../lib/task-history.js";
@@ -184,6 +185,18 @@ export function isAllowedTaskTransition(previous: DbTask, next: TaskWrite): bool
   return next.status === "review";
 }
 
+// Account-scoped O(1) revision probe; RLS is enforced by the caller's JWT.
+router.get("/workspace/revision", async (req,res):Promise<void>=>{
+ const session=await sessionOrReport(req,res);if(session===false)return;if(!session){res.status(401).json({error:"Sign in required."});return;}
+ res.setHeader("Cache-Control","private, no-store");
+ try{
+  const response=await supabaseFetch('/rest/v1/rpc/get_workspace_revision',{method:'POST',headers:{'content-type':'application/json'},body:'{}'},session.accessToken);
+  const revision=await readSupabaseJson<unknown>(response);
+  if(typeof revision!=='string')throw new Error('Invalid workspace revision');
+  res.json({revision});
+ }catch(error){reportSupabaseError(req,res,error,"Could not check workspace changes.");}
+});
+
 router.get("/workspace", async (req, res): Promise<void> => {
   const session = await sessionOrReport(req, res);
   if (session === false) return;
@@ -191,6 +204,9 @@ router.get("/workspace", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Sign in to load your workspace." });
     return;
   }
+  const offset=workspaceOffset(req.query.offset);
+  if(offset===null){res.status(400).json({error:"Invalid workspace offset."});return;}
+  res.setHeader("Cache-Control","private, no-store");
   try {
     const profileQuery = new URLSearchParams({
       id: `eq.${session.user.id}`,
@@ -200,7 +216,9 @@ router.get("/workspace", async (req, res): Promise<void> => {
     const tasksQuery = new URLSearchParams({
       user_id: `eq.${session.user.id}`,
       select: "id,title,request,specialty,steps,status,created_at",
-      order: "created_at.desc",
+      order: "created_at.desc,id.desc",
+      limit: String(WORKSPACE_PAGE_SIZE+1),
+      offset: String(offset),
     });
     const [profileResponse, tasksResponse] = await Promise.all([
       supabaseFetch(`/rest/v1/profiles?${profileQuery}`, {}, session.accessToken),
@@ -221,7 +239,9 @@ router.get("/workspace", async (req, res): Promise<void> => {
       organization: profiles[0].organization,
       avatarPath: profiles[0].avatar_path,
     });
-    const tasks = taskRows
+    const nextOffset=taskRows.length>WORKSPACE_PAGE_SIZE?offset+WORKSPACE_PAGE_SIZE:null;
+    const sendWorkspace=(value:unknown)=>res.json({...value as object,nextOffset});
+    const tasks = taskRows.slice(0,WORKSPACE_PAGE_SIZE)
       .map((row, index) => {
         const task = sanitizeWorkspaceTask(row);
         if (!task) console.warn("[Workspace] Dropping unreadable task row while loading the workspace.", { index });
@@ -230,7 +250,7 @@ router.get("/workspace", async (req, res): Promise<void> => {
       .filter((task): task is NonNullable<typeof task> => task !== null);
     const parsed = GetWorkspaceResponse.safeParse({ profile, tasks });
     if (parsed.success) {
-      res.json(parsed.data);
+      sendWorkspace(parsed.data);
       return;
     }
     const taskSchema = GetWorkspaceResponse.shape.tasks.element;
@@ -246,11 +266,11 @@ router.get("/workspace", async (req, res): Promise<void> => {
     });
     const reparsed = GetWorkspaceResponse.safeParse({ profile, tasks: kept });
     if (reparsed.success) {
-      res.json(reparsed.data);
+      sendWorkspace(reparsed.data);
       return;
     }
     console.error("[Workspace] Response validation failed after sanitization; returning the profile without tasks.", parsed.error.issues.slice(0, 5));
-    res.json(GetWorkspaceResponse.parse({ profile, tasks: [] }));
+    sendWorkspace(GetWorkspaceResponse.parse({ profile, tasks: [] }));
   } catch (error) {
     reportSupabaseError(req, res, error, "Could not load your workspace.");
   }

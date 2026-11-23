@@ -118,7 +118,12 @@ paths:
     get:
       operationId: getWorkspace
       tags: [workspace]
-      summary: Load the signed-in user's profile and tasks
+      summary: Load one page of the signed-in user's profile and tasks
+      parameters:
+        - name: offset
+          in: query
+          schema: {type: integer, minimum: 0, default: 0}
+          description: Continue using nextOffset until null to reach all historical projects.
       responses:
         "200":
           description: User-scoped workspace data
@@ -530,6 +535,9 @@ components:
       properties:
         profile:
           $ref: "#/components/schemas/Profile"
+        nextOffset:
+          type: [integer, "null"]
+          description: Next page offset, or null when complete. Tasks are bounded to 100 per response.
         tasks:
           type: array
           items:

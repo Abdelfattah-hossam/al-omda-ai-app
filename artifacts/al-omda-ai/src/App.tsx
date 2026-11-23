@@ -1,3 +1,4 @@
+import {loadWorkspacePages,createSingleFlight,type WorkspacePage} from './lib/workspace-sync';
 import './home-directory.css';
 import LocalModelSettings from './LocalModelSettings';
 import HostedConnections from './HostedConnections';
@@ -36,7 +37,6 @@ import {
   createTask as apiCreateTask,
   getAuthSession,
   getAuthStatus,
-  getWorkspace,
   signIn as apiSignIn,
   signOut as apiSignOut,
   signUp as apiSignUp,
@@ -1155,6 +1155,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
       );
     } catch { /* The database remains the source of truth if local storage is unavailable. */ }
   }, [authUser?.id, saved.tasks]);
+  const workspaceRevisionRef=useRef('');
+  const workspaceRefreshGate=useRef(createSingleFlight());
+  const getWorkspace=async(options:RequestInit=apiRequestOptions):Promise<ApiWorkspace>=>{
+    let revision='';
+    try{const r=await fetch('/api/workspace/revision',{...options,cache:'no-store'});if(r.ok){const d=await r.json();if(typeof d.revision==='string')revision=d.revision;}}catch{/* Full load remains available if a probe fails. */}
+    const workspace=await loadWorkspacePages(async offset=>{
+      const r=await fetch(offset?'/api/workspace?offset='+offset:'/api/workspace',{...options,cache:'no-store'});
+      if(!r.ok)throw new Error(language==='ar'?'تعذر تحميل مساحة العمل.':'Could not load workspace.');
+      return await r.json() as WorkspacePage;
+    });
+    workspaceRevisionRef.current=revision;return workspace;
+  };
   const applyWorkspace = (workspace:ApiWorkspace, email:string, expectedRevision=profileDraftRef.current.revision) => {
     setWorkspaceLoaded(true);
     setWorkspaceLoadError('');
@@ -1225,16 +1237,18 @@ pnpm --filter @workspace/scripts agent:runtime`;
   useEffect(() => {
     if (!authUser || authLoading) return;
     let cancelled = false;
-    const refreshWorkspace = async () => {
+    const refreshWorkspace = async () => workspaceRefreshGate.current(async () => {
       if (cancelled || document.visibilityState !== "visible" || taskWriteQueue.current.size > 0) return;
       try {
+        const probe=await fetch('/api/workspace/revision',{...apiRequestOptions,cache:'no-store'});
+        if(probe.ok){const data=await probe.json();if(typeof data.revision==='string'&&data.revision===workspaceRevisionRef.current)return;}
         const revision=profileDraftRef.current.revision;
         const workspace = await getWorkspace(apiRequestOptions);
         if (!cancelled) applyWorkspace(workspace, authUser.email,revision);
       } catch {
         // Keep the current task list visible if a background refresh is temporarily unavailable.
       }
-    };
+    });
     const interval = window.setInterval(() => void refreshWorkspace(), 7000);
     const onVisible = () => { if (document.visibilityState === "visible") void refreshWorkspace(); };
     window.addEventListener("focus", onVisible);
