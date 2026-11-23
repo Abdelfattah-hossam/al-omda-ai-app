@@ -1,3 +1,4 @@
+import {avatarDimensions,AVATAR_EDGE} from '../../artifacts/al-omda-ai/src/lib/avatar-image';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadWorkspacePages, createSingleFlight } from '../../artifacts/al-omda-ai/src/lib/workspace-sync';
@@ -32,4 +33,10 @@ test('palette search is debounced, bounded, cancellable and has explicit errors'
 });
 test('asset screen shows first page and explicit next page rather than awaiting all pages',()=>{
  const app=readFileSync(new URL('../../artifacts/al-omda-ai/src/WorkspaceAssets.tsx',import.meta.url),'utf8');assert.ok(!app.includes('loadAssetPages'));assert.ok(app.includes('button-load-more-assets'));assert.ok(app.includes('generation!==listGeneration.current'));assert.ok(app.includes('setAssets(previous=>Array.from(new Map('));
+});
+
+test('avatar resize caps longest edge,keeps aspect ratio and never upscales',()=>{
+ assert.equal(AVATAR_EDGE,384);assert.deepEqual(avatarDimensions(2400,1200),{width:384,height:192});assert.deepEqual(avatarDimensions(100,200),{width:100,height:200});assert.deepEqual(avatarDimensions(1200,2400),{width:192,height:384});for(const n of [0,-1,NaN,Infinity])assert.throws(()=>avatarDimensions(n,100));
+ const helper=readFileSync(new URL('../../artifacts/al-omda-ai/src/lib/avatar-image.ts',import.meta.url),'utf8');assert.ok(helper.includes('blob.size>=file.size'));assert.ok(helper.includes('URL.revokeObjectURL(url)'));
+ const server=readFileSync(new URL('../../artifacts/api-server/src/routes/storage.ts',import.meta.url),'utf8');assert.ok(server.includes('"private, no-store"'));
 });

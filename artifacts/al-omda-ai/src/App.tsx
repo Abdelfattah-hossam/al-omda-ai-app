@@ -1,3 +1,4 @@
+import {prepareAvatarImage} from './lib/avatar-image';
 import {loadWorkspacePages,createSingleFlight,type WorkspacePage} from './lib/workspace-sync';
 import './home-directory.css';
 import LocalModelSettings from './LocalModelSettings';
@@ -1512,7 +1513,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     setAvatarWorking(true);
     setWorkspaceError('');
     try {
-      const result = await apiUploadAvatar(file, { ...apiRequestOptions, headers:{'Content-Type':file.type} });
+      const displayImage=await prepareAvatarImage(file);
+      const result = await apiUploadAvatar(displayImage, { ...apiRequestOptions, headers:{'Content-Type':displayImage.type} });
       setAvatarPath(result.path);
       setAvatarVersion(Date.now());
       setAuthNotice(t('profileSaved'));
