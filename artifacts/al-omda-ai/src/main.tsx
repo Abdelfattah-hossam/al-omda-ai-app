@@ -15,6 +15,7 @@ import './mobile-workspace.css';
 import './chat-composer-alignment.css';
 import './profile-account.css';
 import './guest-nudge.css';
+import './welcome-greeting.css';
 import './chat-legacy.css';
 
 // Cache the production app shell so AL OMDA Ai can open while the device is offline.

@@ -788,6 +788,18 @@ function GuestWelcomeNudge({ isAr, onSignup, onDismiss }: { isAr: boolean; onSig
   </aside>;
 }
 
+// Personalized welcome greeting shown each time the site opens: uses the
+// saved display name when one exists and falls back to a generic greeting.
+// Additive and non-blocking; it auto-dismisses and never stores anything.
+function WelcomeGreeting({ isAr, name, onClose }: { isAr: boolean; name: string; onClose: () => void }) {
+  const personal = name.trim();
+  return <aside className="welcome-greeting" role="dialog" aria-label={isAr ? 'رسالة ترحيب' : 'Welcome message'}>
+    <button type="button" className="welcome-greeting-close" onClick={onClose} aria-label={isAr ? 'إغلاق' : 'Close'}><X size={14}/></button>
+    <strong>{personal ? (isAr ? `أهلاً يا ${personal}` : `Welcome, ${personal}`) : (isAr ? 'أهلاً وسهلاً' : 'Welcome')}</strong>
+    <p>{personal ? (isAr ? 'نورت AL OMDA Ai، وإحنا تحت أمرك في أي حاجة.' : 'Good to see you at AL OMDA Ai. We are at your service.') : (isAr ? 'نورت AL OMDA Ai، وإحنا تحت أمرك في أي حاجة.' : 'Welcome to AL OMDA Ai. We are at your service.')}</p>
+  </aside>;
+}
+
 function App() {
   const [location, setLocation] = useLocation();
   const locationSearch=useSearch();
@@ -3048,9 +3060,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return undefined;
   }, [location, authLoading, authUser, guestNudge]);
   const dismissGuestNudge = () => { setGuestNudge('dismissed'); try { window.localStorage.setItem('omda-guest-nudge-dismissed', '1'); } catch { /* storage unavailable */ } };
+  // Welcome greeting: appears once per site open (per full page load) and
+  // hides itself after a short moment so it never interrupts work.
+  const [welcomeGreeting, setWelcomeGreeting] = useState<'shown' | 'dismissed'>('shown');
+  useEffect(() => {
+    const timer = window.setTimeout(() => setWelcomeGreeting('dismissed'), 7000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
     <NetworkStatus ar={isAr}/>
+    {welcomeGreeting==='shown'&&<WelcomeGreeting isAr={isAr} name={hasGreetingName?greetingName:''} onClose={()=>setWelcomeGreeting('dismissed')}/>}
     {mediaStudioOpen&&<Suspense fallback={null}><MediaStudio ar={isAr} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
     <aside className="sidebar">
       <div className="sidebar-brand-area">

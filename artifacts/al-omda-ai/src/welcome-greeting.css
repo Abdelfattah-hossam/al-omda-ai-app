@@ -1,0 +1,43 @@
+/* Personalized welcome greeting: a small floating card under the topbar on
+   the inline-end side. It never covers the composer or the mobile dock, and
+   only its own rectangle receives taps. Same palette as the rest of the app. */
+.app-shell>.welcome-greeting {
+ position:fixed;
+ top:calc(84px + env(safe-area-inset-top));
+ inset-inline-end:16px;
+ z-index:120;
+ box-sizing:border-box;
+ display:grid;
+ gap:4px;
+ max-width:min(360px, calc(100vw - 32px));
+ padding:14px 16px;
+ border:1px solid #2a3038;
+ border-radius:13px;
+ background:#181c23;
+ box-shadow:0 12px 32px rgba(0,0,0,.35);
+ animation:welcome-greeting-in .45s ease-out;
+ pointer-events:auto;
+}
+.app-shell>.welcome-greeting>strong { color:#e3dfe9; font-size:14px; line-height:1.6; padding-inline-end:28px; }
+.app-shell>.welcome-greeting>p { margin:0; color:#9da1a8; font-size:12px; line-height:1.7; }
+.app-shell>.welcome-greeting>.welcome-greeting-close {
+ position:absolute;
+ top:6px;
+ inset-inline-end:6px;
+ display:grid;
+ place-items:center;
+ width:32px;
+ height:32px;
+ border:0;
+ border-radius:8px;
+ color:#9da1a8;
+ background:transparent;
+ cursor:pointer;
+ touch-action:manipulation;
+}
+.app-shell>.welcome-greeting>.welcome-greeting-close:hover { color:#e5ddf0; background:#1a1e25; }
+@keyframes welcome-greeting-in { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+.app-shell[data-reduced-motion="true"]>.welcome-greeting { animation:none; }
+@media(max-width:800px) {
+ .app-shell>.welcome-greeting { top:calc(76px + env(safe-area-inset-top)); inset-inline:12px; max-width:none; }
+}
