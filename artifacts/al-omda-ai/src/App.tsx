@@ -1,6 +1,7 @@
 import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import NetworkStatus from './NetworkStatus';
+import AgentDirectory from './AgentDirectory';
 import { Link, useLocation } from 'wouter';
 // Route-level code splitting: the chat page (with its markdown renderer) and
 // the secondary workspaces only download when their route is visited.
@@ -801,7 +802,6 @@ function App() {
   const approvalLockRef = useRef(false);
   const commentSubmissionLockRef = useRef(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<Specialty>('business');
-  const [filter, setFilter] = useState<Specialty | 'all'>('all');
   const [query, setQuery] = useState('');
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'all'|'review'|'approved'|'stopped'>(() => {
     const status = new URLSearchParams(window.location.search).get('status');
@@ -1794,6 +1794,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </section>;
   };
 
+  const directorySpecialties = specialties.map(item => ({...item,name:label(item.id),description:t(specialtyDesc(item.id)),tag:t(specialtyLabel(item.id))}));
+  const selectDirectorySpecialty = (id:string) => { if (specialties.some(item=>item.id===id)) setSelectedSpecialty(id as Specialty); };
+
   const dashboardPage = () => {
     const dashboardTasks = tasks.filter((task) => !task.demo);
     const active = dashboardTasks.filter((task) => task.status === 'review' || task.status === 'paused').length;
@@ -1854,6 +1857,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {[{label:isAr?'مهام تحتاج متابعة':'Needs attention',value:active,foot:isAr?'بانتظار المراجعة أو الاستكمال':'Review or continuation needed',icon:Activity,href:focusedHref('/history?status=review','history-list'),tone:'cyan'},{label:t('approvedPlans'),value:approved,foot:isAr?'خطط وافقت عليها':'Plans you approved',icon:BadgeCheck,href:focusedHref('/history?status=approved','history-list'),tone:'teal'},{label:isAr?'قوالب تخصص متاحة':'Specialty templates',value:specialties.length,foot:isAr?'قوالب التخصصات المتاحة':'Available specialty templates',icon:Bot,href:focusedHref('/agents','agent-marketplace-grid'),tone:'violet'},{label:t('totalTasks'),value:total,foot:isAr?'إجمالي المهام المسجلة':'All recorded tasks',icon:FileText,href:focusedHref('/history','history-list'),tone:'pink'}].map((stat,index)=><Link href={stat.href} className={`panel stat-card stat-card-link dashboard-kpi ${stat.tone}`} key={stat.label} data-testid={`stat-card-${index}`}><div className="stat-card-top"><span className="stat-label">{stat.label}</span><span className="dashboard-kpi-icon"><stat.icon size={17}/></span></div><div className="stat-value"><span>{stat.value}</span></div><div className="stat-foot">{stat.foot}</div></Link>)}
         </div>
       </section>
+      <AgentDirectory compact specialties={directorySpecialties} tasks={tasks} ar={isAr} onSelect={selectDirectorySpecialty}/>
       <div className="dashboard-analytics-grid">
         <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'مسار المهام':'Task pipeline'}</h2><p className="dashboard-card-subtitle">{isAr?'توزيع المهام حسب حالتها':'Tasks by current status'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="pipeline-chart" role="img" aria-label={isAr?'رسم يوضح أعداد المهام حسب الحالة':'Chart of task counts by status'}>{statusRows.map((row,index)=><div className="pipeline-column" key={row.label}><span className="pipeline-value">{row.value}</span><div className="pipeline-track"><span style={{height:`${Math.max(5,row.value/maxStatus*100)}%`,background:row.color}}/></div><small>{row.label}</small></div>)}</div></section>
         <section className="panel dashboard-chart-card"><div className="section-head"><div><h2 className="section-title">{isAr?'نشاط المهام':'Task activity'}</h2><p className="dashboard-card-subtitle">{isAr?'المهام المسجلة خلال الأشهر الماضية':'Tasks created over recent months'}</p></div><span className="dashboard-chart-menu">•••</span></div><div className="activity-chart" role="img" aria-label={isAr?'منحنى نشاط المهام':'Task activity trend'}><div className="activity-chart-scale"><span>{trendMax}</span><span>{Math.ceil(trendMax/2)}</span><span>0</span></div><svg viewBox="0 0 288 112" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="omdaTrendFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="var(--omda-accent)" stopOpacity=".32"/><stop offset="100%" stopColor="var(--omda-accent)" stopOpacity="0"/></linearGradient></defs><path d={`M ${trendPoints.replaceAll(' ',', ')} L 288,112 L 24,112 Z`} fill="url(#omdaTrendFill)"/><polyline points={trendPoints} fill="none" stroke="var(--omda-accent)" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round"/></svg><div className="activity-chart-labels">{[6,5,4,3,2,1,0].map(offset=><span key={offset}>{new Date(new Date().getFullYear(),new Date().getMonth()-offset,1).toLocaleDateString(language==='ar'?'ar':'en',{month:'short'})}</span>)}</div></div></section>
@@ -2355,18 +2359,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       <div className="marketplace-intro-copy"><span className="eyebrow">{isAr?'شبكة المتخصصين':'SPECIALIST NETWORK'}</span><h2>{isAr?'اختار العقل المناسب لمهمتك':'Find the right specialist for the job'}</h2><p>{isAr?'كل تخصص يوجّه طلبك بخطة مناسبة، وتقدر تراجع الخطة قبل الموافقة على أي خطوة.':'Each specialty shapes a focused plan. Review the plan before approving any step.'}</p></div>
       <Link href={focusedHref("/workbench","request-input")} className="button button-primary">{isAr?'افتح مساحة العمل':'Open workbench'}<ArrowLeft size={14}/></Link>
     </section>
-    <section className="agent-marketplace-toolbar" aria-label={isAr?'تصفية التخصصات':'Specialty filters'}>
-      <div className="agent-marketplace-summary">
-        <div><span className="eyebrow">{isAr?'دليل التخصصات':'SPECIALTY DIRECTORY'}</span><strong>{specialties.length.toLocaleString(isAr?'ar':'en')} <span>{isAr?'تخصصات':'specialties'}</span></strong><p>{isAr?'اختار التخصص الأقرب لمهمتك، وتابع إنجازاته من هنا.':'Choose the specialty closest to your task and track its activity here.'}</p></div>
-        <div className="agent-marketplace-total"><strong>{tasks.length.toLocaleString(isAr?'ar':'en')}</strong><span>{isAr?'إجمالي المهام':'total tasks'}</span></div>
-      </div>
-      <div className="agent-marketplace-filter-head"><span className="form-label">{isAr?'تصفية حسب التخصص':'Filter by specialty'}</span><span className="section-meta" role="status">{specialties.filter(({id})=>filter==='all'||filter===id).length} {isAr?'نتائج':'results'}</span></div>
-      <div className="filter-row" role="group" aria-label={isAr?'التخصصات':'Specialties'}><button type="button" className={`filter-pill ${filter==='all'?'active':''}`} aria-pressed={filter==='all'} onClick={()=>setFilter('all')}>{t('all')}</button>{specialties.map(({id})=><button type="button" key={id} className={`filter-pill ${filter===id?'active':''}`} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label(id)}</button>)}</div>
-    </section>
-    <div className="market-grid" id="agent-marketplace-grid" aria-live="polite">{specialties.filter(({id})=>filter==='all'||filter===id).map(({id,icon:Icon},index)=><article className="panel agent-card" key={id} data-testid={`agent-card-${id}`}>
-      <div className="agent-top"><span className="agent-symbol"><Icon size={20}/></span><span className="section-meta">0{index+1} / 06</span></div>
-      <h3>{label(id)}</h3><p>{t(specialtyDesc(id))}</p><div className="agent-card-stats"><span>{tasks.filter(task=>task.specialty===id).length} {isAr?'مهمة مسجلة':'recorded tasks'}</span><span>{tasks.filter(task=>task.specialty===id&&(task.status==='review'||task.status==='paused')).length} {isAr?'تحتاج متابعة':'need attention'}</span></div><div className="agent-footer"><span className="agent-tag">{t(specialtyLabel(id))}</span><Link href={focusedHref(`/workbench?specialty=${id}`,"request-input")} className="button button-quiet button-small" onClick={()=>setSelectedSpecialty(id)}>{t('useAgent')}<ArrowLeft size={12}/></Link></div>
-    </article>)}</div>
+    <AgentDirectory specialties={directorySpecialties} tasks={tasks} ar={isAr} onSelect={selectDirectorySpecialty}/>
   </div>;
 
   const professionalSpecialtyPage = (route:string) => {
