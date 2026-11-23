@@ -1,0 +1,38 @@
+/* iPhone feedback: compact header and content behind the floating dock.
+   Workspace routes only. No chat layout or scroll handlers are changed. */
+.app-shell .mobile-header-actions-toggle {display:none;}
+@media(max-width:760px) {
+ .app-shell:not([data-chat-active="true"])>.main-area {
+  height:100dvh!important;
+ }
+ .app-shell:not([data-chat-active="true"]) .content-wrap {
+  padding-bottom:calc(176px + env(safe-area-inset-bottom))!important;
+ }
+ .app-shell:not([data-chat-active="true"]) .topbar {
+  display:grid!important;grid-template-columns:44px minmax(0,1fr) 44px!important;
+  gap:6px 10px!important;min-height:0!important;height:auto!important;
+  padding-bottom:8px!important;
+ }
+ .app-shell:not([data-chat-active="true"]) .topbar>.curtain-trigger {grid-column:1!important;grid-row:1!important;}
+ .app-shell:not([data-chat-active="true"]) .topbar>.crumb {
+  grid-column:2!important;grid-row:1!important;max-width:none!important;
+  width:100%!important;font-size:13px!important;text-align:start;
+ }
+ .app-shell:not([data-chat-active="true"]) .mobile-header-actions-toggle {display:grid!important;grid-column:3;grid-row:1;}
+ .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics {
+  grid-column:1/-1!important;grid-row:2!important;display:flex!important;
+  justify-content:space-between!important;gap:7px!important;padding:0!important;
+ }
+ .app-shell:not([data-chat-active="true"]) .topbar-metric {display:flex!important;align-items:baseline!important;gap:5px!important;min-width:0!important;}
+ .app-shell:not([data-chat-active="true"]) .topbar-metric strong {font-size:13px!important;line-height:1.5!important;}
+ .app-shell:not([data-chat-active="true"]) .topbar-metric small {font-size:10px!important;line-height:1.5!important;}
+ .app-shell:not([data-chat-active="true"]) .topbar>.top-actions {
+  display:none!important;grid-column:1/-1!important;grid-row:3!important;
+  margin:0!important;padding:10px!important;background:#24202f;
+  border:1px solid #514767;border-radius:14px;gap:10px!important;
+ }
+ .app-shell:not([data-chat-active="true"]) .topbar>.top-actions[data-open="true"] {
+  display:flex!important;justify-content:space-around!important;flex-wrap:wrap;
+ }
+ .app-shell:not([data-chat-active="true"]) .topbar-quick-actions {display:flex!important;gap:10px!important;}
+}

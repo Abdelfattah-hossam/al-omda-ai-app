@@ -771,6 +771,8 @@ function App() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
   const [pageHelpOpen, setPageHelpOpen] = useState(false);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
+  useEffect(()=>setHeaderActionsOpen(false),[location]);
   const [commandQuery, setCommandQuery] = useState('');
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
   const [commandAssetsLoading,setCommandAssetsLoading]=useState(false);
@@ -3011,7 +3013,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <i aria-hidden="true"/>{runtimeStatusLabel}
           </span>}
         </div>}
-        <div className="top-actions">
+        <button type="button" className="icon-button mobile-header-actions-toggle" aria-label={isAr?"إجراءات الصفحة":"Page actions"} aria-expanded={headerActionsOpen} aria-controls="workspace-header-actions" onClick={()=>setHeaderActionsOpen(value=>!value)}><Settings2 size={18}/></button>
+        <div id="workspace-header-actions" className="top-actions" data-open={headerActionsOpen?"true":"false"} onClick={(event)=>{if((event.target as HTMLElement).closest("button,a"))setHeaderActionsOpen(false);}}>
           {showWorkspaceHeader && <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>}
           <button type="button" className="icon-button" onClick={()=>setPageHelpOpen(value=>!value)} aria-label={isAr?"مساعدة الصفحة":"Page help"} title={isAr?"مساعدة الصفحة":"Page help"} aria-expanded={pageHelpOpen} data-testid="button-page-help"><CircleHelp size={16}/></button>
           {showWorkspaceHeader && <div className="topbar-quick-actions">

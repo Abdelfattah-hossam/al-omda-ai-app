@@ -61,3 +61,15 @@ error and tool-category colors remain. No file content is recolored or rewritten
 Chrome renders at 320/390/1280 confirm lavender artifact buttons, working local
 preview and no page overflow. Screenshots inspected at mobile and desktop sizes.
 No paid services or real AI execution were used for this change.
+
+## iPhone workspace geometry follow-up
+
+Owner screenshot at 07:20 Dubai showed a three-row crowded header and a large
+empty strip above the floating dock. Root cause: mobile header overrides forced
+six actions and metrics into separate rows, while main-area height subtracted
+158px plus the bottom safe area. The workspace now uses a compact metrics row
+and an accessible actions disclosure, retaining all six controls. The main-area
+fills the viewport behind the dock; end padding keeps the last content reachable.
+No overflow mode, scroll handler or chat rule changed. Local checks cover 320,
+390, 1280, menu open/help/close and scrolling to last content. Physical iPhone
+acceptance remains pending; the supplied screenshot is the bug evidence.
