@@ -44,3 +44,18 @@ body .app-shell[data-chat-active="true"] .ai-chat-live-modal>header>span{color:#
 @layer omda-voice-experience {
 body .app-shell[data-chat-active="true"] .voice-capture-diagnostic{display:block!important;flex:none!important;width:100%;max-width:340px;box-sizing:border-box;text-align:center;font:10px/1.7 ui-monospace,monospace;color:#ded0f1!important;background:#231c30;border:1px solid #67517c;border-radius:9px;padding:5px 7px;overflow-wrap:anywhere}
 }
+@layer omda-voice-experience {
+/* Real-iPhone snapshots: never shrink the voice body underneath footer buttons. */
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;overflow-y:auto!important;overscroll-behavior:contain!important;gap:12px!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal>*{flex:0 0 auto!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice{flex:0 0 auto!important;min-height:min-content!important;justify-content:flex-start!important;gap:10px!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice>*{flex-shrink:0!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-status{display:flex!important;align-items:center;justify-content:center;min-height:66px!important;margin:0!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .voice-turn-button{min-height:42px!important}
+body .app-shell[data-chat-active="true"] .voice-capture-diagnostic{min-height:46px!important}
+@media(max-width:600px){
+ body .app-shell[data-chat-active="true"] .ai-chat-live-modal{height:100dvh!important;min-height:0!important;max-height:100dvh!important;gap:10px!important;padding-bottom:calc(20px + env(safe-area-inset-bottom))!important}
+ body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap{width:140px!important;height:140px!important}
+ body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{width:124px!important;height:124px!important}
+}
+}

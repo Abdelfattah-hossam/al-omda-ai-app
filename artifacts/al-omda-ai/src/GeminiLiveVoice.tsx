@@ -584,9 +584,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
-    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(turnArmed?heardSpeech?(ar?"رصدنا صوتك":"Voice detected"):(ar?"انتظر ثم تكلّم":"Pause, then speak"):(ar?"اضغط لفتح دور كلام":"Tap to open a speaking turn")):(ar?"المس للتحدث":"Tap to talk")}</span>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
-    {active&&<button type="button" className="ai-chat-live-test" disabled={speaking||thinking} onClick={()=>{
+    <button type="button" className="ai-chat-live-test voice-turn-button" disabled={!active||speaking||thinking} onClick={()=>{
       if(turnArmedRef.current){
         turnArmedRef.current=false;setTurnArmed(false);
         if(speechActiveRef.current&&socketRef.current?.readyState===WebSocket.OPEN){validTurnRef.current=gateRef.current.voicedMs>=350;socketRef.current.send(JSON.stringify({realtimeInput:{activityEnd:{}}}));speechActiveRef.current=false;setThinking(true);setStatus(ar?'جارٍ تجهيز الرد…':'Preparing reply…');}
@@ -595,13 +594,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       }
       silenceDurationRef.current=0;gateRef.current.reset();validTurnRef.current=false;turnArmedRef.current=true;setTurnArmed(true);setHeardSpeech(false);
       setStatus(ar?'انتظر لحظة لمعايرة الضجيج، ثم تكلّم. لن تُرسل الضوضاء وحدها.':'Pause briefly for noise calibration, then speak. Noise alone is not sent.');
-    }}>{turnArmed?(ar?'إنهاء دور الكلام الآن':'Finish speaking turn now'):(ar?'دور كلام جديد':'New speaking turn')}</button>}
+    }}>{turnArmed?(ar?'إنهاء دور الكلام الآن':'Finish speaking turn now'):(ar?'دور كلام جديد':'New speaking turn')}</button>
     <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>
     </button>
-    {active&&micDiagnostic&&<small className="voice-privacy-note" role="status">{micDiagnostic}</small>}
+
     <small className="voice-privacy-note">{ar?'تقليل الضجيج لا يعزل صوتك عن أصوات الآخرين. قرّب الهاتف أو استخدم سماعة بميكروفون.':'Noise reduction cannot identify your voice over other people. Hold the phone close or use a headset microphone.'}</small>
-    <small className="voice-privacy-note">{ar?"الميكروفون يعمل بعد البدء فقط. أنهِ المحادثة لإيقافه.":"Microphone starts only when you begin. End the chat to stop it."}</small>
+
   </div>;
 }

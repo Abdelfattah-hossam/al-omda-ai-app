@@ -61,3 +61,11 @@ test('voice screenshot identifies release and input independent of speech gate',
  assert.ok(voice.includes("'frames='+inputFramesRef.current"));
  assert.ok(voice.indexOf('inputFramesRef.current++')<voice.indexOf('if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;'));
 });
+test('voice layout reserves dynamic rows and prevents footer overlap',()=>{
+ const voice=readFileSync('../artifacts/al-omda-ai/src/GeminiLiveVoice.tsx','utf8');
+ const layout=readFileSync('../artifacts/al-omda-ai/src/voice-experience.css','utf8');
+ assert.ok(!voice.includes('className="voice-state-label"'));
+ assert.ok(!voice.includes('{active&&micDiagnostic&&'));
+ assert.ok(layout.includes('min-height:66px!important'));
+ assert.ok(layout.includes('flex:0 0 auto!important;min-height:min-content!important'));
+});
