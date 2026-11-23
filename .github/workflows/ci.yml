@@ -42,6 +42,8 @@ jobs:
 
       - name: Test local Agent utilities
         run: pnpm --filter @workspace/scripts test
+      - name: Test security headers and API error responses
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/security.test.ts
       - name: Test chat intent classification
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/chat-intent.test.ts
       - name: Test new task plan validation

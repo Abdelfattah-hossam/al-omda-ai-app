@@ -101,11 +101,20 @@ export async function runFetchUrlTool(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(url.toString(), {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { accept: "text/html,text/plain,application/json,application/xml,text/markdown,*/*;q=0.5", "user-agent": "ALOMDA-fetch_url/1.0" },
-    });
+    let response: Response;
+    let redirects = 0;
+    while (true) {
+      response = await fetchImpl(url.toString(), {
+        signal: controller.signal, redirect: "manual",
+        headers: { accept: "text/html,text/plain,application/json,application/xml,text/markdown,*/*;q=0.5", "user-agent": "ALOMDA-fetch_url/1.0" },
+      });
+      if (![301,302,303,307,308].includes(response.status)) break;
+      const location = response.headers.get("location");
+      await response.body?.cancel();
+      if (!location || ++redirects > 5) return { ...base, ok: false, detail: "Invalid or excessive redirects", durationMs: Date.now()-started };
+      url = new URL(location, url);
+      if (!isFetchUrlAllowed(url)) return { ...base, ok: false, detail: "Redirect blocked by fetch safety rules", durationMs: Date.now()-started };
+    }
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
     if (!response.ok) {
       return { ...base, ok: false, detail: "HTTP " + response.status, durationMs: Date.now() - started };

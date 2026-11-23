@@ -134,3 +134,16 @@ test("runRequestReadTools runs url and asset tools together and survives listing
   });
   assert.equal(resilient.length, 0);
 });
+
+test("redirects cannot bypass private-network URL checks", async () => {
+ let calls=0;
+ const mock=(async()=>{calls++;return new Response(null,{status:302,headers:{location:"http://127.0.0.1/secret"}})}) as typeof fetch;
+ const result=await runFetchUrlTool("https://example.com/start",mock);
+ assert.equal(result.ok,false); assert.equal(calls,1);
+});
+test("safe public redirects preserve normal link reading", async () => {
+ let calls=0;
+ const mock=(async()=>++calls===1?new Response(null,{status:302,headers:{location:"/final"}}):new Response("public page",{headers:{"content-type":"text/plain"}})) as typeof fetch;
+ const result=await runFetchUrlTool("https://example.com/start",mock);
+ assert.equal(result.ok,true);assert.equal(calls,2);
+});

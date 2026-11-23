@@ -15,5 +15,18 @@
   "devDependencies": {
     "prettier": "^3.9.10",
     "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "body-parser": "2.4.0",
+      "undici": "7.30.2",
+      "fast-uri": "3.1.9",
+      "qs": "6.17.1",
+      "postcss-selector-parser": "6.1.6",
+      "zod@>=4 <5": "4.6.7",
+      "esbuild": "0.28.2",
+      "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
+      "js-yaml": "4.3.2"
+    }
   }
 }

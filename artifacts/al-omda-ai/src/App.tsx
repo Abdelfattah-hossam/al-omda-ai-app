@@ -1749,7 +1749,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                </div> : getTaskHtmlApp(result) ? <div style={{display:'grid',gap:10}}>
                  <strong>{isAr?'معاينة التطبيق':'Application preview'}</strong>
                  <div style={{overflow:'hidden',border:'1px solid var(--border,#59616c)',borderRadius:10,background:'#fff'}}>
-                   <iframe title={task.title} sandbox="allow-scripts" srcDoc={getTaskHtmlApp(result)!} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
+                   <iframe title={task.title} sandbox="allow-scripts" srcDoc={sandboxedHtmlPreview(getTaskHtmlApp(result)!)} style={{display:'block',width:'100%',height:430,border:0,background:'#fff'}} />
                  </div>
                  <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskHtml({title:task.title,html:getTaskHtmlApp(result)!},task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف الموقع.":"Could not save or download the website file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل التطبيق HTML':'Save & download app (.html)'}</button></div>
                  <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{isAr?'ملف HTML مستقل يعمل في المتصفح.':'A standalone HTML file that runs in a browser.'}</small>
@@ -2643,7 +2643,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   };
   const exportTaskExcel = async (task:Task) => {
     try {
-      const lib = await loadReportLibrary('https://esm.sh/xlsx@0.18.5');
+      const lib = await import('xlsx');
       const XLSX = lib.default ?? lib;
       const rows = [
         [isAr?'اسم المشروع':'Project',task.title],

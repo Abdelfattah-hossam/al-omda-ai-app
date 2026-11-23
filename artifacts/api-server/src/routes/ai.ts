@@ -28,6 +28,18 @@ import {
 } from "../lib/supabase";
 
 const router: IRouter = Router();
+// Check the shared limit before any hosted AI work, across all Worker isolates.
+router.use("/ai", (req,res,next) => { if(req.method === "POST") requireSameOrigin(req,res,next); else next(); });
+router.use("/ai", async (req, res, next): Promise<void> => {
+ if (req.method !== "POST") { next(); return; }
+ try {
+  const session = await resolveSession(req, res);
+  if (!session) { res.status(401).json({error:"Sign in to use AI."}); return; }
+  const check = await supabaseFetch("/rest/v1/rpc/omda_allow_ai_request", {method:"POST", headers:{"content-type":"application/json"},body:"{}"},session.accessToken);
+  if (!(await readSupabaseJson<boolean>(check))) { res.setHeader("Retry-After","60"); res.status(429).json({error:"Too many AI requests. Wait a minute and try again."}); return; }
+  next();
+ } catch (error) { reportSupabaseError(req, res, error, "Could not check the AI request limit."); }
+});
 const DAILY_LIMIT = 1000;
 type ChatMessage = { role: "user" | "assistant"; content: string; image?: { mimeType: string; data: string } };
 type Usage = { allowed?: boolean; used: number; remaining: number; limit: number; resetAt: string };
@@ -1395,7 +1407,7 @@ router.post("/ai/connections/test",requireSameOrigin,async(req,res):Promise<void
  if(!providers.length){res.status(409).json({error:"المزود ده مش معد على خدمة التطبيق."});return;}
  const start=Date.now();const result=await runWithProviderFailover(providers,c=>callProviderWithRetry(c,messages),()=>undefined);
  if(!result.answer){res.status(503).json({error:"التوليد الفعلي ما نجحش دلوقتي. ممكن الحصة المجانية خلصت أو الخدمة مش متاحة. لم يتم خصم وحدة."});return;}
- await reserveUnits(session.accessToken,1);res.setHeader("cache-control","no-store");res.json({provider:result.provider,model:result.answer.model,latencyMs:Date.now()-start,generated:true});
+ const charged=await reserveUnits(session.accessToken,1);if(charged.allowed===false){res.status(429).json({error:"Your daily AI limit is exhausted."});return;}res.setHeader("cache-control","no-store");res.json({provider:result.provider,model:result.answer.model,latencyMs:Date.now()-start,generated:true});
  }catch{res.status(503).json({error:"تعذر إكمال الاختبار. حاول لاحقًا."});}
 });
 
