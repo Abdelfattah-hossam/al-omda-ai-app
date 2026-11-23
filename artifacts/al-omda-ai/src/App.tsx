@@ -28,8 +28,6 @@ import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload, detectI
 import {createProjectExport,type ProjectExportFormat} from './lib/project-export';
 import {isDefaultPageFocus} from './lib/page-navigation';
 import {serializeCsv} from './lib/csv-export';
-import {loadAssetPages} from './lib/asset-pages';
-import {loadSearchFolders} from './lib/workspace-search';
 import { readAgentEventStream } from './lib/agent-stream';
 import { getLocalAgentOrigin } from './lib/local-agent-url';
 import { parseModelProviderHealth, parseModelProviderInfo, providerStatusLabel, type ModelProviderHealth } from './lib/model-provider-health';
@@ -806,7 +804,9 @@ function App() {
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   useEffect(()=>setHeaderActionsOpen(false),[location]);
   const [commandQuery, setCommandQuery] = useState('');
-  const [commandFullTasks,setCommandFullTasks]=useState<Task[]>([]);
+  const [commandSearchTasks,setCommandSearchTasks]=useState<Array<{id:string;title:string;specialty:Specialty;stepText:string|null}>>([]);
+  const [commandSearchError,setCommandSearchError]=useState('');
+  const [commandSearchRetry,setCommandSearchRetry]=useState(0);
   const [commandAssets, setCommandAssets] = useState<CommandAsset[]>([]);
   const [commandAssetsLoading,setCommandAssetsLoading]=useState(false);
   const [projectPage, setProjectPage] = useState(1);
@@ -1116,37 +1116,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
     document.documentElement.classList.add('dark');
   }, [language]);
   useEffect(() => {
-    if (!commandPaletteOpen) {setCommandAssetsLoading(false);return;}
-    if (!authUser) { setCommandAssets([]);setCommandAssetsLoading(false); return; }
-    setCommandAssets([]);setCommandFullTasks([]);setCommandAssetsLoading(true);
-    let fullSearchCancelled=false;
-    void loadWorkspacePages(async offset=>{const r=await fetch('/api/workspace?offset='+offset,{...apiRequestOptions,cache:'no-store'});if(!r.ok)throw new Error('Could not search project outputs.');return await r.json();}).then(workspace=>{if(!fullSearchCancelled)setCommandFullTasks(workspace.tasks as Task[]);}).catch(()=>{if(!fullSearchCancelled)setCommandFullTasks([]);});
-    let cancelled = false;
-    const controller=new AbortController();
-    const loadCommandAssets = async () => {
-      const projectIds = tasks.filter(task=>!task.demo).map(task=>task.id);
-      const folders: Array<{projectId:string|null;url:string}> = [
-        {projectId:null,url:'/api/storage/assets'},
-        ...projectIds.map(projectId=>({projectId,url:'/api/storage/assets?projectId='+encodeURIComponent(projectId)})),
-      ];
-      const responses = await loadSearchFolders<CommandAsset>(folders,async folder => {
-        const data = await loadAssetPages<CommandAsset>(async (offset,signal)=>{
-          const response = await fetch(folder.url+(folder.url.includes('?')?'&':'?')+'offset='+offset,{credentials:'same-origin',signal});
-          if(!response.ok)throw new Error('Could not list files.');
-          const page = await response.json();
-          if(!Array.isArray(page))throw new Error('Invalid file list.');
-          return page;
-        },controller.signal);
-        return data.map(item=>({...item,projectId:folder.projectId}));
-      },()=>!cancelled);
-      if(cancelled)return;
-      const unique = new Map<string,CommandAsset>();
-      for(const asset of responses) if(typeof asset.path==='string'&&typeof asset.name==='string') unique.set(asset.path,asset as CommandAsset);
-      setCommandAssets([...unique.values()]);setCommandAssetsLoading(false);
-    };
-    void loadCommandAssets();
-    return ()=>{fullSearchCancelled=true;cancelled=true;controller.abort();};
-  }, [commandPaletteOpen, authUser?.id, tasks]);
+    setCommandAssets([]);setCommandSearchTasks([]);setCommandSearchError('');
+    if(!commandPaletteOpen||!authUser){setCommandAssetsLoading(false);return;}
+    const controller=new AbortController();let cancelled=false;setCommandAssetsLoading(true);
+    const timer=window.setTimeout(()=>{void fetch('/api/workspace/search?q='+encodeURIComponent(commandQuery.trim().slice(0,200)),{credentials:'same-origin',cache:'no-store',signal:controller.signal}).then(async r=>{if(!r.ok)throw new Error(isAr?'تعذر البحث. أعد المحاولة.':'Search failed. Try again.');return await r.json();}).then(d=>{if(cancelled)return;if(!Array.isArray(d.tasks)||!Array.isArray(d.assets))throw new Error('Invalid search response.');setCommandSearchTasks(d.tasks);setCommandAssets(d.assets);}).catch(e=>{if(!cancelled)setCommandSearchError(e instanceof Error?e.message:'Search failed.');}).finally(()=>{if(!cancelled)setCommandAssetsLoading(false);});},250);
+    return()=>{cancelled=true;window.clearTimeout(timer);controller.abort();};
+  },[commandPaletteOpen,authUser?.id,commandQuery,commandSearchRetry,isAr]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -1690,17 +1665,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
     ];
     return entries.filter(item=>!needle||((item.ar+' '+item.en).toLocaleLowerCase().includes(needle))).slice(0,12);
   }, [commandQuery, isAr]);
-  const commandMatches = useMemo(() => {
-    const needle = commandQuery.trim().toLocaleLowerCase();
-    const realTasks = (commandFullTasks.length?commandFullTasks:tasks).filter(task=>!task.demo);
-    const matches = realTasks.flatMap(task => {
-      const taskMatch = !needle || `${task.title} ${task.request}`.toLocaleLowerCase().includes(needle);
-      const outputMatches = task.steps.filter(step=>needle && `${step.text} ${step.output ?? ''} ${step.result ?? ''}`.toLocaleLowerCase().includes(needle));
-      if (taskMatch) return [{task,detail:isAr?'مشروع':'Project'}];
-      return outputMatches.map(step=>({task,detail:(isAr?'مخرج: ':'Output: ')+step.text}));
-    });
-    return matches.slice(0,12);
-  }, [tasks, commandFullTasks, commandQuery, isAr]);
+  const commandMatches = useMemo(()=>{
+    if(authUser)return commandSearchTasks.map(task=>({task,detail:task.stepText?(isAr?'مخرج: ':'Output: ')+task.stepText:(isAr?'مشروع':'Project')}));
+    const needle=commandQuery.trim().toLocaleLowerCase();return tasks.filter(t=>!t.demo&&(!needle||(t.title+' '+t.request+' '+t.steps.map(s=>s.text+' '+(s.output??'')+' '+(s.result??'')).join(' ')).toLocaleLowerCase().includes(needle))).slice(0,12).map(task=>({task,detail:isAr?'مشروع':'Project'}));
+  },[authUser?.id,commandSearchTasks,commandQuery,tasks,isAr]);
   const downloadCommandAsset = async (asset:CommandAsset) => {
     try {
       await downloadStoredAsset(asset.path,asset.name);
@@ -3154,8 +3122,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {commandMatches.map((item,index)=><Link key={item.task.id+':'+index} href={focusedHref('/history/'+item.task.id,'task-plan')} onClick={()=>setCommandPaletteOpen(false)} className="nav-link" style={{minHeight:54,border:'1px solid #2a3038',background:'#141820',borderRadius:9,padding:10,textDecoration:'none',color:'inherit'}}>
             <span className="task-icon"><FileText size={16}/></span><span className="task-main"><strong>{item.task.title}</strong><small>{item.detail} · {label(item.task.specialty)}</small></span><ArrowLeft size={14} className="muted"/>
           </Link>)}
+          {commandSearchError&&<div role="alert" className="notice-bar notice-error">{commandSearchError}<button className="button button-quiet" onClick={()=>setCommandSearchRetry(v=>v+1)}>{isAr?'إعادة المحاولة':'Retry'}</button></div>}
           {commandAssetsLoading&&<p role="status" className="section-meta">{isAr?'جارٍ البحث في ملفات مشروعاتك…':'Searching your project files…'}</p>}
-          {!commandAssetsLoading&&commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
+          {!commandSearchError&&!commandAssetsLoading&&commandMatches.length===0&&commandNavigationMatches.length===0&&commandAssetMatches.length===0&&<div className="plan-empty" style={{padding:24,textAlign:'center'}}><h3>{isAr?'لا توجد نتائج':'No results found'}</h3><p>{isAr?'جرّب كلمة أخرى من اسم المشروع أو تفاصيل مخرجاته.':'Try another project name or a phrase from its saved outputs.'}</p></div>}
         </div>
         <div className="section-meta" style={{marginTop:12}}>{isAr?'اضغط Esc للإغلاق':'Press Esc to close'} · ⌘K</div>
       </section>

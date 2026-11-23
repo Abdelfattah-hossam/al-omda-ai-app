@@ -9,7 +9,7 @@ type Language = "ar" | "en";
 type ProjectOption = { id: string; title: string };
 type WorkspaceAsset = { path: string; name: string; createdAt: string | null; size: number | null; mimeType: string | null };
 
-import {loadAssetPages} from './lib/asset-pages';
+import {WORKSPACE_ASSET_PAGE_SIZE} from './lib/asset-pages';
 import { resolveWorkspaceUploadMime } from "./lib/asset-upload";
 
 function fileSize(bytes: number | null, ar: boolean): string {
@@ -24,6 +24,9 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const [projectId, setProjectId] = useState("");
   const [assets, setAssets] = useState<WorkspaceAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore,setLoadingMore]=useState(false);
+  const [nextOffset,setNextOffset]=useState<number|null>(null);
+  const listGeneration=useRef(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -46,6 +49,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
 
   useEffect(() => {
     let cancelled = false;
+    listGeneration.current+=1;setLoadingMore(false);setNextOffset(null);
     const controller = new AbortController();
     const load = async () => {
       setLoading(true);
@@ -54,15 +58,13 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
       try {
         const params = new URLSearchParams();
         if (projectId) params.set("projectId", projectId);
-        const data = await loadAssetPages<WorkspaceAsset>(async(offset,signal)=>{
-          params.set('offset',String(offset));
-          const response = await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin',signal});
-          const page = await response.json();
-          if(!response.ok)throw new Error(typeof page?.error==='string'?page.error:(ar?'تعذر تحميل الملفات.':'Could not load files.'));
-          if(!Array.isArray(page))throw new Error(ar?'استجابة الملفات غير صالحة.':'Invalid file list.');
-          return page;
-        },controller.signal);
-        if (!cancelled) setAssets(data);
+        params.set('offset','0');
+        const response=await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin',signal:controller.signal});
+        const data=await response.json();
+        if(!response.ok)throw new Error(typeof data?.error==='string'?data.error:(ar?'تعذر تحميل الملفات.':'Could not load files.'));
+        if(!Array.isArray(data))throw new Error('Invalid file list.');
+        if(!cancelled){setAssets(data);setNextOffset(data.length===WORKSPACE_ASSET_PAGE_SIZE?data.length:null);}
+
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : (ar ? "تعذر تحميل الملفات." : "Could not load files."));
       } finally {
@@ -72,6 +74,20 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     void load();
     return () => { cancelled = true; controller.abort(); };
   }, [projectId, refreshVersion, ar]);
+
+  const loadMore=async()=>{
+    if(nextOffset===null||loading||loadingMore)return;
+    const generation=listGeneration.current;setLoadingMore(true);setError('');
+    try{
+      const params=new URLSearchParams({offset:String(nextOffset)});if(projectId)params.set('projectId',projectId);
+      const r=await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin'});const data=await r.json();
+      if(!r.ok||!Array.isArray(data))throw new Error(ar?'تعذر تحميل المزيد من الملفات. أعد المحاولة.':'Could not load more files. Try again.');
+      if(generation!==listGeneration.current)return;
+      setAssets(previous=>Array.from(new Map([...previous,...data].map(item=>[item.path,item])).values()));
+      setNextOffset(data.length===WORKSPACE_ASSET_PAGE_SIZE?nextOffset+data.length:null);
+    }catch(e){if(generation===listGeneration.current)setError(e instanceof Error?e.message:'Could not load files.');}
+    finally{if(generation===listGeneration.current)setLoadingMore(false);}
+  };
 
   const uploadFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.currentTarget.files ?? []);
@@ -210,6 +226,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         <span className="task-icon"><FileText size={17}/></span><span className="task-main"><strong>{asset.name}</strong><small>{fileSize(asset.size,ar)} · {asset.name.split(".").pop()?.toUpperCase() || (ar ? "ملف" : "File")}{asset.createdAt ? " · "+new Date(asset.createdAt).toLocaleDateString(ar?"ar":"en") : ""}</small></span>
         <div style={{display:"flex",gap:6}}>{(asset.mimeType?.startsWith("video/") || asset.mimeType?.startsWith("image/") || asset.mimeType==="application/pdf" || asset.mimeType?.startsWith("text/") || asset.mimeType==="application/json" || asset.mimeType==="application/xml" || ["docx","xlsx","pptx","html","htm"].includes(asset.name.split(".").pop()?.toLowerCase() ?? ""))&&<button type="button" className="icon-button" onClick={()=>void openPreview(asset)} aria-label={ar?"معاينة الملف":"Preview file"}><Eye size={14}/></button>}<button type="button" className="icon-button" onClick={()=>void downloadAsset(asset)} aria-label={ar?"تنزيل الملف":"Download file"}><Download size={14}/></button><button type="button" className="icon-button" onClick={()=>requestDelete(asset)} aria-label={ar?"حذف الملف":"Delete file"}><Trash2 size={14}/></button></div>
       </article>)}</div>}
+      {!loading&&nextOffset!==null&&<button type="button" className="button button-quiet" onClick={()=>void loadMore()} disabled={loadingMore} style={{marginTop:16}} data-testid="button-load-more-assets">{loadingMore?(ar?"جارٍ التحميل…":"Loading…"):(ar?"تحميل المزيد من الملفات":"Load more files")}</button>}
     </section>
   </div>
     {previewAsset&&createPortal(<div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)closePreview();}} style={{position:"fixed",inset:0,zIndex:110,display:"grid",placeItems:"center",padding:16,background:"rgba(0,0,0,.72)",backdropFilter:"blur(5px)"}}>

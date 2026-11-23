@@ -23,3 +23,13 @@ test('summary SQL is invoker scoped and omits deliverable bodies',()=>{
  const sql=readFileSync(new URL('../../supabase/migrations/20261123142000_workspace_summaries.sql',import.meta.url),'utf8');
  assert.ok(sql.includes('security invoker'));assert.ok(sql.includes('t.user_id=(select auth.uid())'));assert.ok(sql.includes('limit 101'));assert.ok(!sql.includes("'result',"));assert.ok(!sql.includes("'comments',"));assert.ok(!sql.includes("'revisionHistory',"));
 });
+
+test('palette search is debounced, bounded, cancellable and has explicit errors',()=>{
+ const app=readFileSync(new URL('../../artifacts/al-omda-ai/src/App.tsx',import.meta.url),'utf8');
+ assert.ok(app.includes('/api/workspace/search?q='));assert.ok(app.includes('},250)'));assert.ok(app.includes('controller.abort()'));assert.ok(app.includes('commandSearchError&&<div role="alert"'));assert.ok(!app.includes('loadSearchFolders'));assert.ok(!app.includes('commandFullTasks'));
+ const sql=readFileSync(new URL('../../supabase/migrations/20261123144000_workspace_search.sql',import.meta.url),'utf8');
+ for(const term of ['security invoker','t.user_id=(select auth.uid())',"o.bucket_id='workspace-assets'",'limit 12','strpos','from public,anon'])assert.ok(sql.includes(term),term);
+});
+test('asset screen shows first page and explicit next page rather than awaiting all pages',()=>{
+ const app=readFileSync(new URL('../../artifacts/al-omda-ai/src/WorkspaceAssets.tsx',import.meta.url),'utf8');assert.ok(!app.includes('loadAssetPages'));assert.ok(app.includes('button-load-more-assets'));assert.ok(app.includes('generation!==listGeneration.current'));assert.ok(app.includes('setAssets(previous=>Array.from(new Map('));
+});

@@ -197,6 +197,13 @@ router.get("/workspace/revision", async (req,res):Promise<void>=>{
  }catch(error){reportSupabaseError(req,res,error,"Could not check workspace changes.");}
 });
 
+router.get("/workspace/search",async(req,res):Promise<void>=>{
+ const session=await sessionOrReport(req,res);if(session===false)return;
+ if(!session){res.status(401).json({error:'Sign in to search your workspace.'});return;}
+ if(req.query.q!==undefined&&(typeof req.query.q!=='string'||req.query.q.length>200)){res.status(400).json({error:'Search must be at most 200 characters.'});return;}
+ try{const r=await supabaseFetch('/rest/v1/rpc/search_workspace',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_query:req.query.q??''})},session.accessToken);const data=await readSupabaseJson(r);res.set('Cache-Control','private, no-store').json(data);}catch(e){reportSupabaseError(req,res,e,'Could not search your workspace.');}
+});
+
 router.get("/tasks/:id", async(req,res):Promise<void>=>{
  const session=await sessionOrReport(req,res);if(session===false)return;if(!session){res.status(401).json({error:"Sign in required."});return;}
  res.setHeader('Cache-Control','private, no-store');
