@@ -1,0 +1,39 @@
+{
+  "name": "al-omda-ai-desktop",
+  "productName": "AL OMDA Ai",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "dist": "electron-builder --win zip --x64"
+  },
+  "devDependencies": {
+    "electron": "40.10.6",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "ai.alomda.desktop",
+    "productName": "AL OMDA Ai",
+    "artifactName": "AL-OMDA-Ai-${os}-${arch}-${version}.${ext}",
+    "files": [
+      "main.cjs",
+      "icon.png"
+    ],
+    "win": {
+      "target": "zip",
+      "signExecutable": false
+    },
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "identity": null,
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Voice conversations in AL OMDA Ai",
+        "NSCameraUsageDescription": "Attach photos in AL OMDA Ai"
+      }
+    }
+  }
+}

@@ -79,3 +79,11 @@ Thumbs.db
 *.pfx
 id_rsa
 id_ed25519
+
+# Native build output and local signing material
+native/desktop/release/
+native/android/.gradle/
+native/android/**/build/
+native/android/local.properties
+*.jks
+*.keystore

@@ -1,0 +1,7 @@
+plugins { id 'com.android.application' }
+android {
+ namespace 'ai.alomda.app'
+ compileSdk 35
+ defaultConfig { applicationId 'ai.alomda.app'; minSdk 26; targetSdk 35; versionCode 1; versionName '1.0.0' }
+ buildTypes { debug { applicationIdSuffix '.preview' } }
+}
