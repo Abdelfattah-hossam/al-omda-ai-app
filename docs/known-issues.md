@@ -105,3 +105,13 @@ Found during Phase 4 work. Each entry: symptom, root cause, impact, proposed fix
 - Real iPhone screenshots showed centered icons but right-aligned titles/descriptions on home tiles. Explicit user request: put icon and text in the center together.
 - All26 home directory tiles now use one center axis for icon, title and description, at every width. Group headings/subtitles centered too. Related specialist directory cards on home and Agent Network use the same centered icon/title/description layout; status sits below the icon rather than pulling it to one side.
 - Palette, destinations, data and chat layout unchanged. Browser geometry checks measure icon/copy/title/description center within1.5px of each tile center at320/390/1280. Physical iPhone recheck remains open.
+
+
+## 2026-11-23: Huawei runtime error, home chart API compatibility
+
+- Second real Huawei Nova7i/Huawei Browser screenshot showed the React error fallback, route/version unknown. Do not call this confirmed chat failure.
+- API-removal reproduction: without String.replaceAll, home renders the same error boundary. /ai, /agents and /profile rendered in that test. Home chart used replaceAll unconditionally. Replaced it with split/join, same chart output, no removed feature.
+- Explicit build target chrome79/edge79/firefox78/safari13 lowers modern syntax; all built JS assets additionally parsed as ES2020. This does not polyfill every API or constitute a physical old-browser test.
+- Error boundary now stores the last error name/message/build/path/browser/time locally and offers expandable production details for a screenshot. No error text, route, browser or account content is transmitted automatically. Existing console logging retained. Error fallback uses vh, not dvh.
+- Checks: full build,16focused tests, missing newer APIs across home/chat/agents/profile, combined degraded-CSS layout, modern compact chat at320/390/1280 with390composer unchanged[10,749,370,56]. Forced invalid-date error verifies local diagnostics and expandable error UI.
+- Physical Huawei acceptance remains open. If another error appears, expand details and capture the message/build/path to identify it rather than guessing.

@@ -66,6 +66,8 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
+    // Huawei Browser on older Android: lower syntax, not just modern module targets.
+    target: ['chrome79', 'edge79', 'firefox78', 'safari13'],
     manifest: 'asset-manifest.json',
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
