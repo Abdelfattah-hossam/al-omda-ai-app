@@ -306,3 +306,11 @@ User reports the same error after opening an Angular interview project from hist
 - Medium: PDF text blocks taller than a page were drawn off-page after one page break. Text is now split by available lines across pages. Local canvas regression asserts multi-page output with no text below the content boundary. Actual browser-generated Arabic long-request PDF has3pages; page2 pixels inspected with connected readable Arabic and intact margins. Oversized single table rows remain a separate limitation.
 - Medium: pinned HTTP fallback stopped its attempt timer at TCP/TLS connection. A connected endpoint that never sent response headers could starve every later route. Timer now remains until headers arrive. Deterministic local connected-stall regression passes; original6tests now pass too. Full utility suite249pass/1skip before added regression; CI leaf suite354pass. No paid provider call or real task execution.
 - Whole-app old-API simulation covers18actual routes; no error boundary. Linux Chrome with removed modern APIs and mobile viewport is not Windows/macOS/Safari/Android hardware acceptance. Live review read existing account data only: connections and usage200, contact/event/ticket list200, email page honestly unconnected. Configured providers are not confirmed healthy quota.
+
+
+## 2026-11-23: iPhone section navigation unexpectedly scrolls down
+
+- User reports every section on physical iPhone opens scrolled to the middle. Huawei not tried.
+- Root cause reproduced in mobile production fixture: navigation adds default focus query to every section; shared focus effect calls smooth scrollIntoView after route/auth load. Before: profile1177px, history632px, agents420px, workbench547px, home125px main-area scroll.
+- Guard legacy default section focus targets so regular section opens stay at top. Same five routes after0px. Preserve explicit project/advanced-feature/media links and all /ai focus/scroll behavior; AIChat source unchanged.
+-8focused tests/build pass; local390px screenshot inspected. Chromium mobile old-API simulation, not Safari/iOS/PWA hardware. Physical iPhone retry still required after deployment.

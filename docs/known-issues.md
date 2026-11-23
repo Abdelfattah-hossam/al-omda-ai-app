@@ -180,3 +180,11 @@ User reports the same error after opening an Angular interview project from hist
 - Arabic /forgot-password and /reset-password pages, server-side PKCE challenge/verifier exchange, Secure HttpOnly cookies, one-hour verifier/15-minute recovery session, no tokens in frontend storage. Generic request response; no password changed by developers. Link must open in the same browser/device that requested it, an explicit UI instruction.
 - The account holder must request the link themselves. Sending from an operator's browser would bind recovery to the wrong PKCE cookie. Do not send a test recovery for a real third party from that browser.
 - Local old-API mobile screenshots inspected; recovery route tests reject missing state/cross-origin/password bounds;360CI leaf tests and production build pass. Actual mail delivery and completed human password change remain unverified until user executes their private link. Callback errors/expiry show a fresh-request route.
+
+
+## 2026-11-23: iPhone section navigation unexpectedly scrolls down
+
+- User reports every section on physical iPhone opens scrolled to the middle. Huawei not tried.
+- Root cause reproduced in mobile production fixture: navigation adds default focus query to every section; shared focus effect calls smooth scrollIntoView after route/auth load. Before: profile1177px, history632px, agents420px, workbench547px, home125px main-area scroll.
+- Guard legacy default section focus targets so regular section opens stay at top. Same five routes after0px. Preserve explicit project/advanced-feature/media links and all /ai focus/scroll behavior; AIChat source unchanged.
+-8focused tests/build pass; local390px screenshot inspected. Chromium mobile old-API simulation, not Safari/iOS/PWA hardware. Physical iPhone retry still required after deployment.

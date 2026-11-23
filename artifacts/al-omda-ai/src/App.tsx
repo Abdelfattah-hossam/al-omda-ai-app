@@ -25,6 +25,7 @@ import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewB
 import type { PdfBlock } from './lib/table-pdf';
 import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload, detectIosDevice, downloadStoredAsset } from './lib/download-file';
 import {createProjectExport,type ProjectExportFormat} from './lib/project-export';
+import {isDefaultPageFocus} from './lib/page-navigation';
 import {serializeCsv} from './lib/csv-export';
 import {loadAssetPages} from './lib/asset-pages';
 import {loadSearchFolders} from './lib/workspace-search';
@@ -1071,7 +1072,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [path]);
 
   useEffect(() => {
-    if (!focusTarget) return;
+    if (!focusTarget || isDefaultPageFocus(path,focusTarget)) return;
     const frame = window.requestAnimationFrame(() => {
       const target = document.getElementById(focusTarget);
       if (!target) return;

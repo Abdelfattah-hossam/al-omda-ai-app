@@ -1,0 +1,3 @@
+import test from'node:test';import assert from'node:assert/strict';import{isDefaultPageFocus}from'./page-navigation';
+test('normal sections do not auto-jump to legacy default focus targets',()=>{for(const [p,t]of[['/profile','profile-account-card'],['/history','history-list'],['/agents','agent-marketplace-grid'],['/workbench','request-input'],['/','dashboard-overview']])assert.equal(isDefaultPageFocus(p,t),true);});
+test('chat and explicit feature or project deep links remain outside the change',()=>{for(const[p,t]of[['/ai','ai-chat-input'],['/agents','advanced-connections'],['/projects','media-studio-launcher'],['/history/fixture','task-plan'],['/profile','profile-preferences']])assert.equal(isDefaultPageFocus(p,t),false);});
