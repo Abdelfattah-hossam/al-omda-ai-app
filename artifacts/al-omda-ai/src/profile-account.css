@@ -131,9 +131,16 @@
 }
 .profile-settings-page input.field:autofill {background:#1a1729!important;color:#eee7f7!important;}
 @media(max-width:800px){
- body .app-shell[data-profile-keyboard="true"] {bottom:auto!important;height:var(--profile-visual-height)!important;}
+ /* Keep the existing app viewport intact while Safari owns keyboard sizing. */
  .app-shell[data-profile-keyboard="true"]>.mobile-nav,
  .app-shell[data-profile-keyboard="true"]>.guest-nudge {display:none!important;}
- .app-shell[data-profile-keyboard="true"] .content-wrap {padding-bottom:24px!important;}
+ .app-shell[data-profile-keyboard="true"] .content-wrap:has(.profile-settings-page) {padding-bottom:calc(var(--profile-keyboard-inset,0px) + 120px)!important;scroll-padding-bottom:calc(var(--profile-keyboard-inset,0px) + 100px)!important;}
+ .app-shell[data-profile-keyboard="true"] .profile-main-card>.profile-actions-row {position:fixed!important;z-index:150;inset-inline:12px;bottom:calc(var(--profile-keyboard-inset,0px) + 12px);display:flex;justify-content:flex-start;gap:10px;padding:10px 12px;margin:0!important;background:#242033!important;border:1px solid #625075!important;border-radius:14px;box-shadow:0 4px 24px #0008;}
+ .app-shell[data-profile-keyboard="true"] .profile-main-card>.profile-actions-row>.button {min-height:44px;}
+ .app-shell[data-profile-keyboard="true"] .topbar {position:relative!important;}
  .profile-settings-page .profile-actions-row {scroll-margin-block:96px 24px;}
+}
+@media(max-width:800px){
+ /* Route entrance transforms otherwise make fixed actions card-relative. */
+ .app-shell[data-profile-keyboard="true"] :is(.main-area,.content-wrap,.profile-settings-page,.route-page-transition,.profile-settings-layout,.profile-main-card) {transform:none!important;filter:none!important;perspective:none!important;backdrop-filter:none!important;contain:none!important;will-change:auto!important;animation:none!important;}
 }

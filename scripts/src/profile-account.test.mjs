@@ -94,3 +94,12 @@ test('welcome is above dock and signup works even when already on profile',()=>{
  assert.ok(app.includes("onSignup={()=>{dismissGuestNudge();setAuthMode('signup')"));
  assert.ok(!nudge.includes('inset:0'));
 });
+
+ test('keyboard keeps full shell and anchors profile save actions above Safari occlusion',()=>{
+ assert.ok(!css.includes('height:var(--profile-visual-height)'));
+ assert.ok(css.includes('bottom:calc(var(--profile-keyboard-inset,0px) + 12px)'));
+ assert.ok(css.includes('.route-page-transition'));
+ assert.ok(app.includes('window.innerHeight-viewport.height-viewport.offsetTop'));
+ assert.ok(app.includes("page.closest<HTMLElement>('.main-area')"));
+ assert.ok(app.includes("scroller.scrollBy({top:delta,behavior:'instant'})"));
+ });

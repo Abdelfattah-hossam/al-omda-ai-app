@@ -858,13 +858,34 @@ function App() {
     const page=profilePageRef.current;const viewport=window.visualViewport;
     if(!page||!viewport)return;
     const shell=page.closest<HTMLElement>('.app-shell');
+    let frame=0;let settle=0;
     const update=()=>{
-      const focused=page.contains(document.activeElement)&&document.activeElement?.matches('input,textarea,select');
-      const keyboard=Boolean(focused&&window.innerHeight-viewport.height>120);
-      if(shell){shell.dataset.profileKeyboard=String(keyboard);shell.style.setProperty('--profile-visual-height',viewport.height+'px');}
+      const active=document.activeElement;
+      const focused=page.contains(active)&&active?.matches('input,textarea,select');
+      const inset=Math.max(0,window.innerHeight-viewport.height-viewport.offsetTop);
+      const keyboard=Boolean((focused||shell?.dataset.profileKeyboard==='true')&&window.innerHeight-viewport.height>120);
+      if(!shell)return;
+      shell.dataset.profileKeyboard=String(keyboard);
+      shell.style.setProperty('--profile-keyboard-inset',inset+'px');
+      // Safari pans the visual viewport independently. Never shrink the fixed
+      // app shell a second time: move only the focused field in its own scroller.
+      if(keyboard&&active instanceof HTMLElement){
+        cancelAnimationFrame(frame);
+        frame=requestAnimationFrame(()=>{
+          const scroller=page.closest<HTMLElement>('.main-area');
+          const actions=page.querySelector<HTMLElement>('.profile-main-card .profile-actions-row');
+          if(!scroller)return;
+          const r=active.getBoundingClientRect();
+          const top=viewport.offsetTop+12;
+          const bottom=viewport.offsetTop+viewport.height-(actions?.offsetHeight||56)-36;
+          const delta=r.bottom>bottom?r.bottom-bottom:r.top<top?r.top-top:0;
+          if(delta)scroller.scrollBy({top:delta,behavior:'instant'});
+        });
+      }
     };
-    viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);document.addEventListener('focusin',update);document.addEventListener('focusout',update);update();
-    return()=>{viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',update);if(shell)delete shell.dataset.profileKeyboard;};
+    const onFocus=()=>{update();window.clearTimeout(settle);settle=window.setTimeout(update,350);};
+    viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);document.addEventListener('focusin',onFocus);document.addEventListener('focusout',onFocus);update();
+    return()=>{cancelAnimationFrame(frame);window.clearTimeout(settle);viewport.removeEventListener('resize',update);viewport.removeEventListener('scroll',update);document.removeEventListener('focusin',onFocus);document.removeEventListener('focusout',onFocus);if(shell){delete shell.dataset.profileKeyboard;shell.style.removeProperty('--profile-keyboard-inset');}};
   },[location,authLoading,workspaceLoaded]);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
