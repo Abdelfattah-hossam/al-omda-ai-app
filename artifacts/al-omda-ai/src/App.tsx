@@ -22,7 +22,8 @@ import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-oox
 import { createZipBlob } from './lib/zip';
 import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
 import type { PdfBlock } from './lib/table-pdf';
-import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload } from './lib/download-file';
+import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload, detectIosDevice } from './lib/download-file';
+import {createProjectExport,type ProjectExportFormat} from './lib/project-export';
 import {serializeCsv} from './lib/csv-export';
 import {loadAssetPages} from './lib/asset-pages';
 import {loadSearchFolders} from './lib/workspace-search';
@@ -789,6 +790,9 @@ function App() {
   const [location, setLocation] = useLocation();
   const locationSearch=useSearch();
   const [saved, setSaved] = useState(readInitial);
+  const [projectExportMenu,setProjectExportMenu]=useState<string|null>(null);
+  const [projectExportBusy,setProjectExportBusy]=useState(false);
+  const [preparedProjectPdf,setPreparedProjectPdf]=useState<{taskId:string;blob:Blob}|null>(null);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
@@ -1825,11 +1829,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
         const isTypedResult = (result?:string) => Boolean(result && (getTaskPresentation(result) || getTaskCodeProject(result) || getTaskHtmlApp(result) || getTaskSpreadsheet(result) || getTaskWordDocument(result)));
         const typedSteps = task.steps.filter((step) => isTypedResult(step.result));
         const finalStep = typedSteps[typedSteps.length - 1] ?? task.steps[task.steps.length - 1];
-        const downloadWholeProject = () => {
-          const parts:string[] = ['# ' + task.title, '', task.request, ''];
-          task.steps.forEach((step, stepIndex) => { parts.push('## ' + (isAr ? '\u0627\u0644\u0645\u0631\u062d\u0644\u0629' : 'Stage') + ' ' + (stepIndex + 1) + ': ' + step.text, '', step.result ?? '', ''); });
-          const blob = new Blob([parts.join('\n')], { type:'text/markdown;charset=utf-8' });
-          return saveAndDownloadTaskArtifact(blob, safeArtifactName(task.title,'AL-OMDA-project') + '.md', 'text/markdown;charset=utf-8', authUser && !task.demo ? task.id : undefined);
+        const downloadWholeProject = async (format:ProjectExportFormat) => {
+          setProjectExportBusy(true);
+          try {
+            const blob=await createProjectExport(task,format);
+            if(format==='pdf'&&detectIosDevice(navigator.userAgent,navigator.platform,navigator.maxTouchPoints)){
+              setPreparedProjectPdf({taskId:task.id,blob});return;
+            }
+            await saveAndDownloadTaskArtifact(blob,safeArtifactName(task.title,'AL-OMDA-project')+'.'+format,blob.type,authUser&&!task.demo?task.id:undefined);
+            setProjectExportMenu(null);
+          }finally{setProjectExportBusy(false);}
         };
         return <div data-testid={`final-project-${task.id}`} style={{display:'grid',gap:12,marginTop:16,padding:14,borderRadius:12,border:'1px solid rgba(146,108,198,0.35)',background:'rgba(146,108,198,0.06)'}}>
           <div style={{display:'flex',alignItems:'center',gap:8,color:'#926cc6',fontWeight:700}}><CheckCheck size={16}/>{t('finalProject')}</div>
@@ -1838,7 +1847,16 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <strong style={{fontSize:13}}>{step.text}</strong>
             {step.result && renderTypedStepResult(task, step.result)}
           </div>)}
-          <div className="step-actions"><button type="button" data-testid={`download-project-${task.id}`} className="button button-primary button-small" disabled={!authUser} onClick={()=>void downloadWholeProject().catch((error)=>setWorkspaceError(readApiError(error,isAr?'\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0623\u0648 \u062a\u0646\u0632\u064a\u0644 \u0645\u0644\u0641 \u0627\u0644\u0645\u0634\u0631\u0648\u0639.':'Could not save or download the project file.')))}><Download size={14}/>{t('downloadWholeProject')}</button></div>
+          <div className="step-actions"><button type="button" data-testid={`download-project-${task.id}`} className="button button-primary button-small" disabled={!authUser||projectExportBusy} aria-expanded={projectExportMenu===task.id} onClick={()=>{setProjectExportMenu(projectExportMenu===task.id?null:task.id);void import('./lib/table-pdf');}}><Download size={14}/>{isAr?'حفظ وتنزيل المشروع':'Save and download project'}</button></div>
+          {projectExportMenu===task.id&&<div role="group" aria-label={isAr?'اختيار صيغة التنزيل':'Choose download format'} data-testid="project-export-formats" style={{display:'grid',gap:8,padding:12,border:'1px solid var(--border,#59616c)',borderRadius:10}}>
+            <strong>{isAr?'تحب تحمّل بأي صيغة؟':'Choose a file format'}</strong>
+            <small>{isAr?'PDF أفضل للقراءة بالعربي. TXT وMD يحتاجان عارضًا يدعم العربية.':'PDF is best for Arabic reading. TXT and MD need an Arabic-capable viewer.'}</small>
+            {([['pdf','PDF','نسخة ثابتة للقراءة','Fixed reading copy'],['docx','Word (.docx)','قابل للتعديل','Editable document'],['txt','TXT','نص UTF-8','UTF-8 text'],['md','Markdown (.md)','النص الأصلي','Original Markdown'],['html','HTML','للقراءة في المتصفح','Read in your browser']] as const).map(([format,label,ar,en])=><button key={format} data-testid={'export-format-'+format} className="button button-small" disabled={projectExportBusy} onClick={()=>void downloadWholeProject(format).catch(error=>setWorkspaceError(readApiError(error,isAr?'تعذر إنشاء أو تنزيل الملف.':'Could not create or download the file.')))}>{label} · {isAr?ar:en}</button>)}
+            {preparedProjectPdf?.taskId===task.id&&<button className="button button-primary" onClick={()=>{const blob=preparedProjectPdf.blob;void saveAndDownloadTaskArtifact(blob,safeArtifactName(task.title,'AL-OMDA-project')+'.pdf',blob.type,authUser&&!task.demo?task.id:undefined).then(()=>{setPreparedProjectPdf(null);setProjectExportMenu(null);}).catch(error=>setWorkspaceError(readApiError(error,'Could not save PDF.')));}}>{isAr?'PDF جاهز، اضغط للحفظ أو المشاركة':'PDF ready, tap to save or share'}</button>}
+            {projectExportBusy&&<span role="status">{isAr?'جارٍ تجهيز الملف...':'Preparing file...'}</span>}
+            <button className="button button-small" disabled={projectExportBusy} onClick={()=>setProjectExportMenu(null)}>{isAr?'إلغاء':'Cancel'}</button>
+          </div>}
+
           {finalStep?.result && finalStep.state === 'approved' && <div style={{display:'grid',gap:7}}>
             <label className="form-label">{t('finalReviseLabel')}</label>
             <textarea className="step-edit" rows={2} maxLength={2000} value={finalProjectNotes[task.id] ?? ''} onChange={(event)=>setFinalProjectNotes((prev)=>({...prev,[task.id]:event.target.value}))} placeholder={t('finalRevisePlaceholder')} aria-label={t('finalReviseLabel')}/>

@@ -6,7 +6,7 @@ CONNECTION_TESTS=[]
 from urllib.parse import urlsplit,parse_qs
 PAGINATION_READS=[]
 QA_TASKS=[{'id':'00000000-0000-4000-8000-'+str(i).zfill(12),'title':'اختبار محلي: '+title,'request':'Local QA fixture','specialty':specialty,'status':status,'createdAt':'2026-11-22T12:00:00.000Z','steps':[{'id':'step-1','text':'مرحلة اختبار','state':'approved'},{'id':'step-2','text':'مرحلة أخرى','state':'pending'}]}for i,(title,specialty,status) in enumerate([('ملف العرض','design','review'),('مراجعة الخطة','design','paused'),('مسودة محتوى','content','approved'),('بحث مصادر','research','stopped')])]
-QA_TASKS[0]['steps'][0].update(result='# Saved fixture result\n\n- **Only local QA**\n- No real project was opened',executedAt='2026-11-23T00:00:00Z')
+QA_TASKS[0]['steps'][0].update(result='# Saved fixture result\n\nالعربية متصلة وواضحة: الأسئلة والمستوى ٣٠.\n\n- **Only local QA**\n- No real project was opened',executedAt='2026-11-23T00:00:00Z')
 QA_TASKS[0]['steps'][1]['state']='approved'
 root=pathlib.Path(__file__).resolve().parents[2]/'artifacts/al-omda-ai/dist/public'
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -17,10 +17,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
   payload=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))));CONNECTION_TESTS.append((self.path,payload));self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps({'generated':True,'provider':payload.get('provider'),'model':'synthetic-model','latencyMs':3}).encode())
  def do_PUT(self):
   if self.path.startswith("/api/storage/assets?"):
-   content=self.rfile.read(int(self.headers.get("Content-Length","0")));PROFILE_WRITES.append({"bytes":len(content),"path":self.path});self.send_response(201);self.send_header("Content-Type","application/json");self.end_headers();self.wfile.write(json.dumps({"path":"synthetic/project/fixture.md"}).encode());return
+   content=self.rfile.read(int(self.headers.get("Content-Length","0")));PROFILE_WRITES.append({"bytes":len(content),"path":self.path});ext=parse_qs(urlsplit(self.path).query)["filename"][0].split(".")[-1];pathlib.Path("/downloads/omda-export-test."+ext).write_bytes(content);self.send_response(201);self.send_header("Content-Type","application/json");self.end_headers();self.wfile.write(json.dumps({"path":"synthetic/project/fixture.md"}).encode());return
   data=json.loads(self.rfile.read(int(self.headers.get('Content-Length','0'))));PROFILE_WRITES.append(data);SAVED_PROFILE.update(data)
   self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(json.dumps(SAVED_PROFILE).encode())
  def do_GET(self):
+  if self.path=="/qa-export.html":
+   self.send_response(200);self.send_header("Content-Type","text/html;charset=utf-8");self.end_headers();self.wfile.write(pathlib.Path("/downloads/omda-export-test.html").read_bytes());return
   if self.path.startswith('/api/'):
    if self.path=='/api/auth/status': payload={'configured':True}
    elif self.path=='/api/auth/session': payload={'configured':True,'user':({'id':'00000000-0000-4000-8000-000000000001','email':'synthetic@example.invalid'} if SIGNED_IN else None)}
@@ -98,15 +100,26 @@ try:
  assert CONNECTION_TESTS[0][1]['taskId']==QA_TASKS[0]['id']
  assert not evaluate('document.body.innerText.includes("تعذر عرض هذه الصفحة")')
  evaluate('Array.from(document.querySelectorAll("button")).find(x=>x.textContent.includes("حفظ وتنزيل المشروع")).click()')
+ wait('Boolean(document.querySelector("[data-testid=project-export-formats]"))')
+ evaluate('document.querySelector("[data-testid=project-export-formats]").scrollIntoView({block:"center",behavior:"instant"})')
+ time.sleep(.2)
+ print('FORMAT_MENU',screenshot('omda-project-export-menu.png'))
+ for format in ['md','txt','docx','html','pdf']:
+  if format!='md':
+   evaluate('document.querySelector("[data-testid^=download-project-]").click()')
+  evaluate('document.querySelector("[data-testid=export-format-'+format+']").click()')
+  wait('!document.querySelector("[data-testid=project-export-formats]")')
  for _ in range(80):
   if any(isinstance(x,str) and 'download?path=' in x for x in PAGINATION_READS):break
   time.sleep(.1)
- assert len(PROFILE_WRITES)==1,PROFILE_WRITES
+ assert len(PROFILE_WRITES)==5,PROFILE_WRITES
  assert any(isinstance(x,str) and 'download?path=' in x for x in PAGINATION_READS),PAGINATION_READS
  print('PASS synthetic old-Chromium project download: uploaded nonempty project then requested authenticated HTTP attachment, no real account/provider')
  evaluate('document.querySelector("[data-testid^=final-project-]").scrollIntoView({block:"center",behavior:"instant"})')
  time.sleep(.2)
  print('SCREEN',screenshot('omda-huawei-download-local.png'))
+ cmd('Page.navigate',{'url':origin+'/qa-export.html'});wait('Boolean(document.querySelector("h1"))')
+ print('HTML_SCREEN',screenshot('omda-project-export-html.png'))
 finally:
  p.terminate()
  try:p.communicate(timeout=8)

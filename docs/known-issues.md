@@ -146,3 +146,11 @@ User reports the same error after opening an Angular interview project from hist
 - HuaweiBrowser and Chromium below94 now upload the generated task artifact first and request the existing authenticated same-origin HTTPS attachment endpoint. No new public access or storage destination. iPhone share-first flow and modern direct blob path unchanged. Upload failure remains visible instead of pretending a download happened.
 - Attachment header includes an ASCII filename fallback alongside the UTF-8 filename for older managers. No auth policy changes.
 -21focused tests passed, production build passed. Synthetic history fixture with Chrome88 UA and modern APIs removed confirms nonempty generated project upload followed by the private attachment GET. No real project or provider executed. Actual Huawei save acceptance is pending a physical retry.
+
+
+## 2026-11-23: Final-project export format chooser
+
+- User physically confirmed Huawei .md download by opening the file in Phoenix Files. Arabic glyphs in that viewer are unjoined/reordered. Screenshot indicates a text-shaping/bidi problem rather than UTF-8 mojibake. Actual downloaded bytes were not independently inspected. Source and synthetic roundtrip preserve logical UTF-8 Arabic.
+- Final save/download button now opens PDF / Word DOCX / TXT / MD / HTML choices, without removing existing typed artifact downloads. Existing authenticated Huawei HTTP attachment path and iPhone native file sharing preserved. Asynchronous PDF on iOS prepares first, then offers a second real tap to save/share, retaining activation.
+- Existing free canvas PDF and OOXML generators reused. PDF is image-based for stable Arabic shaping, not searchable/selectable. Word is editable text. TXT UTF-8 BOM improves encoding recognition but TXT/MD cannot repair an incapable viewer, stated in chooser. HTML is escaped static content, per-line dir=auto, UTF-8 charset and no-script/network CSP.
+- Local synthetic Chrome88-UA browser fixture downloads all five nonempty files through upload+attachment. PDF pixels inspected with connected Arabic, Word inspected by LibreOffice render and OOXML UTF-8/bidi/font metadata, HTML inspected in browser.17format/download tests pass. These are actual generated files from a simulated task, not Huawei/iPhone acceptance. No real user project or provider executed.
