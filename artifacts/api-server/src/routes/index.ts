@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import passwordRecoveryRouter from "./password-recovery";
 import adminRouter from "./admin";
 import healthRouter from "./health";
 import authRouter from "./auth";
@@ -16,6 +17,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(adminRouter);
 router.use(authRouter);
+router.use(passwordRecoveryRouter);
 router.use(workspaceRouter);
 router.use(storageRouter);
 router.use(aiRouter);

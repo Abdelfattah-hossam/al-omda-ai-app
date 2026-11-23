@@ -122,6 +122,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/collaboration.test.ts
       - name: Test workspace asset validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/storage-assets.test.ts
+      - name: Test password recovery
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/password-recovery.test.ts
       - name: Test admin boundaries
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/admin.test.ts
       - name: Test workspace response sanitization

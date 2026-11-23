@@ -172,3 +172,11 @@ User reports the same error after opening an Angular interview project from hist
 - Existing project request/result text may have originated in a conversation, but underlying messages and raw memory remain inaccessible to admins. No mutation fabricates project execution success.
 - Three shared display settings only: announcement, help text, support email, rendered as escaped React text outside chat. Not arbitrary code/config/secrets.
 - Live migration and rollback-only permission tests passed;25local focused tests/build passed. UI screenshots inspected at390/1280. Real physical device/admin-second-person acceptance not performed. Deployment verification tracked separately.
+
+
+## 2026-11-23: Password recovery and redirect configuration
+
+- Live Auth config had localhost:3000 Site URL and empty redirect allowlist. Updated to deployed app origin and exact /api/auth/recovery-callback, verified by readback. No SMTP credentials added or paid service used. Default SMTP remains2emails/hour and may restrict recipients.
+- Arabic /forgot-password and /reset-password pages, server-side PKCE challenge/verifier exchange, Secure HttpOnly cookies, one-hour verifier/15-minute recovery session, no tokens in frontend storage. Generic request response; no password changed by developers. Link must open in the same browser/device that requested it, an explicit UI instruction.
+- The account holder must request the link themselves. Sending from an operator's browser would bind recovery to the wrong PKCE cookie. Do not send a test recovery for a real third party from that browser.
+- Local old-API mobile screenshots inspected; recovery route tests reject missing state/cross-origin/password bounds;360CI leaf tests and production build pass. Actual mail delivery and completed human password change remain unverified until user executes their private link. Callback errors/expiry show a fresh-request route.

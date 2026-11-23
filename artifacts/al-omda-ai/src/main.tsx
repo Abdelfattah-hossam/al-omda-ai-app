@@ -3,6 +3,7 @@ import './polyfills';
 import { createRoot } from 'react-dom/client';
 
 import App from './App';
+import PasswordRecovery from './PasswordRecovery';
 import { ErrorBoundary } from '@/components/error-boundary';
 
 import './index.css';
@@ -33,7 +34,7 @@ createRoot(document.getElementById('root')!, {
   },
 }).render(
   <ErrorBoundary>
-    <App />
+    {location.pathname==='/forgot-password'||location.pathname==='/reset-password'?<PasswordRecovery reset={location.pathname==='/reset-password'}/>:<App />}
   </ErrorBoundary>,
 );
 
