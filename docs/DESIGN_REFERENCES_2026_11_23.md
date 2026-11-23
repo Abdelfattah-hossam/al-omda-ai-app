@@ -162,3 +162,7 @@ A physical screenshot showed a user-attributed English phrase the user says he n
 ## Profile physical screenshot corrections
 
 Live account read confirms 45 tasks,31approved,14review/paused and zero demo tasks. The remote profile display name is empty, not a saved name lost by the input. Show Complete your profile/No display name yet and an explicit hint rather than a generic name that implies a stored value. Open privacy content by default, align its disclosure arrow using flex instead of negative-margin float, and remove the floating chat launcher from this page only; a visible in-flow Open AI chat link keeps access. Profile-specific end padding allows the final privacy card to scroll fully above the fixed dock. Synthetic acceptance checks at320/390 verify its bottom is above nav at end of scroll, plus no floating launcher. Logo untouched.
+
+## Safari icon ghost surfaces
+
+Removed SVG itself from the active navigation background selector, which was painting a tile and inset shadow on the glyph. Cleaned backgrounds, shadows, filters and backdrop filters on profile SVG and shared icon-wrapper glyphs, plus the disclosure chevron. Active navigation remains visibly selected on the link, not behind the SVG. No dock geometry or bottom-area changes. Local profile screenshots inspected and19focused tests/typecheck/build passed; physical Safari confirmation remains needed.

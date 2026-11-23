@@ -68,7 +68,7 @@
   box-shadow:none!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.nav-link,.mobile-nav .mobile-nav-link,.mobile-nav a) {color:#b9b3ca!important;}
-.app-shell:not([data-chat-active="true"]) :is(.nav-link.active,.nav-link:hover,.mobile-nav .mobile-nav-link.active,.mobile-nav .mobile-nav-link.active svg,.filter-pill.active,.select-specialty.selected,.button-quiet:hover,.icon-button:hover,.lang-button:hover) {
+.app-shell:not([data-chat-active="true"]) :is(.nav-link.active,.nav-link:hover,.mobile-nav .mobile-nav-link.active,.filter-pill.active,.select-specialty.selected,.button-quiet:hover,.icon-button:hover,.lang-button:hover) {
   color:#e8dbff!important;
   background:#47365f!important;
   border-color:#9472c3!important;
@@ -103,4 +103,15 @@
 
 .app-shell:not([data-chat-active="true"]) :is(.nav-link svg,.control-note>svg,.workbench-context-icon,.profile-section-heading>svg,.sidebar-search kbd) {color:#ccb7ec!important;border-color:#645079!important;}
 .app-shell:not([data-chat-active="true"]) .eyebrow:before {background:#b79aef!important;}
+
+/* SVGs are glyphs, not card surfaces. Safari can paint a ghost tile otherwise. */
+.app-shell:not([data-chat-active="true"]) :is(.mobile-nav svg,.profile-settings-page svg,.profile-section-heading>svg,.setting-row>svg,.dashboard-kpi-icon>svg,.task-icon>svg,.specialty-icon>svg,.empty-mark>svg) {
+ background:transparent!important;background-image:none!important;box-shadow:none!important;
+ filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ border-color:transparent!important;outline:none!important;isolation:auto!important;
+}
+.app-shell:not([data-chat-active="true"]) .profile-settings-page .profile-accordion-summary::after {
+ background:transparent!important;background-image:none!important;border:0!important;
+ box-shadow:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
 }

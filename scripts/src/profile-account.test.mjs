@@ -36,3 +36,10 @@ test('physical profile feedback keeps empty name honest and privacy readable',()
  assert.ok(css.includes('float:none!important'));
  assert.ok(css.includes('padding-bottom:calc(120px + env(safe-area-inset-bottom))'));
 });
+
+test('icon glyphs do not inherit active card tiles or Safari compositing effects',()=>{
+ const palette=readFileSync('../artifacts/al-omda-ai/src/workspace-palette.css','utf8');
+ assert.ok(!palette.includes('.mobile-nav .mobile-nav-link.active svg,.filter-pill'));
+ assert.ok(palette.includes('.mobile-nav svg,.profile-settings-page svg'));
+ assert.ok(palette.includes('filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important'));
+});
