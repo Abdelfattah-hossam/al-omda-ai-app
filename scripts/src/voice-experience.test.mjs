@@ -26,7 +26,7 @@ test('iOS audio unlock runs in tap before asynchronous permission and token work
  assert.ok(voice.includes('context.state !== "running"'));
  assert.ok(voice.includes('No microphone samples arrived'));
  assert.ok(voice.includes("name==='NotAllowedError'"));
- assert.ok(voice.includes('No speech detected yet'));
+ assert.ok(voice.includes('The microphone is supplying silent frames'));
  assert.ok(voice.includes('event.outputBuffer.getChannelData(0).fill(0)'));
 });
 test('Safari orb is native SVG, without CSS blend or conic clipping layers',()=>{
@@ -43,4 +43,13 @@ test('dictation waits for native start, times out and explains Safari abort',()=
  assert.ok(chat.includes('Safari aborted dictation'));
  assert.ok(chat.includes('if(!event.results[index]?.isFinal)continue'));
  assert.ok(chat.includes('className="ai-dictation-status" role="status"'));
+});
+
+test('quiet iPhone speech is not discarded by the previous fixed gate',()=>{
+ assert.ok(voice.includes('const hasSpeech = rms > 0.0015'));
+ assert.ok(voice.includes('audio: true'));
+ assert.ok(voice.includes("audioSession.type='play-and-record'"));
+ assert.ok(voice.includes('mic.connect(silent)'));
+ assert.ok(voice.includes('track?.muted'));
+ assert.ok(voice.includes('peakInputRef.current.toFixed(5)'));
 });

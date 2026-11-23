@@ -34,3 +34,7 @@ body .app-shell[data-chat-active="true"] .ai-message-actions button {color:#d6c3
 
 body .app-shell[data-chat-active="true"] .ai-message-actions {border-color:#493a5b!important;}
 }
+@layer omda-chat-palette {
+body .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row>svg{color:#c8a9f5!important}
+body .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready{color:#b79aef!important;background:#b79aef!important;box-shadow:0 0 0 3px #b79aef26!important}
+}

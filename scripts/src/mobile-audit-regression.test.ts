@@ -66,10 +66,10 @@ test("iPhone shell avoids the legacy chat height cap and gives dock one bottom i
  assert.ok(css.includes('height:74px!important;min-height:74px!important;max-height:74px!important;padding:8px!important;'));
  assert.ok(css.includes('padding-top:calc(20px + env(safe-area-inset-top))!important;'));
 });
-test("studio escapes transformed ancestors and retains dark gold controls", () => {
+test("studio escapes transformed ancestors and retains dark lavender controls", () => {
  const studio = readFileSync('../artifacts/al-omda-ai/src/MediaStudio.tsx', 'utf8');
  assert.ok(studio.includes('return createPortal('));
  assert.ok(studio.includes('</section></div>,document.body)'));
  assert.ok(css.includes('flex:0 1 980px;min-width:0;max-width:100%;overflow-x:hidden;'));
- assert.ok(css.includes('.media-studio .button-primary{background:linear-gradient(135deg,#f0d18a,#d5a34c)'));
+ assert.ok(css.includes('.media-studio .button-primary{background:linear-gradient(135deg,#b58feb,#854cd5)'));
 });

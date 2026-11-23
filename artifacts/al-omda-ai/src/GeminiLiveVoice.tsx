@@ -46,6 +46,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const [thinking,setThinking]=useState(false);
   const [heardSpeech,setHeardSpeech]=useState(false);
   const captureTimerRef=useRef(0);
+  const silentGainRef=useRef<GainNode|null>(null);
+  const peakInputRef=useRef(0);
+  const inputFramesRef=useRef(0);
+  const [micDiagnostic,setMicDiagnostic]=useState('');
   const visualRef=useRef<HTMLDivElement|null>(null);
   const micAnalyserRef=useRef<AnalyserNode|null>(null);
   const outputAnalyserRef=useRef<AnalyserNode|null>(null);
@@ -54,6 +58,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     cancelAnimationFrame(animationRef.current);
     micAnalyserRef.current?.disconnect();outputAnalyserRef.current?.disconnect();
     micAnalyserRef.current=null;outputAnalyserRef.current=null;
+    silentGainRef.current?.disconnect();silentGainRef.current=null;
     visualRef.current?.style.setProperty('--voice-level','0');
     visualRef.current?.querySelectorAll<HTMLElement>('.voice-wave-bar').forEach(bar=>bar.style.setProperty('--bar-level','0'));
   };
@@ -61,6 +66,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     const mic=context.createAnalyser();mic.fftSize=256;mic.smoothingTimeConstant=.72;
     const output=context.createAnalyser();output.fftSize=256;output.smoothingTimeConstant=.72;
     source.connect(mic);output.connect(context.destination);
+    // Keep the analyser in a rendered graph on WebKit without mic feedback.
+    const silent=context.createGain();silent.gain.value=0;mic.connect(silent);silent.connect(context.destination);silentGainRef.current=silent;
     micAnalyserRef.current=mic;outputAnalyserRef.current=output;
     const bins=new Uint8Array(128);let last=0;
     const draw=(time:number)=>{
@@ -180,6 +187,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
 
   const start = async () => {
     if (activeRef.current || connectingRef.current || disabled || !mountedRef.current) return;
+    peakInputRef.current=0;inputFramesRef.current=0;setMicDiagnostic('');
     const sessionId = ++sessionIdRef.current;
     const isCurrentSession = () => mountedRef.current && sessionIdRef.current === sessionId;
     setConnectingState(true);
@@ -190,11 +198,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
       if (!navigator.mediaDevices?.getUserMedia) throw new Error(ar ? "الميكروفون غير متاح في هذا المتصفح. افتح التطبيق في Safari واسمح بالميكروفون." : "Microphone unavailable. Open in Safari and allow microphone access.");
       // iOS requires creation AND the first resume in the original tap, before any await.
+      // WebKit can otherwise keep a playback-only audio route on iPhone.
+      if('audioSession' in navigator){try{(navigator as any).audioSession.type='play-and-record';}catch{/* Older Safari does not expose audio-session routing. */}}
       const context: AudioContext = new AudioContextClass();
       contextRef.current = context;
       const resumed = context.resume();
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: true,
       });
       if (!isCurrentSession()) {
         stream.getTracks().forEach((track) => track.stop());
@@ -202,6 +212,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       }
       streamRef.current = stream;
       await resumed;
+      // Permission can interrupt the already-unlocked iOS context. Resume the same context again.
+      if(context.state!=="running")await context.resume();
       if (!isCurrentSession()) return;
       if (context.state !== "running") throw new Error(ar ? "تعذر تشغيل صوت الميكروفون. اضغط بدء مرة أخرى واسمح بالميكروفون في إعدادات Safari." : "Microphone audio could not start. Tap Start again and allow microphone access in Safari settings.");
       if (!stream.getAudioTracks().some(track=>track.enabled && track.readyState==='live')) throw new Error(ar ? "الميكروفون غير متاح. تحقق من إذن Safari." : "Microphone is unavailable. Check Safari permission.");
@@ -315,7 +327,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         let energy = 0;
         for (let i = 0; i < input.length; i++) energy += input[i] * input[i];
         const rms = Math.sqrt(energy / Math.max(1, input.length));
-        const hasSpeech = rms > 0.012;
+        inputFramesRef.current++;
+        peakInputRef.current=Math.max(peakInputRef.current,rms);
+        // A fixed .012 gate discarded quiet iPhone speech before it reached the server.
+        const hasSpeech = rms > 0.0015;
+        if(inputFramesRef.current%12===0){
+          const track=stream.getAudioTracks()[0];
+          setMicDiagnostic((ar?'مستوى الميكروفون: ':'Mic level: ')+Math.round(Math.min(100,peakInputRef.current*10000))+'%'+(track?.muted?(ar?' · المسار مكتوم':' · track muted'):''));
+        }
 
         if (hasSpeech) {
           setHeardSpeech(true);
@@ -358,7 +377,11 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         track.onended=()=>{if(isCurrentSession()){setStatus(ar?"توقف الميكروفون. أعد البدء واسمح باستخدامه.":"Microphone stopped. Start again and allow access.");cleanup(sessionId);}};
       });
       captureTimerRef.current=window.setTimeout(()=>{
-        if(isCurrentSession()&&!speechActiveRef.current)setStatus(ar?"لم نرصد صوتًا بعد. قرّب الهاتف وتحقق من إذن الميكروفون في Safari، ثم تكلّم.":"No speech detected yet. Move closer and check Safari microphone permission, then speak.");
+        if(isCurrentSession()&&peakInputRef.current<.0015){
+          const track=stream.getAudioTracks()[0];
+          setStatus(context.state!=="running"?(ar?'Safari أوقف مسار الصوت. أنهِ المحادثة وابدأ مرة أخرى.':'Safari paused audio. End the chat and start again.'):track?.muted?(ar?'Safari يرسل مسار ميكروفون مكتومًا. أغلق أي مكالمة أو تطبيق يستخدم الميكروفون ثم أعد البدء.':'Safari reports a muted microphone track. End other calls or microphone apps and start again.'):peakInputRef.current===0?(ar?'وصلت إطارات صامتة من الميكروفون، وليس خطأ في الاتصال بالعمدة. أنهِ المحادثة وأغلق أي مكالمة أخرى ثم أعد البدء.':'The microphone is supplying silent frames, not a connection error. End this chat and other calls, then start again.'):(ar?'صوت الميكروفون ضعيف جدًا. قرّب الهاتف وتحدث بصوت أعلى.':'Microphone audio is very quiet. Move closer and speak louder.'));
+          setMicDiagnostic((ar?'عينات: ':'Frames: ')+inputFramesRef.current+' · '+(ar?'أعلى مستوى: ':'Peak: ')+peakInputRef.current.toFixed(5));
+        }
       },8000);
       sessionReadyRef.current = true;
       setConnectingState(false);
@@ -535,6 +558,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>
     </button>
+    {active&&micDiagnostic&&<small className="voice-privacy-note" role="status">{micDiagnostic}</small>}
     <small className="voice-privacy-note">{ar?"الميكروفون يعمل بعد البدء فقط. أنهِ المحادثة لإيقافه.":"Microphone starts only when you begin. End the chat to stop it."}</small>
   </div>;
 }
