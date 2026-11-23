@@ -40,3 +40,7 @@ test('avatar resize caps longest edge,keeps aspect ratio and never upscales',()=
  const helper=readFileSync(new URL('../../artifacts/al-omda-ai/src/lib/avatar-image.ts',import.meta.url),'utf8');assert.ok(helper.includes('blob.size>=file.size'));assert.ok(helper.includes('URL.revokeObjectURL(url)'));
  const server=readFileSync(new URL('../../artifacts/api-server/src/routes/storage.ts',import.meta.url),'utf8');assert.ok(server.includes('"private, no-store"'));
 });
+
+test('agent directory controls override palette and disclosure arrows never float',()=>{
+ const css=readFileSync(new URL('../../artifacts/al-omda-ai/src/agent-controls.css',import.meta.url),'utf8');assert.ok(css.includes('@layer omda-workspace-palette'));assert.ok(css.includes('background:transparent!important'));assert.ok(css.includes('appearance:none'));assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 32px'));assert.ok(css.includes('float:none!important'));assert.ok(css.includes('.agent-marketplace-page'));assert.ok(!css.includes('AIChat'));
+});

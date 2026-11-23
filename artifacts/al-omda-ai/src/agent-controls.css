@@ -1,0 +1,16 @@
+@layer omda-workspace-palette {
+/* Isolate the input reset from the global workspace field palette,including iOS. */
+.app-shell:not([data-chat-active="true"]) #agent-marketplace-grid :is(.directory-search,.directory-select){position:relative;background:#211c2e!important;min-height:48px;gap:10px;padding-inline:14px;}
+.app-shell:not([data-chat-active="true"]) #agent-marketplace-grid :is(.directory-search input,.directory-select select){background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;margin:0!important;padding:0!important;color:#f1eff9!important;font:inherit;font-size:16px;min-width:0;flex:1 1 0;}
+.app-shell:not([data-chat-active="true"]) #agent-marketplace-grid :is(.directory-search,.directory-select)>svg{display:block;flex:0 0 18px;width:18px;height:18px;}
+.app-shell:not([data-chat-active="true"]) #agent-marketplace-grid .directory-select select{appearance:none;-webkit-appearance:none;padding-inline-end:26px!important;cursor:pointer;}
+.app-shell:not([data-chat-active="true"]) #agent-marketplace-grid .directory-select::after{content:"";position:absolute;inset-inline-end:17px;top:19px;width:8px;height:8px;border-right:2px solid #cbb7e8;border-bottom:2px solid #cbb7e8;transform:rotate(45deg);pointer-events:none;}
+/* No floating arrow or negative offsets:copy,icon and disclosure have own cells. */
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)>.profile-accordion-summary{display:grid!important;grid-template-columns:minmax(0,1fr) 32px;align-items:start;gap:12px;padding:0!important;list-style:none;min-width:0;}
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)>.profile-accordion-summary::-webkit-details-marker{display:none;}
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)>.profile-accordion-summary>:is(.section-head,.profile-section-heading){display:grid!important;grid-template-columns:minmax(0,1fr) 32px;align-items:start!important;gap:12px;margin:0!important;padding:0!important;min-width:0;}
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)>.profile-accordion-summary>:is(.section-head,.profile-section-heading)>svg{width:20px!important;height:20px!important;min-width:20px;margin:6px!important;flex:none;}
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)>.profile-accordion-summary::after{content:"⌄";position:static!important;float:none!important;margin:0!important;display:grid;place-items:center;width:32px;height:32px;box-sizing:border-box;border:1px solid #68527f;border-radius:10px;color:#c6a6f1;font-size:24px;line-height:1;align-self:start;}
+.app-shell .agent-marketplace-page :is(.agent-guide-panel,.agent-advanced-tools)[open]>.profile-accordion-summary::after{transform:rotate(180deg);}
+
+}
