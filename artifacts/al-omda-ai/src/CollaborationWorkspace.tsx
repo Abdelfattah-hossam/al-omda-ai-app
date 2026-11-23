@@ -144,7 +144,7 @@ export default function CollaborationWorkspace({ kind, language }: Props) {
   const Icon = kind === "contact" ? Contact : kind === "event" ? CalendarDays : Ticket;
   return <div className="page-enter">
     <section className="panel panel-pad" style={{ marginBottom: 16 }}>
-      <div className="section-head"><div><span className="eyebrow">Al OMDA AI · WORKSPACE</span><h1 className="section-title">{labels.title}</h1><p className="section-meta">{labels.subtitle}</p></div><Icon size={22}/></div>
+      <div className="section-head"><div><span className="eyebrow">AL OMDA Ai · WORKSPACE</span><h1 className="section-title">{labels.title}</h1><p className="section-meta">{labels.subtitle}</p></div><Icon size={22}/></div>
       <p className="section-meta" style={{ marginTop: 8 }}>{t.local}</p>
       {error && <div className="notice-bar notice-error" role="alert">{error}</div>}
       {notice && <div className="notice-bar" role="status">{notice}</div>}

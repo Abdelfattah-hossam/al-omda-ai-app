@@ -235,16 +235,16 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
   const host =
     req.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.get("host") ?? "";
   if (!origin || !host) {
-    res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+    res.status(403).json({ error: "This request must come from the AL OMDA Ai app." });
     return;
   }
   try {
     if (new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
-      res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+      res.status(403).json({ error: "This request must come from the AL OMDA Ai app." });
       return;
     }
   } catch {
-    res.status(403).json({ error: "This request must come from the AL OMDA AI app." });
+    res.status(403).json({ error: "This request must come from the AL OMDA Ai app." });
     return;
   }
   next();
@@ -253,7 +253,7 @@ export function requireSameOrigin(req: Request, res: Response, next: NextFunctio
 export function requireSameOriginRead(req: Request, res: Response, next: NextFunction): void {
   const fetchSite = req.get("sec-fetch-site")?.toLowerCase();
   if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
-    res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+    res.status(403).json({ error: "This private read must come from the AL OMDA Ai app." });
     return;
   }
   const origin = req.get("origin");
@@ -262,11 +262,11 @@ export function requireSameOriginRead(req: Request, res: Response, next: NextFun
       req.get("x-forwarded-host")?.split(",")[0]?.trim() ?? req.get("host") ?? "";
     try {
       if (!host || new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
-        res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+        res.status(403).json({ error: "This private read must come from the AL OMDA Ai app." });
         return;
       }
     } catch {
-      res.status(403).json({ error: "This private read must come from the AL OMDA AI app." });
+      res.status(403).json({ error: "This private read must come from the AL OMDA Ai app." });
       return;
     }
   }

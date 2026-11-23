@@ -145,7 +145,7 @@ export default function AuditLogWorkspace({ language }: Props) {
   return <div className="page-enter">
     <section className="panel panel-pad" style={{ marginBottom: 16 }}>
       <div className="section-head">
-        <div><span className="eyebrow">Al OMDA AI · AUDIT TRAIL</span><h1 className="section-title">{t.title}</h1><p className="section-meta">{t.subtitle}</p></div>
+        <div><span className="eyebrow">AL OMDA Ai · AUDIT TRAIL</span><h1 className="section-title">{t.title}</h1><p className="section-meta">{t.subtitle}</p></div>
         <ShieldCheck size={22}/>
       </div>
       <p className="section-meta" style={{ marginTop: 10 }}>{t.scope}</p>

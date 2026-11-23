@@ -9714,3 +9714,6 @@ body:has(.ai-chat-page){
 .media-studio :is(.button-quiet,.icon-button){background:#191421!important;color:#c6a8f0!important;border-color:rgba(152,101,224,.35)!important;}
 .media-studio :is(input,textarea,select){background:#0e0c0f!important;color:#ebe5f4!important;border-color:#5f3e8e!important;}
 .media-studio label:has(input[type="file"]){background:#19161a!important;color:#c6a8f0!important;border-color:rgba(152,101,224,.35)!important;}
+
+/* Keep the product's exact mixed-case spelling in message bylines. */
+.ai-chat-page .chat-message.assistant>strong{text-transform:none}

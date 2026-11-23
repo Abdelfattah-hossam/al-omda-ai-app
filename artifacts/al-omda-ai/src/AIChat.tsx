@@ -249,7 +249,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
 <html lang="ar" dir="rtl">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="background:#111;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:40px 16px">
-<h2>معاينة كود العمدة</h2><p>الكود يعمل مباشرة داخل التطبيق.</p>
+<h2>معاينة كود AL OMDA Ai</h2><p>الكود يعمل مباشرة داخل التطبيق.</p>
 <button onclick="document.getElementById('canvas-status').textContent='تم التشغيل بنجاح!'" style="padding:10px 20px;background:#10b981;border:0;color:white;border-radius:8px;cursor:pointer">اختبار الزر</button>
 <p id="canvas-status" role="status" aria-live="polite"></p>
 </body></html>`);
@@ -330,8 +330,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   }, [input]);
 
   const copy = {
-    title: ar ? "شات العمدة الذكي" : "Al OMDA AI Chat",
-    subtitle: ar ? "العمدة يختار نموذجًا مجانيًا متخصصًا حسب طلبك ويجرّب بدائل تلقائيًا." : "Al OMDA AI selects a specialized free model for each request and automatically tries alternatives.",
+    title: ar ? "شات AL OMDA Ai الذكي" : "AL OMDA Ai Chat",
+    subtitle: ar ? "AL OMDA Ai يختار نموذجًا مجانيًا متخصصًا حسب طلبك ويجرّب بدائل تلقائيًا." : "AL OMDA Ai selects a specialized free model for each request and automatically tries alternatives.",
     login: ar ? "سجّل الدخول لاستخدام الشات وحفظ رصيدك اليومي." : "Sign in to use AI chat and track your daily allowance.",
     placeholder: ar ? "اكتب سؤالك أو اطلب كودًا..." : "Ask a question or request code...",
     send: ar ? "إرسال" : "Send",
@@ -346,9 +346,9 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     mic: ar ? "تحدث" : "Speak",
     stop: ar ? "إيقاف التسجيل" : "Stop recording",
     voiceNote: ar ? "الصوت يستخدم إمكانات المتصفح والجهاز، وقد يختلف دعمه حسب المتصفح." : "Voice uses browser and device capabilities; support varies by browser.",
-    loading: ar ? "العمدة يفكر..." : "Al OMDA AI is thinking...",
+    loading: ar ? "AL OMDA Ai يفكر..." : "AL OMDA Ai is thinking...",
     exhausted: ar ? "انتهى رصيدك اليومي. سيتجدد تلقائيًا عند بداية يوم UTC التالي." : "Your daily allowance is exhausted. It resets at the next UTC day.",
-    empty: ar ? "ابدأ محادثتك مع العمدة." : "Start a conversation with Al OMDA AI.",
+    empty: ar ? "ابدأ محادثتك مع AL OMDA Ai." : "Start a conversation with AL OMDA Ai.",
     clear: ar ? "محادثة جديدة" : "New chat",
     historyLoading: ar ? "جارٍ تحميل المحادثة المحفوظة..." : "Loading saved conversation...",
     copy: ar ? "نسخ الرد" : "Copy answer",
@@ -502,7 +502,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         loadMemoryGraph(),
       ]);
       const data = await response.json().catch(() => null);
-      if (!response.ok || !data) throw new Error(data?.error || (ar ? "تعذر تحميل ذاكرة العمدة." : "Could not load AI memory."));
+      if (!response.ok || !data) throw new Error(data?.error || (ar ? "تعذر تحميل ذاكرة AL OMDA Ai." : "Could not load AI memory."));
       setMemory(typeof data.memory === "string" ? data.memory : "");
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الذاكرة." : "Could not load memory."));
@@ -552,7 +552,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
-      setError(ar ? "تم حفظ ذاكرة العمدة الخاصة بحسابك." : "Your private Al OMDA AI memory was saved.");
+      setError(ar ? "تم حفظ ذاكرة AL OMDA Ai الخاصة بحسابك." : "Your private AL OMDA Ai memory was saved.");
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : (ar ? "تعذر حفظ الذاكرة." : "Could not save memory."));
@@ -564,7 +564,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
 
   const clearMemory = async () => {
     if (memorySaving || memoryLoading || memoryGraphEdgeSaving || !signedIn || (!memory.trim() && memoryGraphNodes.length === 0 && !memoryGraphLoadError)) return;
-    if (!window.confirm(ar ? "هل تريد حذف ذاكرة العمدة والنقاط المؤكدة الخاصة بحسابك؟" : "Delete your private memory and confirmed memory graph?")) return;
+    if (!window.confirm(ar ? "هل تريد حذف ذاكرة AL OMDA Ai والنقاط المؤكدة الخاصة بحسابك؟" : "Delete your private memory and confirmed memory graph?")) return;
     setMemorySaving(true);
     setError("");
     try {
@@ -894,10 +894,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     const PptxGenJS = imported.default ?? imported;
     const pptx = new PptxGenJS();
     pptx.layout = "LAYOUT_WIDE";
-    pptx.author = "Al OMDA AI";
+    pptx.author = "AL OMDA Ai";
     pptx.subject = data.title;
     pptx.title = data.title;
-    pptx.company = "Al OMDA AI";
+    pptx.company = "AL OMDA Ai";
     pptx.lang = ar ? "ar-SA" : "en-US";
     pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial", lang: pptx.lang };
     for (const item of data.slides) {
@@ -908,7 +908,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       const bulletFontSize = bulletTextLength <= 650 ? 19 : bulletTextLength <= 1100 ? 17 : bulletTextLength <= 1700 ? 15 : 13;
       if (item.bullets.length) slide.addText(item.bullets.map((text) => ({ text, options: { bullet: { indent: 18 }, hanging: 4, breakLine: true } })), { x: 0.75, y: 1.65, w: 11.8, h: 5.15, fontFace: "Arial", fontSize: bulletFontSize, color: "F1F5F9", paraSpaceAfterPt: 16, valign: "mid", align: ar ? "right" : "left", rtlMode: ar, margin: 0.12, fit: "shrink", breakLine: false });
       if (item.notes) slide.addNotes(item.notes);
-      slide.addText("Al OMDA AI", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
+      slide.addText("AL OMDA Ai", { x: 0.55, y: 7.08, w: 12.2, h: 0.2, fontFace: "Arial", fontSize: 9, color: "8290A3", align: "center", margin: 0 });
     }
     const blob = await pptx.write({ outputType: "blob" }) as Blob;
     // PptxGenJS writes a notes part for every slide, including empty notes.
@@ -1514,12 +1514,12 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <button type="button" className="ai-chat-new-button" onClick={()=>{setChatSidebarOpen(false);void createConversation();}} disabled={!signedIn || loading || historyLoading}><Plus size={16}/><span>{ar ? "محادثة جديدة" : "New chat"}</span><PenLine size={14}/></button>
         <button type="button" className="ai-chat-sidebar-close" onClick={()=>setChatSidebarOpen(false)} aria-label={ar ? "إغلاق القائمة" : "Close sidebar"}><X size={18}/></button>
       </div>
-      <div className="ai-chat-tools-caption">{ar ? "أدوات العمدة" : "Al OMDA AI TOOLS"}</div>
+      <div className="ai-chat-tools-caption">{ar ? "أدوات AL OMDA Ai" : "AL OMDA Ai TOOLS"}</div>
       <div className="ai-chat-tool-list">
         <button type="button" onClick={()=>{setChatSidebarOpen(false);setMediaStudioOpen(true);}} disabled={!signedIn}><ImagePlus size={16}/>{ar?"استوديو الصور والفيديو":"Image & video studio"}</button>
         <button type="button" onClick={()=>{activateMode("office");setChatSidebarOpen(false);}}><BriefcaseBusiness size={16}/>{ar ? "حزمة برامج الأوفيس (Office)" : "Office suite"}</button>
         <button type="button" onClick={()=>{setChatSidebarOpen(false);openCodeCanvas();}}><Code2 size={16}/>{ar ? "محرر البرمجة (Code Canvas)" : "Code Canvas"}</button>
-        <button type="button" onClick={()=>{setChatSidebarOpen(false);openSettings();}}><Bot size={16}/>{ar ? "ذاكرة العمدة والحد اليومي" : "Memory & daily usage"}</button>
+        <button type="button" onClick={()=>{setChatSidebarOpen(false);openSettings();}}><Bot size={16}/>{ar ? "ذاكرة AL OMDA Ai والحد اليومي" : "Memory & daily usage"}</button>
       </div>
       <div className="ai-chat-history-caption"><span>{ar ? "المحادثات السابقة" : "Recent conversations"}</span><button type="button" onClick={()=>setShowConversationList(v=>!v)}>{showConversationList ? (ar ? "إخفاء" : "Hide") : (ar ? "عرض الكل" : "View all")}</button></div>
       <div className="ai-chat-sidebar-history">
@@ -1533,23 +1533,23 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
         <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
       </button>
-      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar" aria-hidden="true">{Array.from(displayName?.trim() || (ar ? "ع" : "A"))[0]}</span><span><strong>{displayName?.trim() || (ar ? "حساب العمدة" : "Al OMDA AI account")}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
+      <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar" aria-hidden="true">{Array.from(displayName?.trim() || (ar ? "ع" : "A"))[0]}</span><span><strong>{displayName?.trim() || (ar ? "حساب AL OMDA Ai" : "AL OMDA Ai account")}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
     </aside>
     <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>{if(window.matchMedia('(min-width:768px)').matches)setDesktopSidebarCollapsed(value=>!value);else setChatSidebarOpen(true);}} aria-label={ar ? "إظهار أو إخفاء القائمة الجانبية" : "Toggle sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
-      <div className="ai-chat-brand" aria-label="Al OMDA AI"><span className="ai-chat-brand-mark"><img src="/brand/al-omda-mark.svg?v=nexusB1" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "العمدة" : "Al OMDA AI"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      <div className="ai-chat-brand" aria-label="AL OMDA Ai"><span className="ai-chat-brand-mark"><img src="/brand/al-omda-mark.svg?v=nexusB1" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "AL OMDA Ai" : "AL OMDA Ai"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
       {!signedIn && <button type="button" id="ai-chat-login-cta" className="ai-chat-login-cta" onClick={()=>setLocation("/profile?focus=profile-account-card")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
-        <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "العمدة · التوجيه التلقائي" : "Al OMDA AI · Auto routing"}</span><i>⌄</i></button>
+        <button type="button" className="ai-chat-model-button" aria-expanded={showModelMenu} onClick={()=>{setShowChatMenu(false);setShowModelMenu(v=>!v);}}><span>{ar ? "AL OMDA Ai · التوجيه التلقائي" : "AL OMDA Ai · Auto routing"}</span><i>⌄</i></button>
         {showModelMenu && <div className="ai-chat-model-menu">
           <div className="ai-chat-menu-caption">{ar ? "المحركات المجانية المهيأة" : "Configured free engines"}</div>
           <div className="ai-chat-provider-row"><Sparkles size={15}/><span><strong>Gemini</strong><small>{usage?.providers?.gemini ? (ar ? "مهيأ · متاح للتوجيه" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.gemini ? "is-ready" : ""}/></div>
           <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>OpenRouter Free</strong><small>{usage?.providers?.openrouter ? (ar ? "مهيأ · متاح للتوجيه" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span><i className={usage?.providers?.openrouter ? "is-ready" : ""}/></div>
               <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Groq</strong><small>{usage?.providers?.groq ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
               <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Cloudflare Workers AI</strong><small>{usage?.providers?.cloudflare ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
-          <p>{ar ? "العمدة يختار النموذج الأنسب تلقائيًا ويجرّب البدائل عند التعطل." : "Al OMDA AI chooses the best available model and tries alternatives."}</p>
+          <p>{ar ? "AL OMDA Ai يختار النموذج الأنسب تلقائيًا ويجرّب البدائل عند التعطل." : "AL OMDA Ai chooses the best available model and tries alternatives."}</p>
         </div>}
       </div>
       <div className="ai-chat-topbar-actions">
@@ -1567,15 +1567,15 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <button type="button" onClick={()=>{setAgentMode(value=>!value);setShowChatMenu(false);}} aria-pressed={agentMode}><Bot size={16}/>{ar ? (agentMode ? "إيقاف وضع الوكيل المحلي" : "تشغيل وضع الوكيل المحلي") : (agentMode ? "Disable local Agent mode" : "Enable local Agent mode")}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);setShowLiveVoice(v=>!v)}} aria-expanded={showLiveVoice}><Volume2 size={16}/>{ar ? "المحادثة الصوتية" : "Live voice"}</button>
         <div className="ai-chat-menu-divider"/>
-        <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"Al OMDA AI")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع العمدة":"Al OMDA AI conversation",text:value}).then(()=>setShowChatMenu(false)).catch((shareError)=>{if(shareError instanceof Error && shareError.name!=="AbortError")setError(shareError.message || (ar?"تعذرت مشاركة المحادثة.":"Could not share conversation."));setShowChatMenu(false);});}else if(navigator.clipboard){void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});}else{setError(ar?"المشاركة غير مدعومة في هذا المتصفح.":"Sharing is not supported.");setShowChatMenu(false);}}}><Share2 size={16}/>{ar ? "مشاركة المحادثة" : "Share conversation"}</button>
-        <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"Al OMDA AI")+": "+m.content).join("\n\n");if(navigator.clipboard)void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});else setError(ar?"النسخ غير مدعوم.":"Clipboard unavailable.");}}><Copy size={16}/>{ar ? "نسخ المحادثة" : "Copy conversation"}</button>
+        <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA Ai")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع AL OMDA Ai":"AL OMDA Ai conversation",text:value}).then(()=>setShowChatMenu(false)).catch((shareError)=>{if(shareError instanceof Error && shareError.name!=="AbortError")setError(shareError.message || (ar?"تعذرت مشاركة المحادثة.":"Could not share conversation."));setShowChatMenu(false);});}else if(navigator.clipboard){void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});}else{setError(ar?"المشاركة غير مدعومة في هذا المتصفح.":"Sharing is not supported.");setShowChatMenu(false);}}}><Share2 size={16}/>{ar ? "مشاركة المحادثة" : "Share conversation"}</button>
+        <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA Ai")+": "+m.content).join("\n\n");if(navigator.clipboard)void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});else setError(ar?"النسخ غير مدعوم.":"Clipboard unavailable.");}}><Copy size={16}/>{ar ? "نسخ المحادثة" : "Copy conversation"}</button>
         <button type="button" onClick={()=>{togglePinnedConversation(activeConversationId);setShowChatMenu(false);}} disabled={!activeConversationId}><Pin size={16}/>{pinnedConversationIds.includes(activeConversationId)?(ar?"إلغاء تثبيت المحادثة":"Unpin conversation"):(ar?"تثبيت المحادثة":"Pin conversation")}</button>
         <button type="button" onClick={()=>{const item=conversations.find(entry=>entry.id===activeConversationId);if(item)void renameConversation(item);setShowChatMenu(false);}} disabled={!activeConversationId}><Pencil size={16}/>{ar ? "إعادة تسمية المحادثة" : "Rename conversation"}</button>
         <button type="button" className="danger" onClick={()=>{if(loadingRef.current || historyLoadingRef.current || !activeConversationId)return;setShowChatMenu(false);void deleteConversation(activeConversationId);}} disabled={loading || historyLoading || !activeConversationId}><Trash2 size={16}/>{ar ? "حذف المحادثة" : "Delete conversation"}</button>
       </div>}
       </div>
     </header>
-    {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: العمدة يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. Al OMDA AI selects a free specialist model and tries alternatives when needed."}</span></div>}
+    {showRoutingInfo && <div className="notice-bar ai-routing-note"><Bot size={14}/><span>{ar ? "التوجيه التلقائي مفعّل: AL OMDA Ai يختار نموذجًا مجانيًا متخصصًا حسب نوع طلبك ويجرّب بدائل عند التعطل." : "Automatic routing is on. AL OMDA Ai selects a free specialist model and tries alternatives when needed."}</span></div>}
     {currentMode && <div className="ai-chat-mode-banner"><span>{currentMode === "word" ? <FileText size={14}/> : currentMode === "excel" ? <Sheet size={14}/> : currentMode === "ppt" ? <Presentation size={14}/> : <BriefcaseBusiness size={14}/>} {currentMode === "word" ? (ar ? "وضع Word نشط" : "Word mode active") : currentMode === "excel" ? (ar ? "وضع Excel نشط" : "Excel mode active") : currentMode === "ppt" ? (ar ? "إعداد محتوى العرض التقديمي" : "Presentation content mode") : (ar ? "حزمة الأوفيس جاهزة" : "Office suite ready")}</span><button type="button" onClick={clearMode} aria-label={ar ? "إلغاء الوضع" : "Clear mode"}><X size={14}/></button></div>}
     {!signedIn ? <section className="panel panel-pad ai-chat-auth-gate" dir={ar?"rtl":"ltr"}>
       <div className="ai-chat-auth-gate-mark"><LockKeyhole size={25}/></div>
@@ -1597,17 +1597,17 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
           {messages.length === 0 && <div className="ai-chat-welcome" id="welcome-screen">
             <div className="ai-chat-welcome-mark"><img src="/brand/al-omda-mark.svg?v=nexusB1" alt="" aria-hidden="true" /></div>
-            <h1>{ar ? "أهلاً بك مع العمدة" : "Welcome to Al OMDA AI"}</h1>
+            <h1>{ar ? "أهلاً بك مع AL OMDA Ai" : "Welcome to AL OMDA Ai"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
               <button type="button" onClick={() => activateMode('word')}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند نصي جاهز" : "Create an editable document"}</small></span></button>
               <button type="button" onClick={() => activateMode('excel')}><Sheet size={17}/><span><strong>{ar ? "جدول Excel" : "Excel workbook"}</strong><small>{ar ? "تصدير جدول بيانات XLSX" : "Export an editable XLSX workbook"}</small></span></button>
               <button type="button" onClick={openCodeCanvas}><Code2 size={17}/><span><strong>{ar ? "برمجة ومعاينة" : "Code & preview"}</strong><small>{ar ? "فتح وتشغيل الكود في Canvas" : "Open and run code in Canvas"}</small></span></button>
-              <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة العمدة" : "Al OMDA AI memory"}</strong><small>{ar ? "تخصيص الذاكرة والوكيل المحلي" : "Memory and local Agent settings"}</small></span></button>
+              <button type="button" onClick={openSettings}><Bot size={17}/><span><strong>{ar ? "ذاكرة AL OMDA Ai" : "AL OMDA Ai memory"}</strong><small>{ar ? "تخصيص الذاكرة والوكيل المحلي" : "Memory and local Agent settings"}</small></span></button>
             </div>
           </div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
-            <strong>{message.role === "user" ? (ar ? "أنت" : "You") : "Al OMDA AI"}</strong>
+            <strong>{message.role === "user" ? (ar ? "أنت" : "You") : "AL OMDA Ai"}</strong>
             <MessageContent content={message.content} />
             {message.toolFailures?.length ? <div role="status" style={{display:"grid",gap:6,width:"100%",padding:10,marginTop:8,border:"1px solid rgba(134,80,210,.4)",borderRadius:10,background:"rgba(134,80,210,.07)"}}>
               <strong style={{fontSize:12}}>{ar ? "تنبيه: بعض الأدوات لم تكتمل" : "Some tools did not complete"}</strong>
@@ -1649,7 +1649,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
               <button type="button" className="ai-message-action" onClick={()=>void copyAnswer(message.content,index)} aria-label={copy.copy} title={copiedIndex===index ? copy.copied : copy.copy}>{copiedIndex===index ? <span className="ai-message-action-check">✓</span> : <Copy size={15}/>}</button>
             </div>}
           </div>)}
-          {loading && <div className="chat-message assistant"><strong>Al OMDA AI</strong><p>{copy.loading}</p></div>}
+          {loading && <div className="chat-message assistant"><strong>AL OMDA Ai</strong><p>{copy.loading}</p></div>}
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
@@ -1724,8 +1724,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       </section>
     </>}
       {showSettingsModal && <div className="ai-chat-modal-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowSettingsModal(false);}}>
-        <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات العمدة" : "Al OMDA AI settings"}>
-          <header><strong><Settings2 size={16}/>{ar ? "إعدادات العمدة" : "Al OMDA AI settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
+        <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات AL OMDA Ai" : "AL OMDA Ai settings"}>
+          <header><strong><Settings2 size={16}/>{ar ? "إعدادات AL OMDA Ai" : "AL OMDA Ai settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <div className="ai-chat-settings-body">
             <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span>{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
               <div className="ai-chat-settings-stats"><div><small>{ar ? "المتبقي اليوم" : "Remaining"}</small><strong>{usage?.remaining ?? "—"}</strong></div><div><small>{ar ? "المستخدم" : "Used"}</small><strong>{usage?.used ?? "—"}</strong></div><div><small>{ar ? "الحد اليومي" : "Daily limit"}</small><strong>{usage?.limit ?? "—"}</strong></div></div>
@@ -1739,14 +1739,14 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
               <div className="ai-chat-provider-row"><Bot size={15}/><span><strong>Cloudflare Workers AI</strong><small>{usage?.providers?.cloudflare ? (ar ? "مهيأ" : "Configured") : (ar ? "غير مهيأ" : "Not configured")}</small></span></div>
               <small className="muted">{copy.voiceNote}</small>
             </section>
-             <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "ذاكرة العمدة الخاصة بك" : "Your Al OMDA AI memory"}</strong><span>{memory.length}/6000</span></div>
+             <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "ذاكرة AL OMDA Ai الخاصة بك" : "Your AL OMDA Ai memory"}</strong><span>{memory.length}/6000</span></div>
                <p>{ar ? "اكتب تفضيلاتك ومشاريعك وقراراتك المهمة. الذاكرة محفوظة في حسابك." : "Save preferences, projects, and important decisions to your account memory."}</p>
-               <textarea className="field ai-chat-memory-field" rows={4} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} disabled={memoryLoading || memorySaving} placeholder={ar ? "اكتب هنا ما تريد أن يتذكره العمدة..." : "What should Al OMDA AI remember?"}/>
+               <textarea className="field ai-chat-memory-field" rows={4} maxLength={6000} value={memory} onChange={(event)=>setMemory(event.target.value)} disabled={memoryLoading || memorySaving} placeholder={ar ? "اكتب هنا ما تريد أن يتذكره AL OMDA Ai..." : "What should AL OMDA Ai remember?"}/>
                <div className="ai-chat-settings-actions"><small>{memoryLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : memorySaving ? (ar ? "جارٍ الحفظ..." : "Saving...") : ""}</small><button type="button" className="button button-quiet button-small" onClick={()=>void clearMemory()} disabled={memoryLoading || memorySaving || memoryGraphLoading || memoryGraphEdgeSaving || (!memory.trim() && memoryGraphNodes.length === 0 && !memoryGraphLoadError)}>{ar ? "حذف الذاكرة" : "Delete memory"}</button><button type="button" className="button button-primary button-small" onClick={()=>void saveMemory()} disabled={memoryLoading || memorySaving}>{ar ? "حفظ الذاكرة" : "Save memory"}</button></div>
              </section>
              <section className="ai-chat-settings-section">
                <div className="ai-chat-settings-section-title"><strong>{ar ? "الحقائق والتفضيلات المؤكدة" : "Confirmed memory graph"}</strong><span>{memoryGraphNodes.length} {ar ? "حقيقة" : "facts"} · {memoryGraphEdges.length} {ar ? "علاقة" : "relations"}</span></div>
-               <p>{ar ? "يضيف العمدة هنا فقط ما تطلب صراحةً حفظه أو تصحيحاتك الواضحة. تُرفض كلمات المرور وبيانات الاتصال والمعلومات الشخصية الحساسة." : "Only facts you explicitly ask Al OMDA AI to remember or supported corrections are stored here. Passwords, contact details, and sensitive personal information are rejected."}</p>
+               <p>{ar ? "يضيف AL OMDA Ai هنا فقط ما تطلب صراحةً حفظه أو تصحيحاتك الواضحة. تُرفض كلمات المرور وبيانات الاتصال والمعلومات الشخصية الحساسة." : "Only facts you explicitly ask AL OMDA Ai to remember or supported corrections are stored here. Passwords, contact details, and sensitive personal information are rejected."}</p>
                {memoryGraphLoadError && <div className="notice-bar" role="alert" style={{marginBottom:10}}><span>{memoryGraphLoadError}</span><button type="button" className="button button-quiet button-small" onClick={()=>void loadMemoryGraph()} disabled={memoryLoading || memoryGraphLoading || memorySaving}>{memoryGraphLoading ? (ar ? "جارٍ التحميل..." : "Loading...") : (ar ? "إعادة المحاولة" : "Retry")}</button></div>}
                {memoryLoading ? <small className="muted">{ar ? "جارٍ تحميل سجل الذاكرة..." : "Loading confirmed memory..."}</small> : memoryGraphLoadError ? <small className="muted">{ar ? "لم يتم تحميل السجل؛ البيانات السابقة لم تُعتبر فارغة." : "The graph was not loaded; previous data has not been treated as empty."}</small> : memoryGraphNodes.length ? <div style={{display:"grid",gap:8}}>
                  {memoryGraphNodes.slice(0,30).map((node)=><div key={node.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:10}}>
@@ -1780,7 +1780,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
                       {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
                     </button>
                   </div>}
-               </div> : memoryGraphLoadError ? null : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell Al OMDA AI “Remember that I prefer concise replies” to add a preference."}</small>}
+               </div> : memoryGraphLoadError ? null : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell AL OMDA Ai “Remember that I prefer concise replies” to add a preference."}</small>}
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
           </div>
@@ -1789,7 +1789,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       </div>}
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
         <section className="ai-chat-live-modal" role="dialog" aria-modal="true" aria-label={ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}>
-          <header><span><i/> {ar ? "التحدث الصوتي مع العمدة" : "Talk with Al OMDA AI"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
+          <header><span><i/> {ar ? "التحدث الصوتي مع AL OMDA Ai" : "Talk with AL OMDA Ai"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <Suspense fallback={<p role="status">{ar?"جارٍ تحميل المحادثة الصوتية…":"Loading live voice…"}</p>}><GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/></Suspense>
           <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إنهاء المحادثة الصوتية وإغلاق النافذة" : "End voice conversation and close"}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
         </section>
