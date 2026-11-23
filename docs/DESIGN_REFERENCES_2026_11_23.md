@@ -106,3 +106,15 @@ not an invented today total. Missing data uses dashes and empty cards. Payment
 Gateways retains the not-connected notice with matching status tiles. No
 revenue trend percentage is invented. Local checks: empty + synthetic CSV,
 Arabic/English, 320/390/1280; 35 focused tests pass. Map CI and deploy succeeded.
+
+## Second physical-iPhone bottom-edge report
+
+A new real-device screenshot at 07:29 still showed an opaque home-indicator
+strip while the new compact header was already loaded. viewport-fit=cover was
+present; the remaining workspace clipping frame still depended on 100dvh and
+root backgrounds were near-black. Replaced only the mobile non-chat workspace
+frame with fixed inset:0 and percentage-height main-area, preserving its scroll
+container and trailing safe-area padding. Root background is workspace ink on
+non-chat routes. This targets Safari standalone viewport sizing but cannot be
+confirmed on physical Safari here. Local workspace and unchanged chat geometry
+checks passed. Do not mark physical-device acceptance complete.

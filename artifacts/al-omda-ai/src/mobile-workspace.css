@@ -36,3 +36,16 @@
  }
  .app-shell:not([data-chat-active="true"]) .topbar-quick-actions {display:flex!important;gap:10px!important;}
 }
+/* Standalone Safari can size dvh above its bottom inset. Anchor the workspace
+   to all four viewport edges rather than ending a dvh-tall clipping box early. */
+@media(max-width:760px) {
+ html:has(.app-shell:not([data-chat-active="true"])),
+ body:has(.app-shell:not([data-chat-active="true"])) {background:#12101c!important;}
+ body .app-shell:not([data-chat-active="true"]) {
+  position:fixed!important;inset:0!important;width:100%!important;
+  height:auto!important;min-height:0!important;
+ }
+ body .app-shell:not([data-chat-active="true"])>.main-area {
+  height:100%!important;max-height:none!important;
+ }
+}

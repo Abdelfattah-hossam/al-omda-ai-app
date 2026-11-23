@@ -10,7 +10,7 @@ test('workspace header keeps existing actions in an accessible mobile disclosure
  assert.ok(css.includes('.top-actions[data-open="true"]'));
 });
 test('workspace content reaches viewport and reserves end padding instead of blank dock band',()=>{
- assert.ok(css.includes('height:100dvh!important'));
+ assert.ok(css.includes('height:100%!important'));
  assert.ok(css.includes('padding-bottom:calc(176px + env(safe-area-inset-bottom))'));
  assert.ok(css.includes('.app-shell:not([data-chat-active="true"])>.main-area'));
  assert.doesNotMatch(css,/overflow(?:-y)?\s*:|scroll-behavior\s*:/);
@@ -21,4 +21,10 @@ test('chat icon alignment only translates the four glyphs on mobile',()=>{
  assert.ok(icons.includes('>svg'));
  assert.ok(icons.includes('translate:0 -3px'));
  assert.doesNotMatch(icons,/(?:height|bottom|padding|position|overflow)\s*:/);
+});
+
+test('workspace viewport is edge anchored, without touching chat',()=>{
+ assert.ok(css.includes('position:fixed!important;inset:0!important'));
+ assert.ok(css.includes('body .app-shell:not([data-chat-active="true"])'));
+ assert.ok(css.includes('height:auto!important;min-height:0!important'));
 });
