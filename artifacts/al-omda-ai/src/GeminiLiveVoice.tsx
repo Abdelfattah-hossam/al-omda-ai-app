@@ -1,10 +1,12 @@
+import {VoiceBargeInGate} from './lib/voice-barge-in';
 import {playFreeSpeech} from './lib/free-speech';
 import {Volume2} from 'lucide-react';
 import {VoiceActivityGate,speechBandRatio} from './lib/voice-activity-gate';
 import { useEffect, useRef, useState } from "react";
-import { Mic, PhoneOff } from "lucide-react";
+
 
 type Props = {
+  initialAudioContext?:AudioContext|null;
   language: "ar" | "en";
   disabled?: boolean;
   onTranscript: (role: "user" | "assistant", text: string) => void;
@@ -40,9 +42,11 @@ function toBase64(samples: Int16Array): string {
   return btoa(binary);
 }
 
-export default function GeminiLiveVoice({ language, disabled, onTranscript }: Props) {
+export default function GeminiLiveVoice({ language, disabled, onTranscript,initialAudioContext }: Props) {
   const ar = language === "ar";
   const [active, setActive] = useState(false);
+  const autoStartedRef=useRef(false);
+  const [retryAvailable,setRetryAvailable]=useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
@@ -52,6 +56,18 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const turnArmedRef=useRef(false);
   const validTurnRef=useRef(false);
   const gateRef=useRef(new VoiceActivityGate());
+  const bargeGateRef=useRef(new VoiceBargeInGate());
+  const preRollRef=useRef<Int16Array[]>([]);
+  const playersRef=useRef(new Set<AudioBufferSourceNode>());
+  const playbackEpochRef=useRef(0);
+  const stopReplyAudio=()=>{
+    playbackEpochRef.current++;bargeGateRef.current.reset();
+    for(const player of playersRef.current){player.onended=null;try{player.stop();}catch{/* Already ended. */}player.disconnect();}
+    playersRef.current.clear();pendingPcmPlaybackRef.current=0;nextPlayTimeRef.current=contextRef.current?.currentTime??0;
+    const cancel=freeSpeechCancelRef.current;freeSpeechCancelRef.current=null;cancel?.();
+    if('speechSynthesis' in window)window.speechSynthesis.cancel();
+    assistantResponseActiveRef.current=false;if(mountedRef.current)setSpeaking(false);
+  };
   const captureTimerRef=useRef(0);
   const silentGainRef=useRef<GainNode|null>(null);
   const peakInputRef=useRef(0);
@@ -59,14 +75,6 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const silenceDurationRef=useRef(0);
   const currentInputRef=useRef(0);
   const [micDiagnostic,setMicDiagnostic]=useState('');
-  const [captureDiagnostic,setCaptureDiagnostic]=useState('frames=0 · rms=0.00000 · audio=idle · track=none');
-  useEffect(()=>{
-    const timer=window.setInterval(()=>{
-      const track=streamRef.current?.getAudioTracks()[0];
-      setCaptureDiagnostic('frames='+inputFramesRef.current+' · rms='+currentInputRef.current.toFixed(5)+' · audio='+(contextRef.current?.state??'idle')+' · track='+(track?(track.muted?'muted':track.readyState):'none'));
-    },500);
-    return()=>window.clearInterval(timer);
-  },[]);
   const visualRef=useRef<HTMLDivElement|null>(null);
   const micAnalyserRef=useRef<AnalyserNode|null>(null);
   const outputAnalyserRef=useRef<AnalyserNode|null>(null);
@@ -150,7 +158,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const cleanup = (expectedSessionId?: number) => {
     if (expectedSessionId !== undefined && sessionIdRef.current !== expectedSessionId) return;
     sessionIdRef.current += 1;
-    stopVisualizer();
+    stopReplyAudio();preRollRef.current=[];stopVisualizer();
     window.clearTimeout(captureTimerRef.current);
     if(mountedRef.current){setThinking(false);setHeardSpeech(false);}
     setConnectingState(false);
@@ -183,7 +191,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      stopVisualizer();
+      stopReplyAudio();preRollRef.current=[];stopVisualizer();
       window.clearTimeout(captureTimerRef.current);
       sessionIdRef.current += 1;
       connectingRef.current = false;
@@ -215,7 +223,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
 
   const start = async () => {
     if (activeRef.current || connectingRef.current || disabled || !mountedRef.current) return;
-    peakInputRef.current=0;inputFramesRef.current=0;setMicDiagnostic('');
+    setRetryAvailable(false);peakInputRef.current=0;inputFramesRef.current=0;setMicDiagnostic('');
     const sessionId = ++sessionIdRef.current;
     const isCurrentSession = () => mountedRef.current && sessionIdRef.current === sessionId;
     setConnectingState(true);
@@ -228,9 +236,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       // iOS requires creation AND the first resume in the original tap, before any await.
       // WebKit can otherwise keep a playback-only audio route on iPhone.
       if('audioSession' in navigator){try{(navigator as any).audioSession.type='play-and-record';}catch{/* Older Safari does not expose audio-session routing. */}}
-      const context: AudioContext = new AudioContextClass();
+      const context: AudioContext = initialAudioContext&&initialAudioContext.state!=="closed"?initialAudioContext:new AudioContextClass();
       contextRef.current = context;
+      context.onstatechange=()=>{if(isCurrentSession()&&activeRef.current&&context.state!=='running'&&context.state!=='closed'){
+        cleanup(sessionId);setRetryAvailable(true);setStatus(ar?'توقف مسار الصوت بسبب مقاطعة من النظام. اضغط إعادة المحاولة.':'System interrupted audio. Select Retry to continue.');
+      }};
       const resumed = context.resume();
+      void resumed.catch(()=>undefined);
       let stream:MediaStream;
       try{
         stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:{ideal:true},noiseSuppression:{ideal:true},autoGainControl:{ideal:false},channelCount:{ideal:1}}});
@@ -301,7 +313,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               },
               inputAudioTranscription: {},
               outputAudioTranscription: {},
-              realtimeInputConfig: { automaticActivityDetection: { disabled: true } },
+              realtimeInputConfig: { automaticActivityDetection: { disabled: true },activityHandling:"START_OF_ACTIVITY_INTERRUPTS" },
               systemInstruction: {
                 parts: [{ text: `You are AL OMDA Ai, a warm Egyptian conversational assistant. Understand informal Arabic, short replies, typos and all Arabic dialects. Mirror the dialect the user actually speaks, including Egyptian, Gulf, Levantine, Maghrebi, Sudanese, Iraqi or Hejazi. Use easy clear Arabic if unclear, and Egyptian as this user's default when there is no stronger cue. Never force one dialect on another. Use short replies, usually one or two sentences, with one useful next move. If a terse message is ambiguous, ask one short clarification in the same dialect. Never claim an action or file exists unless it was actually produced by a tool. Do not exaggerate slang or repeat greetings. Avoid robotic service phrases, lectures, and theatrical delivery. Match the user's language if they switch to English. Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; prioritize that language for input transcription. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
               }
@@ -353,7 +365,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         if (!isCurrentSession()) return;
         if(context.state!=="running"){
           setStatus(ar ? "توقف صوت الميكروفون. أنهِ المحادثة ثم ابدأ مرة أخرى." : "Microphone audio paused. End the chat and start again.");
-          cleanup(sessionId);return;
+          setRetryAvailable(true);cleanup(sessionId);return;
         }
         const input = event.inputBuffer.getChannelData(0);
         let energy = 0;
@@ -361,11 +373,31 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         const rms = Math.sqrt(energy / Math.max(1, input.length));
         inputFramesRef.current++;
         peakInputRef.current=Math.max(peakInputRef.current,rms);currentInputRef.current=rms;
-        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
+        if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current) return;
         const durationMs=input.length/context.sampleRate*1000;
         const spectrum=new Uint8Array(micAnalyserRef.current?.frequencyBinCount??128);
         micAnalyserRef.current?.getByteFrequencyData(spectrum);
         const speechLike=speechBandRatio(spectrum,context.sampleRate,micAnalyserRef.current?.fftSize??256)>=.35;
+        const pcmFrame=downsampleTo16k(input,context.sampleRate);
+        preRollRef.current.push(pcmFrame);
+        while(preRollRef.current.reduce((n,p)=>n+p.length,0)>8000)preRollRef.current.shift();
+        if(assistantResponseActiveRef.current||pendingPcmPlaybackRef.current>0||freeSpeechCancelRef.current){
+          const outputSamples=new Float32Array(outputAnalyserRef.current?.fftSize??256);
+          outputAnalyserRef.current?.getFloatTimeDomainData(outputSamples);
+          const outputRms=Math.sqrt(outputSamples.reduce((n,v)=>n+v*v,0)/outputSamples.length);
+          if(!bargeGateRef.current.process(rms,speechLike,durationMs,outputRms))return;
+          stopReplyAudio();assistantTurnCompleteRef.current=false;validTurnRef.current=false;
+          turnArmedRef.current=true;setTurnArmed(true);gateRef.current.reset();
+          // The already-confirmed interruption includes the pre-roll that detected it.
+          gateRef.current.calibrationMs=600;gateRef.current.noise=.002;gateRef.current.consecutiveMs=300;gateRef.current.voicedMs=350;
+          speechActiveRef.current=true;setHeardSpeech(true);setThinking(false);
+          userTranscriptRef.current='';assistantTranscriptRef.current='';receivedAudioChunks=0;
+          socket.send(JSON.stringify({realtimeInput:{activityStart:{}}}));
+          for(const frame of preRollRef.current)socket.send(JSON.stringify({realtimeInput:{audio:{mimeType:'audio/pcm;rate=16000',data:toBase64(frame)}}}));
+          preRollRef.current=[];silenceDurationRef.current=0;
+          setStatus(ar?'وقفت الرد. اتكلم براحتك، أنا سامعك.':'Reply stopped. I am listening until you finish.');return;
+        }
+        bargeGateRef.current.reset();
         const hasSpeech=turnArmedRef.current && gateRef.current.process(speechLike?rms:0,durationMs);
         if(inputFramesRef.current%12===0){
           const track=stream.getAudioTracks()[0];
@@ -384,6 +416,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             assistantTranscriptRef.current = "";
             receivedAudioChunks = 0;
             socket.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
+            for(const frame of preRollRef.current.slice(0,-1))socket.send(JSON.stringify({realtimeInput:{audio:{mimeType:'audio/pcm;rate=16000',data:toBase64(frame)}}}));
+            preRollRef.current=[];
             speechActiveRef.current = true;
             setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
           }
@@ -413,7 +447,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         }
       };
       stream.getAudioTracks().forEach(track=>{
-        track.onended=()=>{if(isCurrentSession()){setStatus(ar?"توقف الميكروفون. أعد البدء واسمح باستخدامه.":"Microphone stopped. Start again and allow access.");cleanup(sessionId);}};
+        track.onended=()=>{if(isCurrentSession()){setStatus(ar?"توقف الميكروفون. أعد البدء واسمح باستخدامه.":"Microphone stopped. Start again and allow access.");setRetryAvailable(true);cleanup(sessionId);}};
       });
       captureTimerRef.current=window.setTimeout(()=>{
         if(isCurrentSession()&&peakInputRef.current<.0015){
@@ -447,7 +481,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         if (!serverContent) return;
         // Unsolicited/noise-only server content never enters the chat or playback.
         if(!validTurnRef.current)return;
-        if (serverContent.interrupted) nextPlayTimeRef.current = context.currentTime;
+        if (serverContent.interrupted){stopReplyAudio();if(!speechActiveRef.current)resumeListening();return;}
         const inputText = serverContent.inputTranscription?.text;
         if (typeof inputText === "string" && inputText.trim()) userTranscriptRef.current += inputText;
         const outputText = serverContent.outputTranscription?.text;
@@ -486,7 +520,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             pendingPcmPlaybackRef.current += 1;
             // Keep the turn-complete latch set until the next user utterance.
             // Audio chunks can arrive in trailing/duplicate frames after turnComplete.
+            const playbackEpoch=playbackEpochRef.current;playersRef.current.add(player);
             player.onended = () => {
+              playersRef.current.delete(player);if(playbackEpoch!==playbackEpochRef.current)return;
               if (!isCurrentSession()) return;
               pendingPcmPlaybackRef.current = Math.max(0, pendingPcmPlaybackRef.current - 1);
               if (assistantTurnCompleteRef.current && pendingPcmPlaybackRef.current === 0) {
@@ -521,7 +557,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
               freeSpeechCancelRef.current=playFreeSpeech(assistantText,ar?'ar-EG':'en-US',{
                 context,output:outputAnalyserRef.current??context.destination,
                 onSource:source=>{if(isCurrentSession())setVoiceSource(source==='free'?'Free voice · Fish':'Device fallback');},
-                onDone:()=>{freeSpeechCancelRef.current=null;if(!isCurrentSession())return;assistantResponseActiveRef.current=false;resumeListening();},
+                onDone:()=>{freeSpeechCancelRef.current=null;if(!isCurrentSession()||speechActiveRef.current)return;assistantResponseActiveRef.current=false;resumeListening();},
               });
             } else if (mountedRef.current) {
               assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
@@ -543,49 +579,40 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       socket.onclose = () => {
         if (isCurrentSession()) {
           setStatus(ar ? "انقطع الاتصال الصوتي." : "Voice connection ended.");
-          cleanup(sessionId);
+          setRetryAvailable(true);cleanup(sessionId);
         }
       };
     } catch (error) {
       const wasCurrentSession = isCurrentSession();
       cleanup(sessionId);
       if (wasCurrentSession && mountedRef.current) {
+        setRetryAvailable(true);
         const name=error instanceof DOMException?error.name:'';
-        setStatus(name==='NotAllowedError'?(ar?'الميكروفون غير مسموح. من إعدادات الموقع في Safari اسمح بالميكروفون ثم اضغط بدء.':'Microphone permission denied. Allow microphone in Safari website settings, then tap Start.'):name==='NotFoundError'?(ar?'لم نعثر على ميكروفون متاح.':'No microphone was found.'):name==='NotReadableError'?(ar?'الميكروفون مشغول أو تعذر تشغيله. أغلق المكالمات الأخرى وحاول مجددًا.':'Microphone is busy or unavailable. End other calls and try again.'):error instanceof Error ? error.message : labels.unavailable);
+        setStatus(name==='NotAllowedError'?(ar?'الميكروفون غير مسموح. من إعدادات الموقع في Safari اسمح بالميكروفون ثم اضغط إعادة المحاولة.':'Microphone permission denied. Allow microphone in Safari website settings, then select Retry.'):name==='NotFoundError'?(ar?'لم نعثر على ميكروفون متاح.':'No microphone was found.'):name==='NotReadableError'?(ar?'الميكروفون مشغول أو تعذر تشغيله. أغلق المكالمات الأخرى وحاول مجددًا.':'Microphone is busy or unavailable. End other calls and try again.'):error instanceof Error ? error.message : labels.unavailable);
       }
     }
   };
 
-  const stop = () => {
-    if (mountedRef.current) setSpeaking(false);
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
-    }
-    cleanup();
-    setStatus(ar ? "انتهت المحادثة الصوتية." : "Voice conversation ended.");
-  };
+  useEffect(()=>{
+    if(disabled||autoStartedRef.current)return;
+    autoStartedRef.current=true;void start();
+  },[disabled]);
+  useEffect(()=>{
+    const onHidden=()=>{if(document.visibilityState==='hidden'&&(activeRef.current||connectingRef.current)){
+      cleanup();setRetryAvailable(true);setStatus(ar?'توقفت المحادثة عند مغادرة التطبيق. اضغط إعادة المحاولة للمتابعة.':'Voice stopped when the app was hidden. Select Retry to continue.');
+    }};
+    document.addEventListener('visibilitychange',onHidden);return()=>document.removeEventListener('visibilitychange',onHidden);
+  },[ar]);
 
   return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
-    <small className="voice-capture-diagnostic" dir="ltr" data-testid="voice-capture-diagnostic">build {import.meta.env.VITE_APP_BUILD_ID} · {connecting?"connecting":speaking?"speaking":thinking?"thinking":active?(turnArmed?"armed":"ready"):"idle"}<br/>{captureDiagnostic}<br/>{voiceSource}</small>
     <span className="voice-mode-kicker">{ar?"AL OMDA Ai · مساعدك الصوتي":"AL OMDA Ai · VOICE ASSISTANT"}</span>
     <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "AL OMDA Ai يتحدث" : "AL OMDA Ai is speaking") : active ? labels.listening : labels.start}>
       <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "AL OMDA Ai بيتكلم..." : "AL OMDA Ai is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع AL OMDA Ai" : "Start a voice conversation with AL OMDA Ai")}</strong>
-    <button type="button" className="ai-chat-live-test voice-turn-button" disabled={!active||!turnArmed||!heardSpeech||speaking||thinking} onClick={()=>{
-      if(!turnArmedRef.current||!speechActiveRef.current||socketRef.current?.readyState!==WebSocket.OPEN)return;
-      validTurnRef.current=gateRef.current.voicedMs>=350;turnArmedRef.current=false;setTurnArmed(false);
-      socketRef.current.send(JSON.stringify({realtimeInput:{activityEnd:{}}}));speechActiveRef.current=false;
-      if(validTurnRef.current){setThinking(true);setStatus(ar?'جارٍ تجهيز الرد…':'Preparing reply…');}
-      else resumeListening();
-    }}>{ar?'إنهاء دور الكلام الآن':'Finish speaking turn now'}</button>
-
-    <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
-      {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
-      <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>
-    </button>
-
+    {retryAvailable&&!active&&!connecting&&<button type="button" className="ai-chat-live-test" onClick={()=>void start()} disabled={disabled}>{ar?'إعادة المحاولة':'Retry connection'}</button>}
+    <small className="voice-privacy-note">{ar?'الاستماع يبدأ تلقائيًا بعد إذنك. تقدر تقاطع الرد بكلام واضح، ويتوقف الميكروفون عند مغادرة التطبيق. سماعة بميكروفون تقلل الصدى.':'Listening starts automatically after permission. Clear speech can interrupt replies. Capture stops when the app is hidden. A headset reduces speaker echo.'}</small>
     <button type="button" className="ai-chat-live-test" disabled={speaking||thinking||connecting||heardSpeech&&turnArmed} onClick={()=>{
       turnArmedRef.current=false;setTurnArmed(false);validTurnRef.current=false;assistantResponseActiveRef.current=true;setSpeaking(true);
       freeSpeechCancelRef.current=playFreeSpeech(ar?'إزيك! أنا AL OMDA Ai، معاك. قولّي تحب نعمل إيه؟':'Hi! I am AL OMDA Ai. What would you like to do?',ar?'ar-EG':'en-US',{

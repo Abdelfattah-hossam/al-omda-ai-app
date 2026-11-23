@@ -239,6 +239,20 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   const [voiceFallback, setVoiceFallback] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showLiveVoice, setShowLiveVoice] = useState(false);
+  const liveAudioUnlockRef=useRef<AudioContext|null>(null);
+  const openLiveVoice=()=>{
+    // Unlock playback inside the actual opening tap, before the lazy import.
+    const AudioContextClass=window.AudioContext||(window as any).webkitAudioContext;
+    if(AudioContextClass&&!liveAudioUnlockRef.current){try{
+      if('audioSession' in navigator)(navigator as any).audioSession.type='play-and-record';
+      const context:AudioContext=new AudioContextClass();liveAudioUnlockRef.current=context;
+      void context.resume().catch(()=>undefined);
+    }catch{/* Voice component reports unsupported audio or permissions. */}}
+    setShowLiveVoice(true);
+  };
+  useEffect(()=>{if(!showLiveVoice){void liveAudioUnlockRef.current?.close().catch(()=>undefined);liveAudioUnlockRef.current=null;}return()=>{};},[showLiveVoice]);
+  useEffect(()=>()=>{void liveAudioUnlockRef.current?.close().catch(()=>undefined);},[]);
+
   const [mediaStudioOpen,setMediaStudioOpen] = useState(false);
   const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
@@ -1565,7 +1579,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <button type="button" onClick={()=>{setShowChatMenu(false);void createConversation()}} disabled={loading || historyLoading}><Plus size={16}/>{ar ? "محادثة جديدة" : "New chat"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);openSettings()}}><Settings2 size={16}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
         <button type="button" onClick={()=>{setAgentMode(value=>!value);setShowChatMenu(false);}} aria-pressed={agentMode}><Bot size={16}/>{ar ? (agentMode ? "إيقاف وضع الوكيل المحلي" : "تشغيل وضع الوكيل المحلي") : (agentMode ? "Disable local Agent mode" : "Enable local Agent mode")}</button>
-        <button type="button" onClick={()=>{setShowChatMenu(false);setShowLiveVoice(v=>!v)}} aria-expanded={showLiveVoice}><Volume2 size={16}/>{ar ? "المحادثة الصوتية" : "Live voice"}</button>
+        <button type="button" onClick={()=>{setShowChatMenu(false);showLiveVoice?setShowLiveVoice(false):openLiveVoice()}} aria-expanded={showLiveVoice}><Volume2 size={16}/>{ar ? "المحادثة الصوتية" : "Live voice"}</button>
         <div className="ai-chat-menu-divider"/>
         <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA Ai")+": "+m.content).join("\n\n");if(navigator.share){void navigator.share({title:ar?"محادثة مع AL OMDA Ai":"AL OMDA Ai conversation",text:value}).then(()=>setShowChatMenu(false)).catch((shareError)=>{if(shareError instanceof Error && shareError.name!=="AbortError")setError(shareError.message || (ar?"تعذرت مشاركة المحادثة.":"Could not share conversation."));setShowChatMenu(false);});}else if(navigator.clipboard){void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});}else{setError(ar?"المشاركة غير مدعومة في هذا المتصفح.":"Sharing is not supported.");setShowChatMenu(false);}}}><Share2 size={16}/>{ar ? "مشاركة المحادثة" : "Share conversation"}</button>
         <button type="button" onClick={()=>{const value=messages.map(m=>(m.role==="user"?(ar?"أنت":"You"):"AL OMDA Ai")+": "+m.content).join("\n\n");if(navigator.clipboard)void navigator.clipboard.writeText(value).then(()=>setShowChatMenu(false)).catch(()=>{setError(ar?"تعذر نسخ المحادثة.":"Could not copy conversation.");setShowChatMenu(false);});else setError(ar?"النسخ غير مدعوم.":"Clipboard unavailable.");}}><Copy size={16}/>{ar ? "نسخ المحادثة" : "Copy conversation"}</button>
@@ -1712,7 +1726,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
             </div>
             <textarea ref={inputRef} id="ai-chat-input" className="field ai-composer-input" rows={1} maxLength={8000} value={input} onChange={(event)=>setInput(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();void sendMessage();}}} placeholder={copy.placeholder} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}/> 
             <button type="button" className={"ai-chat-mic-button" + (listening ? " is-listening" : "")} aria-label={listening ? copy.stop : copy.mic} title={listening ? copy.stop : copy.mic} onClick={toggleVoiceInput} disabled={!signedIn || loading || historyLoading}><Mic size={17}/></button>
-            {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage || pendingFile ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
+            {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage || pendingFile ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={openLiveVoice} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
           </div>
 
           {(voiceStarting||listening||voiceFallback)&&<div className="ai-dictation-status" role="status" aria-live="polite">{voiceStarting?(ar?'جارٍ بدء خدمة الإملاء…':'Starting dictation…'):listening?(ar?'الميكروفون مفتوح للإملاء، تكلّم الآن. اضغطه للإيقاف.':'Dictation microphone is open. Speak now. Tap it to stop.'):error||copy.voiceUnsupported}{voiceFallback&&<button type="button" className="button button-quiet button-small" onClick={()=>inputRef.current?.focus()}>{copy.keyboardDictation}</button>}</div>}
@@ -1790,7 +1804,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       {showLiveVoice && <div className="ai-chat-modal-backdrop ai-chat-live-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setShowLiveVoice(false);}}>
         <section className="ai-chat-live-modal" role="dialog" aria-modal="true" aria-label={ar ? "المحادثة الصوتية المباشرة" : "Live voice conversation"}>
           <header><span><i/> {ar ? "التحدث الصوتي مع AL OMDA Ai" : "Talk with AL OMDA Ai"}</span><button type="button" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
-          <Suspense fallback={<p role="status">{ar?"جارٍ تحميل المحادثة الصوتية…":"Loading live voice…"}</p>}><GeminiLiveVoice language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/></Suspense>
+          <Suspense fallback={<p role="status">{ar?"جارٍ تحميل المحادثة الصوتية…":"Loading live voice…"}</p>}><GeminiLiveVoice initialAudioContext={liveAudioUnlockRef.current} language={language} disabled={loading || historyLoading || usage?.remaining === 0} onTranscript={handleLiveTranscript}/></Suspense>
           <button type="button" className="ai-chat-live-end" onClick={()=>setShowLiveVoice(false)} aria-label={ar ? "إنهاء المحادثة الصوتية وإغلاق النافذة" : "End voice conversation and close"}><X size={15}/>{ar ? "إنهاء المحادثة الصوتية" : "End voice conversation"}</button>
         </section>
       </div>}

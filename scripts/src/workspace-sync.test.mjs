@@ -1,3 +1,4 @@
+import {VoiceBargeInGate} from '../../artifacts/al-omda-ai/src/lib/voice-barge-in';
 import {avatarDimensions,AVATAR_EDGE} from '../../artifacts/al-omda-ai/src/lib/avatar-image';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -43,4 +44,11 @@ test('avatar resize caps longest edge,keeps aspect ratio and never upscales',()=
 
 test('agent directory controls override palette and disclosure arrows never float',()=>{
  const css=readFileSync(new URL('../../artifacts/al-omda-ai/src/agent-controls.css',import.meta.url),'utf8');assert.ok(css.includes('@layer omda-workspace-palette'));assert.ok(css.includes('background:transparent!important'));assert.ok(css.includes('appearance:none'));assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 32px'));assert.ok(css.includes('float:none!important'));assert.ok(css.includes('.agent-marketplace-page'));assert.ok(!css.includes('AIChat'));
+});
+
+test('barge-in ignores short noise and residual echo but accepts sustained close speech',()=>{
+ const gate=new VoiceBargeInGate();for(let i=0;i<20;i++)assert.equal(gate.process(.004,true,50,.04),false);
+ assert.equal(gate.process(.08,true,100,.04),false);assert.equal(gate.process(.004,false,100,.04),false);
+ for(let i=0;i<5;i++)assert.equal(gate.process(.08,true,50,.04),false);assert.equal(gate.process(.08,true,50,.04),true);
+ gate.reset();for(let i=0;i<10;i++)assert.equal(gate.process(.1,false,100,.04),false);
 });

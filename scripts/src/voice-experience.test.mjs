@@ -56,9 +56,18 @@ test('iPhone capture keeps routing diagnostics and explicit noise gate',()=>{
  assert.ok(voice.includes('noiseSuppression:{ideal:true}'));
  assert.ok(voice.includes('autoGainControl:{ideal:false}'));
  assert.ok(voice.includes('silenceDurationRef.current >= 650'));
- assert.ok(voice.includes('Finish speaking turn now'));
+ assert.ok(!voice.includes('Finish speaking turn now'));
+ assert.ok(!voice.includes('voice-capture-diagnostic'));
+ assert.ok(voice.includes('autoStartedRef.current=true;void start()'));
+ assert.ok(chat.includes('onClick={openLiveVoice}'));
+ assert.ok(chat.includes('const context:AudioContext=new AudioContextClass()'));
+ assert.ok(voice.includes("document.visibilityState==='hidden'"));
  assert.ok(voice.includes("audioSession.type='play-and-record'"));
  assert.ok(voice.includes('mic.connect(silent)'));
  assert.ok(voice.includes('track?.muted'));
  assert.ok(voice.includes('peakInputRef.current.toFixed(5)'));
+});
+
+test('barge-in cancels current and queued playback and keeps permission safeguards',()=>{
+ assert.ok(voice.includes('START_OF_ACTIVITY_INTERRUPTS'));assert.ok(voice.includes('for(const player of playersRef.current)'));assert.ok(voice.includes('player.stop()'));assert.ok(voice.includes('bargeGateRef.current.process'));assert.ok(voice.includes('preRollRef.current'));assert.ok(voice.includes('context.onstatechange='));assert.ok(voice.includes('if(!validTurnRef.current)return'));
 });

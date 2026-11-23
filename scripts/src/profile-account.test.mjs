@@ -54,12 +54,12 @@ test('profile and navigation use equal aligned icon slots, preserving lavender s
  assert.ok(css.includes('transform:none!important;gap:3px!important'));
  assert.ok(palette.includes('background:#373044!important;border:1px solid #645079!important'));
 });
-test('voice screenshot identifies release and input independent of speech gate',()=>{
+test('voice capture keeps input guards without debug UI',()=>{
  const voice=readFileSync('../artifacts/al-omda-ai/src/GeminiLiveVoice.tsx','utf8');
- assert.ok(voice.includes('data-testid="voice-capture-diagnostic"'));
- assert.ok(voice.includes('VITE_APP_BUILD_ID'));
- assert.ok(voice.includes("'frames='+inputFramesRef.current"));
- assert.ok(voice.indexOf('inputFramesRef.current++')<voice.indexOf('if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;'));
+ assert.ok(!voice.includes('data-testid="voice-capture-diagnostic"'));
+ assert.ok(!voice.includes('VITE_APP_BUILD_ID'));
+ assert.ok(voice.includes('inputFramesRef.current++'));
+ assert.ok(voice.indexOf('inputFramesRef.current++')<voice.indexOf('if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current) return;'));
 });
 test('voice layout reserves dynamic rows and prevents footer overlap',()=>{
  const voice=readFileSync('../artifacts/al-omda-ai/src/GeminiLiveVoice.tsx','utf8');
