@@ -86,6 +86,8 @@ try:
   assert evaluate('typeof Object.hasOwn==="function"&&typeof Object.fromEntries==="function"&&typeof Array.prototype.at==="function"&&typeof Array.prototype.findLast==="function"&&typeof String.prototype.replaceAll==="function"&&typeof structuredClone==="function"&&typeof AbortSignal.timeout==="function"'),route
   if route=='/ai':
    assert evaluate('document.querySelectorAll(".ai-chat-markdown p").length>0')
+   assert evaluate('Object.hasOwn({x:1},"x")&&!Object.hasOwn(Object.create({x:1}),"x")&&[1,2].at(-1)===2&&[1,2,3].findLast(x=>x<3)===2&&"a.a".replaceAll(".","-")==="a-a"&&structuredClone(new Map([["k",3]])).get("k")===3')
+   assert evaluate('new Promise(resolve=>{const signal=AbortSignal.timeout(5);signal.addEventListener("abort",()=>resolve(signal.aborted));})')
    print('CHAT_SCREEN',screenshot('omda-huawei-hasown-after-chat.png'))
   print('PASS old APIs missing',route)
   if route=='/':
