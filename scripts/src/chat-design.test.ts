@@ -49,3 +49,10 @@ test('compact turns remove redundant visible labels, empty padding and action di
  assert.ok(!compact.includes('.ai-composer'));
  assert.ok(!compact.includes('scrollTop'));
 });
+test('explicit sides use physical margins in both RTL and LTR without moving composer',()=>{
+ const sides=css.slice(css.indexOf("/* User's explicit physical sides"));
+ assert.ok(sides.includes('.chat-message.user{align-self:flex-start!important;margin-left:0!important;margin-right:auto!important'));
+ assert.ok(sides.includes('.chat-message.assistant{width:fit-content!important'));
+ assert.ok(sides.includes('margin-left:auto!important;margin-right:0!important'));
+ assert.ok(!sides.includes('.ai-composer'));
+});

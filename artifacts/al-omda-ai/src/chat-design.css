@@ -155,3 +155,9 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message
 body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action:hover{background:#24202b!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action svg{width:17px!important;height:17px!important;}
 }
+/* User's explicit physical sides: user LEFT, assistant RIGHT, in either UI language. */
+@layer omda-chat-design {
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{align-self:flex-start!important;margin-left:0!important;margin-right:auto!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:fit-content!important;max-width:100%!important;align-self:flex-end!important;margin-left:auto!important;margin-right:0!important;text-align:right!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant .ai-message-actions{margin-left:auto!important;margin-right:0!important;}
+}

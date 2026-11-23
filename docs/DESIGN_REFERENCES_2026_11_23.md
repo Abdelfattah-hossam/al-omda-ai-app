@@ -219,3 +219,6 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 ## Auto provider priority
 - User requested ordering after all4real generation smoke tests succeeded. Text primary Groq, fallback OpenRouter, Gemini, Cloudflare. Images skip unsupported Cloudflare; long context leads OpenRouter to reduce low-TPM pressure on Groq.
 - Measured smoke latency:Groq790ms,OpenRouter1078ms,Cloudflare601ms,Gemini16335ms. These are one short fixed-prompt sample each, not quality/dialect or sustained-load benchmarks. Kept Cloudflare small model last as conservative quality default, not a measured quality ranking.
+
+## Explicit chat sides
+- User requested physical left for their messages, right for AI. Physical auto margins enforce this in RTL and LTR. Compact44px user turns and unframed assistant text retained, no composer/scroll changes. Tested320/390/1280 geometry and RTL/LTR sides.
