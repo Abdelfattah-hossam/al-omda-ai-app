@@ -103,3 +103,18 @@
  display:grid!important;grid-template-columns:minmax(0,1fr) 40px 40px!important;gap:10px!important;align-items:center!important;
 }
 .app-shell .profile-settings-page .profile-data-card>.setting-row>.profile-heading-icon {grid-column:2;}
+
+@layer omda-workspace-palette {
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link {transform:none!important;gap:3px!important;}
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-icon {
+ display:grid!important;place-items:center!important;flex:none!important;width:28px!important;height:28px!important;
+ padding:0!important;border:1px solid #514767!important;border-radius:8px!important;background:#302c42!important;
+ font-size:inherit!important;line-height:1!important;
+}
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active .mobile-nav-icon {
+ background:#594175!important;border-color:#9472c3!important;box-shadow:inset 0 1px 0 #e3d1ff1a!important;
+}
+.app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link>span:not(.mobile-nav-icon) {
+ min-height:12px!important;display:block!important;line-height:12px!important;white-space:nowrap!important;
+}
+}

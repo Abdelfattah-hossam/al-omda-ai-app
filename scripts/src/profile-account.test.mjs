@@ -51,7 +51,7 @@ test('profile and navigation use equal aligned icon slots, preserving lavender s
  assert.ok(app.includes('className="mobile-nav-icon"'));
  assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 40px 40px!important'));
  assert.ok(css.includes('width:40px!important;height:40px!important;margin:0!important'));
- assert.ok(palette.includes('transform:none!important;gap:3px!important'));
+ assert.ok(css.includes('transform:none!important;gap:3px!important'));
  assert.ok(palette.includes('background:#373044!important;border:1px solid #645079!important'));
 });
 test('voice screenshot identifies release and input independent of speech gate',()=>{

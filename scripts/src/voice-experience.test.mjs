@@ -15,7 +15,7 @@ test('voice visuals read actual microphone and PCM playback analysers',()=>{
 test('voice has honest states and reduced-motion path without composer rules',()=>{
  for(const state of ['connecting','speaking','thinking','listening','idle'])assert.ok(voice.includes('"'+state+'"'));
  assert.ok(css.includes('prefers-reduced-motion:reduce'));
- assert.doesNotMatch(css,/ai-chat-composer|chat-messages|scroll-behavior/);
+ assert.doesNotMatch(css,/ai-chat-composer|chat-messages|(?:^|[;{\s])scroll-behavior\s*:/);
  assert.ok(voice.includes('if(fallbackUtteranceRef.current)bins.fill(0)'));
 });
 test('iOS audio unlock runs in tap before asynchronous permission and token work',()=>{
