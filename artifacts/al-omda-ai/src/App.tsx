@@ -8,7 +8,7 @@ import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import NetworkStatus from './NetworkStatus';
 import AgentDirectory from './AgentDirectory';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 // Route-level code splitting: the chat page (with its markdown renderer) and
 // the secondary workspaces only download when their route is visited.
 const MediaStudio = lazy(() => import('./MediaStudio'));
@@ -778,6 +778,7 @@ function GuestWelcomeNudge({ isAr, onSignup, onDismiss }: { isAr: boolean; onSig
 
 function App() {
   const [location, setLocation] = useLocation();
+  const locationSearch=useSearch();
   const [saved, setSaved] = useState(readInitial);
   const [curtainOpen, setCurtainOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -967,7 +968,7 @@ function App() {
   const detailMatch = path.match(/^\/history\/([^/]+)$/);
   const currentTask = useMemo(() => tasks.find((task) => task.id === (detailMatch?.[1] ?? selectedTaskId ?? new URLSearchParams(window.location.search).get('task'))), [tasks, detailMatch?.[1], selectedTaskId, location]);
   const requestedSpecialty = new URLSearchParams(window.location.search).get('specialty');
-  const focusTarget = new URLSearchParams(location.includes('?') ? location.slice(location.indexOf('?') + 1) : '').get('focus');
+  const focusTarget = new URLSearchParams(locationSearch).get('focus');
   const focusedHref = (href:string, target:string) => {
     const url = new URL(href, window.location.origin);
     url.searchParams.set('focus', target);
@@ -1065,7 +1066,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) target.focus({ preventScroll: true });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [location, focusTarget, saved.reduceMotion]);
+  }, [location, focusTarget, saved.reduceMotion, authLoading]);
 
   useEffect(() => {
     const onKeyDown = (event:KeyboardEvent) => {
@@ -2259,7 +2260,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </details>
       {agentGuideNotice&&<p className="agent-guide-notice" role="status">{agentGuideNotice}</p>}
     </details>
-    <details className="panel panel-pad agent-advanced-tools">
+    <details className="panel panel-pad agent-advanced-tools" open={focusTarget==='advanced-connections'?true:undefined}>
       <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات متقدمة':'ADVANCED'}</span><h2>{isAr?'ربط الوكلاء والأدوات المتقدمة':'Agent runtime & advanced tools'}</h2><p>{isAr?'إعدادات الاتصال والتشغيل والمتصفح ومزودي النماذج للمستخدمين المتقدمين.':'Runtime, browser, HTTP, and model-provider settings for advanced users.'}</p></div><Settings2 size={18}/></div></summary>
       <div className="agent-advanced-tools-content" id="advanced-connections">
       <HostedConnections ar={isAr}/>
