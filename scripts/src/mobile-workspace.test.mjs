@@ -15,12 +15,15 @@ test('workspace content reaches viewport and reserves end padding instead of bla
  assert.ok(css.includes('.app-shell:not([data-chat-active="true"])>.main-area'));
  assert.doesNotMatch(css,/overflow(?:-y)?\s*:|scroll-behavior\s*:/);
 });
-test('chat icon alignment only translates the four glyphs on mobile',()=>{
+test('chat controls center within unchanged composer anchoring',()=>{
  const icons=readFileSync('../artifacts/al-omda-ai/src/chat-composer-alignment.css','utf8');
  for(const cls of ['ai-attach-image-button','ai-plus-button','ai-chat-mic-button','ai-voice-button'])assert.ok(icons.includes(cls));
  assert.ok(icons.includes('>svg'));
- assert.ok(icons.includes('translate:0 -3px'));
- assert.doesNotMatch(icons,/(?:height|bottom|padding|position|overflow)\s*:/);
+ assert.ok(icons.includes('translate:none!important'));
+ assert.ok(icons.includes('align-items:center!important'));
+ assert.ok(icons.includes('line-height:20px!important'));
+ assert.ok(icons.includes('background:#0b0b0b!important'));
+ assert.doesNotMatch(icons,/ai-chat-composer\s*\{|chat-messages|scroll-behavior/);
 });
 
 test('workspace viewport is edge anchored, without touching chat',()=>{
