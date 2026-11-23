@@ -210,3 +210,8 @@ Voice source references checked live: https://openrouter.ai/fish-audio/s2.1-pro-
 - Local LM Studio/Ollama model Save/apply persists validated loopback-only endpoint/model under .omda/local-model.json, mode0600, keeps backup on revision, and is loaded for new runtime invocations. Remote endpoints, credentials, keys and query URLs rejected. Command execution permissions remain computer-side environment only.
 - Browser policy already applied through Runtime save; failed saves now preserve the typed hostname. Desktop inspection, HTTP role compare/history and approval-gated local delegation remain real Runtime features, not cloud remote-control features.
 - Lavender panels,44px actions, RTL, LTR endpoint inputs, responsive fields and wrapped status/model text. Checked320/390 widths. No chat layout or keyboard changes.
+
+## Compact chat turns after physical iPhone screenshot
+- Reproduced user's short Arabic exchange at390x844 before/after. Old user turn89.5px and assistant139.5px were caused by visible role labels, flex gap11px, large padding, framed action row.
+- User bubble now44.25px for one line, assistant69.25px including40px accessible action targets. Assistant is flowing text with no enclosing card or divider. Role labels remain visually hidden for accessibility; message text, copy and listen actions retained.
+- Lavender palette and charcoal canvas kept; buttons icon-only and transparent.320px wrapping inspected, desktop1280 inspected. Composer box unchanged at390:10,749,370,56. No scroll handler or composer changes. Physical Safari acceptance still not verified.

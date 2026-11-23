@@ -38,3 +38,8 @@ body .app-shell[data-chat-active="true"] .ai-message-actions {border-color:#493a
 body .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row>svg{color:#c8a9f5!important}
 body .app-shell[data-chat-active="true"] .ai-chat-page .ai-chat-provider-row i.is-ready{color:#b79aef!important;background:#b79aef!important;box-shadow:0 0 0 3px #b79aef26!important}
 }
+/* Compact icon-only actions, same lavender colors without card-like fills. */
+@layer omda-chat-palette {
+body .app-shell[data-chat-active="true"] .ai-chat-main .ai-message-actions button{background:transparent!important;border-color:transparent!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .ai-message-actions button:hover{background:#24202b!important;}
+}

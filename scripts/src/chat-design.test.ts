@@ -39,3 +39,13 @@ test("Canvas has an actual DOM-updating sample without widening sandbox permissi
  assert.ok(chat.includes("textContent='تم التشغيل بنجاح!'"));
  assert.ok(!chat.includes('sandbox="allow-scripts allow-modals"'));
 });
+test('compact turns remove redundant visible labels, empty padding and action dividers without touching composer',()=>{
+ const compact=css.slice(css.indexOf('/* Compact conversation rhythm'));
+ assert.ok(compact.includes('.chat-message.user{width:fit-content'));
+ assert.ok(compact.includes('padding:8px 14px!important'));
+ assert.ok(compact.includes('.chat-message.assistant{width:100%'));
+ assert.ok(compact.includes('clip-path:inset(50%)'));
+ assert.ok(compact.includes('.ai-message-actions{width:fit-content'));
+ assert.ok(!compact.includes('.ai-composer'));
+ assert.ok(!compact.includes('scrollTop'));
+});
