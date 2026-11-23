@@ -223,7 +223,7 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
           {channels.length === 0 ? <p className="page-subtitle">{isAr ? "لا توجد مبيعات مدفوعة أو مستردة." : "No paid or refunded transactions to distribute."}</p> : <div style={{ display: "grid", gap: 14, marginTop: 16 }}>
             {channels.map((item) => <div key={item.name} style={{ display: "grid", gap: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><strong>{item.name}</strong><span>{money(item.net, currency, language)}</span></div>
-              <div style={{ height: 9, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}><div style={{ width: Math.max(0, item.net) / maxChannel * 100 + "%", height: "100%", borderRadius: 99, background: "var(--accent,#bda06b)" }}/></div>
+              <div style={{ height: 9, borderRadius: 99, background: "var(--border)", overflow: "hidden" }}><div style={{ width: Math.max(0, item.net) / maxChannel * 100 + "%", height: "100%", borderRadius: 99, background: "var(--accent,#8d6bbd)" }}/></div>
               <small className="page-subtitle">{item.paidCount} {isAr ? "مدفوعة" : "paid"} · {item.refundCount} {isAr ? "مستردة" : "refunded"}</small>
             </div>)}
           </div>}

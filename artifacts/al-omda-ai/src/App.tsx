@@ -1,3 +1,4 @@
+import ProfileUsage from './ProfileUsage';
 import './sales-dashboard.css';
 import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
@@ -88,7 +89,7 @@ function renderTaskWorkbookPreview(data: TaskSpreadsheet, isAr: boolean): ReactN
       {sheets.length > 1 && <strong style={{display:"block",marginBottom:7}}>{sheet.name}</strong>}
       <div style={{overflowX:"auto",maxWidth:"100%"}}>
         <table dir={isAr?"rtl":"ltr"} style={{borderCollapse:"collapse",minWidth:560,width:"100%",fontSize:12}}>
-          <thead><tr>{sheet.columns.map((column,columnIndex)=><th key={columnIndex} style={{padding:8,border:"1px solid var(--border,#59616c)",background:"rgba(190,160,100,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
+          <thead><tr>{sheet.columns.map((column,columnIndex)=><th key={columnIndex} style={{padding:8,border:"1px solid var(--border,#59616c)",background:"rgba(137,100,190,.13)",textAlign:"start"}}>{column}</th>)}</tr></thead>
           <tbody>{sheet.rows.map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,cellIndex)=><td key={cellIndex} style={{padding:8,border:"1px solid var(--border,#59616c)"}}>{cell}</td>)}</tr>)}</tbody>
         </table>
       </div>
@@ -736,7 +737,7 @@ function TaskGeneratedFiles({ taskId, taskRequest, isAr }: { taskId: string; tas
             ? <p key={blockIndex} style={{margin:0,overflowWrap:'anywhere'}}>{block.text}</p>
             : <div key={blockIndex} style={{overflowX:'auto'}}>
                 {block.type === 'sheet' && <strong style={{display:'block',margin:'4px 0 6px'}}>{block.name}</strong>}
-                <table dir="auto" style={{width:'100%',borderCollapse:'collapse',tableLayout:'auto'}}><tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => { const Cell = (block.type === 'table' || block.type === 'sheet') && rowIndex === 0 ? 'th' : 'td'; return <Cell key={cellIndex} style={{border:'1px solid #3a3426',padding:'8px 10px',textAlign:'start',whiteSpace:'pre-wrap',overflowWrap:'anywhere',verticalAlign:'top',fontWeight:rowIndex === 0 ? 700 : 400,background:rowIndex === 0 ? 'rgba(190,160,100,.16)' : 'transparent'}}>{cell}</Cell>; })}</tr>)}</tbody></table>
+                <table dir="auto" style={{width:'100%',borderCollapse:'collapse',tableLayout:'auto'}}><tbody>{block.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => { const Cell = (block.type === 'table' || block.type === 'sheet') && rowIndex === 0 ? 'th' : 'td'; return <Cell key={cellIndex} style={{border:'1px solid #2e263a',padding:'8px 10px',textAlign:'start',whiteSpace:'pre-wrap',overflowWrap:'anywhere',verticalAlign:'top',fontWeight:rowIndex === 0 ? 700 : 400,background:rowIndex === 0 ? 'rgba(137,100,190,.16)' : 'transparent'}}>{cell}</Cell>; })}</tr>)}</tbody></table>
               </div>)}
         </div>}
         {!previewLoading && !previewUrl && previewText && <pre dir="auto" style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',maxHeight:340,overflow:'auto',background:'#10141b',border:'1px solid #2a3038',borderRadius:10,padding:12,fontSize:12,lineHeight:1.8,margin:0}}>{previewText}</pre>}
@@ -1696,7 +1697,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                  <div><button type="button" className="button button-primary button-small" onClick={()=>void downloadTaskWord(getTaskWordDocument(result)!,task.id).catch((error)=>setWorkspaceError(readApiError(error,isAr?"تعذر حفظ أو تنزيل ملف Word.":"Could not save or download the Word file.")))}><FileText size={14}/>{isAr?'حفظ وتنزيل مستند Word (.docx)':'Save & download Word (.docx)'}</button></div>
                  <div style={{padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
                    {getTaskWordDocument(result)!.paragraphs.map((p,i)=><p key={i} style={{margin:'5px 0',lineHeight:1.8}}>{p}</p>)}
-                   <div style={{overflowX:'auto'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:480,width:'100%',fontSize:12}}><thead><tr>{getTaskWordDocument(result)!.columns.map((column,i)=><th key={i} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(190,160,100,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead><tbody>{getTaskWordDocument(result)!.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody></table></div>
+                   <div style={{overflowX:'auto'}}><table dir={isAr?'rtl':'ltr'} style={{borderCollapse:'collapse',minWidth:480,width:'100%',fontSize:12}}><thead><tr>{getTaskWordDocument(result)!.columns.map((column,i)=><th key={i} style={{padding:8,border:'1px solid var(--border,#59616c)',background:'rgba(137,100,190,.13)',textAlign:'start'}}>{column}</th>)}</tr></thead><tbody>{getTaskWordDocument(result)!.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j} style={{padding:8,border:'1px solid var(--border,#59616c)'}}>{cell}</td>)}</tr>)}</tbody></table></div>
                  </div>
                </div> : <Suspense fallback={<pre style={{margin:0,whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit'}}>{result}</pre>}><TaskResultMarkdown content={result}/></Suspense>;
     return <section className="panel plan-card" id="task-plan">
@@ -1719,9 +1720,9 @@ pnpm --filter @workspace/scripts agent:runtime`;
               <textarea className="step-edit" value={editComplete} onChange={(event) => setEditComplete(event.target.value)} aria-label={t('completionCheck')} />
             </div> : <strong>{step.text}</strong>}
             <small>{step.state === 'approved' ? t('approvedStep') : step.state === 'rejected' ? t('rejectedStep') : isCurrent ? t('pendingStep') : ''}</small>
-            {(() => { const guidance = getStepGuidance(task.specialty,index,language); return <div style={{display:'grid',gap:5,marginTop:9,padding:'9px 11px',borderRadius:8,background:'rgba(198,167,108,0.07)',border:'1px solid rgba(198,167,108,0.16)'}}>
-              <div><small style={{display:'block',color:'#c6a76c',fontWeight:700,marginBottom:2}}>{t('expectedOutput')}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{step.output ?? guidance.output}</span></div>
-              <div><small style={{display:'block',color:'#c6a76c',fontWeight:700,marginBottom:2}}>{t('completionCheck')}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{step.complete ?? guidance.complete}</span></div>
+            {(() => { const guidance = getStepGuidance(task.specialty,index,language); return <div style={{display:'grid',gap:5,marginTop:9,padding:'9px 11px',borderRadius:8,background:'rgba(146,108,198,0.07)',border:'1px solid rgba(146,108,198,0.16)'}}>
+              <div><small style={{display:'block',color:'#926cc6',fontWeight:700,marginBottom:2}}>{t('expectedOutput')}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{step.output ?? guidance.output}</span></div>
+              <div><small style={{display:'block',color:'#926cc6',fontWeight:700,marginBottom:2}}>{t('completionCheck')}</small><span style={{fontSize:12,lineHeight:1.6,color:'var(--text-secondary,#c5c8ce)'}}>{step.complete ?? guidance.complete}</span></div>
             </div>; })()}
             {step.result && <div style={{marginTop:12,padding:12,borderRadius:9,border:'1px solid rgba(74,190,145,.28)',background:'rgba(74,190,145,.06)'}}>
                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8,color:'#72d6ad',fontWeight:700,fontSize:12}}><CheckCheck size={14}/>{isAr?'المخرج المنفذ':'Executed deliverable'}{step.executedAt && <span style={{marginInlineStart:'auto',opacity:.7,fontWeight:400}}>{dateLabel(step.executedAt,language)}</span>}</div>
@@ -1733,10 +1734,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
              {step.revisionHistory && step.revisionHistory.length > 0 && <div style={{display:'grid',gap:8,marginTop:12}}><strong style={{fontSize:12}}>{isAr?'سجل النسخ السابقة':'Previous versions'}</strong>{step.revisionHistory.map((revision,revisionIndex)=><details key={revision.revisionRequestedAt+revisionIndex} style={{padding:9,border:'1px solid var(--border,#59616c)',borderRadius:8}}><summary style={{cursor:'pointer',fontSize:12}}>{isAr?'النسخة السابقة':'Previous version'} · {dateLabel(revision.executedAt ?? revision.revisionRequestedAt,language)}</summary><p style={{fontSize:12,whiteSpace:'pre-wrap',lineHeight:1.7}}>{revision.note}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:12,maxHeight:260,overflow:'auto'}}>{revision.result}</pre></details>)}</div>}
              {step.result && step.state === 'approved' && <div style={{display:'grid',gap:8,marginTop:10}} data-testid={`step-file-action-${step.id}`}>
                <div className="step-actions"><button type="button" data-testid={`save-step-file-${step.id}`} className="button button-quiet button-small" disabled={fileActionBusy || !authUser || task.demo} onClick={()=>void proposeStepFile(task,step)}><Download size={13}/>{isAr?'حفظ نتيجة المرحلة كملف Markdown':'Save stage result as Markdown file'}</button></div>
-               {fileActionProposal && fileActionProposal.taskId === task.id && fileActionProposal.stepId === step.id && <div role="dialog" aria-label={isAr?'مراجعة إجراء كتابة':'Review write action'} style={{display:'grid',gap:8,padding:12,border:'1px solid var(--gold,#c9a55c)',borderRadius:10,background:'var(--surface,#10151b)'}}>
+               {fileActionProposal && fileActionProposal.taskId === task.id && fileActionProposal.stepId === step.id && <div role="dialog" aria-label={isAr?'مراجعة إجراء كتابة':'Review write action'} style={{display:'grid',gap:8,padding:12,border:'1px solid var(--gold,#895cc9)',borderRadius:10,background:'var(--surface,#10151b)'}}>
                  <strong style={{fontSize:13}}>{isAr?'مراجعة قبل التنفيذ: إجراء كتابة يحتاج موافقتك':'Review before running: a write action needs your approval'}</strong>
                  {fileActionProposal.disclosure.map((line,lineIndex)=><p key={lineIndex} style={{margin:0,fontSize:12,lineHeight:1.8,overflowWrap:'anywhere'}}>{line}</p>)}
-                 {fileActionProposal.alreadySaved && <p style={{margin:0,fontSize:12,color:'#e0b84f'}}>{isAr?'هذا الملف نفسه محفوظ مسبقًا لهذه المرحلة.':'This exact file is already saved for this stage.'}</p>}
+                 {fileActionProposal.alreadySaved && <p style={{margin:0,fontSize:12,color:'#8b4fe0'}}>{isAr?'هذا الملف نفسه محفوظ مسبقًا لهذه المرحلة.':'This exact file is already saved for this stage.'}</p>}
                  <div className="step-actions">
                    <button type="button" data-testid={`approve-step-file-${step.id}`} className="button button-primary button-small" disabled={fileActionBusy || fileActionProposal.alreadySaved} onClick={()=>void decideStepFile('approve')}><Check size={12}/>{isAr?'اعتماد وحفظ الملف':'Approve and save'}</button>
                    <button type="button" data-testid={`reject-step-file-${step.id}`} className="button button-danger button-small" disabled={fileActionBusy} onClick={()=>void decideStepFile('reject')}><X size={12}/>{isAr?'رفض':'Reject'}</button>
@@ -1771,8 +1772,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           const blob = new Blob([parts.join('\n')], { type:'text/markdown;charset=utf-8' });
           return saveAndDownloadTaskArtifact(blob, safeArtifactName(task.title,'AL-OMDA-project') + '.md', 'text/markdown;charset=utf-8', authUser && !task.demo ? task.id : undefined);
         };
-        return <div data-testid={`final-project-${task.id}`} style={{display:'grid',gap:12,marginTop:16,padding:14,borderRadius:12,border:'1px solid rgba(198,167,108,0.35)',background:'rgba(198,167,108,0.06)'}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,color:'#c6a76c',fontWeight:700}}><CheckCheck size={16}/>{t('finalProject')}</div>
+        return <div data-testid={`final-project-${task.id}`} style={{display:'grid',gap:12,marginTop:16,padding:14,borderRadius:12,border:'1px solid rgba(146,108,198,0.35)',background:'rgba(146,108,198,0.06)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,color:'#926cc6',fontWeight:700}}><CheckCheck size={16}/>{t('finalProject')}</div>
           <small style={{color:'var(--text-secondary,#aeb4bd)'}}>{t('finalProjectHint')}</small>
           {typedSteps.map((step) => <div key={step.id} style={{display:'grid',gap:9,padding:12,border:'1px solid var(--border,#59616c)',borderRadius:9,background:'var(--surface,#10151b)'}}>
             <strong style={{fontSize:13}}>{step.text}</strong>
@@ -2230,7 +2231,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         {localAgentMessage&&<div className="section-meta" role="status" style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere",maxHeight:240,overflow:"auto",flex:"1 1 280px"}}>{localAgentMessage}</div>}
       </div>
       {localAgentSessionId&&<p className="section-meta" style={{marginTop:8}}>{isAr?'رقم الجلسة المحفوظة: ':'Saved session: '}{localAgentSessionId}</p>}
-      {localAgentPending.length>0&&<div className="panel panel-pad" style={{marginTop:16,borderColor:'rgba(190,155,91,.45)'}}>
+      {localAgentPending.length>0&&<div className="panel panel-pad" style={{marginTop:16,borderColor:'rgba(132,91,190,.45)'}}>
         <h3 className="section-title">{isAr?'إجراءات تنتظر موافقتك':'Actions awaiting your approval'}</h3>
         {localAgentPending.map(item=><div key={item.id} style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
           <strong>{item.tool}</strong><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,marginTop:6}}>{JSON.stringify(item.arguments,null,2)}</pre>
@@ -2461,8 +2462,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </section>`).join('');
     return `<!doctype html><html lang="${isAr?'ar':'en'}" dir="${direction}"><head><meta charset="utf-8"><title>${title}</title><style>
       body{font-family:Arial,Tahoma,sans-serif;color:#20242a;line-height:1.8;margin:32px;direction:${direction}}
-      h1{font-size:24px;border-bottom:2px solid #b89a61;padding-bottom:12px}
-      h2{font-size:17px;color:#6d552b;margin-bottom:8px}h3{font-size:15px;margin-bottom:4px}
+      h1{font-size:24px;border-bottom:2px solid #8561b8;padding-bottom:12px}
+      h2{font-size:17px;color:#462b6d;margin-bottom:8px}h3{font-size:15px;margin-bottom:4px}
       .meta{color:#555;font-size:12px;margin-bottom:22px}.step{break-inside:avoid;border-bottom:1px solid #ddd;padding:12px 0}
       pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:12px;border:1px solid #ddd;font:13px/1.7 Arial,Tahoma,sans-serif}
       .muted{color:#666;font-size:11px}.failure{color:#a32626;background:#fff2f2;padding:8px}
@@ -2739,7 +2740,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
                   {executionTotal > 0 ? <>
                     <span style={{width:successShare + '%',background:'#50e3a4'}}/>
                     <span style={{width:failureShare + '%',background:'#ff687b'}}/>
-                  </> : <span style={{width:'100%',background:'rgba(241,199,111,.35)'}}/>}
+                  </> : <span style={{width:'100%',background:'rgba(167,121,231,.35)'}}/>}
                 </div>
               </div>
               <div className="market-signals">
@@ -2795,13 +2796,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>
       </div>
       <div className="profile-welcome-stats">
-        <div><strong>{tasks.length}</strong><span>{isAr?'إجمالي المهام':'Total tasks'}</span></div>
-        <div><strong>{tasks.filter(item=>item.status==='approved').length}</strong><span>{isAr?'مهام معتمدة':'Approved'}</span></div>
-        <div><strong>{tasks.filter(item=>item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
+        <div><strong>{tasks.filter(item=>!item.demo).length}</strong><span>{isAr?'مشاريعك':'Your projects'}</span></div>
+        <div><strong>{tasks.filter(item=>!item.demo && item.status==='approved').length}</strong><span>{isAr?'مهام معتمدة':'Approved'}</span></div>
+        <div><strong>{tasks.filter(item=>!item.demo && item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
       </div>
     </section>
+    <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
     <div className="profile-settings-layout">
-              <section className="panel panel-pad profile-main-card profile-account-profile-card profile-account-first" id="profile-account-card">
+              <section className="panel panel-pad profile-account-profile-card profile-account-first" id="profile-account-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><LockKeyhole size={18}/></div>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && !authUser && <>
@@ -2822,6 +2824,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authActive')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceLoadError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
         
+      </section>
+      <section className="panel panel-pad profile-main-card" id="profile-personal">
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل العمدة.':'Update the details shown across your workspace.'}</p></div><UserRound size={19}/></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || defaultDisplayName}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
         <div className="profile-fields-grid">
@@ -2831,7 +2835,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} data-testid="button-save-profile"><Check size={14}/>{savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
         {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
       </section>
-              <details className="panel panel-pad profile-setting-card profile-accordion">
+              <details open className="panel panel-pad profile-setting-card profile-accordion" id="profile-preferences">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة وتقليل الحركة.':'Your language and reduced-motion preferences.'}</p></div><Settings2 size={18}/></div></summary>
           <div className="setting-row"><div><strong>{t('language')}</strong><small>{t('languageDesc')}</small></div><button className="button button-quiet button-small" onClick={toggleLanguage}>{isAr?'العربية':'English'} <ChevronDown size={12}/></button></div>
           <div className="setting-row"><div><strong>{isAr?"تقليل الحركة والمؤثرات":"Reduce motion"}</strong><small>{isAr?"إيقاف حركات الخلفيات والوميض والانتقالات لتجربة أهدأ.":"Reduce animated backgrounds, button glow, and transitions."}</small></div><button type="button" role="switch" aria-checked={Boolean(saved.reduceMotion)} className={"toggle "+(saved.reduceMotion?"on":"")} onClick={()=>setSaved((prev)=>({...prev,reduceMotion:!prev.reduceMotion}))} aria-label={isAr?"تقليل الحركة":"Reduce motion"}/></div>
@@ -2839,6 +2843,14 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
       
       <div className="profile-settings-side">
+        <ProfileUsage signedIn={Boolean(authUser)} isAr={isAr}/>
+        <section className="panel panel-pad profile-data-card" id="profile-data">
+          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات والأجهزة':'DATA & DEVICES'}</span><h2>{isAr?'مساحة حسابك':'Your account workspace'}</h2><p>{isAr?'حالة البيانات المحمّلة في هذه الجلسة وأدوات تنزيلها.':'Data loaded in this session and tools to download it.'}</p></div><ShieldCheck size={20}/></div>
+          <div className="setting-row"><div><strong>{isAr?'مصدر مساحة العمل':'Workspace source'}</strong><small>{!authUser?(isAr?'معاينة هذا الجهاز، سجّل الدخول لحفظ المشاريع بحسابك.':'Device preview. Sign in to save projects to your account.'):workspaceLoadError?(isAr?'تعذر تحميل مساحة الحساب.':'Could not load account workspace.'):workspaceLoaded?(isAr?'تم تحميل مساحة الحساب لهذه الجلسة.':'Account workspace loaded for this session.'):(isAr?'جارٍ تحميل مساحة الحساب…':'Loading account workspace…')}</small></div><Monitor size={19}/></div>
+          <p className="account-hint">{isAr?'اللغة وتقليل الحركة محفوظان على هذا المتصفح. لا تتوفر قائمة بالأجهزة أو جلسات الدخول الأخرى.':'Language and reduced motion are saved in this browser. A list of other devices or sign-in sessions is not available.'}</p>
+          <div className="profile-actions-row"><button type="button" className="button button-quiet button-small" disabled={!tasks.some(task=>!task.demo)} onClick={()=>void exportTasksSheet(tasks.filter(task=>!task.demo))}><Download size={14}/>{isAr?'تنزيل مشاريعك CSV':'Download projects CSV'}</button><Link href="/assets" className="button button-quiet button-small"><FileText size={14}/>{isAr?'الملفات والمخرجات':'Files & deliverables'}</Link></div>
+          <small className="account-hint">{isAr?'تصدير المشاريع يتضمن الطلبات والخطوات والنتائج، ولا يتضمن سجل المحادثات.':'Project export includes requests, steps, and results, not chat history.'}</small>
+        </section>
         <section className="panel panel-pad profile-features-card">
           <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><Compass size={18}/></div>
           <div className="profile-feature-grid">
@@ -2997,7 +3009,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </section>
       </div>
       <div className="sidebar-bottom">
-        <div className="control-note"><ShieldCheck size={17} color="#d0ae70"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div>
+        <div className="control-note"><ShieldCheck size={17} color="#9870d0"/><strong>{t('control')}</strong><p>{t('controlText')}</p></div>
         <div className="sidebar-account-card">
           <span className="avatar">{name.charAt(0)||'ع'}</span>
           <span className="sidebar-account-copy"><strong>{name}</strong><small>{authUser?.email||org}</small></span>
