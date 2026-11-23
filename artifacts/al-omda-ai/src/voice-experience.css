@@ -2,13 +2,10 @@
 body .app-shell[data-chat-active="true"] .ai-chat-live-modal{background:radial-gradient(ellipse at 50% 25%,#281a4b80,transparent 58%),#100d1c!important;border:1px solid #75638f!important;border-radius:26px!important;color:#f4eeff!important;box-shadow:0 26px 90px #000b!important}
 body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice{gap:14px!important;padding:14px 8px!important;--voice-level:0}
 body .app-shell[data-chat-active="true"] .voice-mode-kicker{font-size:10px;letter-spacing:.16em;color:#c9b7e4}
-body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap{width:190px!important;height:190px!important;flex:none;isolation:isolate}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap{width:190px!important;height:190px!important;flex:none;isolation:auto}
 body .app-shell[data-chat-active="true"] .omda-voice-orb-wrap:before,body .app-shell[data-chat-active="true"] .omda-voice-orb-wrap:after{inset:8px!important;border-color:#ab85fa38!important;animation:none!important;transform:scale(calc(1 + var(--voice-level)*.16));opacity:calc(.25 + var(--voice-level)*.7);transition:transform .08s,opacity .08s}
 body .app-shell[data-chat-active="true"] .omda-voice-orb-wrap:after{inset:22px!important;border-color:#78d4ff55!important}
-body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{width:134px!important;height:142px!important;border-radius:43% 57% 58% 42% / 42% 42% 58% 58%!important;background:radial-gradient(ellipse at 22% 12%,#f1d0ff 0%,#bb76f5 18%,transparent 42%),radial-gradient(ellipse at 80% 70%,#6be7ff 0%,#6c90ee 23%,transparent 55%),conic-gradient(from 40deg,#25205a,#a06fea,#dfacf6,#546cec,#181631,#a06fea)!important;box-shadow:inset 8px 0 19px #e9caff88,inset -12px -6px 26px #402273,0 0 38px #9260ed55!important;animation:voice-reference-turn 12s ease-in-out infinite!important;transform:scale(calc(1 + var(--voice-level)*.15))!important;filter:saturate(calc(1 + var(--voice-level)*.6))!important;transition:transform .08s,filter .08s!important}
-body .app-shell[data-chat-active="true"] .omda-voice-orb span{border-color:#e9d8ff77!important;mix-blend-mode:screen;animation:voice-orbit 8s ease-in-out infinite!important}
-body .app-shell[data-chat-active="true"] .omda-voice-orb span:nth-child(2){animation-delay:-3s!important}
-body .app-shell[data-chat-active="true"] .omda-voice-orb span:nth-child(3){animation-delay:-5s!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{display:block!important;width:160px!important;height:160px!important;overflow:visible!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;animation:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(calc(1 + var(--voice-level)*.12))!important;transition:transform .08s!important}
 body .app-shell[data-chat-active="true"] .voice-live-wave{width:min(100%,290px);height:45px;display:flex;align-items:center;justify-content:center;gap:4px;direction:ltr}
 body .app-shell[data-chat-active="true"] .voice-wave-bar{display:block;width:4px;height:calc(3px + var(--bar-level,0)*37px);border-radius:8px;background:linear-gradient(#e3b8ff,#9e7af4,#68caff);opacity:calc(.35 + var(--bar-level,0)*.65);transition:height .08s,opacity .08s}
 body .app-shell[data-chat-active="true"] .voice-state-label{font-size:12px;color:#d8c3fb;background:#9b73d51a;border:1px solid #9b73d536;border-radius:99px;padding:6px 14px}
@@ -21,7 +18,7 @@ body .app-shell[data-chat-active="true"] .ai-chat-live-end{background:#20162f!im
 body .app-shell[data-chat-active="true"] .ai-chat-live-test{color:#c5a9e7!important;border-color:#665075!important;background:#241931!important}
 @keyframes voice-reference-turn{0%,100%{border-radius:43% 57% 58% 42% / 42% 42% 58% 58%}50%{border-radius:56% 44% 40% 60% / 57% 39% 61% 43%}}
 @keyframes voice-orbit{0%,100%{rotate:0deg}50%{rotate:30deg}}
-@media(max-width:420px){body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap{width:160px!important;height:160px!important}body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{width:115px!important;height:120px!important}body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice{gap:10px!important;padding:8px 4px!important}}
+@media(max-width:420px){body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb-wrap{width:160px!important;height:160px!important}body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{width:140px!important;height:140px!important}body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice{gap:10px!important;padding:8px 4px!important}}
 @media(prefers-reduced-motion:reduce){body .app-shell[data-chat-active="true"] .omda-live-voice *{animation:none!important;transition:none!important}body .app-shell[data-chat-active="true"] :is(.omda-voice-orb,.omda-voice-orb-wrap:before,.omda-voice-orb-wrap:after){transform:none!important}body .app-shell[data-chat-active="true"] .voice-wave-bar{height:4px!important;opacity:calc(.3 + var(--bar-level,0)*.7)}}
 }
 @layer omda-voice-experience {
@@ -29,4 +26,18 @@ body .app-shell[data-chat-active="true"] .ai-chat-live-test{color:#c5a9e7!import
  body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice .omda-voice-orb,
  body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice .omda-voice-orb span{animation:none!important;transform:none!important;transition:none!important}
 }
+}
+
+@layer omda-voice-experience {
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal>header{background:transparent!important;color:#d8c3fb!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal>header>button{background:#292039!important;border:1px solid #655078!important;color:#eee3ff!important}
+body .app-shell[data-chat-active="true"] .ai-chat-live-backdrop{background:#100d1c!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+@media(max-width:600px){
+ body .app-shell[data-chat-active="true"] .ai-chat-live-backdrop{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;padding:0!important;align-items:stretch!important;overflow:hidden!important}
+ body .app-shell[data-chat-active="true"] .ai-chat-live-modal{box-sizing:border-box!important;width:100%!important;max-width:none!important;min-height:100%!important;height:100%!important;max-height:100%!important;border:0!important;border-radius:0!important;padding:calc(12px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-left)) calc(20px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-right))!important;justify-content:space-between!important;box-shadow:none!important}
+ body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-live-voice{flex:1!important;justify-content:center!important}
+}
+}
+@layer omda-voice-experience {
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal>header>span{color:#c9b7e4!important}
 }

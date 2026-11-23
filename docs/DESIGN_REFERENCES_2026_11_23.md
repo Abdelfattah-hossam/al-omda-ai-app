@@ -134,3 +134,9 @@ Local 320/390/1280 Arabic/English checks used fake mic + synthetic WebSocket/PCM
 not a real paid provider session. 38 focused tests + typecheck/build pass; chat
 composer geometry is unchanged. Real-iPhone mic, audio routing and provider
 acceptance remain unverified. No new paid service or credential introduced.
+
+## Real iPhone voice correction
+
+The user's physical Safari screenshot rejected the prior Chrome-only acceptance: the layered orb showed square compositing artifacts and the UI claimed to listen without audible speech being captured. Replaced the CSS conic/blend/rotated-glass orb with a native SVG gradient and ellipse strokes. Mobile voice dialog now fills its own backdrop to the screen edge, with safe-area padding, without altering the chat composer or transcript.
+
+AudioContext construction and the first resume now happen synchronously in the original Start tap, before microphone permission and token fetch. A running context, live microphone track, and actual input processing callback are required before the provider token request. Output is explicitly silent on the capture graph. Permission, missing device, busy microphone, stopped tracks, and no detected speech have actionable messages. Listening is no longer claimed before speech is detected. Chrome synthetic microphone and PCM tests pass at 320/390/1280 in Arabic/English, as does denied-permission acceptance without provider connection. These are not physical-iOS audio verification. No real provider session was opened during this correction's tests.

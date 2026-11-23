@@ -18,3 +18,20 @@ test('voice has honest states and reduced-motion path without composer rules',()
  assert.doesNotMatch(css,/ai-chat-composer|chat-messages|scroll-behavior/);
  assert.ok(voice.includes('if(fallbackUtteranceRef.current)bins.fill(0)'));
 });
+test('iOS audio unlock runs in tap before asynchronous permission and token work',()=>{
+ const start=voice.slice(voice.indexOf('const start = async'));
+ assert.ok(start.indexOf('new AudioContextClass()')<start.indexOf('await navigator.mediaDevices.getUserMedia'));
+ assert.ok(start.indexOf('const resumed = context.resume()')<start.indexOf('await navigator.mediaDevices.getUserMedia'));
+ assert.ok(start.indexOf('Prove the input graph')<start.indexOf('fetch("/api/ai/live-token"'));
+ assert.ok(voice.includes('context.state !== "running"'));
+ assert.ok(voice.includes('No microphone samples arrived'));
+ assert.ok(voice.includes("name==='NotAllowedError'"));
+ assert.ok(voice.includes('No speech detected yet'));
+ assert.ok(voice.includes('event.outputBuffer.getChannelData(0).fill(0)'));
+});
+test('Safari orb is native SVG, without CSS blend or conic clipping layers',()=>{
+ assert.ok(voice.includes('<svg className="omda-voice-orb"'));
+ assert.ok(voice.includes('<radialGradient'));
+ assert.doesNotMatch(css,/mix-blend-mode|conic-gradient|filter:saturate/);
+ assert.ok(css.includes('.ai-chat-live-backdrop{position:fixed!important;inset:0!important'));
+});

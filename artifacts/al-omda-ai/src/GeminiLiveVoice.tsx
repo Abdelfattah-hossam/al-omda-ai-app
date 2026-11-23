@@ -44,6 +44,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState("");
   const [thinking,setThinking]=useState(false);
+  const [heardSpeech,setHeardSpeech]=useState(false);
+  const captureTimerRef=useRef(0);
   const visualRef=useRef<HTMLDivElement|null>(null);
   const micAnalyserRef=useRef<AnalyserNode|null>(null);
   const outputAnalyserRef=useRef<AnalyserNode|null>(null);
@@ -106,7 +108,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     start: ar ? "محادثة صوتية مباشرة" : "Live voice conversation",
     stop: ar ? "إنهاء المحادثة" : "End voice chat",
     connecting: ar ? "جارٍ الاتصال بالعمدة..." : "Connecting to AL OMDA...",
-    listening: ar ? "العمدة يسمعك الآن..." : "AL OMDA is listening...",
+    listening: ar ? "الميكروفون جاهز، اتكلم الآن" : "Microphone ready. Speak now",
     unavailable: ar ? "المحادثة الصوتية غير متاحة حاليًا." : "Live voice is unavailable right now.",
   };
 
@@ -124,7 +126,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     if (expectedSessionId !== undefined && sessionIdRef.current !== expectedSessionId) return;
     sessionIdRef.current += 1;
     stopVisualizer();
-    if(mountedRef.current)setThinking(false);
+    window.clearTimeout(captureTimerRef.current);
+    if(mountedRef.current){setThinking(false);setHeardSpeech(false);}
     setConnectingState(false);
     setActiveState(false);
     sessionReadyRef.current = false;
@@ -154,6 +157,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     return () => {
       mountedRef.current = false;
       stopVisualizer();
+      window.clearTimeout(captureTimerRef.current);
       sessionIdRef.current += 1;
       connectingRef.current = false;
       activeRef.current = false;
@@ -184,6 +188,11 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       // Request microphone permission before creating a billable temporary Gemini session.
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) throw new Error(ar ? "هذا المتصفح لا يدعم تشغيل الصوت المباشر." : "This browser does not support live audio.");
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error(ar ? "الميكروفون غير متاح في هذا المتصفح. افتح التطبيق في Safari واسمح بالميكروفون." : "Microphone unavailable. Open in Safari and allow microphone access.");
+      // iOS requires creation AND the first resume in the original tap, before any await.
+      const context: AudioContext = new AudioContextClass();
+      contextRef.current = context;
+      const resumed = context.resume();
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
@@ -192,7 +201,25 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         return;
       }
       streamRef.current = stream;
-
+      await resumed;
+      if (!isCurrentSession()) return;
+      if (context.state !== "running") throw new Error(ar ? "تعذر تشغيل صوت الميكروفون. اضغط بدء مرة أخرى واسمح بالميكروفون في إعدادات Safari." : "Microphone audio could not start. Tap Start again and allow microphone access in Safari settings.");
+      if (!stream.getAudioTracks().some(track=>track.enabled && track.readyState==='live')) throw new Error(ar ? "الميكروفون غير متاح. تحقق من إذن Safari." : "Microphone is unavailable. Check Safari permission.");
+      const source = context.createMediaStreamSource(stream);
+      const processor = context.createScriptProcessor(4096, 1, 1);
+      sourceRef.current=source;processorRef.current=processor;
+      startVisualizer(context,source);
+      // Prove the input graph is processing before opening the provider session.
+      await new Promise<void>((resolve,reject)=>{
+        const timer=window.setTimeout(()=>reject(new Error(ar ? "لا تصل عينات من الميكروفون. أغلق أي مكالمة أخرى ثم أعد البدء، وتحقق من إذن الميكروفون في Safari." : "No microphone samples arrived. End other calls, check Safari microphone permission, then start again.")),6000);
+        processor.onaudioprocess=(event)=>{
+          event.outputBuffer.getChannelData(0).fill(0);
+          if(!isCurrentSession()){window.clearTimeout(timer);reject(new Error('Session ended'));return;}
+          if(event.inputBuffer.length>0){window.clearTimeout(timer);resolve();}
+        };
+        source.connect(processor);processor.connect(context.destination);
+      });
+      if(!isCurrentSession())return;
       const tokenResponse = await fetch("/api/ai/live-token", {
         method: "POST",
         credentials: "same-origin",
@@ -205,14 +232,6 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       if (!tokenResponse.ok || typeof tokenData.token !== "string") {
         const diagnostic = [tokenData.error, tokenData.details].filter((value) => typeof value === "string" && value.trim()).join(" — ");
         throw new Error(diagnostic || labels.unavailable);
-      }
-
-      const context: AudioContext = new AudioContextClass();
-      contextRef.current = context;
-      await context.resume();
-      if (!isCurrentSession()) {
-        void context.close();
-        return;
       }
 
       const socket = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=" + encodeURIComponent(tokenData.token));
@@ -284,13 +303,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         throw new Error(ar ? "انقطع اتصال Gemini أثناء تجهيز الصوت." : "Gemini disconnected while preparing audio.");
       }
 
-      const source = context.createMediaStreamSource(stream);
-      const processor = context.createScriptProcessor(4096, 1, 1);
-      sourceRef.current = source;
-      startVisualizer(context,source);
-      processorRef.current = processor;
       processor.onaudioprocess = (event) => {
+        event.outputBuffer.getChannelData(0).fill(0);
         if (!isCurrentSession()) return;
+        if(context.state!=="running"){
+          setStatus(ar ? "توقف صوت الميكروفون. أنهِ المحادثة ثم ابدأ مرة أخرى." : "Microphone audio paused. End the chat and start again.");
+          cleanup(sessionId);return;
+        }
         if (socket.readyState !== WebSocket.OPEN || !sessionReadyRef.current || assistantResponseActiveRef.current) return;
         const input = event.inputBuffer.getChannelData(0);
         let energy = 0;
@@ -299,6 +318,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         const hasSpeech = rms > 0.012;
 
         if (hasSpeech) {
+          setHeardSpeech(true);
+          window.clearTimeout(captureTimerRef.current);
           if (!speechActiveRef.current) {
             // A new user utterance opens exactly one new assistant response cycle.
             setThinking(false);
@@ -333,9 +354,12 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
           }
         }
       };
-      source.connect(processor);
-      processor.connect(context.destination);
-
+      stream.getAudioTracks().forEach(track=>{
+        track.onended=()=>{if(isCurrentSession()){setStatus(ar?"توقف الميكروفون. أعد البدء واسمح باستخدامه.":"Microphone stopped. Start again and allow access.");cleanup(sessionId);}};
+      });
+      captureTimerRef.current=window.setTimeout(()=>{
+        if(isCurrentSession()&&!speechActiveRef.current)setStatus(ar?"لم نرصد صوتًا بعد. قرّب الهاتف وتحقق من إذن الميكروفون في Safari، ثم تكلّم.":"No speech detected yet. Move closer and check Safari microphone permission, then speak.");
+      },8000);
       sessionReadyRef.current = true;
       setConnectingState(false);
       setActiveState(true);
@@ -484,7 +508,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       const wasCurrentSession = isCurrentSession();
       cleanup(sessionId);
       if (wasCurrentSession && mountedRef.current) {
-        setStatus(error instanceof Error ? error.message : labels.unavailable);
+        const name=error instanceof DOMException?error.name:'';
+        setStatus(name==='NotAllowedError'?(ar?'الميكروفون غير مسموح. من إعدادات الموقع في Safari اسمح بالميكروفون ثم اضغط بدء.':'Microphone permission denied. Allow microphone in Safari website settings, then tap Start.'):name==='NotFoundError'?(ar?'لم نعثر على ميكروفون متاح.':'No microphone was found.'):name==='NotReadableError'?(ar?'الميكروفون مشغول أو تعذر تشغيله. أغلق المكالمات الأخرى وحاول مجددًا.':'Microphone is busy or unavailable. End other calls and try again.'):error instanceof Error ? error.message : labels.unavailable);
       }
     }
   };
@@ -501,10 +526,10 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
     <span className="voice-mode-kicker">{ar?"العمدة · مساعدك الصوتي":"AL OMDA · VOICE ASSISTANT"}</span>
     <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "العمدة يتحدث" : "AL OMDA is speaking") : active ? labels.listening : labels.start}>
-      <div className="omda-voice-orb"><span/><span/><span/><i/></div>
+      <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
-    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(ar?"يسمعك":"Listening"):(ar?"المس للتحدث":"Tap to talk")}</span>
+    <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(heardSpeech?(ar?"رصدنا صوتك":"Voice detected"):(ar?"الميكروفون جاهز":"Microphone ready")):(ar?"المس للتحدث":"Tap to talk")}</span>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
     <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
