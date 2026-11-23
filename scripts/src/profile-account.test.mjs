@@ -69,3 +69,7 @@ test('voice layout reserves dynamic rows and prevents footer overlap',()=>{
  assert.ok(layout.includes('min-height:66px!important'));
  assert.ok(layout.includes('flex:0 0 auto!important;min-height:min-content!important'));
 });
+test('short voice screens keep end button in scroll flow',()=>{
+ const layout=readFileSync('../artifacts/al-omda-ai/src/voice-experience.css','utf8');
+ assert.ok(layout.includes('.ai-chat-live-modal>.ai-chat-live-end{position:static!important'));
+});

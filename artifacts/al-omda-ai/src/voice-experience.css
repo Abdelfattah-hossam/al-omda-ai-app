@@ -59,3 +59,6 @@ body .app-shell[data-chat-active="true"] .voice-capture-diagnostic{min-height:46
  body .app-shell[data-chat-active="true"] .ai-chat-live-modal .omda-voice-orb{width:124px!important;height:124px!important}
 }
 }
+@layer omda-voice-experience {
+body .app-shell[data-chat-active="true"] .ai-chat-live-modal>.ai-chat-live-end{position:static!important;inset:auto!important;transform:none!important;margin:0!important}
+}
