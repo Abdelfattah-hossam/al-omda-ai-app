@@ -62,3 +62,11 @@ export async function downloadFileFromUrl(url: string, name: string): Promise<vo
   }
   anchorDownload(url, name, false);
 }
+
+
+// Some old Android download managers cannot resolve a page-owned blob URL,
+// including Huawei Browser using a desktop Chromium88 user agent.
+export function prefersServerDownload(userAgent:string):boolean {
+  const chromium=/\b(?:Chrome|Chromium)\/(\d+)/.exec(userAgent);
+  return /HuaweiBrowser/i.test(userAgent) || Boolean(chromium && Number(chromium[1])<94);
+}

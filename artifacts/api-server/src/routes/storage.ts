@@ -306,7 +306,8 @@ router.get("/storage/assets/download", async (req, res): Promise<void> => {
       // Keep the storage-key filename when the lookup is unavailable.
     }
     res.setHeader("content-type", mime);
-    res.setHeader("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    const asciiFilename=filename.replace(/[^A-Za-z0-9._-]/g,"_").replace(/^[._]+/,"")||"download";
+    res.setHeader("content-disposition", `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.setHeader("cache-control", "private, no-store");
     res.setHeader("x-content-type-options", "nosniff");
     res.send(Buffer.from(await response.arrayBuffer()));

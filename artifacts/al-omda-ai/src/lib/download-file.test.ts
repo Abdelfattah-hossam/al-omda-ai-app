@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectIosDevice, downloadBlobAsFile } from "./download-file";
+import { detectIosDevice, downloadBlobAsFile, prefersServerDownload } from "./download-file";
 import {serializeCsv} from './csv-export';
 import {loadAssetPages} from './asset-pages';
 import {loadSearchFolders} from './workspace-search';
@@ -113,4 +113,15 @@ test('global file lookup isolates folder failures and stops scheduling after clo
  let keepGoing=true,requested=0;
  await loadSearchFolders(folders,async()=>{requested++;keepGoing=false;return [];},()=>keepGoing);
  assert.equal(requested,1);
+});
+
+
+test('old Huawei desktop UA selects HTTPS attachment, not blob',()=>{
+ assert.equal(prefersServerDownload('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/88.0.4324.93 Safari/537.36'),true);
+ assert.equal(prefersServerDownload('HuaweiBrowser/12.0 Chrome/100'),true);
+ assert.equal(prefersServerDownload('Chrome/131.0.0.0 Safari/537.36'),false);
+ assert.equal(prefersServerDownload("iPhone AppleWebKit Safari/605.1.15"),false);
+ const app=readFileSync(new URL('../App.tsx',import.meta.url),'utf8');
+ assert.ok(app.includes('if(projectId && prefersServerDownload(navigator.userAgent))'));
+ assert.ok(app.includes("downloadFileFromUrl('/api/storage/assets/download?path='"));
 });

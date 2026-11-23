@@ -282,3 +282,11 @@ User reports the same error after opening an Angular interview project from hist
 - Local6xCPU-throttled production fixture: cold chat decoded JS1.150MB before to0.926MB after, about224KB/19.5% lower. Main gzip247KB to192KB. Single-pass script time0.65s to0.53s and heap5.9MB to5.1MB are simulated/noisy, not a claimed device speedup.
 - Focused standard polyfill imports retain audited Chrome79/Safari13 runtime coverage rather than all315stable modules; old-API removal tests still pass. Voice/media tools lazy-load only when opened. Unchanged message markdown memoized to avoid reparsing old messages on each composer keystroke. Old-engine workspace decorative animations/blur/shadows disabled without changing palette or any scrolling/geometry handlers.
 - Build/13focused tests; missing APIs and synthetic task continuation; modern320/390/1280composer/sides unchanged. Real generation/server waiting was not benchmarked and is not claimed faster. Physical scroll/creation acceptance still needed.
+
+
+## 2026-11-23: Huawei final-project download fallback
+
+- Physical Huawei screenshot reports the native download-manager request failed. Exact OS/browser cause cannot be confirmed through current Chrome simulation. Existing project button used a temporary blob URL (revoked after1.5s), a fragile handoff for old download managers.
+- HuaweiBrowser and Chromium below94 now upload the generated task artifact first and request the existing authenticated same-origin HTTPS attachment endpoint. No new public access or storage destination. iPhone share-first flow and modern direct blob path unchanged. Upload failure remains visible instead of pretending a download happened.
+- Attachment header includes an ASCII filename fallback alongside the UTF-8 filename for older managers. No auth policy changes.
+-21focused tests passed, production build passed. Synthetic history fixture with Chrome88 UA and modern APIs removed confirms nonempty generated project upload followed by the private attachment GET. No real project or provider executed. Actual Huawei save acceptance is pending a physical retry.

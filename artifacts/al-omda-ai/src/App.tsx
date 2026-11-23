@@ -22,7 +22,7 @@ import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-oox
 import { createZipBlob } from './lib/zip';
 import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
 import type { PdfBlock } from './lib/table-pdf';
-import { downloadBlobAsFile } from './lib/download-file';
+import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload } from './lib/download-file';
 import {serializeCsv} from './lib/csv-export';
 import {loadAssetPages} from './lib/asset-pages';
 import {loadSearchFolders} from './lib/workspace-search';
@@ -180,7 +180,7 @@ function getTaskHtmlApp(result?: string): string | null {
 function safeArtifactName(value: string, fallback: string): string {
   return value.replace(/[^\p{L}\p{N}_-]+/gu, "-").slice(0, 70) || fallback;
 }
-async function persistTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
+async function persistTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<string|undefined> {
   if (!projectId) return;
   const params = new URLSearchParams({ filename, projectId });
   const response = await fetch("/api/storage/assets?" + params.toString(), {
@@ -191,12 +191,21 @@ async function persistTaskArtifact(blob: Blob, filename: string, mimeType: strin
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof data?.error === "string" ? data.error : "Could not save the generated file to project assets.");
+  return typeof data.path==='string'?data.path:undefined;
 }
 async function deliverTaskArtifact(blob: Blob, filename: string, mimeType: string): Promise<void> {
   await downloadBlobAsFile(blob.type===mimeType?blob:new Blob([blob],{type:mimeType}),filename);
 }
 async function saveAndDownloadTaskArtifact(blob: Blob, filename: string, mimeType: string, projectId?: string): Promise<void> {
-  // Invoke the browser's native file/share UI directly from the user's click before awaiting upload I/O.
+  // Huawei/older Chromium download managers need an actual HTTPS attachment,
+  // not a renderer-owned blob URL. Save first, then use the existing private route.
+  if(projectId && prefersServerDownload(navigator.userAgent)){
+    const path=await persistTaskArtifact(blob,filename,mimeType,projectId);
+    if(!path)throw new Error('File saved without a downloadable path. Please open Assets.');
+    await downloadFileFromUrl('/api/storage/assets/download?path='+encodeURIComponent(path),filename);
+    return;
+  }
+  // Keep iPhone native sharing in the original user gesture, before upload I/O.
   await deliverTaskArtifact(blob, filename, mimeType);
   await persistTaskArtifact(blob, filename, mimeType, projectId);
 }
