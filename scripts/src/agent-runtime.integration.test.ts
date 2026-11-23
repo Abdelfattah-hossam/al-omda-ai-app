@@ -1304,12 +1304,12 @@ test('local model settings persist, route new agent runs, preserve backups and r
    const r=await fetch(isolated.baseUrl+'/v1/models/local-config',{method:'POST',headers,body:JSON.stringify(bad)});assert.equal(r.status,400);
   }
   const value={baseUrl:model.baseUrl,model:'qa-local-selected'};
-  for(let n=0;n<2;n++){const r=await fetch(isolated.baseUrl+'/v1/models/local-config',{method:'POST',headers,body:JSON.stringify(value)});assert.equal(r.status,200);assert.equal((await r.json()).execution,'disabled');}
-  const loaded=await fetch(isolated.baseUrl+'/v1/models/local-config',{headers});assert.equal((await loaded.json()).model,value.model);
+  for(let n=0;n<2;n++){const r=await fetch(isolated.baseUrl+'/v1/models/local-config',{method:'POST',headers,body:JSON.stringify(value)});assert.equal(r.status,200);assert.equal(((await r.json()) as any).execution,'disabled');}
+  const loaded=await fetch(isolated.baseUrl+'/v1/models/local-config',{headers});assert.equal(((await loaded.json()) as any).model,value.model);
   const file=await readFile(join(isolated.workspace,'.omda/local-model.json'),'utf8');assert.deepEqual(JSON.parse(file),value);
   const {readdir}=await import('node:fs/promises');assert.equal((await readdir(join(isolated.workspace,'.omda'))).filter(x=>x.startsWith('local-model.json.backup-')).length,1);
-  const run=await fetch(isolated.baseUrl+'/v1/agent/run',{method:'POST',headers,body:JSON.stringify({goal:'Synthetic test only: reply OK'})});assert.equal(run.status,200);assert.equal((await run.json()).status,'completed');assert.equal(model.requests,1);
+  const run=await fetch(isolated.baseUrl+'/v1/agent/run',{method:'POST',headers,body:JSON.stringify({goal:'Synthetic test only: reply OK'})});assert.equal(run.status,200);assert.equal(((await run.json()) as any).status,'completed');assert.equal(model.requests,1);
   const policy=await fetch(isolated.baseUrl+'/v1/browser/policy',{method:'POST',headers,body:JSON.stringify({allowedHosts:['docs.example.com']})});assert.equal(policy.status,200);
-  const workspace=await fetch(isolated.baseUrl+'/v1/browser/workspace',{headers});assert.deepEqual((await workspace.json()).policy.allowedHosts,['docs.example.com']);
+  const workspace=await fetch(isolated.baseUrl+'/v1/browser/workspace',{headers});assert.deepEqual(((await workspace.json()) as any).policy.allowedHosts,['docs.example.com']);
  }finally{await stopRuntime(isolated);await stopMockModel(model);}
 });
