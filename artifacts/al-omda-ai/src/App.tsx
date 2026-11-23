@@ -1,3 +1,4 @@
+import './sales-dashboard.css';
 import {sandboxedHtmlPreview} from "./lib/html-preview";
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import NetworkStatus from './NetworkStatus';
@@ -1641,6 +1642,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>
         <p className="page-subtitle" style={{marginTop:14}}>{authUser ? (liveUserAnalytics ? (isAr?'البيانات محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة.':'Figures are calculated from sign-ins in the last 30 days versus the previous 30 days.') : (liveUserAnalyticsError ? (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.') : (isAr?'جارٍ تحميل التحليلات الحقيقية…':'Loading live analytics…'))) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
+      {path==='/finance/payment-gateways'&&<div className="finance-gateway-stats">{[(isAr?'بوابات متصلة':'Connected gateways'),(isAr?'المعاملات':'Transactions'),(isAr?'نسبة نجاح الدفع':'Payment success rate')].map((label,i)=><div className="finance-gateway-stat" key={label}><CreditCard size={22}/><strong>{i===0?'0':'—'}</strong><span>{label}</span><small className="page-subtitle">{isAr?'لا يوجد مصدر دفع موثق':'No verified payment source'}</small></div>)}</div>}
       {!isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>

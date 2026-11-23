@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet, RefreshCw, Upload } from "lucide-react";
 import { isSalesCsvAssetName, parseSalesCsv, type SalesRow } from "./lib/sales-csv";
 
 import WorldSalesMap from './WorldSalesMap';
+import SalesDashboard from './SalesDashboard';
 
 type Language = "ar" | "en";
 type Mode = "overview" | "distribution";
@@ -180,7 +181,9 @@ export default function SalesAnalyticsWorkspace({ language, mode }: { language: 
       </div>
     </div>
 
-    <section className="panel panel-pad" style={{ marginTop: 16, display: "grid", gap: 12 }}>
+    <SalesDashboard language={language} rows={parse.errors.length||loading?[]:selectedRows} currency={currency} loading={loading}/>
+
+    <section className="panel panel-pad sales-finance-source" style={{ marginTop: 16, display: "grid", gap: 12 }}>
       <div className="section-head"><div><h2 className="section-title">{isAr ? "مصدر البيانات" : "Data source"}</h2><p className="page-subtitle">{isAr ? "يتم حفظ الملف داخل الأصول الخاصة بحسابك." : "The file is stored in your private workspace assets."}</p></div><button type="button" className="button button-secondary" onClick={() => void refreshAssets()} disabled={loading}><RefreshCw size={14} className={loading ? "animate-spin" : ""}/>{isAr ? "تحديث" : "Refresh"}</button></div>
       <select className="field" value={selectedPath} onChange={(event) => setSelectedPath(event.target.value)} disabled={loading || csvAssets.length === 0} aria-label={isAr ? "ملف بيانات المبيعات" : "Sales data file"}>
         {csvAssets.length === 0 ? <option value="">{isAr ? "لا توجد ملفات CSV مستوردة" : "No CSV files imported"}</option> : csvAssets.map((asset) => <option key={asset.path} value={asset.path}>{asset.name} · {formatBytes(asset.size, isAr)}</option>)}

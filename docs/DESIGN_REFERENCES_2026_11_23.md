@@ -93,3 +93,16 @@ Pending/cancelled excluded, refunds subtract, unknown countries stay unassigned.
 Country picker, tap, hover/focus, arrow keyboard navigation, zoom and drag pan.
 No data shows a clear empty state, not zero-sales claims. Local Arabic/English
 320/390/1280 checks passed with 33 focused tests; physical-device acceptance pending.
+
+## Analytics reference dashboard
+
+Sales Overview and Distribution now retain all CSV import/source/currency/table
+controls and add reference-inspired dark glass summary tiles, colored badges,
+smooth daily paid/refunded/pending lines, ranked channel progress bars and
+percent pills, and paid/refund count bars. Product ranking and service level
+are not available in the existing schema; the labels explicitly use actual
+channels and transaction counts instead. Totals cover the imported period,
+not an invented today total. Missing data uses dashes and empty cards. Payment
+Gateways retains the not-connected notice with matching status tiles. No
+revenue trend percentage is invented. Local checks: empty + synthetic CSV,
+Arabic/English, 320/390/1280; 35 focused tests pass. Map CI and deploy succeeded.
