@@ -1,4 +1,4 @@
-import {VoiceActivityGate} from './lib/voice-activity-gate';
+import {VoiceActivityGate,speechBandRatio} from './lib/voice-activity-gate';
 import { useEffect, useRef, useState } from "react";
 import { Mic, PhoneOff } from "lucide-react";
 
@@ -54,6 +54,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
   const silentGainRef=useRef<GainNode|null>(null);
   const peakInputRef=useRef(0);
   const inputFramesRef=useRef(0);
+  const silenceDurationRef=useRef(0);
+  const currentInputRef=useRef(0);
   const [micDiagnostic,setMicDiagnostic]=useState('');
   const visualRef=useRef<HTMLDivElement|null>(null);
   const micAnalyserRef=useRef<AnalyserNode|null>(null);
@@ -210,9 +212,14 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
       const context: AudioContext = new AudioContextClass();
       contextRef.current = context;
       const resumed = context.resume();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      let stream:MediaStream;
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:{ideal:true},noiseSuppression:{ideal:true},autoGainControl:{ideal:false},channelCount:{ideal:1}}});
+      }catch(error){
+        // Only unsupported constraints justify default-capture fallback, never a denied permission.
+        if(error instanceof DOMException && error.name==='OverconstrainedError')stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        else throw error;
+      }
       if (!isCurrentSession()) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -335,12 +342,15 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         for (let i = 0; i < input.length; i++) energy += input[i] * input[i];
         const rms = Math.sqrt(energy / Math.max(1, input.length));
         inputFramesRef.current++;
-        peakInputRef.current=Math.max(peakInputRef.current,rms);
+        peakInputRef.current=Math.max(peakInputRef.current,rms);currentInputRef.current=rms;
         const durationMs=input.length/context.sampleRate*1000;
-        const hasSpeech=turnArmedRef.current && gateRef.current.process(rms,durationMs);
+        const spectrum=new Uint8Array(micAnalyserRef.current?.frequencyBinCount??128);
+        micAnalyserRef.current?.getByteFrequencyData(spectrum);
+        const speechLike=speechBandRatio(spectrum,context.sampleRate,micAnalyserRef.current?.fftSize??256)>=.35;
+        const hasSpeech=turnArmedRef.current && gateRef.current.process(speechLike?rms:0,durationMs);
         if(inputFramesRef.current%12===0){
           const track=stream.getAudioTracks()[0];
-          setMicDiagnostic((ar?'مستوى الميكروفون: ':'Mic level: ')+Math.round(Math.min(100,peakInputRef.current*10000))+'%'+(track?.muted?(ar?' · المسار مكتوم':' · track muted'):''));
+          setMicDiagnostic((ar?'مستوى الميكروفون: ':'Mic level: ')+Math.round(Math.min(100,rms*1000))+'%'+(track?.muted?(ar?' · المسار مكتوم':' · track muted'):''));
         }
 
         if(!turnArmedRef.current)return;
@@ -358,7 +368,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
             speechActiveRef.current = true;
             setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
           }
-          silenceFramesRef.current = 0;
+          silenceFramesRef.current = 0;silenceDurationRef.current=0;
         } else if (!speechActiveRef.current) {
           return;
         }
@@ -371,8 +381,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
         }));
 
         if (!hasSpeech) {
-          silenceFramesRef.current += 1;
-          if (silenceFramesRef.current >= 8) {
+          silenceFramesRef.current += 1;silenceDurationRef.current+=durationMs;
+          if (silenceDurationRef.current >= 650) {
             validTurnRef.current=gateRef.current.voicedMs>=350;
             turnArmedRef.current=false;setTurnArmed(false);
             socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
@@ -567,15 +577,22 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript }: Pr
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
     <span className="voice-state-label">{connecting?(ar?"جارٍ الاتصال":"Connecting"):speaking?(ar?"يتحدث":"Speaking"):thinking?(ar?"يفكر":"Thinking"):active?(turnArmed?heardSpeech?(ar?"رصدنا صوتك":"Voice detected"):(ar?"انتظر ثم تكلّم":"Pause, then speak"):(ar?"اضغط لفتح دور كلام":"Tap to open a speaking turn")):(ar?"المس للتحدث":"Tap to talk")}</span>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "العمدة بيتكلم..." : "AL OMDA is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع العمدة" : "Start a voice conversation with AL OMDA")}</strong>
-    {active&&<button type="button" className="ai-chat-live-test" disabled={turnArmed||speaking||thinking} onClick={()=>{
-      gateRef.current.reset();validTurnRef.current=false;turnArmedRef.current=true;setTurnArmed(true);setHeardSpeech(false);
+    {active&&<button type="button" className="ai-chat-live-test" disabled={speaking||thinking} onClick={()=>{
+      if(turnArmedRef.current){
+        turnArmedRef.current=false;setTurnArmed(false);
+        if(speechActiveRef.current&&socketRef.current?.readyState===WebSocket.OPEN){validTurnRef.current=gateRef.current.voicedMs>=350;socketRef.current.send(JSON.stringify({realtimeInput:{activityEnd:{}}}));speechActiveRef.current=false;setThinking(true);setStatus(ar?'جارٍ تجهيز الرد…':'Preparing reply…');}
+        else setStatus(ar?'أُغلق الدور دون إرسال كلام.':'Turn closed without sending speech.');
+        return;
+      }
+      silenceDurationRef.current=0;gateRef.current.reset();validTurnRef.current=false;turnArmedRef.current=true;setTurnArmed(true);setHeardSpeech(false);
       setStatus(ar?'انتظر لحظة لمعايرة الضجيج، ثم تكلّم. لن تُرسل الضوضاء وحدها.':'Pause briefly for noise calibration, then speak. Noise alone is not sent.');
-    }}>{turnArmed?(ar?'دور الكلام مفتوح':'Speaking turn open'):(ar?'دور كلام جديد':'New speaking turn')}</button>}
+    }}>{turnArmed?(ar?'إنهاء دور الكلام الآن':'Finish speaking turn now'):(ar?'دور كلام جديد':'New speaking turn')}</button>}
     <button type="button" className={active ? "omda-voice-end" : "omda-voice-start"} onClick={active ? stop : start} disabled={disabled || connecting}>
       {connecting ? <span className="animate-spin">◌</span> : active ? <PhoneOff size={17}/> : <Mic size={17}/>}
       <span>{connecting ? labels.connecting : active ? labels.stop : labels.start}</span>
     </button>
     {active&&micDiagnostic&&<small className="voice-privacy-note" role="status">{micDiagnostic}</small>}
+    <small className="voice-privacy-note">{ar?'تقليل الضجيج لا يعزل صوتك عن أصوات الآخرين. قرّب الهاتف أو استخدم سماعة بميكروفون.':'Noise reduction cannot identify your voice over other people. Hold the phone close or use a headset microphone.'}</small>
     <small className="voice-privacy-note">{ar?"الميكروفون يعمل بعد البدء فقط. أنهِ المحادثة لإيقافه.":"Microphone starts only when you begin. End the chat to stop it."}</small>
   </div>;
 }

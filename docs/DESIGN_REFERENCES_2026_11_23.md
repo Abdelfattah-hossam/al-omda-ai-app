@@ -166,3 +166,7 @@ Live account read confirms 45 tasks,31approved,14review/paused and zero demo tas
 ## Safari icon ghost surfaces
 
 Removed SVG itself from the active navigation background selector, which was painting a tile and inset shadow on the glyph. Cleaned backgrounds, shadows, filters and backdrop filters on profile SVG and shared icon-wrapper glyphs, plus the disclosure chevron. Active navigation remains visibly selected on the link, not behind the SVG. No dock geometry or bottom-area changes. Local profile screenshots inspected and19focused tests/typecheck/build passed; physical Safari confirmation remains needed.
+
+## Room-sound reduction, not speaker identification
+
+Request echo/noise reduction, mono capture and no automatic gain boost using ideal constraints; only unsupported-constraint errors fall back to default capture. Raise calibrated gate to4xambient with .006 minimum and300ms sustained onset; require35% of spectral energy in250–3600Hz to reject rumble/hiss. End a speaking turn after650ms silence, and provide Finish speaking turn now. Level reports current input rather than historical peak. Clearly state that this cannot distinguish the owner's voice from other people speaking; a nearby/headset mic is the practical isolation route. Unit tests verify noise, clicks, speech bands and onset, plus synthetic unsolicited-transcript rejection. Not physical iPhone acoustic acceptance.

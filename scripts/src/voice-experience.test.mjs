@@ -50,7 +50,10 @@ test('iPhone capture keeps routing diagnostics and explicit noise gate',()=>{
  assert.ok(voice.includes('if(!validTurnRef.current)return'));
  assert.ok(voice.includes('New speaking turn'));
  assert.ok(voice.includes('Only transcribe actual intelligible speech'));
- assert.ok(voice.includes('audio: true'));
+ assert.ok(voice.includes('noiseSuppression:{ideal:true}'));
+ assert.ok(voice.includes('autoGainControl:{ideal:false}'));
+ assert.ok(voice.includes('silenceDurationRef.current >= 650'));
+ assert.ok(voice.includes('Finish speaking turn now'));
  assert.ok(voice.includes("audioSession.type='play-and-record'"));
  assert.ok(voice.includes('mic.connect(silent)'));
  assert.ok(voice.includes('track?.muted'));
