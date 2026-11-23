@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { detectIosDevice, downloadBlobAsFile, prefersServerDownload } from "./download-file";
+import { detectIosDevice, downloadBlobAsFile, prefersServerDownload, downloadStoredAsset } from "./download-file";
 import {serializeCsv} from './csv-export';
 import {loadAssetPages} from './asset-pages';
 import {loadSearchFolders} from './workspace-search';
@@ -77,7 +77,7 @@ test('desktop continues to download a named file directly',async()=>{
 test('workspace exports and search use the same named-file delivery path',()=>{
  const app=readFileSync(new URL('../App.tsx',import.meta.url),'utf8');
  const search=app.slice(app.indexOf('const downloadCommandAsset ='),app.indexOf('const label ='));
- assert.match(search,/await downloadBlobAsFile\(blob,asset.name\)/);
+ assert.match(search,/await downloadStoredAsset\(asset.path,asset.name\)/);
  assert.ok(!search.includes('createObjectURL'));
  assert.ok(!app.includes('link.download ='));
  assert.ok(!app.includes(".join('\\\\r\\\\n')"));
@@ -124,4 +124,11 @@ test('old Huawei desktop UA selects HTTPS attachment, not blob',()=>{
  const app=readFileSync(new URL('../App.tsx',import.meta.url),'utf8');
  assert.ok(app.includes('if(projectId && prefersServerDownload(navigator.userAgent))'));
  assert.ok(app.includes("downloadFileFromUrl('/api/storage/assets/download?path='"));
+});
+
+test('saved-asset downloads preserve HTTPS for Huawei and iOS sharing for modern paths',async()=>{
+ await withBrowser({userAgent:'Chrome/88.0',platform:'Win32'},async({anchors})=>{
+  await downloadStoredAsset('user/project/file.md','العربية.md');
+  assert.equal(anchors[0].url,'/api/storage/assets/download?path=user%2Fproject%2Ffile.md');
+ });
 });

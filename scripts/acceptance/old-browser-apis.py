@@ -79,7 +79,7 @@ try:
   cmd('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':pos['x'],'y':pos['y']}]});cmd('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]});cmd('Input.insertText',{'text':value})
  cmd('Emulation.setDeviceMetricsOverride',{'width':390,'height':710,'deviceScaleFactor':1,'mobile':True})
  cmd('Page.addScriptToEvaluateOnNewDocument',{'source':'Object.hasOwn=undefined;Object.fromEntries=undefined;String.prototype.replaceAll=undefined;Array.prototype.at=undefined;Array.prototype.findLast=undefined;Array.prototype.findLastIndex=undefined;window.structuredClone=undefined;AbortSignal.timeout=undefined;AbortSignal.any=undefined;crypto.randomUUID=undefined;'});
- for route in ['/','/ai','/agents','/profile']:
+ for route in ['/','/ai','/agents','/profile','/workbench','/history','/assets','/projects','/pipeline','/collaboration/contacts','/collaboration/calendar','/collaboration/tickets','/collaboration/email','/system/security','/finance/sales-overview','/finance/sales-distribution','/finance/payment-gateways','/finance/active-users']:
   cmd('Page.navigate',{'url':origin+route});time.sleep(.8)
   print('OLD_API_RESULT',route,evaluate('({error:document.body.innerText.includes("تعذر عرض هذه الصفحة"),text:document.body.innerText.slice(-300)})'))
   assert not evaluate('document.body.innerText.includes("تعذر عرض هذه الصفحة")'),route

@@ -70,3 +70,14 @@ export function prefersServerDownload(userAgent:string):boolean {
   const chromium=/\b(?:Chrome|Chromium)\/(\d+)/.exec(userAgent);
   return /HuaweiBrowser/i.test(userAgent) || Boolean(chromium && Number(chromium[1])<94);
 }
+
+
+// Reuse the authenticated attachment directly on older download managers.
+// Modern browsers and iOS retain their existing named-file/share-sheet path.
+export async function downloadStoredAsset(path:string,name:string):Promise<void>{
+ const url='/api/storage/assets/download?path='+encodeURIComponent(path);
+ if(prefersServerDownload(navigator.userAgent)){await downloadFileFromUrl(url,name);return;}
+ const response=await fetch(url,{credentials:'same-origin'});
+ if(!response.ok)throw new Error('Could not download file.');
+ await downloadBlobAsFile(await response.blob(),name);
+}

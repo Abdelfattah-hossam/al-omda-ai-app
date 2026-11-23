@@ -128,11 +128,11 @@ export function requestPinnedHttp(
     overallDeadline.unref?.();
 
     request.once("socket", (socket) => {
-      // For HTTPS, wait for the TLS handshake as well as the TCP connection.
-      const connectedEvent = url.protocol === "https:" ? "secureConnect" : "connect";
-      socket.once(connectedEvent, clearConnectDeadline);
+      // Keep the attempt budget until response headers arrive. A reachable
+      // TCP/TLS endpoint can still stall before sending headers, so clearing
+      // this timer on connect would starve all later validated addresses.
       connectDeadline = setTimeout(() => {
-        request.destroy(new Error("HTTP connection could not be established before its connect deadline."));
+        request.destroy(new Error("HTTP route did not return headers before its attempt deadline."));
       }, Math.min(timeoutMs, Math.max(1, connectTimeoutMs)));
       connectDeadline.unref?.();
     });

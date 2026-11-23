@@ -113,3 +113,15 @@ test("reserves time for later addresses even when the remaining deadline is shor
   assert.equal(getConnectAttemptBudget(0, 2), 0);
   assert.equal(getConnectAttemptBudget(500, 0), 0);
 });
+
+
+test('a connected route that never sends headers leaves time for the fallback',async()=>{
+ let calls=0;
+ const server=createServer((_request,response)=>{calls++;if(calls>1){response.writeHead(200);response.end('fallback');}});
+ await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const address=server.address() as AddressInfo;
+ try{
+  const result=await requestPinnedHttpWithFallback(new URL('http://header-stall.invalid:'+address.port+'/'),[{address:'127.0.0.1',family:4},{address:'127.0.0.1',family:4}],'GET',new Headers(),1000);
+  assert.equal(await new Response(result.body).text(),'fallback');assert.equal(calls,2);
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});

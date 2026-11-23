@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assemblePdfFromJpegPages, computeColumnWidths } from "./table-pdf";
+import { assemblePdfFromJpegPages, computeColumnWidths, createDocumentPdfBlob } from "./table-pdf";
 
 const fakeJpeg = (n: number) => new Uint8Array(Array.from({ length: n }, (_, i) => (i * 7) % 256));
 
@@ -39,4 +39,16 @@ test("column widths always fill the table and respect minimums when content is w
   assert.ok(wide.every((width) => width >= 100));
   const tight = computeColumnWidths([900, 100], [300, 80], 500);
   assert.ok(tight[0] > tight[1] && tight[1] >= 80);
+});
+
+
+test('an oversized paragraph paginates without drawing below content boundary',async()=>{
+ const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
+ const positions:number[]=[];let pages=0;
+ const ctx={scale(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},measureText:(text:string)=>({width:text.length*6}),fillText:(_s:string,_x:number,y:number)=>positions.push(y)};
+ Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>{pages++;return {width:0,height:0,getContext:()=>ctx,toBlob:(done:(b:Blob)=>void)=>done(new Blob([new Uint8Array([255,216,255,217])]))};}}});
+ try{
+  const blob=await createDocumentPdfBlob([{type:'paragraph',text:Array.from({length:800},(_,i)=>'كلمة'+i).join(' ')}]);
+  assert.ok(pages>1);assert.ok(positions.every(y=>y<=818));assert.equal(blob.type,'application/pdf');
+ }finally{if(previous)Object.defineProperty(globalThis,'document',previous);else Reflect.deleteProperty(globalThis,'document');}
 });

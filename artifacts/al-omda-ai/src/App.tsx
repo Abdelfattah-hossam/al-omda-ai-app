@@ -22,7 +22,7 @@ import { createDocxBlob, createPptxBlob, createXlsxBlob } from './lib/office-oox
 import { createZipBlob } from './lib/zip';
 import { previewOfficeDocument, previewOfficeDocumentBlocks, type OfficePreviewBlock } from './lib/office-preview';
 import type { PdfBlock } from './lib/table-pdf';
-import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload, detectIosDevice } from './lib/download-file';
+import { downloadBlobAsFile, downloadFileFromUrl, prefersServerDownload, detectIosDevice, downloadStoredAsset } from './lib/download-file';
 import {createProjectExport,type ProjectExportFormat} from './lib/project-export';
 import {serializeCsv} from './lib/csv-export';
 import {loadAssetPages} from './lib/asset-pages';
@@ -1668,10 +1668,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   }, [tasks, commandQuery, isAr]);
   const downloadCommandAsset = async (asset:CommandAsset) => {
     try {
-      const response = await fetch('/api/storage/assets/download?path='+encodeURIComponent(asset.path),{credentials:'same-origin'});
-      if(!response.ok)throw new Error(isAr?'تعذر تنزيل الملف.':'Could not download the file.');
-      const blob = await response.blob();
-      await downloadBlobAsFile(blob,asset.name);
+      await downloadStoredAsset(asset.path,asset.name);
     } catch(error) {
       setWorkspaceError(error instanceof Error?error.message:(isAr?'تعذر تنزيل الملف.':'Could not download the file.'));
     }

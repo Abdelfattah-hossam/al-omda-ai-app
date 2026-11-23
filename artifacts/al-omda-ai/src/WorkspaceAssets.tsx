@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {createPortal} from 'react-dom';
 import {sandboxedHtmlPreview} from './lib/html-preview';
 import { previewOfficeDocument, previewPowerPointSlideImages } from "./lib/office-preview";
-import { downloadBlobAsFile } from "./lib/download-file";
+import { downloadBlobAsFile, downloadStoredAsset } from "./lib/download-file";
 import { Download, Eye, FileText, FolderOpen, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
 type Language = "ar" | "en";
@@ -107,13 +107,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   const downloadAsset = async (asset: WorkspaceAsset) => {
     setError("");
     try {
-      const response = await fetch("/api/storage/assets/download?path=" + encodeURIComponent(asset.path), { credentials: "same-origin" });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(typeof data?.error === "string" ? data.error : (ar ? "تعذر تنزيل الملف." : "Could not download file."));
-      }
-      const blob = await response.blob();
-      await downloadBlobAsFile(blob,asset.name);
+      await downloadStoredAsset(asset.path,asset.name);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : (ar ? "تعذر تنزيل الملف." : "Could not download file."));
     }

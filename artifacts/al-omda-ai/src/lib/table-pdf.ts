@@ -233,11 +233,18 @@ export async function createDocumentPdfBlob(blocks: PdfBlock[], rtlOverride?: bo
     const lineH = Math.round(size * 1.55);
     setFont(size, isTitle || Boolean(heading));
     const lines = wrapText(ctx, text, contentW);
-    if (y + lines.length * lineH > PAGE_H - MARGIN - 14) newPage();
-    setFont(size, isTitle || Boolean(heading));
-    ctx.fillStyle = isTitle ? PDF_THEME.text : heading ? PDF_THEME.muted : PDF_THEME.text;
-    drawLines(lines, isTitle ? PAGE_W / 2 : textX(MARGIN, contentW), y, isTitle ? "center" : align, lineH);
-    y += lines.length * lineH;
+    // Split text across pages instead of drawing an oversized paragraph off-page.
+    let cursor=0;
+    while(cursor<lines.length){
+      if(y+lineH>PAGE_H-MARGIN-14)newPage();
+      const capacity=Math.max(1,Math.floor((PAGE_H-MARGIN-14-y)/lineH));
+      const pageLines=lines.slice(cursor,cursor+capacity);
+      setFont(size,isTitle||Boolean(heading));
+      ctx.fillStyle=isTitle?PDF_THEME.text:heading?PDF_THEME.muted:PDF_THEME.text;
+      drawLines(pageLines,isTitle?PAGE_W/2:textX(MARGIN,contentW),y,isTitle?'center':align,lineH);
+      y+=pageLines.length*lineH;
+      cursor+=pageLines.length;
+    }
     if (isTitle) {
       ctx.strokeStyle = PDF_THEME.rule;
       ctx.lineWidth = 1.6;
