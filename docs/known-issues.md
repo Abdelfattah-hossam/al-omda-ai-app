@@ -188,3 +188,10 @@ User reports the same error after opening an Angular interview project from hist
 - Root cause reproduced in mobile production fixture: navigation adds default focus query to every section; shared focus effect calls smooth scrollIntoView after route/auth load. Before: profile1177px, history632px, agents420px, workbench547px, home125px main-area scroll.
 - Guard legacy default section focus targets so regular section opens stay at top. Same five routes after0px. Preserve explicit project/advanced-feature/media links and all /ai focus/scroll behavior; AIChat source unchanged.
 -8focused tests/build pass; local390px screenshot inspected. Chromium mobile old-API simulation, not Safari/iOS/PWA hardware. Physical iPhone retry still required after deployment.
+
+
+## 2026-11-23: Administration belongs only in Profile
+
+- Owner requested removal of the global admin entry from every page. Admin-only entry and collapsible management panel now live inside Profile. Existing /admin bookmark redirects to /profile?admin=1; no standalone management page.
+- Backend membership/RPC/audit enforcement unchanged. General shared announcements remain separate from admin entry. AIChat and scroll handlers unchanged.
+- Build and3focused boundary tests pass. Local390/1280profile-admin screenshots inspected; live verification follows deploy, physical iPhone acceptance not claimed.

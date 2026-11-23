@@ -82,13 +82,14 @@ try:
   cmd('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':pos['x'],'y':pos['y']}]});cmd('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]});cmd('Input.insertText',{'text':value})
  cmd('Emulation.setDeviceMetricsOverride',{'width':390,'height':710,'deviceScaleFactor':1,'mobile':True})
  cmd('Page.addScriptToEvaluateOnNewDocument',{'source':'Object.hasOwn=undefined;Object.fromEntries=undefined;String.prototype.replaceAll=undefined;Array.prototype.at=undefined;Array.prototype.findLast=undefined;Array.prototype.findLastIndex=undefined;window.structuredClone=undefined;AbortSignal.timeout=undefined;AbortSignal.any=undefined;crypto.randomUUID=undefined;'});
- for route in ['/admin','/','/ai','/agents','/profile','/workbench','/history','/assets','/projects','/pipeline','/collaboration/contacts','/collaboration/calendar','/collaboration/tickets','/collaboration/email','/system/security','/finance/sales-overview','/finance/sales-distribution','/finance/payment-gateways','/finance/active-users']:
+ for route in ['/profile?admin=1','/','/ai','/agents','/profile','/workbench','/history','/assets','/projects','/pipeline','/collaboration/contacts','/collaboration/calendar','/collaboration/tickets','/collaboration/email','/system/security','/finance/sales-overview','/finance/sales-distribution','/finance/payment-gateways','/finance/active-users']:
   cmd('Page.navigate',{'url':origin+route});time.sleep(.8)
   print('OLD_API_RESULT',route,evaluate('({error:document.body.innerText.includes("تعذر عرض هذه الصفحة"),text:document.body.innerText.slice(-300)})'))
   assert not evaluate('document.body.innerText.includes("تعذر عرض هذه الصفحة")'),route
   assert evaluate('typeof Object.hasOwn==="function"&&typeof Object.fromEntries==="function"&&typeof Array.prototype.at==="function"&&typeof Array.prototype.findLast==="function"&&typeof String.prototype.replaceAll==="function"&&typeof structuredClone==="function"&&typeof AbortSignal.timeout==="function"'),route
-  if route=='/admin':
+  if route=='/profile?admin=1':
    assert evaluate('document.body.innerText.includes("synthetic@example.invalid")')
+   evaluate('document.querySelector("[data-testid=profile-admin-section]").scrollIntoView({block:"start",behavior:"instant"})')
    print('ADMIN_SCREEN',screenshot('omda-admin-mobile.png'))
    cmd('Emulation.setDeviceMetricsOverride',{'width':1280,'height':900,'deviceScaleFactor':1,'mobile':False})
    print('ADMIN_DESKTOP_SCREEN',screenshot('omda-admin-desktop.png'))
