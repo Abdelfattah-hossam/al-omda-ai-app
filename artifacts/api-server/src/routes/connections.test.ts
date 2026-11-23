@@ -1,3 +1,4 @@
+// Isolated connection tests use synthetic credentials and mock all provider traffic.
 import {test} from 'node:test';import {strict as assert} from 'node:assert';import express from 'express';import cookieParser from 'cookie-parser';import {once} from 'node:events';import router from './ai.js';import {setWorkersAiBinding} from '../lib/cloudflare-ai.js';
 test('hosted connections require auth and origin, test actual generation and sanitize failures',async()=>{
  const old=globalThis.fetch,env={...process.env};process.env.SUPABASE_URL='https://qa.supabase.co';process.env.SUPABASE_PUBLISHABLE_KEY='qa';let units=0,runs=0;

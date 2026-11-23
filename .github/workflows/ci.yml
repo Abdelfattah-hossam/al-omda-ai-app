@@ -116,6 +116,8 @@ jobs:
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/al-omda-ai/src/lib/agent-stream.test.ts
       - name: Test API CORS policy
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/app.cors.test.ts
+      - name: Test hosted provider diagnostics
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/connections.test.ts
       - name: Test collaboration record validation
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/routes/collaboration.test.ts
       - name: Test workspace asset validation
