@@ -14,6 +14,7 @@ import { Link, useLocation, useSearch } from 'wouter';
 const MediaStudio = lazy(() => import('./MediaStudio'));
 const AIChatPage = lazy(() => import('./AIChat'));
 const CollaborationWorkspace = lazy(() => import('./CollaborationWorkspace'));
+const AdminWorkspace=lazy(()=>import('./AdminWorkspace'));
 const AuditLogWorkspace = lazy(() => import('./AuditLogWorkspace'));
 const SalesAnalyticsWorkspace = lazy(() => import('./SalesAnalyticsWorkspace'));
 const WorkspaceAssets = lazy(() => import('./WorkspaceAssets'));
@@ -790,6 +791,10 @@ function App() {
   const [location, setLocation] = useLocation();
   const locationSearch=useSearch();
   const [saved, setSaved] = useState(readInitial);
+  const [adminAllowed,setAdminAllowed]=useState(false);
+  const [sharedContent,setSharedContent]=useState<Record<string,string>>({});
+  useEffect(()=>{void fetch('/api/app-content').then(r=>r.ok?r.json():{}).then(d=>setSharedContent(d)).catch(()=>{});},[]);
+
   const [projectExportMenu,setProjectExportMenu]=useState<string|null>(null);
   const [projectExportBusy,setProjectExportBusy]=useState(false);
   const [preparedProjectPdf,setPreparedProjectPdf]=useState<{taskId:string;blob:Blob}|null>(null);
@@ -1212,6 +1217,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     void initializeAccount();
     return () => { cancelled = true; };
   }, []);
+  useEffect(()=>{if(!authUser){setAdminAllowed(false);return;}void fetch('/api/admin/access',{credentials:'same-origin'}).then(r=>r.ok?r.json():{}).then(d=>setAdminAllowed((d as {admin?:boolean}).admin===true)).catch(()=>setAdminAllowed(false));},[authUser?.id]);
   // Refresh the signed-in workspace so tasks created in chat appear without a manual page reload.
   useEffect(() => {
     if (!authUser || authLoading) return;
@@ -2988,6 +2994,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
   else if (path === '/collaboration/contacts') page = <CollaborationWorkspace key="contact" kind="contact" language={language} />;
   else if (path === '/collaboration/calendar') page = <CollaborationWorkspace key="event" kind="event" language={language} />;
   else if (path === '/collaboration/tickets') page = <CollaborationWorkspace key="ticket" kind="ticket" language={language} />;
+  else if (path === '/admin') page=<AdminWorkspace language={language}/>;
   else if (path === '/system/security') page = <AuditLogWorkspace language={language} />;
   else if (path === '/finance/sales-overview') page = <SalesAnalyticsWorkspace language={language} mode="overview" />;
   else if (path === '/finance/sales-distribution') page = <SalesAnalyticsWorkspace language={language} mode="distribution" />;
@@ -3083,7 +3090,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <Link href={focusedHref("/profile","profile-account-card")} className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
         </div></header>
       {pageHelpOpen && <section className="panel panel-pad" role="region" aria-label={isAr?"مساعدة الصفحة الحالية":"Current page help"} style={{margin:"12px 20px 0",display:"grid",gap:8}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><strong>{isAr?"كيف تستخدم هذه الصفحة؟":"How to use this page"}</strong><button type="button" className="icon-button" onClick={()=>setPageHelpOpen(false)} aria-label={isAr?"إغلاق المساعدة":"Close help"}><X size={15}/></button></div><p style={{margin:0,lineHeight:1.8,color:"var(--text-secondary)"}}>{getPageGuidance(path,isAr)}</p></section>}
-      <div className="content-wrap"><Suspense fallback={<div className="panel panel-pad plan-empty" style={{margin:20}}><span className="section-meta">{isAr?'جارٍ تحميل الصفحة…':'Loading page…'}</span></div>}>{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</Suspense></div>
+      <div className="content-wrap">{path!=='/ai'&&(adminAllowed||sharedContent.announcement||sharedContent.help_text||sharedContent.support_email)&&<aside className="panel" style={{margin:'12px 20px',padding:14,display:'grid',gap:8,overflowWrap:'anywhere'}}>{adminAllowed&&<Link className="button button-small" href="/admin">{isAr?'إدارة التطبيق':'App administration'}</Link>}{sharedContent.announcement&&<p dir="auto">{sharedContent.announcement}</p>}{sharedContent.help_text&&<small dir="auto">{sharedContent.help_text}</small>}{sharedContent.support_email&&<small dir="auto">{isAr?'الدعم: ':'Support: '}{sharedContent.support_email}</small>}</aside>}<Suspense fallback={<div className="panel panel-pad plan-empty" style={{margin:20}}><span className="section-meta">{isAr?'جارٍ تحميل الصفحة…':'Loading page…'}</span></div>}>{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</Suspense></div>
     </main>
     {pendingDeleteTask&&<div role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&deletingTaskId===null)setPendingDeleteTaskId(null);}} style={{position:'fixed',inset:0,zIndex:110,display:'grid',placeItems:'center',padding:16,background:'rgba(0,0,0,.68)',backdropFilter:'blur(5px)'}}>
       <section role="dialog" aria-modal="true" aria-label={isAr?'تأكيد حذف المشروع':'Confirm project deletion'} className="panel" style={{width:'min(440px,100%)',padding:18,boxShadow:'0 24px 80px rgba(0,0,0,.45)'}} onMouseDown={(event)=>event.stopPropagation()}>

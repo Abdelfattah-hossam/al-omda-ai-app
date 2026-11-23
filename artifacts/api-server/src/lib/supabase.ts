@@ -172,7 +172,7 @@ export function clearSessionCookies(req: Request, res: Response): void {
   res.clearCookie(REFRESH_COOKIE, options);
 }
 
-export async function resolveSession(
+async function resolveSessionBase(
   req: Request,
   res: Response,
 ): Promise<SupabaseSession | null> {
@@ -219,6 +219,15 @@ export async function resolveSession(
   }
   setSessionCookies(req, res, session);
   return { user: session.user, accessToken: session.access_token };
+}
+
+// Account suspension is checked centrally, including old already-signed-in sessions.
+export async function resolveSession(req:Request,res:Response):Promise<SupabaseSession|null>{
+ const session=await resolveSessionBase(req,res);if(!session)return null;
+ const response=await supabaseFetch('/rest/v1/rpc/omda_account_access',{method:'POST',headers:{'content-type':'application/json'},body:'{}'},session.accessToken);
+ const access=await readSupabaseJson<{suspended?:boolean}>(response);
+ if(access?.suspended){clearSessionCookies(req,res);return null;}
+ return session;
 }
 
 export function requireSameOrigin(req: Request, res: Response, next: NextFunction): void {
