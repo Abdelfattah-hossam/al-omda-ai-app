@@ -12,12 +12,12 @@ import './mobile-workspace.css';
 import './chat-composer-alignment.css';
 import './profile-account.css';
 
-// Cache the production app shell so AL OMDA can open while the device is offline.
+// Cache the production app shell so Al OMDA AI can open while the device is offline.
 // API-backed actions still require a connection and are never cached.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     void navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch((error) => {
-      console.warn('AL OMDA offline shell could not be registered.', error);
+      console.warn('Al OMDA AI offline shell could not be registered.', error);
     });
   });
 }

@@ -1,26 +1,32 @@
 {
   "id": "/",
-  "name": "AL OMDA AI",
-  "short_name": "AL OMDA",
+  "name": "Al OMDA AI",
+  "short_name": "Al OMDA AI",
   "description": "مساعدك الذكي ومساحة عملك",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#08080a",
-  "theme_color": "#08080a",
+  "background_color": "#100e19",
+  "theme_color": "#100e19",
   "icons": [
     {
-      "src": "/brand/al-omda-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/brand/nexus-icon-192.png?v=nexusB1",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/brand/al-omda-icon-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/brand/nexus-icon-512.png?v=nexusB1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/nexus-maskable-512.png?v=nexusB1",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

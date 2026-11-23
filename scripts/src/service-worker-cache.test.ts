@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=readFileSync(new URL('../../artifacts/al-omda-ai/public/service-worker.js',import.meta.url),'utf8');
 test('asset-only deploys change the worker script and cache version, not just the manifest',()=>{
  const first=versionOfflineWorker(source,'assets/chat-a.js');const second=versionOfflineWorker(source,'assets/chat-b.js');
- assert.notEqual(first,second);assert.equal(first,versionOfflineWorker(source,'assets/chat-a.js'));assert.ok(!first.includes('__OMDA_ASSET_VERSION__'));assert.match(first,/al-omda-shell-v4-[a-f0-9]{16}/);
+ assert.notEqual(first,second);assert.equal(first,versionOfflineWorker(source,'assets/chat-a.js'));assert.ok(!first.includes('__OMDA_ASSET_VERSION__'));assert.match(first,/al-omda-shell-v5-nexus-[a-f0-9]{16}/);
  assert.throws(()=>versionOfflineWorker('missing marker','assets'));
 });
 async function assetRequest(cachedType:string, networkType:string) {
@@ -35,4 +35,20 @@ test('private API responses never enter the offline shell cache',()=>{
  const listeners:Record<string,(event:any)=>void>={};let intercepted=false;
  vm.runInNewContext(source,{self:{location:{origin:'https://app.test'},addEventListener:(name:string,fn:(event:any)=>void)=>listeners[name]=fn},URL});
  listeners.fetch({request:{url:'https://app.test/api/ai/conversations',method:'GET',mode:'cors'},respondWith:()=>{intercepted=true;}});assert.equal(intercepted,false);
+});
+
+test('NEXUS B identity is consistent across metadata, install names, icons and preserved originals',()=>{
+ const root=new URL('../../artifacts/al-omda-ai/',import.meta.url);
+ const html=readFileSync(new URL('index.html',root),'utf8');
+ const manifest=JSON.parse(readFileSync(new URL('public/manifest.webmanifest',root),'utf8'));
+ assert.match(html,/<title>Al OMDA AI<\/title>/);
+ for(const name of ['og:title','twitter:title']) assert.ok(html.includes(`${name}" content="Al OMDA AI"`));
+ assert.equal(manifest.name,'Al OMDA AI');assert.equal(manifest.short_name,'Al OMDA AI');
+ assert.match(html,/apple-touch-icon/);assert.match(html,/nexus-social\.png/);assert.ok(!html.includes('?v=nexusB1?v='));
+ for(const item of manifest.icons) assert.ok(readFileSync(new URL('public'+item.src.split('?')[0],root)).length>100);
+ for(const name of ['al-omda-mark.svg','al-omda-lockup.svg','al-omda-icon-maskable.svg']){
+  const current=readFileSync(new URL('public/brand/'+name,root),'utf8');
+  const original=readFileSync(new URL('public/brand/archive-before-nexus-20261123/'+name,root),'utf8');
+  assert.notEqual(current,original);assert.match(current,/Al OMDA AI/);assert.ok(!current.includes('#c48e34'));
+ }
 });
