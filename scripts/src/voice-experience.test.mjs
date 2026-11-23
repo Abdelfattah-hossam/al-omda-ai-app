@@ -35,3 +35,12 @@ test('Safari orb is native SVG, without CSS blend or conic clipping layers',()=>
  assert.doesNotMatch(css,/mix-blend-mode|conic-gradient|filter:saturate/);
  assert.ok(css.includes('.ai-chat-live-backdrop{position:fixed!important;inset:0!important'));
 });
+const chat=readFileSync('../artifacts/al-omda-ai/src/AIChat.tsx','utf8');
+test('dictation waits for native start, times out and explains Safari abort',()=>{
+ assert.ok(chat.includes('recognition.onstart='));
+ assert.ok(chat.includes('window.clearTimeout(voiceStartTimerRef.current)'));
+ assert.ok(chat.includes('Safari did not start dictation'));
+ assert.ok(chat.includes('Safari aborted dictation'));
+ assert.ok(chat.includes('if(!event.results[index]?.isFinal)continue'));
+ assert.ok(chat.includes('className="ai-dictation-status" role="status"'));
+});

@@ -1,8 +1,14 @@
-/* iPhone request: lift only glyphs inside the typing bar, not the bar or hit targets. */
+/* Center contents inside the existing typing pill. Never move the composer. */
 @layer omda-chat-design {
- @media(max-width:767px) {
-  body .app-shell[data-chat-active="true"] .ai-chat-composer :is(.ai-attach-image-button,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button)>svg {
-   translate:0 -3px;
-  }
- }
+ body .app-shell[data-chat-active="true"] .ai-composer-tools{align-items:center!important}
+ body .app-shell[data-chat-active="true"] .ai-composer-tools :is(.ai-attach-image-button,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button,.ai-send-button){display:flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important;line-height:1!important;padding:0!important;align-self:center!important}
+ body .app-shell[data-chat-active="true"] .ai-composer-tools :is(.ai-attach-image-button,.ai-plus-button,.ai-chat-mic-button,.ai-voice-button,.ai-send-button)>svg{display:block!important;translate:none!important;transform:none!important;margin:0!important;flex:none!important}
+ body .app-shell[data-chat-active="true"] .ai-plus-wrap{display:flex!important;align-items:center!important;align-self:center!important}
+ body .app-shell[data-chat-active="true"] .ai-composer-input{box-sizing:border-box!important;min-height:42px!important;padding-block:11px!important;line-height:20px!important;align-self:center!important;margin-block:0!important}
+ body .app-shell[data-chat-active="true"] .ai-dictation-status{color:#ddcdf7;background:#211b2b;border:1px solid #4a3b60;border-radius:12px;padding:10px;margin-top:8px;font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+ body .app-shell[data-chat-active="true"] .ai-dictation-status button{display:block;margin-top:6px}
 }
+
+/* Paint the exposed root and iOS home-indicator region, no composer offset changes. */
+html:has(.app-shell[data-chat-active="true"]),body:has(.app-shell[data-chat-active="true"]),#root:has(.app-shell[data-chat-active="true"]){background:#0b0b0b!important;background-color:#0b0b0b!important}
+html:has(.app-shell[data-chat-active="true"])::before{content:"";position:fixed;inset:0;z-index:-1;background:#0b0b0b;pointer-events:none}

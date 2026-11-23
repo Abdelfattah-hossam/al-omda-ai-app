@@ -267,6 +267,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   const historyLoadingRef = useRef(historyLoading);
   historyLoadingRef.current = historyLoading;
   const recognitionRef = useRef<any>(null);
+  const voiceStartTimerRef=useRef(0);
+  const [voiceStarting,setVoiceStarting]=useState(false);
   const voiceHasResultRef = useRef(false);
   const voiceHadErrorRef = useRef(false);
   const voiceStoppedByUserRef = useRef(false);
@@ -686,6 +688,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     container.scrollTop = container.scrollHeight;
   }, [messages, loading]);
   useEffect(() => () => {
+    window.clearTimeout(voiceStartTimerRef.current);
     recognitionRef.current?.stop?.();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   }, []);
@@ -1333,8 +1336,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   };
 
   const toggleVoiceInput = () => {
-    if (listening) {
+    if (listening || voiceStarting) {
       voiceStoppedByUserRef.current = true;
+      window.clearTimeout(voiceStartTimerRef.current);
+      setVoiceStarting(false);
       recognitionRef.current?.stop();
       setListening(false);
       return;
@@ -1347,14 +1352,17 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     }
     const recognition = new SpeechRecognition();
     recognition.lang = ar ? "ar-EG" : "en-US";
-    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     voiceHasResultRef.current = false;
     voiceHadErrorRef.current = false;
     voiceStoppedByUserRef.current = false;
+    recognition.onstart=()=>{window.clearTimeout(voiceStartTimerRef.current);setVoiceStarting(false);setListening(true);};
     recognition.onresult = (event: any) => {
       const transcripts: string[] = [];
       for (let index = event.resultIndex ?? 0; index < (event.results?.length ?? 0); index += 1) {
+        if(!event.results[index]?.isFinal)continue;
         const transcript = event.results[index]?.[0]?.transcript;
         if (typeof transcript === "string" && transcript.trim()) transcripts.push(transcript.trim());
       }
@@ -1365,6 +1373,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       }
     };
     recognition.onerror = (event: any) => {
+      window.clearTimeout(voiceStartTimerRef.current);
+      setVoiceStarting(false);
       voiceHadErrorRef.current = true;
       setListening(false);
       setVoiceFallback(true);
@@ -1376,28 +1386,37 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         "no-speech": { ar: "لم نسمع صوتًا. اضغط الميكروفون وتحدث بوضوح ثم حاول مرة أخرى.", en: "No speech was detected. Tap the microphone and try speaking again." },
         "network": { ar: "تعذر الاتصال بخدمة التعرف على الصوت. تحقق من الإنترنت وحاول مرة أخرى.", en: "Speech recognition service could not be reached. Check your internet connection and try again." },
         "language-not-supported": { ar: "لغة التعرف على الصوت غير مدعومة على هذا الجهاز.", en: "Speech recognition language is not supported on this device." },
-        "aborted": { ar: "تم إيقاف التسجيل.", en: "Recording was stopped." },
+        "aborted": { ar: "Safari أوقف خدمة الإملاء قبل إكمالها. تأكد من تفعيل الإملاء وإذن الميكروفون، وأغلق أي محادثة صوتية أو مكالمة أخرى. يمكنك استخدام ميكروفون لوحة المفاتيح بدلًا منها.", en: "Safari aborted dictation. Check Dictation and microphone permission, and end other voice chats or calls. You can use the keyboard microphone instead." },
       };
       if (code === "aborted" && voiceStoppedByUserRef.current) return;
       const detail = messages[code];
       setError(detail ? (ar ? detail.ar : detail.en) : (ar ? "تعذر التعرف على الصوت (" + code + "). تحقق من إذن الميكروفون ودعم المتصفح." : "Speech recognition failed (" + code + "). Check microphone permission and browser support."));
     };
     recognition.onend = () => {
+      window.clearTimeout(voiceStartTimerRef.current);
+      setVoiceStarting(false);
       setListening(false);
-      if (!voiceHasResultRef.current && !voiceHadErrorRef.current) {
+      if (!voiceHasResultRef.current && !voiceHadErrorRef.current && !voiceStoppedByUserRef.current) {
         setVoiceFallback(true);
         setError(ar
-          ? "Safari أنهى التسجيل لكنه لم يُرجع نصًا. قد لا تدعم خدمة التعرف على الصوت العربية في هذا المتصفح حاليًا. جرّب تحديث الصفحة والتحدث بوضوح، وإذا تكررت المشكلة سنضيف طريقة صوت بديلة."
-          : "Safari ended recording without returning a transcript. Speech recognition may not be available for this language in this browser. Refresh and try again; if it persists, we can add an alternative voice method.");
+          ? "Safari لم يُرجع نصًا. فعّل الإملاء من إعدادات iPhone > عام > لوحة المفاتيح، وتحقق من إذن الميكروفون. يمكنك الضغط داخل خانة الكتابة ثم ميكروفون لوحة المفاتيح."
+          : "Safari returned no text. Enable Dictation in iPhone Settings > General > Keyboard and check microphone permission. You can also tap the text field, then the keyboard microphone.");
       }
     };
     recognitionRef.current = recognition;
     setError("");
     setVoiceFallback(false);
-    setListening(true);
+    setVoiceStarting(true);
     try {
+      // Native recognition starts directly in the tap; no recording MIME assumption.
       recognition.start();
+      voiceStartTimerRef.current=window.setTimeout(()=>{
+        voiceHadErrorRef.current=true;setVoiceStarting(false);setListening(false);setVoiceFallback(true);
+        recognition.abort?.();
+        setError(ar?'Safari لم يبدأ خدمة الإملاء. اسمح بالميكروفون وفعّل الإملاء من إعدادات iPhone > عام > لوحة المفاتيح. أو استخدم ميكروفون لوحة المفاتيح داخل خانة الكتابة.':'Safari did not start dictation. Allow microphone access and enable Dictation in iPhone Settings > General > Keyboard, or use the keyboard microphone in the text field.');
+      },6000);
     } catch {
+      window.clearTimeout(voiceStartTimerRef.current);setVoiceStarting(false);
       setListening(false);
       setVoiceFallback(true);
       setError(ar ? "تعذر بدء التعرف على الصوت في Safari." : "Safari could not start speech recognition.");
@@ -1695,6 +1714,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
             {loading && agentRunSessionId ? <button type="button" className="ai-send-button" aria-label={ar ? "إيقاف الوكيل" : "Stop Agent"} title={ar ? "إيقاف الوكيل" : "Stop Agent"} onClick={()=>void cancelLocalAgent()} disabled={agentCancelling}>{agentCancelling ? <LoaderCircle size={18} className="animate-spin"/> : <Square size={16}/>}</button> : input.trim() || pendingImage || pendingFile ? <button type="submit" className="ai-send-button" aria-label={copy.send} disabled={loading || historyLoading || !signedIn || (!agentMode && usage?.remaining === 0)}>{loading ? <LoaderCircle size={18} className="animate-spin"/> : <Send size={18}/>}</button> : <button type="button" className="ai-voice-button" aria-label={ar ? "محادثة صوتية مباشرة" : "Live voice conversation"} aria-expanded={showLiveVoice} onClick={()=>setShowLiveVoice(true)} disabled={!signedIn || loading || historyLoading || usage?.remaining === 0}><Headphones size={18}/></button>}
           </div>
 
+          {(voiceStarting||listening||voiceFallback)&&<div className="ai-dictation-status" role="status" aria-live="polite">{voiceStarting?(ar?'جارٍ بدء خدمة الإملاء…':'Starting dictation…'):listening?(ar?'الميكروفون مفتوح للإملاء، تكلّم الآن. اضغطه للإيقاف.':'Dictation microphone is open. Speak now. Tap it to stop.'):error||copy.voiceUnsupported}{voiceFallback&&<button type="button" className="button button-quiet button-small" onClick={()=>inputRef.current?.focus()}>{copy.keyboardDictation}</button>}</div>}
           <div className="ai-composer-footer">
             <div>{speaking && <button type="button" className="button button-quiet button-small" onClick={()=>{window.speechSynthesis.cancel();setSpeaking(false);}}><VolumeX size={14}/>{ar ? "إيقاف الصوت" : "Stop voice"}</button>}</div>
             <small className="muted">{usage ? (ar ? `متبقي ${usage.remaining} من ${usage.limit} وحدة` : `${usage.remaining} of ${usage.limit} units left`) : copy.subtitle}</small>
