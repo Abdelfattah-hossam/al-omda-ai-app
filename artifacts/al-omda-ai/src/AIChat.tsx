@@ -1553,7 +1553,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>{if(window.matchMedia('(min-width:768px)').matches)setDesktopSidebarCollapsed(value=>!value);else setChatSidebarOpen(true);}} aria-label={ar ? "إظهار أو إخفاء القائمة الجانبية" : "Toggle sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
-      <div className="ai-chat-brand" aria-label="Munjizly"><span className="ai-chat-brand-mark"><ZahinOrb state={loading ? "thinking" : "idle"} /></span><span className="ai-chat-brand-copy"><strong>{ar ? "Munjizly" : "Munjizly"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      <div className="ai-chat-brand" aria-label="مُنجِزلي | Munjizly"><span className="ai-chat-brand-mark"><ZahinOrb state={loading ? "thinking" : "idle"} /></span><span className="ai-chat-brand-copy"><strong>مُنجِزلي | Munjizly</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
       {!signedIn && <button type="button" id="ai-chat-login-cta" className="ai-chat-login-cta" onClick={()=>setLocation("/profile?focus=profile-account-card")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
@@ -1664,7 +1664,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
               <button type="button" className="ai-message-action" onClick={()=>void copyAnswer(message.content,index)} aria-label={copy.copy} title={copiedIndex===index ? copy.copied : copy.copy}>{copiedIndex===index ? <span className="ai-message-action-check">✓</span> : <Copy size={15}/>}</button>
             </div>}
           </div>)}
-          {loading && <div className="chat-message assistant"><strong>Munjizly</strong><p className="ai-chat-thinking"><ZahinOrb state="thinking" /><span>{copy.loading}</span></p></div>}
+          {loading && <div className="chat-message assistant"><strong>مُنجِزلي | Munjizly</strong><p className="ai-chat-thinking"><ZahinOrb state="thinking" /><span>{copy.loading}</span></p></div>}
         </div>
         {error && <div className="notice-bar notice-error" role="alert" style={{marginBottom:12}}>{error}</div>}
         {usage?.remaining === 0 && <div className="notice-bar" style={{marginBottom:12}}>{copy.exhausted}</div>}
@@ -1795,7 +1795,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
                       {memoryGraphEdgeSaving ? (ar ? "جارٍ حفظ العلاقة..." : "Saving relationship...") : (ar ? "إضافة العلاقة" : "Add relationship")}
                     </button>
                   </div>}
-               </div> : memoryGraphLoadError ? null : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل للعمدة: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell Munjizly “Remember that I prefer concise replies” to add a preference."}</small>}
+               </div> : memoryGraphLoadError ? null : <small className="muted">{ar ? "لا توجد حقائق مؤكدة محفوظة بعد. قل لمُنجِزلي: «احفظ أنني أفضل الرد بالعربية» لإضافة تفضيل." : "No confirmed facts yet. Tell Munjizly “Remember that I prefer concise replies” to add a preference."}</small>}
              </section>
 <section className="ai-chat-settings-section ai-chat-agent-setting"><div><strong>{ar ? "وضع الوكيل المحلي" : "Local Agent mode"}</strong><p>{ar ? "قراءة ملفات المشروع وتعديلها وتشغيل أوامر بعد موافقتك. يحتاج Runtime يعمل على جهازك." : "Inspect project files and run commands with your approval. Requires a local runtime."}</p></div><button type="button" role="switch" aria-checked={agentMode} className={"ai-chat-switch" + (agentMode ? " on" : "")} onClick={()=>{if(!signedIn){setError(copy.login);return;}setAgentMode(v=>!v);}} disabled={!signedIn}><i/></button></section>
           </div>
