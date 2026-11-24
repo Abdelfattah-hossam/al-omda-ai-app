@@ -1500,6 +1500,17 @@ pnpm --filter @workspace/scripts agent:runtime`;
       setAuthWorking(false);
     }
   };
+  const handleDeleteAccount = async () => {
+    const ar = document.documentElement.lang === 'ar';
+    const answer = window.prompt(ar ? 'هيتمسح حسابك وكل بياناتك وملفاتك نهائياً ومينفعش نرجعها. اكتب DELETE للتأكيد.' : 'This permanently deletes your account, data and files. Type DELETE to confirm.');
+    if (answer !== 'DELETE') return;
+    setAuthWorking(true);
+    try {
+      const response = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirm: 'DELETE' }) });
+      if (!response.ok) { setAuthError(ar ? 'تعذر حذف الحساب. حساب الأدمن لا يُحذف من هنا.' : 'Could not delete the account. Admin accounts cannot be deleted here.'); setAuthWorking(false); return; }
+    } catch { setAuthError(ar ? 'تعذر حذف الحساب.' : 'Could not delete the account.'); setAuthWorking(false); return; }
+    await handleSignOut();
+  };
   const handleSaveProfile = async () => {
     if(profileSavingRef.current)return;
     const displayName=profileName.trim();const organization=profileOrg.trim()||org;
@@ -2935,7 +2946,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
               <button type="button" className={'account-mode-button'+(authMode==='signup'?' is-active':'')} aria-pressed={authMode==='signup'} onClick={()=>{setAuthMode('signup');setAuthError('');setAuthNotice('');}} data-testid="button-auth-signup-mode">{isAr?'إنشاء حساب جديد':t('signUp')}</button>
             </div>
           </>}
-          {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authActive')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button></div>}
+          {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authActive')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button> <button type="button" className="button button-small" onClick={()=>void handleDeleteAccount()} disabled={authWorking}>{document.documentElement.lang==='ar'?'حذف الحساب نهائياً':'Delete account'}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceLoadError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
         
       </section>

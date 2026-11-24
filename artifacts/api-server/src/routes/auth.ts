@@ -138,4 +138,56 @@ router.post("/auth/logout", requireSameOrigin, async (req, res): Promise<void> =
   res.json(SignOutResponse.parse({ ok: true }));
 });
 
+// Account deletion (privacy): removes the caller's stored files, then the
+// account and all of its rows through a database function that only ever acts
+// on the caller's own id. Requires an explicit confirmation word. Admin
+// accounts cannot be deleted here.
+async function removeUserObjects(bucket: string, prefix: string, accessToken: string, depth = 0): Promise<void> {
+  if (depth > 4) return;
+  const files: string[] = [];
+  for (let offset = 0; offset < 5000; offset += 100) {
+    const listed = await supabaseFetch(`/storage/v1/object/list/${bucket}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefix, limit: 100, offset }),
+    }, accessToken);
+    const items = await readSupabaseJson<Array<{ name?: string; id?: string | null }>>(listed);
+    for (const item of items) {
+      if (!item.name) continue;
+      if (item.id) files.push(prefix + item.name);
+      else await removeUserObjects(bucket, `${prefix}${item.name}/`, accessToken, depth + 1);
+    }
+    if (items.length < 100) break;
+  }
+  for (let i = 0; i < files.length; i += 100) {
+    const removed = await supabaseFetch(`/storage/v1/object/${bucket}`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prefixes: files.slice(i, i + 100) }),
+    }, accessToken);
+    await readSupabaseJson<unknown>(removed);
+  }
+}
+
+router.delete("/auth/account", requireSameOrigin, async (req, res): Promise<void> => {
+  const session = await resolveSession(req, res);
+  if (!session) { res.status(401).json({ error: "Sign in to delete your account." }); return; }
+  if (req.body?.confirm !== "DELETE") { res.status(400).json({ error: "Send confirm: DELETE to delete the account." }); return; }
+  try {
+    for (const bucket of ["workspace-assets", "user-avatars"]) {
+      await removeUserObjects(bucket, `${session.user.id}/`, session.accessToken);
+    }
+    const response = await supabaseFetch("/rest/v1/rpc/omda_delete_my_account", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }, session.accessToken);
+    await readSupabaseJson<unknown>(response);
+    clearSessionCookies(req, res);
+    res.json({ ok: true });
+  } catch (error) {
+    reportSupabaseError(req, res, error, "Could not delete the account.");
+  }
+});
+
 export default router;

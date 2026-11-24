@@ -1,17 +1,11 @@
 name: Deploy Cloudflare Worker
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "artifacts/al-omda-ai/**"
-      - "artifacts/api-server/**"
-      - "lib/**"
-      - "artifacts/al-omda-ai/wrangler.jsonc"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/deploy-cloudflare.yml"
+  # Production deploys only after the CI workflow has passed on main.
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -26,9 +20,12 @@ jobs:
     name: Build and deploy production Worker
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4

@@ -7,11 +7,26 @@ import { apiCors } from "./lib/cors";
 const app: Express = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
+app.use(cookieParser());
 app.use(securityHeaders);
 app.use(authBurstGuard);
+// Structured request log: method, route, status, duration and user id only.
+// Never log bodies, query strings, cookies or tokens. The user id is read from
+// the access-token payload for log correlation only and is never trusted.
+app.use((req, res, next) => {
+ const started = Date.now();
+ res.on("finish", () => {
+  let userId: string | undefined;
+  try {
+   const token = req.cookies?.["omda_access"] as string | undefined;
+   if (token) userId = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")).sub;
+  } catch { /* ignore malformed token */ }
+  console.log(JSON.stringify({ evt: "api", method: req.method, route: req.originalUrl.split("?")[0].replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, ":id"), status: res.statusCode, ms: Date.now() - started, userId }));
+ });
+ next();
+});
 
 app.use(apiCors);
-app.use(cookieParser());
 app.use(express.json({ limit: "7mb" }));
 app.use(express.urlencoded({ extended: false, limit: "64kb", parameterLimit: 100 }));
 
