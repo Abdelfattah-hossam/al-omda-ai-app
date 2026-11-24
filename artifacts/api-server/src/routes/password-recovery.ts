@@ -2,13 +2,14 @@ import {Router,type IRouter}from 'express';
 import {randomBytes,createHash}from 'node:crypto';
 import {supabaseFetch,requireSameOrigin,readSupabaseJson,reportSupabaseError,SupabaseHttpError,resolveSession,clearSessionCookies}from '../lib/supabase';
 const router:IRouter=Router();
-const APP='https://al-omda-ai.pages.dev';
+const CANONICAL='https://al-omda-ai.pages.dev';
+function recoveryOrigin(req:{get(name:string):string|undefined}){return req.get('x-forwarded-host')?.split(',')[0]?.trim()==='al-omda-ai.pages.dev'?CANONICAL:'https://al-omda-ai-app.abdelfattahhossam1.workers.dev';}
 const verifierCookie='omda_recovery_verifier',accessCookie='omda_recovery_access',cooldownCookie='omda_recovery_wait';
 const cookie={httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax' as const,path:'/api/auth',maxAge:15*60*1000};
 export function validRecoveryEmail(value:unknown):value is string{return typeof value==='string'&&value.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
 export function validRecoveryPassword(value:unknown):value is string{return typeof value==='string'&&value.length>=8&&value.length<=128;}
 router.post('/auth/forgot-password',requireSameOrigin,async(req,res)=>{
- const email=req.body?.email;if(!validRecoveryEmail(email)){res.status(400).json({error:'أدخل بريدًا إلكترونيًا صحيحًا.'});return;}
+ const APP=recoveryOrigin(req);const email=req.body?.email;if(!validRecoveryEmail(email)){res.status(400).json({error:'أدخل بريدًا إلكترونيًا صحيحًا.'});return;}
  const wait=Number(req.cookies?.[cooldownCookie]);if(Number.isFinite(wait)&&Date.now()-wait<60000){res.status(429).json({error:'انتظر دقيقة قبل طلب رابط آخر.'});return;}
  const verifier=randomBytes(32).toString('base64url'),challenge=createHash('sha256').update(verifier).digest('base64url');
  try{const response=await supabaseFetch('/auth/v1/recover?redirect_to='+encodeURIComponent(APP+'/api/auth/recovery-callback'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),code_challenge:challenge,code_challenge_method:'s256'})});await readSupabaseJson(response);
@@ -22,7 +23,7 @@ router.post('/auth/forgot-password',requireSameOrigin,async(req,res)=>{
 
 });
 router.get('/auth/recovery-callback',async(req,res)=>{
- res.setHeader('cache-control','no-store');res.setHeader('referrer-policy','no-referrer');
+ const APP=recoveryOrigin(req);res.setHeader('cache-control','no-store');res.setHeader('referrer-policy','no-referrer');
  const code=typeof req.query.code==='string'?req.query.code:'',verifier=req.cookies?.[verifierCookie];
  res.clearCookie(verifierCookie,{...cookie,secure:true});
  if(!code||code.length>3000||typeof verifier!=='string'){res.redirect(303,APP+'/reset-password?error=invalid');return;}
