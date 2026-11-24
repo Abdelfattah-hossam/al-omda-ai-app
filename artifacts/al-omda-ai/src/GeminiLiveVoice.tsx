@@ -43,6 +43,45 @@ function toBase64(samples: Int16Array): string {
   return btoa(binary);
 }
 
+// Keep at most ~90 seconds of 16 kHz mono PCM per utterance for server transcription.
+const MAX_UTTERANCE_SAMPLES = 16000 * 90;
+
+function encodeWav16k(frames: Int16Array[]): Uint8Array {
+  let total = 0;
+  for (const frame of frames) total += frame.length;
+  const bytes = new Uint8Array(44 + total * 2);
+  const view = new DataView(bytes.buffer);
+  const writeText = (offset: number, text: string) => { for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i)); };
+  writeText(0, "RIFF");
+  view.setUint32(4, 36 + total * 2, true);
+  writeText(8, "WAVE");
+  writeText(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, 16000, true);
+  view.setUint32(28, 16000 * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, "data");
+  view.setUint32(40, total * 2, true);
+  let offset = 44;
+  for (const frame of frames) {
+    bytes.set(new Uint8Array(frame.buffer, frame.byteOffset, frame.byteLength), offset);
+    offset += frame.byteLength;
+  }
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 export default function GeminiLiveVoice({ language, disabled, onTranscript,initialAudioContext }: Props) {
   const ar = language === "ar";
   const [active, setActive] = useState(false);
@@ -130,6 +169,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
   const sessionReadyRef = useRef(false);
   const userTranscriptRef = useRef("");
   const assistantTranscriptRef = useRef("");
+  const utteranceFramesRef = useRef<Int16Array[]>([]);
+  const utteranceSamplesRef = useRef(0);
+  const utteranceTranscriptionRef = useRef<Promise<string> | null>(null);
   const speechActiveRef = useRef(false);
   const silenceFramesRef = useRef(0);
   const pendingPcmPlaybackRef = useRef(0);
@@ -156,6 +198,24 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
     if (mountedRef.current) setActive(value);
   };
 
+  // Gemini Live's own input transcription misfires on Arabic speech (it can emit
+  // Japanese or Latin text). The mic audio already streamed to Gemini is also kept
+  // and sent to a dedicated Arabic speech-to-text pass, which is what the chat shows.
+  const transcribeUtterance = (frames: Int16Array[]): Promise<string> => {
+    if (!frames.length) return Promise.resolve("");
+    const wav = encodeWav16k(frames);
+    return fetch("/api/ai/transcribe", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ audio: bytesToBase64(wav), language: ar ? "ar" : "en" }),
+    }).then(async (response) => {
+      if (!response.ok) return "";
+      const data = await response.json().catch(() => ({}));
+      return typeof data.text === "string" ? data.text.trim() : "";
+    }).catch(() => "");
+  };
+
   const cleanup = (expectedSessionId?: number) => {
     if (expectedSessionId !== undefined && sessionIdRef.current !== expectedSessionId) return;
     sessionIdRef.current += 1;
@@ -165,6 +225,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
     setConnectingState(false);
     setActiveState(false);
     turnArmedRef.current=false;validTurnRef.current=false;gateRef.current.reset();
+    utteranceTranscriptionRef.current=null;utteranceFramesRef.current=[];utteranceSamplesRef.current=0;
     if(mountedRef.current)setTurnArmed(false);
     sessionReadyRef.current = false;
     speechActiveRef.current = false;
@@ -316,7 +377,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
               outputAudioTranscription: {},
               realtimeInputConfig: { automaticActivityDetection: { disabled: true },activityHandling:"START_OF_ACTIVITY_INTERRUPTS" },
               systemInstruction: {
-                parts: [{ text: `You are Munjizly, a warm Egyptian conversational assistant. Understand informal Arabic, short replies, typos and all Arabic dialects. Mirror the dialect the user actually speaks, including Egyptian, Gulf, Levantine, Maghrebi, Sudanese, Iraqi or Hejazi. Use easy clear Arabic if unclear, and Egyptian as this user's default when there is no stronger cue. Never force one dialect on another. Use short replies, usually one or two sentences, with one useful next move. If a terse message is ambiguous, ask one short clarification in the same dialect. Never claim an action or file exists unless it was actually produced by a tool. Do not exaggerate slang or repeat greetings. Avoid robotic service phrases, lectures, and theatrical delivery. ${ar ? "ALWAYS speak and reply in Arabic (Egyptian by default). This user speaks Arabic only. Never answer in English or any other language on your own; switch language only if the user explicitly asks you to. If the audio sounds unclear or foreign, assume it is Arabic and ask a short clarifying question in Arabic. Never repeat or transcribe it as English, Portuguese, Spanish or Hindi." : "Match the user's language if they switch language."} Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; transcribe the user's speech in that language only. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
+                parts: [{ text: `You are Munjizly, a warm Egyptian conversational assistant inside the Munjizly app. App knowledge: if the user asks what this app does or how they benefit from it, answer only from these real features, in their own dialect: smart Arabic chat in every dialect; creating real downloadable Word, Excel and PowerPoint files (reports, tables, presentations) with PDF export; AI image generation from a text description; writing and building complete code and interactive web apps with a live preview; projects with an execution plan the user approves and Munjizly carries out step by step; a specialist agent network (lawyer, engineer, doctor, accountant, maintenance, education); this live hands-free voice chat; personal memory of the user's preferences; chat and task history synced across devices with Android, Windows and Mac apps; free daily usage units. Relate the benefit to the user's work or study and suggest one concrete thing to try now. Never invent features beyond this list. Understand informal Arabic, short replies, typos and all Arabic dialects. Mirror the dialect the user actually speaks, including Egyptian, Gulf, Levantine, Maghrebi, Sudanese, Iraqi or Hejazi. Use easy clear Arabic if unclear, and Egyptian as this user's default when there is no stronger cue. Never force one dialect on another. Use short replies, usually one or two sentences, with one useful next move. If a terse message is ambiguous, ask one short clarification in the same dialect. Never claim an action or file exists unless it was actually produced by a tool. Do not exaggerate slang or repeat greetings. Avoid robotic service phrases, lectures, and theatrical delivery. ${ar ? "ALWAYS speak and reply in Arabic (Egyptian by default). This user speaks Arabic only. Never answer in English or any other language on your own; switch language only if the user explicitly asks you to. If the audio sounds unclear or foreign, assume it is Arabic and ask a short clarifying question in Arabic. Never repeat or transcribe it as English, Portuguese, Spanish or Hindi." : "Match the user's language if they switch language."} Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; transcribe the user's speech in that language only. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
               }
             }
           }));
@@ -393,8 +454,11 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
           gateRef.current.calibrationMs=600;gateRef.current.noise=.002;gateRef.current.consecutiveMs=300;gateRef.current.voicedMs=350;
           speechActiveRef.current=true;setHeardSpeech(true);setThinking(false);
           userTranscriptRef.current='';assistantTranscriptRef.current='';receivedAudioChunks=0;
+          utteranceTranscriptionRef.current=null;
           socket.send(JSON.stringify({realtimeInput:{activityStart:{}}}));
           for(const frame of preRollRef.current)socket.send(JSON.stringify({realtimeInput:{audio:{mimeType:'audio/pcm;rate=16000',data:toBase64(frame)}}}));
+          utteranceFramesRef.current=[...preRollRef.current];
+          utteranceSamplesRef.current=preRollRef.current.reduce((n,p)=>n+p.length,0);
           preRollRef.current=[];silenceDurationRef.current=0;
           setStatus(ar?'وقفت الرد. اتكلم براحتك، أنا سامعك.':'Reply stopped. I am listening until you finish.');return;
         }
@@ -418,6 +482,8 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             receivedAudioChunks = 0;
             socket.send(JSON.stringify({ realtimeInput: { activityStart: {} } }));
             for(const frame of preRollRef.current.slice(0,-1))socket.send(JSON.stringify({realtimeInput:{audio:{mimeType:'audio/pcm;rate=16000',data:toBase64(frame)}}}));
+            utteranceFramesRef.current=[...preRollRef.current.slice(0,-1)];
+            utteranceSamplesRef.current=preRollRef.current.slice(0,-1).reduce((n,p)=>n+p.length,0);
             preRollRef.current=[];
             speechActiveRef.current = true;
             setStatus(ar ? "سمعتك... اتكلم براحتك" : "I hear you... go ahead");
@@ -433,6 +499,9 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             audio: { mimeType: "audio/pcm;rate=16000", data: toBase64(pcm) }
           }
         }));
+        utteranceFramesRef.current.push(pcm);
+        utteranceSamplesRef.current+=pcm.length;
+        while(utteranceSamplesRef.current>MAX_UTTERANCE_SAMPLES&&utteranceFramesRef.current.length>1){utteranceSamplesRef.current-=utteranceFramesRef.current[0].length;utteranceFramesRef.current.shift();}
 
         if (!hasSpeech) {
           silenceFramesRef.current += 1;silenceDurationRef.current+=durationMs;
@@ -442,8 +511,13 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
             speechActiveRef.current = false;
             silenceFramesRef.current = 0;
-            if(validTurnRef.current){setThinking(true);setStatus(ar ? "جاري تجهيز رد Munjizly..." : "Preparing Munjizly's reply...");}
-            else resumeListening();
+            if(validTurnRef.current){
+              const frames=utteranceFramesRef.current;
+              utteranceFramesRef.current=[];utteranceSamplesRef.current=0;
+              utteranceTranscriptionRef.current=frames.length?transcribeUtterance(frames):null;
+              setThinking(true);setStatus(ar ? "جاري تجهيز رد Munjizly..." : "Preparing Munjizly's reply...");
+            }
+            else {utteranceFramesRef.current=[];utteranceSamplesRef.current=0;resumeListening();}
           }
         }
       };
@@ -482,7 +556,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
         if (!serverContent) return;
         // Unsolicited/noise-only server content never enters the chat or playback.
         if(!validTurnRef.current)return;
-        if (serverContent.interrupted){stopReplyAudio();if(!speechActiveRef.current)resumeListening();return;}
+        if (serverContent.interrupted){stopReplyAudio();utteranceTranscriptionRef.current=null;utteranceFramesRef.current=[];utteranceSamplesRef.current=0;if(!speechActiveRef.current)resumeListening();return;}
         const inputText = serverContent.inputTranscription?.text;
         if (typeof inputText === "string" && inputText.trim()) userTranscriptRef.current += inputText;
         const outputText = serverContent.outputTranscription?.text;
@@ -545,7 +619,15 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
           setThinking(false);
           assistantTurnCompleteRef.current = true;
           if (pendingPcmPlaybackRef.current === 0 && mountedRef.current) setSpeaking(false);
-          const userText = userTranscriptRef.current.trim();
+          let userText = userTranscriptRef.current.trim();
+          const pendingTranscription=utteranceTranscriptionRef.current;
+          utteranceTranscriptionRef.current=null;
+          if(pendingTranscription){
+            try{
+              const whisperText=await Promise.race([pendingTranscription,new Promise<string>((resolve)=>window.setTimeout(()=>resolve(""),4000))]);
+              if(whisperText)userText=whisperText;
+            }catch{/* Keep Gemini's live transcript when the dedicated transcription fails. */}
+          }
           const assistantText = assistantTranscriptRef.current.trim();
           // Clear the completed turn immediately so later turns cannot append stale transcripts.
           userTranscriptRef.current = "";
