@@ -11,6 +11,13 @@ router.get('/app-content',async(_req,res)=>{try{const result=await supabaseFetch
 router.get('/admin/access',async(req,res)=>{
  try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:'Sign in required.'});return;}const result=await supabaseFetch('/rest/v1/rpc/omda_account_access',{method:'POST',headers:{'content-type':'application/json'},body:'{}'},session.accessToken);res.json(await readSupabaseJson(result));}catch(error){reportSupabaseError(req,res,error,'Could not check admin access.');}
 });
+// Identity comes only from the validated server session. No caller-supplied user IDs or timestamps.
+router.post('/presence/heartbeat',requireSameOrigin,async(req,res)=>{
+ try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:'Sign in required.'});return;}const result=await supabaseFetch('/rest/v1/rpc/omda_presence_heartbeat',{method:'POST',headers:{'content-type':'application/json'},body:'{}'},session.accessToken);res.json(await readSupabaseJson(result));}catch(error){reportSupabaseError(req,res,error,'Could not record app activity.');}
+});
+router.get('/admin/presence',async(req,res)=>{
+ try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:'Sign in required.'});return;}const result=await supabaseFetch('/rest/v1/rpc/omda_presence_stats',{method:'POST',headers:{'content-type':'application/json'},body:'{}'},session.accessToken);res.json(await readSupabaseJson(result));}catch(error){reportSupabaseError(req,res,error,'Could not load app activity.');}
+});
 router.get('/admin/:action',async(req,res)=>{
  if(!READS.has(req.params.action)){res.status(404).json({error:'Unknown admin view.'});return;}
  try{const session=await resolveSession(req,res);if(!session){res.status(401).json({error:'Sign in required.'});return;}const offset=Number(req.query.offset??0);if(!Number.isInteger(offset)||offset<0){res.status(400).json({error:'Invalid offset.'});return;}const result=await supabaseFetch('/rest/v1/rpc/omda_admin',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_action:req.params.action,p_id:typeof req.query.id==='string'?req.query.id:null,p_offset:offset})},session.accessToken);res.status(result.status===403?403:result.ok?200:400).json(await result.json());}catch(error){reportSupabaseError(req,res,error,'Could not load admin data.');}

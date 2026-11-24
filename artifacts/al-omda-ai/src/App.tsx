@@ -1,3 +1,5 @@
+import {useAppPresence} from './useAppPresence';
+import AdminPresence from './AdminPresence';
 import {prepareAvatarImage} from './lib/avatar-image';
 import {loadWorkspacePages,createSingleFlight,type WorkspacePage} from './lib/workspace-sync';
 import './home-directory.css';
@@ -1233,6 +1235,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     void initializeAccount();
     return () => { cancelled = true; };
   }, []);
+  useAppPresence(authUser?.id);
   useEffect(()=>{if(!authUser){setAdminAllowed(false);return;}void fetch('/api/admin/access',{credentials:'same-origin'}).then(r=>r.ok?r.json():{}).then(d=>setAdminAllowed((d as {admin?:boolean}).admin===true)).catch(()=>setAdminAllowed(false));},[authUser?.id]);
   // Refresh the signed-in workspace so tasks created in chat appear without a manual page reload.
   useEffect(() => {
@@ -2908,7 +2911,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><strong>{tasks.filter(item=>!item.demo && item.status==='review').length}</strong><span>{isAr?'تحتاج مراجعة':'In review'}</span></div>
       </div>
     </section>
-    {adminAllowed&&<section className="panel" data-testid="profile-admin-section" style={{padding:16,display:'grid',gap:12}}><button type="button" className="button button-small" aria-expanded={adminProfileOpen} onClick={()=>setLocation(adminProfileOpen?'/profile':'/profile?admin=1')}>{isAr?'إدارة التطبيق':'App administration'}</button>{adminProfileOpen&&<Suspense fallback={<p>{isAr?'جارٍ تحميل الإدارة…':'Loading administration…'}</p>}><AdminWorkspace language={language}/></Suspense>}</section>}
+    {adminAllowed&&<section className="panel" data-testid="profile-admin-section" style={{padding:16,display:'grid',gap:12}}><AdminPresence language={language}/><button type="button" className="button button-small" aria-expanded={adminProfileOpen} onClick={()=>setLocation(adminProfileOpen?'/profile':'/profile?admin=1')}>{isAr?'إدارة التطبيق':'App administration'}</button>{adminProfileOpen&&<Suspense fallback={<p>{isAr?'جارٍ تحميل الإدارة…':'Loading administration…'}</p>}><AdminWorkspace language={language}/></Suspense>}</section>}
     <AppDownloads isAr={isAr}/>
     <Link href={navigationHref('/ai')} className="button button-quiet profile-chat-link"><Bot size={17}/>{isAr?'افتح الشات الذكي':'Open AI chat'}</Link>
     <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
