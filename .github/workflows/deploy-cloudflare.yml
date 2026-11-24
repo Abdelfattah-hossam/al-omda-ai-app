@@ -58,6 +58,7 @@ jobs:
           # keeping its /api proxy alive for stale clients.
           pnpm dlx wrangler@4.161.0 pages project create zahin --production-branch main || true
           pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name zahin --branch main
+          PAGES_HOST_MODE=legacy node artifacts/al-omda-ai/build/prepare-pages.mjs
           pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name al-omda-ai --branch main
 
       - name: Deploy Worker and static assets
