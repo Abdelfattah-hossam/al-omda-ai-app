@@ -24,5 +24,5 @@ test('sitemap lists only public pages that exist and robots advertises it',()=>{
 test('public about page is bilingual, links to app and downloads, and retains brand',()=>{
  const about=readFileSync(root+'public/about/index.html','utf8');
  assert.match(about,/lang="en" dir="ltr"/);assert.match(about,/href="\/"/);assert.match(about,/href="\/download\/"/);assert.match(about,/#100e19/);
- assert.ok(existsSync(root+'public/favicon.ico'));assert.ok(existsSync(root+'public/brand/nexus-icon-192.png'));
+ assert.ok(existsSync(root+'public/favicon.ico'));assert.ok(existsSync(root+'public/brand/zahin-icon-192.png'));
 });

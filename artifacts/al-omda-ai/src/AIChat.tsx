@@ -1552,7 +1552,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     <div className="ai-chat-main" dir={ar ? "rtl" : "ltr"}>
     <header ref={chatTopbarRef} className="ai-chat-topbar" dir={ar ? "rtl" : "ltr"}>
       <button type="button" className="ai-chat-back" onClick={()=>{if(window.matchMedia('(min-width:768px)').matches)setDesktopSidebarCollapsed(value=>!value);else setChatSidebarOpen(true);}} aria-label={ar ? "إظهار أو إخفاء القائمة الجانبية" : "Toggle sidebar"}><i className="ai-chat-bars" aria-hidden="true">☰</i></button>
-      <div className="ai-chat-brand" aria-label="Zahin"><span className="ai-chat-brand-mark"><img src="/brand/al-omda-mark.svg?v=nexusB1" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "Zahin" : "Zahin"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
+      <div className="ai-chat-brand" aria-label="Zahin"><span className="ai-chat-brand-mark"><img src="/brand/zahin-mark.svg?v=zahin1" alt="" aria-hidden="true" /></span><span className="ai-chat-brand-copy"><strong>{ar ? "Zahin" : "Zahin"}</strong><small><i className={signedIn ? "is-ready" : ""}/>{signedIn ? (ar ? "متصل" : "Online") : (ar ? "غير متصل" : "Offline")}</small></span></div>
       {!signedIn && <button type="button" id="ai-chat-login-cta" className="ai-chat-login-cta" onClick={()=>setLocation("/profile?focus=profile-account-card")}><LockKeyhole size={14}/>{ar ? "دخول / حساب جديد" : "Sign in / Sign up"}</button>}
       <button type="button" className="ai-chat-exit" onClick={()=>setLocation("/")} aria-label={ar ? "الخروج من الشات والعودة للرئيسية" : "Exit chat and return home"} title={ar ? "الخروج من الشات" : "Exit chat"}><ArrowLeft size={17}/><span>{ar ? "خروج" : "Exit"}</span></button>
       <div className="ai-chat-model-wrap">
@@ -1610,7 +1610,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}
         <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
           {messages.length === 0 && <div className="ai-chat-welcome" id="welcome-screen">
-            <div className="ai-chat-welcome-mark"><img src="/brand/al-omda-mark.svg?v=nexusB1" alt="" aria-hidden="true" /></div>
+            <div className="ai-chat-welcome-mark"><img src="/brand/zahin-mark.svg?v=zahin1" alt="" aria-hidden="true" /></div>
             <h1>{ar ? "أهلاً بك مع Zahin" : "Welcome to Zahin"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">

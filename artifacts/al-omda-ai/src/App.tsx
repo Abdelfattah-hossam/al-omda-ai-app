@@ -3078,7 +3078,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     {mediaStudioOpen&&<Suspense fallback={null}><MediaStudio ar={isAr} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
     <aside className="sidebar">
       <div className="sidebar-brand-area">
-        <Link href={focusedHref("/","dashboard-overview")} className="brand-lockup"><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg?v=nexusB1" alt={isAr ? "Zahin" : "Zahin"}/></Link>
+        <Link href={focusedHref("/","dashboard-overview")} className="brand-lockup"><img className="brand-lockup-logo" src="/brand/zahin-lockup.svg?v=zahin1" alt={isAr ? "Zahin" : "Zahin"}/></Link>
         <span className="sidebar-workspace-state"><i aria-hidden="true"/>{isAr?'مساحة العمل':'WORKSPACE'}</span>
       </div>
       <div className="sidebar-scroll">
@@ -3160,7 +3160,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     </div>}
     {curtainOpen&&<div className="curtain-backdrop" role="presentation" onClick={()=>setCurtainOpen(false)}>
       <aside className="app-curtain" role="dialog" aria-modal="true" aria-label={isAr?'قائمة Zahin':'Zahin menu'} onClick={event=>event.stopPropagation()}>
-        <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><img className="brand-lockup-logo" src="/brand/al-omda-lockup.svg?v=nexusB1" alt={isAr ? "Zahin" : "Zahin"}/></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
+        <div className="curtain-head"><Link href={focusedHref("/","dashboard-overview")} className="brand-lockup" onClick={()=>setCurtainOpen(false)}><img className="brand-lockup-logo" src="/brand/zahin-lockup.svg?v=zahin1" alt={isAr ? "Zahin" : "Zahin"}/></Link><button type="button" className="icon-button" onClick={()=>setCurtainOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={17}/></button></div>
         <div className="curtain-user"><span className="avatar">{name.charAt(0)||'ع'}</span><span><strong>{name}</strong><small>{authUser?.email||org}</small></span></div>
         <div className="curtain-launcher-groups">
           {appLauncherGroups.map(group=><section key={group.id} className="curtain-launcher-group">

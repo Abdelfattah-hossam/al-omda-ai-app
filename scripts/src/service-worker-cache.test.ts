@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=readFileSync(new URL('../../artifacts/al-omda-ai/public/service-worker.js',import.meta.url),'utf8');
 test('asset-only deploys change the worker script and cache version, not just the manifest',()=>{
  const first=versionOfflineWorker(source,'assets/chat-a.js');const second=versionOfflineWorker(source,'assets/chat-b.js');
- assert.notEqual(first,second);assert.equal(first,versionOfflineWorker(source,'assets/chat-a.js'));assert.ok(!first.includes('__OMDA_ASSET_VERSION__'));assert.match(first,/al-omda-shell-v5-nexus-[a-f0-9]{16}/);
+ assert.notEqual(first,second);assert.equal(first,versionOfflineWorker(source,'assets/chat-a.js'));assert.ok(!first.includes('__OMDA_ASSET_VERSION__'));assert.match(first,/al-omda-shell-v6-zahin-[a-f0-9]{16}/);
  assert.throws(()=>versionOfflineWorker('missing marker','assets'));
 });
 async function assetRequest(cachedType:string, networkType:string) {
@@ -44,7 +44,7 @@ test('NEXUS B identity is consistent across metadata, install names, icons and p
  assert.match(html,/<title>[^<]*Zahin[^<]*<\/title>/);
  for(const name of ['og:title','twitter:title']) assert.ok(html.includes(`${name}" content="Zahin"`));
  assert.equal(manifest.name,'Zahin');assert.equal(manifest.short_name,'Zahin');
- assert.match(html,/apple-touch-icon/);assert.match(html,/nexus-social\.png/);assert.ok(!html.includes('?v=nexusB1?v='));
+ assert.match(html,/apple-touch-icon/);assert.match(html,/zahin-social\.png/);assert.ok(!html.includes('?v=nexusB1?v='));
  for(const item of manifest.icons) assert.ok(readFileSync(new URL('public'+item.src.split('?')[0],root)).length>100);
  for(const name of ['al-omda-mark.svg','al-omda-lockup.svg','al-omda-icon-maskable.svg']){
   const current=readFileSync(new URL('public/brand/'+name,root),'utf8');
