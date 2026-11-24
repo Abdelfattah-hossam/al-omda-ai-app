@@ -66,3 +66,15 @@ jobs:
         run: |
           rm -f artifacts/al-omda-ai/dist/public/_worker.js artifacts/al-omda-ai/dist/public/_routes.json
           pnpm dlx wrangler@4.161.0 deploy --config artifacts/al-omda-ai/wrangler.jsonc --keep-vars
+
+      - name: Sync Turnstile secret to the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: |
+          if [ -n "$TURNSTILE_SECRET_KEY" ]; then
+            printf '%s' "$TURNSTILE_SECRET_KEY" | pnpm dlx wrangler@4.161.0 secret put TURNSTILE_SECRET_KEY --name al-omda-ai-app
+          else
+            echo "TURNSTILE_SECRET_KEY repo secret not set; skipping."
+          fi

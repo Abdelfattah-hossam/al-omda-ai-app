@@ -1,4 +1,5 @@
 import {useAppPresence} from './useAppPresence';
+import TurnstileBox from './TurnstileBox';
 import AdminPresence from './AdminPresence';
 import {prepareAvatarImage} from './lib/avatar-image';
 import {loadWorkspacePages,createSingleFlight,type WorkspacePage} from './lib/workspace-sync';
@@ -2938,6 +2939,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <form className="account-form" onSubmit={handleAuthSubmit}>
               <div className="field-group"><label className="form-label" htmlFor="auth-email">{t('email')}</label><input id="auth-email" name="email" type="email" className="field" autoComplete="email" required maxLength={254} value={authEmail} onChange={(event)=>setAuthEmail(event.target.value)} data-testid="input-auth-email" placeholder="name@example.com"/></div>
               <a href="/forgot-password" className="button button-small">{isAr?'نسيت كلمة المرور؟':'Forgot password?'}</a><div className="field-group"><label className="form-label" htmlFor="auth-password">{t('password')}</label><input id="auth-password" name="password" type="password" className="field" autoComplete={authMode==='login'?'current-password':'new-password'} required minLength={8} maxLength={128} value={authPassword} onChange={(event)=>setAuthPassword(event.target.value)} data-testid="input-auth-password" placeholder={isAr?'8 أحرف على الأقل':'At least 8 characters'}/></div>
+              <TurnstileBox/>
               {authError&&<div className="notice-bar notice-error" role="alert">{authError}</div>}
               <button className="button button-primary" type="submit" disabled={authWorking || authStatus!=='configured'} data-testid="button-auth-submit"><LockKeyhole size={14}/>{authWorking?t('authWorking'):authMode==='login'?(isAr?'تسجيل الدخول':t('signIn')):(isAr?'إنشاء حساب':t('signUp'))}</button>
             </form>

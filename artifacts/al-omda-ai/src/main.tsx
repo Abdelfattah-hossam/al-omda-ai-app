@@ -1,4 +1,5 @@
 import './polyfills';
+import './lib/turnstile';
 
 import { createRoot } from 'react-dom/client';
 

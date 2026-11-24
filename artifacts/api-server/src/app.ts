@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
 import router from "./routes";
 import { securityHeaders, authBurstGuard } from "./lib/security";
+import { turnstileGuard } from "./lib/turnstile";
 import { apiCors } from "./lib/cors";
 
 const app: Express = express();
@@ -10,6 +11,7 @@ app.disable("x-powered-by");
 app.use(cookieParser());
 app.use(securityHeaders);
 app.use(authBurstGuard);
+app.use(turnstileGuard);
 // Structured request log: method, route, status, duration and user id only.
 // Never log bodies, query strings, cookies or tokens. The user id is read from
 // the access-token payload for log correlation only and is never trusted.
