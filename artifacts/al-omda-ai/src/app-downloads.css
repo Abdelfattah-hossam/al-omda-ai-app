@@ -1,1 +1,17 @@
 .app-downloads{scroll-margin-top:110px;padding:20px;margin:0 0 22px;min-width:0}.app-downloads-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.app-downloads-heading h2{font-size:19px;margin:0}.app-downloads-heading>span{font-size:12px;color:var(--text-secondary,#bfb1ca)}.app-downloads-devices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.app-downloads-device{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:118px;min-width:0;padding:14px 8px;border:1px solid #594564;border-radius:14px;background:#211b2b;color:#dbc6f4;text-decoration:none;text-align:center;font:inherit;cursor:pointer}.app-downloads-device:hover{background:#30233e;border-color:#bd9cdb}.app-downloads-device strong{font-size:12px;overflow-wrap:anywhere}.app-downloads-device small{font-size:11px;color:#bfb0ca}.app-downloads-device svg{flex:none}.app-downloads-device:focus-visible{outline:3px solid #d7b9f5;outline-offset:3px}.app-downloads-note{font-size:11px;line-height:1.9;color:var(--text-secondary,#bfb1ca);margin:14px 0 0}.app-downloads-iphone{margin-top:14px;padding:14px;border:1px solid #594564;border-radius:12px;background:#211b2b;font-size:13px;line-height:1.9}.app-downloads-iphone p{margin:6px 0 0}@media(max-width:650px){.app-downloads{padding:16px}.app-downloads-devices{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.app-downloads-device{min-height:116px;padding:12px 5px}.app-downloads-heading h2{font-size:17px}}@media(max-width:350px){.app-downloads-devices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Compact row layout: replaces the tall tile grid so the card stops
+   dominating the profile page. */
+.app-downloads{padding:16px}
+.app-downloads-heading{margin-bottom:12px}
+.app-downloads-heading h2{font-size:16px}
+.app-downloads-devices{grid-template-columns:1fr 1fr;gap:8px}
+.app-downloads-device{flex-direction:row;justify-content:flex-start;gap:10px;min-height:0;padding:10px 12px;border-radius:12px;text-align:start}
+.app-downloads-device>svg:first-child{width:20px;height:20px;padding:6px;border-radius:9px;background:rgba(189,156,219,.12);box-sizing:content-box;flex:none}
+.app-downloads-device-label{display:flex;flex-direction:column;gap:1px;min-width:0}
+.app-downloads-device-label strong{font-size:12px}
+.app-downloads-device-label small{font-size:10.5px}
+.app-downloads-dl{margin-inline-start:auto;color:#9c86ad;flex:none}
+.app-downloads-note{font-size:10.5px;margin:10px 0 0;line-height:1.7}
+.app-downloads-iphone{margin-top:10px;padding:12px}
+@media(max-width:650px){.app-downloads{padding:14px}.app-downloads-devices{grid-template-columns:1fr 1fr;gap:6px}.app-downloads-device{padding:9px 10px}}
+@media(max-width:400px){.app-downloads-devices{grid-template-columns:1fr}}

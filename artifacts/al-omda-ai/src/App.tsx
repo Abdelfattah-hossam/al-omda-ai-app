@@ -2925,7 +2925,6 @@ pnpm --filter @workspace/scripts agent:runtime`;
       </div>
     </section>
     {adminAllowed&&<section className="panel" data-testid="profile-admin-section" style={{padding:16,display:'grid',gap:12}}><AdminPresence language={language}/><button type="button" className="button button-small" aria-expanded={adminProfileOpen} onClick={()=>setLocation(adminProfileOpen?'/profile':'/profile?admin=1')}>{isAr?'إدارة التطبيق':'App administration'}</button>{adminProfileOpen&&<Suspense fallback={<p>{isAr?'جارٍ تحميل الإدارة…':'Loading administration…'}</p>}><AdminWorkspace language={language}/></Suspense>}</section>}
-    <AppDownloads isAr={isAr}/>
     <Link href={navigationHref('/ai')} className="button button-quiet profile-chat-link"><Bot size={17}/>{isAr?'افتح الشات الذكي':'Open AI chat'}</Link>
     <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
     <div className="profile-settings-layout">
@@ -2995,6 +2994,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {[isAr?'بيانات الملف والمهام المرتبطة بحسابك تُحفظ في مساحة حسابك عند تسجيل الدخول.':'Profile details and tasks are saved to your account when signed in.',isAr?'تفضيلات المظهر واللغة والتنبيهات تُحفظ على هذا الجهاز.':'Appearance, language, and notification preferences are saved on this device.',isAr?'لا يتم تنفيذ إجراءات خارجية دون موافقتك.':'No external action is taken without your approval.'].map((item,index)=><div className="setting-row profile-trust-row" key={index}><span className="specialty-icon"><Check size={14}/></span><strong>{item}</strong></div>)}
         </details>
       </div>
+    <AppDownloads isAr={isAr}/>
     </div>
   </div>;
 

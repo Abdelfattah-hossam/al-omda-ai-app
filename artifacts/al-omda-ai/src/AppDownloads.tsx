@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {Download} from 'lucide-react';
 import './app-downloads.css';
 
 const ROOT='https://github.com/Abdelfattah-hossam/al-omda-ai-app/releases/download/preview-1.0.0/';
@@ -18,8 +19,8 @@ export default function AppDownloads({isAr}:{isAr:boolean}) {
  return <section className="app-downloads panel" aria-label={isAr?'تحميل التطبيق على جهازك':'Download the app'} data-testid="app-downloads">
   <div className="app-downloads-heading"><h2>{isAr?'حمّل مُنجِزلي على جهازك':'Get Munjizly on your device'}</h2><span>{isAr?'تحميل مباشر':'Direct download'}</span></div>
   <div className="app-downloads-devices">
-   {APP_PACKAGES.map(item=><a key={item.id} className="app-downloads-device" href={ROOT+item.file} download data-testid={'download-'+item.id} aria-label={(isAr?'تحميل ':'Download ')+(isAr?item.ar:item.name)}><DeviceIcon device={item.id}/><strong>{isAr?item.ar:item.name}</strong><small dir="ltr">{item.size}</small></a>)}
-   <button type="button" className="app-downloads-device" onClick={()=>setIphoneOpen(v=>!v)} aria-expanded={iphoneOpen} data-testid="install-iphone"><DeviceIcon device="iphone"/><strong>{isAr?'آيفون وiPad':'iPhone & iPad'}</strong><small>{isAr?'تثبيت من Safari':'Install from Safari'}</small></button>
+   {APP_PACKAGES.map(item=><a key={item.id} className="app-downloads-device" href={ROOT+item.file} download data-testid={'download-'+item.id} aria-label={(isAr?'تحميل ':'Download ')+(isAr?item.ar:item.name)}><DeviceIcon device={item.id}/><span className="app-downloads-device-label"><strong>{isAr?item.ar:item.name}</strong><small dir="ltr">{item.size}</small></span><Download size={15} className="app-downloads-dl" aria-hidden="true"/></a>)}
+   <button type="button" className="app-downloads-device" onClick={()=>setIphoneOpen(v=>!v)} aria-expanded={iphoneOpen} data-testid="install-iphone"><DeviceIcon device="iphone"/><span className="app-downloads-device-label"><strong>{isAr?'آيفون وiPad':'iPhone & iPad'}</strong><small>{isAr?'تثبيت من Safari':'Install from Safari'}</small></span><Download size={15} className="app-downloads-dl" aria-hidden="true"/></button>
   </div>
   {iphoneOpen&&<div className="app-downloads-iphone" role="status"><strong>{isAr?'تثبيت الآيفون بدون ملف':'Install on iPhone, no file needed'}</strong><p>{isAr?'افتح موقع مُنجِزلي في Safari، اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية»، وفعّل «فتح كتطبيق ويب» إذا ظهر. لا يوجد ملف IPA أو إصدار App Store.':'Open Munjizly in Safari. Tap Share, then Add to Home Screen. Enable Open as Web App if shown. There is no IPA or App Store version.'}</p></div>}
   <p className="app-downloads-note">{isAr?'نسخ تجريبية تحتاج إنترنت. أندرويد بمفتاح اختبار، وويندوز وماك غير موقّعين. لم تُختبر هذه النسخ على أجهزة فعلية. لا تعطّل حماية الجهاز. على ويندوز فكّ الضغط كاملًا. على ماك اختر Apple Silicon أو Intel حسب معالجك.':'Preview builds require internet. Android is debug-signed; Windows and Mac are unsigned. These builds have not been tested on physical target devices. Do not disable device security. Extract the full Windows ZIP. Choose your Mac processor: Apple Silicon or Intel.'}</p>
