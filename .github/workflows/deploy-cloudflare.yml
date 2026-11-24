@@ -56,6 +56,7 @@ jobs:
           # Canonical Zahin project (created on first deploy) and the legacy
           # project, whose worker 301-redirects pages to zahin.pages.dev while
           # keeping its /api proxy alive for stale clients.
+          pnpm dlx wrangler@4.161.0 pages project create zahin --production-branch main || true
           pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name zahin --branch main
           pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name al-omda-ai --branch main
 
