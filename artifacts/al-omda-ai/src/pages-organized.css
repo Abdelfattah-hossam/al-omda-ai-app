@@ -24,3 +24,9 @@
   .app-launcher-section,.panel{border-radius:16px}
   .dashboard-toolbar-actions{flex-direction:row}
 }
+/* Home: directory stays ahead in the DOM (required), KPI row shows first like the references */
+.dashboard-overview{display:flex;flex-direction:column}
+.dashboard-overview>.app-launcher-section{order:6}
+.dashboard-overview>.app-downloads,.dashboard-overview>[class*="app-downloads"]{order:7}
+.dashboard-overview>.section-meta{order:8}
+.dashboard-overview>.dashboard-security-note{order:9}
