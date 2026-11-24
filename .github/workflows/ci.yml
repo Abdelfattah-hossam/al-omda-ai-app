@@ -44,6 +44,8 @@ jobs:
         run: pnpm --filter @workspace/scripts test
       - name: Test security headers and API error responses
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/security.test.ts
+      - name: Test Turnstile guard fail-open on widget client errors
+        run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/turnstile.test.ts
       - name: Test chat intent classification
         run: pnpm --filter @workspace/scripts exec tsx --test ../artifacts/api-server/src/lib/chat-intent.test.ts
       - name: Test new task plan validation

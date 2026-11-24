@@ -4,6 +4,10 @@ import type { Request, Response, NextFunction } from 'express';
 // The secret key is read only from the TURNSTILE_SECRET_KEY secret and is never logged.
 const PROTECTED = /^\/api\/auth\/(?:login|signin|signup|forgot-password)\/?$/;
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+// Marker header the web client sends when the Turnstile widget itself failed on
+// that browser (unsupported WebView, blocked challenge script, challenge error
+// that persists after a retry). Value is the widget's error code.
+const CLIENT_ERROR_RE = /^[a-z0-9_.-]{1,32}$/i;
 
 export function turnstileGuard(req: Request, res: Response, next: NextFunction): void {
   if (req.method !== 'POST' || !PROTECTED.test(req.path)) { next(); return; }
@@ -15,6 +19,15 @@ export function turnstileGuard(req: Request, res: Response, next: NextFunction):
   }
   const token = req.get('x-turnstile-token')?.trim() ?? '';
   if (!token || token.length > 2048) {
+    // Fail-open only for browsers whose widget could not produce a token at
+    // all. Verified clients keep sending tokens; the burst guard still
+    // rate-limits these endpoints either way.
+    const clientError = req.get('x-turnstile-client-error')?.trim() ?? '';
+    if (!token && CLIENT_ERROR_RE.test(clientError)) {
+      console.warn(`turnstile: client-error bypass (${clientError})`);
+      next();
+      return;
+    }
     res.status(400).json({ error: 'أكمل التحقق الأمني ثم حاول مرة أخرى. / Complete the security check and try again.' });
     return;
   }

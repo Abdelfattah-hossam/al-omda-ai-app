@@ -4,6 +4,12 @@ const PROTECTED = /^\/api\/auth\/(?:login|signin|signup|forgot-password)\/?$/;
 type TurnstileApi = { render: (el: HTMLElement, o: Record<string, unknown>) => string; reset: (id?: string) => void; remove: (id: string) => void };
 const w = window as unknown as { turnstile?: TurnstileApi };
 const tokens = new Map<string, string>();
+// Set when the widget itself cannot run on this browser (unsupported client,
+// blocked challenge script). The request then carries a client-error marker
+// instead of a token and the API server lets it through, so people on such
+// browsers are not locked out. Browsers with a working widget keep sending
+// real tokens and stay fully verified.
+let clientError = '';
 let scriptPromise: Promise<TurnstileApi> | null = null;
 
 export function loadTurnstile(): Promise<TurnstileApi> {
@@ -20,7 +26,8 @@ export function loadTurnstile(): Promise<TurnstileApi> {
   }
   return scriptPromise;
 }
-export function setTurnstileToken(id: string, token: string | null) { if (token) tokens.set(id, token); else tokens.delete(id); }
+export function setTurnstileToken(id: string, token: string | null) { if (token) { tokens.set(id, token); clientError = ''; } else tokens.delete(id); }
+export function setTurnstileClientError(code: string) { clientError = String(code || 'unknown').slice(0, 32); }
 export function currentTurnstileToken(): string { return Array.from(tokens.values()).pop() ?? ''; }
 
 // Attach the token to protected auth requests, then reset widgets because tokens are single-use.
@@ -33,6 +40,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   const token = currentTurnstileToken();
   if (token) headers.set('x-turnstile-token', token);
+  else if (clientError) headers.set('x-turnstile-client-error', clientError);
   try { return await originalFetch(input, { ...init, headers }); }
   finally { tokens.clear(); window.dispatchEvent(new Event('turnstile-reset')); }
 };
