@@ -1365,6 +1365,39 @@ router.post("/ai/respond-to-step-comment", requireSameOrigin, async (req, res): 
   }
 });
 
+// Interactive HTML previews (Code Canvas, generated apps) cannot run in a srcdoc
+// iframe: srcdoc documents inherit this page's CSP, which has no 'unsafe-inline'
+// script-src, so every inline script and event handler in previews was blocked.
+// This shell is served by the worker with its own offline CSP that allows inline
+// scripts, framed only by this app, and receives the preview HTML by postMessage.
+const CANVAS_PREVIEW_HTML = `<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>معاينة</title>
+<script>
+window.addEventListener("message", function (event) {
+  if (window.parent === window) return;
+  if (event.source !== window.parent) return;
+  var data = event.data;
+  if (!data || data.type !== "munjizly-preview" || typeof data.html !== "string") return;
+  document.open();
+  document.write(data.html);
+  document.close();
+});
+</${''}script>
+</head>
+<body style="margin:0;background:#fff"></body>
+</html>`;
+
+router.get("/ai/canvas-preview", (_req, res): void => {
+  res.setHeader("content-type", "text/html; charset=utf-8");
+  res.setHeader("cache-control", "no-store");
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader("x-frame-options", "SAMEORIGIN");
+  res.setHeader("content-security-policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'");
+  res.status(200).send(CANVAS_PREVIEW_HTML);
+});
+
 router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void> => {
   try {
     const session = await resolveSession(req, res);

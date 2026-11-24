@@ -55,7 +55,7 @@ function withPreviewCsp(html: string): string {
 function SandboxedPreview({ html, title, style, className }: { html: string; title: string; style?: CSSProperties; className?: string }) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const postHtml = () => { frameRef.current?.contentWindow?.postMessage({ type: "munjizly-preview", html }, "*"); };
-  return <iframe key={html} ref={frameRef} title={title} src="/canvas-preview.html" sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={postHtml} style={style} className={className} />;
+  return <iframe key={html} ref={frameRef} title={title} src="/api/canvas-preview" sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={postHtml} style={style} className={className} />;
 }
 
 
