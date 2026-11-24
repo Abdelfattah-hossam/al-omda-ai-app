@@ -1612,7 +1612,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <div ref={chatScrollRef} className="chat-messages" aria-live="polite" onScroll={(event)=>{const el=event.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{minHeight:250,maxHeight:"52vh",overflowY:"auto",overscrollBehavior:"contain"}}>
           {messages.length === 0 && <div className="ai-chat-welcome" id="welcome-screen">
             <div className="ai-chat-welcome-mark"><ZahinOrb state={loading ? "thinking" : "idle"} interactive /></div>
-            <h1>{ar ? "أهلاً بك مع Munjizly" : "Welcome to Munjizly"}</h1>
+            <h1>{ar ? <>أهلاً بك مع <bdi dir="ltr" className="brand-latin">Munjizly</bdi></> : "Welcome to Munjizly"}</h1>
             <p>{ar ? "مساعدك الذكي المتكامل للبرمجة، الأوفيس، وإدارة المشاريع" : "Your AI workspace for coding, Office documents, and projects."}</p>
             <div className="ai-chat-quick-grid">
               <button type="button" onClick={() => activateMode('word')}><FileText size={17}/><span><strong>{ar ? "مستند Word" : "Word document"}</strong><small>{ar ? "تصدير مستند نصي جاهز" : "Create an editable document"}</small></span></button>

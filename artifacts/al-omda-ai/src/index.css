@@ -8699,7 +8699,7 @@ body:has(.ai-chat-page){
 .app-shell[data-chat-active="true"] .ai-chat-welcome h1 {
   color:#f7f7f7!important;
   font-size:clamp(21px,2.4vw,28px)!important;
-  letter-spacing:-.035em;
+  letter-spacing:0;
 }
 
 .app-shell[data-chat-active="true"] .ai-chat-welcome>p {
@@ -9742,3 +9742,6 @@ body:has(.ai-chat-page){
 .admin-presence-grid .admin-presence-card strong{display:block;font-size:19px;line-height:1.25}
 .admin-presence-grid .admin-presence-card span{font-size:12px;line-height:1.4;opacity:.85}
 @media (max-width:480px){.admin-presence-grid{grid-template-columns:1fr 1fr}}
+
+.ai-chat-welcome h1{unicode-bidi:plaintext;text-align:center;letter-spacing:0!important}
+.ai-chat-welcome h1 .brand-latin{display:inline-block;unicode-bidi:isolate;direction:ltr;letter-spacing:0;margin-inline:.25em;font-family:inherit}
