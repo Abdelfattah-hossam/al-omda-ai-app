@@ -30,8 +30,10 @@ test('iOS audio unlock runs in tap before asynchronous permission and token work
  assert.ok(voice.includes('event.outputBuffer.getChannelData(0).fill(0)'));
 });
 test('Safari orb is native SVG, without CSS blend or conic clipping layers',()=>{
- assert.ok(voice.includes('<svg className="omda-voice-orb"'));
- assert.ok(voice.includes('<radialGradient'));
+ const orb=readFileSync('../artifacts/al-omda-ai/src/components/ZahinOrb.tsx','utf8');
+ assert.ok(voice.includes('<ZahinOrb className="omda-voice-orb zahin-orb-voice"'));
+ assert.ok(orb.includes('<svg'));
+ assert.ok(orb.includes('<linearGradient'));
  assert.doesNotMatch(css,/mix-blend-mode|conic-gradient|filter:saturate/);
  assert.ok(css.includes('.ai-chat-live-backdrop{position:fixed!important;inset:0!important'));
 });

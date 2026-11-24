@@ -1,6 +1,7 @@
 import {VoiceBargeInGate} from './lib/voice-barge-in';
 import {playFreeSpeech} from './lib/free-speech';
 import {Volume2} from 'lucide-react';
+import {ZahinOrb} from './components/ZahinOrb';
 import {VoiceActivityGate,speechBandRatio} from './lib/voice-activity-gate';
 import { useEffect, useRef, useState } from "react";
 
@@ -607,7 +608,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
   return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
     <span className="voice-mode-kicker">{ar?"Zahin · مساعدك الصوتي":"Zahin · VOICE ASSISTANT"}</span>
     <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "Zahin يتحدث" : "Zahin is speaking") : active ? labels.listening : labels.start}>
-      <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
+      <ZahinOrb className="omda-voice-orb zahin-orb-voice" state={speaking ? "speaking" : (thinking || connecting) ? "thinking" : "idle"} />
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
     <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "Zahin بيتكلم..." : "Zahin is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع Zahin" : "Start a voice conversation with Zahin")}</strong>

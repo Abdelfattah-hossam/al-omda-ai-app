@@ -9717,3 +9717,23 @@ body:has(.ai-chat-page){
 
 /* Keep the product's exact mixed-case spelling in message bylines. */
 .ai-chat-page .chat-message.assistant>strong{text-transform:none}
+
+/* Animated Zahin mind-orbit mark: ring + spark + orbiting dot */
+.zahin-orb{display:block;width:100%;height:100%;box-sizing:border-box;overflow:visible}
+.zahin-orb .zahin-orb-ring{transform-box:view-box;transform-origin:400px 440px;animation:zahinOrbPulse 4.6s ease-in-out infinite}
+.zahin-orb .zahin-orb-spark{transform-box:view-box;transform-origin:400px 440px;animation:zahinSparkPulse 3.4s ease-in-out infinite}
+.zahin-orb[data-state="thinking"] .zahin-orb-ring{animation-duration:1.5s}
+.zahin-orb[data-state="thinking"] .zahin-orb-spark{animation-duration:1s}
+.zahin-orb[data-state="speaking"] .zahin-orb-ring{animation-duration:2.4s}
+.zahin-orb[data-state="speaking"] .zahin-orb-spark{animation-duration:1.8s}
+.zahin-orb-interactive{cursor:pointer;transition:transform .18s ease}
+.zahin-orb-interactive:hover .zahin-orb-ring{animation-duration:2s}
+.zahin-orb-interactive:hover .zahin-orb-spark{animation-duration:.8s}
+.zahin-orb-interactive:active{transform:scale(1.08)}
+@keyframes zahinOrbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes zahinSparkPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.72;transform:scale(1.14)}}
+@media(prefers-reduced-motion:reduce){.zahin-orb,.zahin-orb *{animation:none!important;transition:none!important}}
+.ai-chat-welcome-mark .zahin-orb,.ai-chat-brand-mark .zahin-orb{padding:6px}
+.ai-chat-thinking{display:flex;align-items:center;gap:10px;margin:0}
+.ai-chat-thinking .zahin-orb{width:34px;height:34px;flex:none;padding:0}
+.omda-voice-orb.zahin-orb-voice{background:none;border-radius:0;box-shadow:0 0 30px rgba(131,207,255,.28);overflow:visible}
