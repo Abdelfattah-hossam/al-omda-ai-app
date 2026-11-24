@@ -133,7 +133,7 @@ export function supabasePublicMessage(error: unknown, fallback: string): string 
       if (code && messages[code]) return messages[code];
       for (const key of ["msg", "message", "error_description"]) {
         const message = data[key];
-        if (typeof message === "string" && message.length < 240) return message;
+        if (typeof message === "string" && message.length < 240 && !/relation|column|function|schema|syntax|violates|permission denied|pg_|postgres|sql/i.test(message)) return message;
       }
     }
     return fallback;
@@ -288,7 +288,7 @@ export function reportSupabaseError(
         : undefined;
     if (code === "42P01" || code === "PGRST205" || code === "PGRST204") {
       res.status(503).json({
-        error: "Supabase tables are not ready. Run supabase/setup.sql in the Supabase SQL Editor.",
+        error: "Service is temporarily unavailable. Please try again later.",
       });
       return;
     }

@@ -586,7 +586,7 @@ router.post("/ai/project-plan", requireSameOrigin, async (req, res): Promise<voi
     const failures = planOutcome.failures;
     let answer = planOutcome.answer;
     let provider = planOutcome.provider;
-    if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. No usage was deducted.", details: failures.slice(0, 2) }); return; }
+    if (!answer) { res.status(503).json({ error: "AI project planning is temporarily unavailable. No usage was deducted." }); return; }
     let parsed = parseProjectPlan(answer.text, request);
     if (!parsed) {
       const repairRequest: ChatMessage[] = [{ role: "user", content: [
@@ -1262,7 +1262,7 @@ router.post("/ai/respond-to-step-comment", requireSameOrigin, async (req, res): 
     const answer = replyOutcome.answer;
     const provider = replyOutcome.provider;
     const reply = answer?.text.trim().slice(0, 1800);
-    if (!reply) { res.status(503).json({ error: "Zahin could not respond to this comment. Your comment is saved; try again.", details: failures.slice(0, 2) }); return; }
+    if (!reply) { res.status(503).json({ error: "Zahin could not respond to this comment. Your comment is saved; try again." }); return; }
     const charged = await reserveUnits(session.accessToken, 1);
     if (!charged.allowed) { res.status(429).json({ error: "Your shared daily AI limit is used up. Your comment is saved; no AI reply was generated.", usage: charged }); return; }
     const latestResponse = await supabaseFetch("/rest/v1/tasks?" + taskQuery.toString(), {}, session.accessToken);
@@ -1318,7 +1318,7 @@ router.post("/ai/live-token", requireSameOrigin, async (req, res): Promise<void>
     if (!response.ok || typeof payload?.name !== "string") {
       const detail = providerErrorMessage(payload);
       console.warn("[Gemini Live token failure]", response.status, detail);
-      res.status(502).json({ error: "Gemini Live could not create a temporary voice session.", details: detail || "Provider rejected the token request." });
+      res.status(502).json({ error: "Gemini Live could not create a temporary voice session." });
       return;
     }
     const chargedUsage = await reserveUnits(session.accessToken, 1);
@@ -1364,7 +1364,6 @@ router.post("/ai/speech", requireSameOrigin, async (req, res): Promise<void> => 
       try { message = providerErrorMessage(JSON.parse(detail)) || message; } catch { /* provider returned plain text */ }
       res.status(response.status === 429 ? 429 : 503).json({
         error: "تعذر إنشاء الصوت المجاني حاليًا. لم يتم خصم وحداتك؛ حاول مرة أخرى لاحقًا.",
-        details: message,
       });
       return;
     }
@@ -1567,7 +1566,6 @@ router.post("/ai/chat", requireSameOrigin, async (req, res): Promise<void> => {
         error: quotaExhausted
           ? "نفدت الحصص المجانية المتاحة حاليًا لدى نماذج الذكاء الاصطناعي. جرّب Zahin تلقائيًا عدة نماذج مجانية بديلة، ولم ينجح أي منها الآن. لم يتم خصم أي وحدات من رصيدك، ولم يتم استخدام أي خدمة مدفوعة. أعد المحاولة بعد تجدد الحصص المجانية."
           : "خدمات الذكاء الاصطناعي المجانية غير متاحة مؤقتًا. لم يتم خصم أي وحدات من رصيد Zahin؛ حاول مرة أخرى لاحقًا.",
-        details: failures.slice(0, 3),
         usage
       });
       return;

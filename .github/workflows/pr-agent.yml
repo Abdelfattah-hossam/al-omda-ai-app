@@ -24,7 +24,7 @@ jobs:
       - name: Run PR-Agent review
         id: pr_agent
         continue-on-error: true
-        uses: the-pr-agent/pr-agent@main
+        uses: the-pr-agent/pr-agent@48edc526e369bc2dc8cd70992661d66a3977621e # main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI__KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.LLM_API_KEY }}

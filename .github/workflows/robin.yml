@@ -12,7 +12,7 @@ permissions:
 jobs:
   review:
     if: ${{ (github.event_name == 'issue_comment' && github.event.issue.pull_request) || (github.event_name == 'pull_request' && !github.event.pull_request.draft) }}
-    uses: antongulin/robin/.github/workflows/review.yml@main
+    uses: antongulin/robin/.github/workflows/review.yml@7405b1eee45c3f0c94aab5c71a0c82d2405a09c3 # main
     with:
       agent-mode: off
       review-on-synchronize: true

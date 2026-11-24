@@ -17,7 +17,7 @@ export function securityHeaders(_req: Request, res: Response, next: NextFunction
 // limits. AI limits are separately enforced by an atomic shared database RPC.
 const authWindows = new Map<string, { until: number; count: number }>();
 export function authBurstGuard(req: Request, res: Response, next: NextFunction): void {
- if (req.method !== 'POST' || !/^\/api\/auth\/(?:signin|signup|forgot-password|reset-password|change-password|assisted-reset|recovery)/.test(req.path)) { next(); return; }
+ if (req.method !== 'POST' || !/^\/api\/auth\/(?:login|signin|signup|forgot-password|reset-password|change-password|assisted-reset|recovery)/.test(req.path)) { next(); return; }
  const now = Date.now();
  for (const [key, state] of authWindows) if (state.until <= now) authWindows.delete(key);
  const key = req.get('cf-connecting-ip') || req.ip || 'unknown';
