@@ -6,10 +6,6 @@ import { verifyPow } from './pow';
 // The secret key is read only from the TURNSTILE_SECRET_KEY secret and is never logged.
 const PROTECTED = /^\/api\/auth\/(?:login|signin|signup|forgot-password)\/?$/;
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-// Marker header the web client sends when the Turnstile widget itself failed on
-// that browser (unsupported WebView, blocked challenge script, challenge error
-// that persists after a retry). Value is the widget's error code.
-const CLIENT_ERROR_RE = /^[a-z0-9_.-]{1,32}$/i;
 
 // Bounds for the fallback path, counted in a shared database table so they hold
 // across every server instance: per IP per hour, per IP per day and per account
@@ -79,21 +75,6 @@ export function turnstileGuard(req: Request, res: Response, next: NextFunction):
         if (ok) { next(); return; }
         res.status(429).json({ error: 'تجاوزت حد المحاولات من هذا المتصفح. حاول لاحقًا. / Too many attempts from this browser. Try later.' });
       })();
-      return;
-    }
-    const clientError = req.get('x-turnstile-client-error')?.trim() ?? '';
-    if (!token && CLIENT_ERROR_RE.test(clientError)) {
-      const ip = req.get('cf-connecting-ip') || req.ip || 'unknown';
-      const body = req.body as { email?: unknown } | undefined;
-      const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
-      void fallbackAllowed(ip, email).then((ok) => {
-        if (ok) {
-          console.warn(`turnstile: bounded client-error fallback (${clientError})`);
-          next();
-          return;
-        }
-        res.status(429).json({ error: 'تجاوزت حد المحاولات من هذا المتصفح. استخدم متصفحًا يدعم التحقق الأمني مثل Chrome أو Safari، أو حاول لاحقًا. / Too many attempts from this browser. Use a browser that supports the security check, or try later.' });
-      });
       return;
     }
     res.status(400).json({ error: 'أكمل التحقق الأمني ثم حاول مرة أخرى. / Complete the security check and try again.' });

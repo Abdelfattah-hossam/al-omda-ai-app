@@ -47,7 +47,6 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     // Widget cannot run here: complete a real proof-of-work challenge instead.
     const sol = powPromise ? await powPromise : null;
     if (sol) headers.set('x-pow', `${sol.c}|${sol.s}|${sol.n}`);
-    else headers.set('x-turnstile-client-error', clientError);
   }
   try { return await originalFetch(input, { ...init, headers }); }
   finally { tokens.clear(); if (clientError) startPow(); window.dispatchEvent(new Event('turnstile-reset')); }
