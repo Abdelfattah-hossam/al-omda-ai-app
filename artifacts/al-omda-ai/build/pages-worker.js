@@ -12,7 +12,7 @@ export default {
    headers.delete('x-forwarded-host');headers.delete('forwarded');
    headers.set('x-forwarded-host',url.host);headers.set('x-forwarded-proto','https');
    const target=new URL(url.pathname+url.search,LEGACY);
-   const response=await fetch(new Request(target,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:'manual'}));
+   const response=await fetch(new Request(target,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:'manual',duplex:'half'}));
    const output=new Headers(response.headers);
    output.set('cache-control','no-store');output.delete('access-control-allow-origin');
    const location=output.get('location');
