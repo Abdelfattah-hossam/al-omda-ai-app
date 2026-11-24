@@ -2,7 +2,7 @@ import {Router,type IRouter}from 'express';
 import {randomBytes,createHash}from 'node:crypto';
 import {supabaseFetch,requireSameOrigin,readSupabaseJson,reportSupabaseError,SupabaseHttpError,resolveSession,clearSessionCookies}from '../lib/supabase';
 const router:IRouter=Router();
-const APP='https://al-omda-ai-app.abdelfattahhossam1.workers.dev';
+const APP='https://al-omda-ai.pages.dev';
 const verifierCookie='omda_recovery_verifier',accessCookie='omda_recovery_access',cooldownCookie='omda_recovery_wait';
 const cookie={httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax' as const,path:'/api/auth',maxAge:15*60*1000};
 export function validRecoveryEmail(value:unknown):value is string{return typeof value==='string'&&value.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}

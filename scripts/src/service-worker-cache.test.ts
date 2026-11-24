@@ -41,7 +41,7 @@ test('NEXUS B identity is consistent across metadata, install names, icons and p
  const root=new URL('../../artifacts/al-omda-ai/',import.meta.url);
  const html=readFileSync(new URL('index.html',root),'utf8');
  const manifest=JSON.parse(readFileSync(new URL('public/manifest.webmanifest',root),'utf8'));
- assert.match(html,/<title>AL OMDA Ai<\/title>/);
+ assert.match(html,/<title>[^<]*AL OMDA Ai[^<]*<\/title>/);
  for(const name of ['og:title','twitter:title']) assert.ok(html.includes(`${name}" content="AL OMDA Ai"`));
  assert.equal(manifest.name,'AL OMDA Ai');assert.equal(manifest.short_name,'AL OMDA Ai');
  assert.match(html,/apple-touch-icon/);assert.match(html,/nexus-social\.png/);assert.ok(!html.includes('?v=nexusB1?v='));

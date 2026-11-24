@@ -4,4 +4,4 @@ Disallow: /api/
 Disallow: /forgot-password
 Disallow: /reset-password
 
-Sitemap: https://al-omda-ai-app.abdelfattahhossam1.workers.dev/sitemap.xml
+Sitemap: https://al-omda-ai.pages.dev/sitemap.xml

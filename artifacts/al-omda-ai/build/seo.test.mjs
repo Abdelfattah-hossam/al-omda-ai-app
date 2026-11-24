@@ -4,7 +4,7 @@ import {readFileSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const html=readFileSync(root+'index.html','utf8');
-const origin='https://al-omda-ai-app.abdelfattahhossam1.workers.dev/';
+const origin='https://al-omda-ai.pages.dev/';
 test('home exposes the site name, canonical, verification and crawlable copy without JavaScript',()=>{
  assert.match(html,/<html lang="ar" dir="rtl">/);
  assert.ok(html.includes('<link rel="canonical" href="'+origin+'"'));

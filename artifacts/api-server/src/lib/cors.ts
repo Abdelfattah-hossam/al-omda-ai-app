@@ -4,6 +4,7 @@ import cors, { type CorsOptions } from "cors";
 // server uses port 5173; localhost and 127.0.0.1 are distinct browser origins.
 // Cross-origin cookie access is intentionally not enabled.
 const ALLOWED_ORIGINS = new Set([
+  "https://al-omda-ai.pages.dev",
   "https://al-omda-ai-app.abdelfattahhossam1.workers.dev",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
