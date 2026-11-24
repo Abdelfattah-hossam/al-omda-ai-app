@@ -2928,8 +2928,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     <Link href={navigationHref('/ai')} className="button button-quiet profile-chat-link"><Bot size={17}/>{isAr?'افتح الشات الذكي':'Open AI chat'}</Link>
     <nav className="profile-section-nav" aria-label={isAr?'أقسام الحساب':'Account sections'}>{[{id:'profile-personal',ar:'البيانات الشخصية',en:'Personal details'},{id:'profile-account-card',ar:'الحساب',en:'Account'},{id:'profile-preferences',ar:'التفضيلات',en:'Preferences'},{id:'profile-data',ar:'البيانات والخصوصية',en:'Data & privacy'}].map(item=><button type="button" key={item.id} onClick={()=>document.getElementById(item.id)?.scrollIntoView({block:'start',behavior:saved.reduceMotion?'instant':'smooth'})}>{isAr?item.ar:item.en}</button>)}</nav>
     <div className="profile-settings-layout">
-              <section className="panel panel-pad profile-account-profile-card profile-account-first" id="profile-account-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><LockKeyhole size={18}/></span></div>
+              <details className="panel panel-pad profile-account-profile-card profile-account-first profile-accordion" id="profile-account-card" open={!authUser}>
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الحساب والأمان':'ACCOUNT & SECURITY'}</span><h2>{isAr?'حالة الحساب':'Account status'}</h2><p>{isAr?'إدارة جلسة الدخول والوصول إلى بياناتك.':'Manage your sign-in and account access.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><LockKeyhole size={18}/></span></div></summary>
           {authLoading && <p className="account-copy" role="status">{t('authChecking')}</p>}
           {!authLoading && !authUser && <>
             <p className="account-copy">{authStatus==='configured' ? t('authConfigured') : (isAr ? 'نموذج الدخول وإنشاء الحساب متاح، لكن خدمة الحسابات غير جاهزة حاليًا.' : 'The sign-in and sign-up form is available, but the account service is not ready yet.')}</p>
@@ -2950,7 +2950,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
           {!authLoading && authUser && <div className="account-signed-in"><div className="account-email"><span className="online-dot"/><span>{t('signedInAs')} <strong>{authUser.email}</strong></span></div><p className="account-copy">{t('authActive')}</p><button type="button" className="button button-danger button-small" onClick={()=>void handleSignOut()} disabled={authWorking}>{t('signOut')}</button> <button type="button" className="button button-small" onClick={()=>void handleDeleteAccount()} disabled={authWorking}>{document.documentElement.lang==='ar'?'حذف الحساب نهائياً':'Delete account'}</button></div>}
           {authNotice&&<div className="notice-bar account-message" role="status">{authNotice}</div>}{workspaceLoadError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceLoadError}</div>}{workspaceError&&<div className="notice-bar notice-error account-message" role="alert">{workspaceError}</div>}
         
-      </section>
+      </details>
       <section className="panel panel-pad profile-main-card" id="profile-personal">
         <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات الشخصية':'PERSONAL INFORMATION'}</span><h2>{isAr?'بيانات الملف الشخصي':'Profile information'}</h2><p>{isAr?'حدّث بياناتك التي تظهر داخل مساحة عمل Munjizly.':'Update the details shown across your workspace.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><UserRound size={19}/></span></div>
         <div className="profile-summary profile-summary-large">{authUser && avatarPath ? <img className="profile-avatar profile-avatar-image" src={'/api/storage/avatar?v='+avatarVersion} alt={t('avatar')} data-testid="img-profile-avatar"/> : <div className="profile-avatar">{profileName.trim().charAt(0)||'ع'}</div>}<div><h2>{profileName.trim() || (isAr?'لم تضف اسمًا بعد':'No display name yet')}</h2><span>{authUser?.email || (isAr?'حساب محلي على هذا الجهاز':'Local account on this device')}</span></div></div>
@@ -2961,7 +2961,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div className="profile-actions-row"><button className="button button-primary" onClick={()=>void handleSaveProfile()} disabled={profileSaving} data-testid="button-save-profile"><Check size={14}/>{profileSaving?t('authWorking'):savedToast?t('saved'):t('saveProfile')}</button>{authUser && <label className={'button button-quiet '+(avatarWorking?'disabled':'')} htmlFor="avatar-file"><UserRound size={14}/>{avatarWorking?t('authWorking'):t('uploadAvatar')}</label>}</div>
         {authUser && <><input id="avatar-file" className="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatarUpload} disabled={avatarWorking} data-testid="input-avatar-file"/><small className="account-hint">{t('avatarHint')}</small></>}
       </section>
-              <details open className="panel panel-pad profile-setting-card profile-accordion" id="profile-preferences">
+              <details className="panel panel-pad profile-setting-card profile-accordion" id="profile-preferences">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة وتقليل الحركة.':'Your language and reduced-motion preferences.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><Settings2 size={18}/></span></div></summary>
           <div className="setting-row"><div><strong>{t('language')}</strong><small>{t('languageDesc')}</small></div><button className="button button-quiet button-small" onClick={toggleLanguage}>{isAr?'العربية':'English'} <ChevronDown size={12}/></button></div>
           <div className="setting-row"><div><strong>{isAr?"تقليل الحركة والمؤثرات":"Reduce motion"}</strong><small>{isAr?"إيقاف حركات الخلفيات والوميض والانتقالات لتجربة أهدأ.":"Reduce animated backgrounds, button glow, and transitions."}</small></div><button type="button" role="switch" aria-checked={Boolean(saved.reduceMotion)} className={"toggle "+(saved.reduceMotion?"on":"")} onClick={()=>setSaved((prev)=>({...prev,reduceMotion:!prev.reduceMotion}))} aria-label={isAr?"تقليل الحركة":"Reduce motion"}/></div>
@@ -2970,15 +2970,15 @@ pnpm --filter @workspace/scripts agent:runtime`;
       
       <div className="profile-settings-side">
         <ProfileUsage signedIn={Boolean(authUser)} isAr={isAr}/>
-        <section className="panel panel-pad profile-data-card" id="profile-data">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات والأجهزة':'DATA & DEVICES'}</span><h2>{isAr?'مساحة حسابك':'Your account workspace'}</h2><p>{isAr?'حالة البيانات المحمّلة في هذه الجلسة وأدوات تنزيلها.':'Data loaded in this session and tools to download it.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><ShieldCheck size={20}/></span></div>
+        <details className="panel panel-pad profile-data-card profile-accordion" id="profile-data">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'البيانات والأجهزة':'DATA & DEVICES'}</span><h2>{isAr?'مساحة حسابك':'Your account workspace'}</h2><p>{isAr?'حالة البيانات المحمّلة في هذه الجلسة وأدوات تنزيلها.':'Data loaded in this session and tools to download it.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><ShieldCheck size={20}/></span></div></summary>
           <div className="setting-row"><div><strong>{isAr?'مصدر مساحة العمل':'Workspace source'}</strong><small>{!authUser?(isAr?'معاينة هذا الجهاز، سجّل الدخول لحفظ المشاريع بحسابك.':'Device preview. Sign in to save projects to your account.'):workspaceLoadError?(isAr?'تعذر تحميل مساحة الحساب.':'Could not load account workspace.'):workspaceLoaded?(isAr?'تم تحميل مساحة الحساب لهذه الجلسة.':'Account workspace loaded for this session.'):(isAr?'جارٍ تحميل مساحة الحساب…':'Loading account workspace…')}</small></div><span className="profile-heading-icon" aria-hidden="true"><Monitor size={19}/></span></div>
           <p className="account-hint">{isAr?'اللغة وتقليل الحركة محفوظان على هذا المتصفح. لا تتوفر قائمة بالأجهزة أو جلسات الدخول الأخرى.':'Language and reduced motion are saved in this browser. A list of other devices or sign-in sessions is not available.'}</p>
           <div className="profile-actions-row"><button type="button" className="button button-quiet button-small" disabled={!tasks.some(task=>!task.demo)} onClick={()=>void exportTasksSheet(tasks.filter(task=>!task.demo))}><Download size={14}/>{isAr?'تنزيل مشاريعك CSV':'Download projects CSV'}</button><Link href="/assets" className="button button-quiet button-small"><FileText size={14}/>{isAr?'الملفات والمخرجات':'Files & deliverables'}</Link></div>
           <small className="account-hint">{isAr?'تصدير المشاريع يتضمن الطلبات والخطوات والنتائج، ولا يتضمن سجل المحادثات.':'Project export includes requests, steps, and results, not chat history.'}</small>
-        </section>
-        <section className="panel panel-pad profile-features-card">
-          <div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><span className="profile-heading-icon" aria-hidden="true"><Compass size={18}/></span></div>
+        </details>
+        <details className="panel panel-pad profile-features-card profile-accordion">
+          <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'ابدأ من هنا':'GET STARTED'}</span><h2>{t('discoverFeatures')}</h2><p>{t('discoverFeaturesText')}</p></div><span className="profile-heading-icon" aria-hidden="true"><Compass size={18}/></span></div></summary>
           <div className="profile-feature-grid">
             <Link href={navigationHref("/ai")} className="profile-feature-link"><Bot size={19}/><span><strong>{t('featureChat')}</strong><small>{t('featureChatText')}</small></span><ArrowUpLeft size={14}/></Link>
             <Link href={focusedHref("/agents","agent-marketplace-grid")} className="profile-feature-link"><Compass size={19}/><span><strong>{t('featureAgents')}</strong><small>{t('featureAgentsText')}</small></span><ArrowUpLeft size={14}/></Link>
@@ -2986,10 +2986,10 @@ pnpm --filter @workspace/scripts agent:runtime`;
             <Link href={focusedHref("/history","history-list")} className="profile-feature-link"><History size={19}/><span><strong>{t('featureHistory')}</strong><small>{t('featureHistoryText')}</small></span><ArrowUpLeft size={14}/></Link>
             
           </div>
-        </section>
+        </details>
 
 
-        <details open className="panel panel-pad profile-setting-card profile-accordion profile-privacy-card">
+        <details className="panel panel-pad profile-setting-card profile-accordion profile-privacy-card">
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'الخصوصية والتحكم':'PRIVACY & CONTROL'}</span><h2>{isAr?'كيف يعمل حسابك':'How your account works'}</h2><p>{isAr?'معلومات واضحة عن حفظ البيانات وصلاحيات التطبيق.':'Clear information about data storage and app permissions.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><ShieldCheck size={18}/></span></div></summary>
           {[isAr?'بيانات الملف والمهام المرتبطة بحسابك تُحفظ في مساحة حسابك عند تسجيل الدخول.':'Profile details and tasks are saved to your account when signed in.',isAr?'تفضيلات المظهر واللغة والتنبيهات تُحفظ على هذا الجهاز.':'Appearance, language, and notification preferences are saved on this device.',isAr?'لا يتم تنفيذ إجراءات خارجية دون موافقتك.':'No external action is taken without your approval.'].map((item,index)=><div className="setting-row profile-trust-row" key={index}><span className="specialty-icon"><Check size={14}/></span><strong>{item}</strong></div>)}
         </details>
