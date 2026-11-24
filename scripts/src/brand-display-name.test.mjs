@@ -4,7 +4,8 @@ import {readFileSync,readdirSync} from 'node:fs';
 const root=new URL('../../artifacts/al-omda-ai/',import.meta.url);
 test('display name is exact in install metadata and brand assets',()=>{
  const html=readFileSync(new URL('index.html',root),'utf8');
- assert.match(html,/<title>AL OMDA Ai<\/title>/);
+ // Search titles may add an Arabic description while preserving the exact product name.
+ assert.match(html,/<title>[^<]*AL OMDA Ai[^<]*<\/title>/);
  for(const key of ['og:title','twitter:title','apple-mobile-web-app-title','application-name']) assert.ok(html.includes(`${key}" content="AL OMDA Ai"`));
  const manifest=JSON.parse(readFileSync(new URL('public/manifest.webmanifest',root),'utf8'));
  assert.equal(manifest.name,'AL OMDA Ai');assert.equal(manifest.short_name,'AL OMDA Ai');assert.equal(manifest.id,'/');
