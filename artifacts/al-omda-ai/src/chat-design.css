@@ -140,27 +140,6 @@ body .app-shell[data-chat-active="true"] .ai-chat-live-end{box-shadow:none!impor
 
 }
 
-/* Compact conversation rhythm, requested after physical iPhone feedback. */
-@layer omda-chat-design {
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{gap:16px!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message{display:block!important;flex:none!important;min-height:0!important;min-width:0!important;gap:0!important;margin:0!important;box-shadow:none!important;line-height:1.7!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message>strong{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{width:fit-content!important;max-width:85%!important;align-self:flex-start!important;padding:8px 14px!important;border:1px solid #493a5b!important;border-radius:20px!important;background:#24202b!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:100%!important;max-width:100%!important;align-self:stretch!important;padding:0 2px!important;border:0!important;border-radius:0!important;background:transparent!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown{display:block!important;gap:0!important;padding:0!important;margin:0!important;min-height:0!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown p{font-size:15px!important;line-height:1.75!important;margin:0 0 10px!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown>:last-child{margin-bottom:0!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-actions{width:fit-content!important;margin:3px 0 0!important;padding:0!important;gap:2px!important;border:0!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:11px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#bba8d4!important;box-shadow:none!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action:hover{background:#24202b!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action svg{width:17px!important;height:17px!important;}
-}
-/* User's explicit physical sides: user LEFT, assistant RIGHT, in either UI language. */
-@layer omda-chat-design {
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{align-self:flex-start!important;margin-left:0!important;margin-right:auto!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:fit-content!important;max-width:100%!important;align-self:flex-end!important;margin-left:auto!important;margin-right:0!important;text-align:right!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant .ai-message-actions{margin-left:auto!important;margin-right:0!important;}
-}
 /* Composer focus: drop the square purple focus-visible outline (the generic
    page rule wins on specificity order) and highlight the rounded bar instead. */
 body .app-shell[data-chat-active="true"] .ai-chat-page .ai-composer-input:focus-visible{outline:none!important;outline-offset:0!important;box-shadow:none!important;}
@@ -184,3 +163,25 @@ body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-item>button:fi
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin{color:#4b5563!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned{color:#c5a4f2!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned>svg{fill:currentColor!important;}
+
+/* Compact conversation rhythm, requested after physical iPhone feedback. */
+@layer omda-chat-design {
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{gap:16px!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message{display:block!important;flex:none!important;min-height:0!important;min-width:0!important;gap:0!important;margin:0!important;box-shadow:none!important;line-height:1.7!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message>strong{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{width:fit-content!important;max-width:85%!important;align-self:flex-start!important;padding:8px 14px!important;border:1px solid #493a5b!important;border-radius:20px!important;background:#24202b!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:100%!important;max-width:100%!important;align-self:stretch!important;padding:0 2px!important;border:0!important;border-radius:0!important;background:transparent!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown{display:block!important;gap:0!important;padding:0!important;margin:0!important;min-height:0!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown p{font-size:15px!important;line-height:1.75!important;margin:0 0 10px!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-chat-markdown>:last-child{margin-bottom:0!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-actions{width:fit-content!important;margin:3px 0 0!important;padding:0!important;gap:2px!important;border:0!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:11px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#bba8d4!important;box-shadow:none!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action:hover{background:#24202b!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action svg{width:17px!important;height:17px!important;}
+}
+/* User's explicit physical sides: user LEFT, assistant RIGHT, in either UI language. */
+@layer omda-chat-design {
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{align-self:flex-start!important;margin-left:0!important;margin-right:auto!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:fit-content!important;max-width:100%!important;align-self:flex-end!important;margin-left:auto!important;margin-right:0!important;text-align:right!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant .ai-message-actions{margin-left:auto!important;margin-right:0!important;}
+}
