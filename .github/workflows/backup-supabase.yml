@@ -1,0 +1,74 @@
+name: Backup Al-Omda Supabase database (off-Supabase, encrypted)
+
+# Daily encrypted dump of the public schema (auth schema not readable by a limited role on Supabase), restore-tested into a throwaway Postgres 17.
+# Needs two repository secrets: SUPABASE_BACKUP_DB_URL (read-only role backup_ro, pooler session mode) and BACKUP_PASSPHRASE.
+# Without them the job exits cleanly and does nothing.
+on:
+  schedule:
+    - cron: "47 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: ${{ secrets.SUPABASE_BACKUP_DB_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    services:
+      restore:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: restore
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then echo "ok=false" >> "$GITHUB_OUTPUT"; echo "Backup secrets not set, skipping."; else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Install PostgreSQL 17 client
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Dump
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          pg_dump "$DB_URL" -Fc --no-owner --no-privileges -n public -f backup.dump
+          ls -l backup.dump
+      - name: Restore test (throwaway database)
+        if: steps.gate.outputs.ok == 'true'
+        env:
+          PGPASSWORD: restore
+        run: |
+          psql -h localhost -U postgres -c "create database restore_test"
+          # auth schema references Supabase roles/extensions that do not exist here; errors on those are expected.
+          for r in anon authenticated service_role supabase_auth_admin; do psql -h localhost -U postgres -c "create role $r nologin" || true; done
+          psql -h localhost -U postgres -d restore_test -c 'create extension if not exists pgcrypto' || true
+          pg_restore -h localhost -U postgres -d restore_test --no-owner --no-privileges backup.dump 2>restore.err || true
+          tail -n 5 restore.err || true
+          T=$(psql -h localhost -U postgres -d restore_test -Atc "select count(*) from information_schema.tables where table_schema='public'")
+          U=$(psql -h localhost -U postgres -d restore_test -Atc "select count(*) from public.profiles")
+          echo "restored public tables: $T, profiles rows: $U"
+          test "$T" -ge 15
+      - name: Encrypt
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" --symmetric --cipher-algo AES256 -o "omda-backup-$(date -u +%Y%m%d).dump.gpg" backup.dump
+          rm -f backup.dump
+          ls -l *.gpg
+      - name: Upload encrypted backup
+        if: steps.gate.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: omda-db-backup
+          path: "*.dump.gpg"
+          retention-days: 30
+          if-no-files-found: error
