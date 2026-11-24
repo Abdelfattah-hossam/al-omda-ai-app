@@ -161,3 +161,7 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{align-
 body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{width:fit-content!important;max-width:100%!important;align-self:flex-end!important;margin-left:auto!important;margin-right:0!important;text-align:right!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant .ai-message-actions{margin-left:auto!important;margin-right:0!important;}
 }
+/* Composer focus: drop the square purple focus-visible outline (the generic
+   page rule wins on specificity order) and highlight the rounded bar instead. */
+body .app-shell[data-chat-active="true"] .ai-chat-page .ai-composer-input:focus-visible{outline:none!important;outline-offset:0!important;box-shadow:none!important;}
+body .app-shell[data-chat-active="true"] .ai-composer-tools:focus-within{border-color:#4a3d5e!important;box-shadow:0 8px 20px #0004,0 0 0 1px #4a3d5e,0 0 18px rgba(152,101,224,.16)!important;}

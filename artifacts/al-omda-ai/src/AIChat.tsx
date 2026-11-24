@@ -1094,6 +1094,12 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     } catch (err) { setError(err instanceof Error ? err.message : (ar ? "تعذر تحميل الجلسات." : "Could not load sessions.")); }
   };
 
+  const modePrompts = {
+    word: ar ? "أنشئ مستند Word احترافيًا وجاهزًا للتحميل عن: " : "Create a professional downloadable Word document about: ",
+    excel: ar ? "أنشئ ملف Excel منظمًا وجاهزًا للتحميل عن: " : "Create a structured downloadable Excel workbook about: ",
+    ppt: ar ? "جهّز عرض PowerPoint منظمًا بعناوين الشرائح ومحتواها وملاحظات المتحدث عن: " : "Prepare a PowerPoint presentation with slide titles, slide content and speaker notes about: ",
+    office: ar ? "استخدم أدوات الأوفيس المناسبة لإنجاز: " : "Use the appropriate Office tools to complete: "
+  };
   const sendMessage = async (event?: FormEvent, draftOverride?: string) => {
     event?.preventDefault();
     const imageForRequest = pendingImage;
@@ -1106,6 +1112,12 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
     const attachmentPrompt = fileForRequest ? text.slice(0, 6000) : text;
     const attachmentText = fileForRequest ? fileForRequest.text.slice(0, Math.max(0, 7800 - attachmentPrompt.length - 100)) : "";
     const requestText = fileForRequest ? attachmentPrompt + "\n\n[Attached file: " + fileForRequest.name + "]\n" + attachmentText : text;
+    const bareModePrompt = !imageForRequest && !fileForRequest && Object.values(modePrompts).some((prefix) => text === prefix.trim());
+    if (bareModePrompt) {
+      setError(ar ? "كمّل الجملة بطلبك الأول، وبعدين ابعت." : "Add your request after the prompt, then send.");
+      inputRef.current?.focus();
+      return;
+    }
     if (!text || loading || historyLoading || sendingRef.current || !signedIn || (!agentMode && usage && usage.remaining <= 0)) return;
     // Lock synchronously before the first await so rapid taps/Enter presses cannot
     // create duplicate conversations or send the same request twice.
@@ -1128,6 +1140,9 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       shouldAutoScrollRef.current = true;
       setMessages(next);
       setError("");
+      // Clear the composer as soon as the message is in the chat. The bubble is
+      // the durable copy; keeping the draft until the model replies felt broken.
+      setInput((current) => current === submittedDraft ? "" : current);
       await saveHistory(next.slice(-100), conversationId);
       if (!componentMountedRef.current) return;
       const officeArtifactIntent = currentMode !== null || /(?:word|docx?|excel|xlsx|spreadsheet|workbook|power\s*point|powerpoint|pptx|وورد|مستند\s*وورد|ملف\s*وورد|إكسل|اكسيل|اكسل|شيت|ملف\s*اكسل|بوربوينت|عرض\s*تقديمي)/i.test(text);
@@ -1516,13 +1531,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   const activateMode = (mode: "word" | "excel" | "ppt" | "office") => {
     setCurrentMode(mode);
     setShowPlusMenu(false);
-    const prompts = {
-      word: ar ? "أنشئ مستند Word احترافيًا وجاهزًا للتحميل عن: " : "Create a professional downloadable Word document about: ",
-      excel: ar ? "أنشئ ملف Excel منظمًا وجاهزًا للتحميل عن: " : "Create a structured downloadable Excel workbook about: ",
-      ppt: ar ? "جهّز عرض PowerPoint منظمًا بعناوين الشرائح ومحتواها وملاحظات المتحدث عن: " : "Prepare a PowerPoint presentation with slide titles, slide content and speaker notes about: ",
-      office: ar ? "استخدم أدوات الأوفيس المناسبة لإنجاز: " : "Use the appropriate Office tools to complete: "
-    };
-    setInput((value) => value.trim() ? prompts[mode] + value : prompts[mode]);
+    setInput((value) => value.trim() ? modePrompts[mode] + value : modePrompts[mode]);
     window.setTimeout(() => inputRef.current?.focus(), 0);
   };
   const clearMode = () => setCurrentMode(null);
