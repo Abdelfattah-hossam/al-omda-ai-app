@@ -9698,6 +9698,31 @@ body:has(.ai-chat-page){
 .media-studio header>.icon-button{flex:none;}
 .media-studio :is(p,label,strong,h2,h3){overflow-wrap:anywhere;}
 .media-studio input[type="file"]{width:100%;max-width:100%;}
+
+/* Studio layout polish (real-iPhone feedback): compact sections, 2-up frames, tappable actions. */
+.media-studio{display:flex;flex-direction:column;gap:14px}
+.media-studio>*{margin-top:0;margin-bottom:0}
+.media-studio .media-studio-actions{margin:0}
+.media-studio-frames,.media-studio-results{margin:0}
+.media-studio label{font-size:13px}
+.media-studio .media-studio-reference-hint{font-size:12px}
+@media(max-width:600px){
+ .media-studio{gap:12px;padding:14px}
+ .media-studio h2{font-size:19px}
+ .media-studio header p{font-size:12px;margin-top:4px}
+ .media-studio p{font-size:12.5px;line-height:1.7}
+ .media-studio .media-studio-note{padding:10px;font-size:12px}
+ .media-studio textarea{min-height:84px}
+ .media-studio .button{width:100%;justify-content:center}
+ .media-studio .media-studio-actions{display:grid;grid-template-columns:1fr;gap:10px}
+ .media-studio-frames,.media-studio-results{grid-template-columns:1fr 1fr;gap:10px}
+ .media-studio article{padding:8px;gap:7px}
+ .media-studio article label{font-size:11px}
+ .media-studio article input{padding:7px;font-size:13px}
+ .media-studio img,.media-studio video{max-height:180px}
+ .media-studio-video{display:grid;gap:10px;padding:14px 0}
+ .media-studio h3{font-size:15px;margin:0}
+}
 .media-studio .button{white-space:normal;max-width:100%;}
 @media(max-width:760px){
  .app-shell:not([data-chat-active="true"]){--workspace-dock-space:calc(158px + env(safe-area-inset-bottom));}

@@ -15,7 +15,7 @@ import { professionalStandards } from "../lib/professional-standards.js";
 import { extractExplicitMemoryNode, extractUserCorrectionNode, parseMemoryNode, shouldWarnExplicitMemoryNotSaved } from "../lib/memory-graph.js";
 import { estimatePromptTokens, getHostedModelTemperature, getHostedProviderOrder, inferHostedModelPurpose, reorderProvidersForPromptSize } from "../lib/ai-model-policy.js";
 import { callWithRateLimitRetry, isRateLimitError, parseRetryAfterSeconds, runWithProviderFailover } from "../lib/provider-failover.js";
-import { getWorkersAiBinding } from "../lib/cloudflare-ai.js";
+import { getWorkersAiBinding, type WorkersAiBinding } from "../lib/cloudflare-ai.js";
 import { ASSET_READ_MAX_BYTES, extractFetchableUrl, runRequestReadTools, type RequestToolDeps, type WorkspaceAssetRef } from "../lib/execution-tools.js";
 import { isValidWorkspaceAssetPath, WORKSPACE_ASSET_BUCKET } from "../lib/storage-assets.js";
 import {
@@ -525,6 +525,72 @@ async function callProviderWithRetry(provider: "gemini" | "openrouter" | "groq" 
 }
 
 // Owner confirmed Workers Free: daily free allocation stops, with no paid fallback.
+// Describe a user-supplied reference image through the free provider chain, so
+// "make a similar image" works without a paid image-to-image model. The visual
+// description then guides the free Cloudflare image generator.
+async function describeReferenceImage(data: string, mimeType: string, binding: WorkersAiBinding | null): Promise<string> {
+  const instruction = "Describe this image in precise English visual detail: the subject, any people and their appearance, clothing, pose, background, colors, lighting, camera angle and art style. Return only the description itself, without headings or commentary.";
+  const groqKey = process.env.GROQ_API_KEY?.trim();
+  if (groqKey) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        signal: AbortSignal.timeout(30000),
+        headers: { authorization: "Bearer " + groqKey, "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "qwen/qwen3.8-27b",
+          messages: [{ role: "user", content: [
+            { type: "text", text: instruction },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${data}` } },
+          ] }],
+          max_completion_tokens: 600,
+          temperature: 0.2,
+        }),
+      });
+      const payload = await response.json().catch(() => null) as any;
+      const raw = payload?.choices?.[0]?.message?.content;
+      const text = (typeof raw === "string" ? raw : "").trim();
+      if (response.ok && text) return text;
+      console.warn("[Reference describe: Groq]", response.status, providerErrorMessage(payload));
+    } catch (error) {
+      console.warn("[Reference describe: Groq]", error instanceof Error ? error.message : String(error));
+    }
+  }
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  if (geminiKey) {
+    for (const model of ["gemini-3.5-flash-lite", "gemini-2.5-flash"]) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiKey)}`, {
+          method: "POST",
+          signal: AbortSignal.timeout(30000),
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: instruction }, { inlineData: { mimeType, data } }] }],
+            generationConfig: { maxOutputTokens: 600, temperature: 0.2 },
+          }),
+        });
+        const payload = await response.json().catch(() => null) as any;
+        const text = ((payload?.candidates?.[0]?.content?.parts ?? []) as any[]).map((part) => typeof part?.text === "string" ? part.text : "").join("").trim();
+        if (response.ok && text) return text;
+        console.warn("[Reference describe: Gemini]", model, response.status, providerErrorMessage(payload));
+      } catch (error) {
+        console.warn("[Reference describe: Gemini]", model, error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
+  if (binding) {
+    try {
+      const bytes = Array.from(new Uint8Array(Buffer.from(data, "base64")));
+      const result = await binding.run("@cf/llava-hf/llava-1.5-7b-hf", { image: bytes, prompt: instruction, max_tokens: 512 }) as any;
+      const text = (typeof result?.description === "string" ? result.description : typeof result?.response === "string" ? result.response : "").trim();
+      if (text) return text;
+    } catch (error) {
+      console.warn("[Reference describe: LLaVA]", error instanceof Error ? error.message : String(error));
+    }
+  }
+  return "";
+}
+
 router.post("/ai/media/image", requireSameOrigin, async (req,res):Promise<void> => {
  let ar=true;
  try {
@@ -544,6 +610,15 @@ router.post("/ai/media/image", requireSameOrigin, async (req,res):Promise<void> 
    }
    if(!english){res.status(502).json({error:ar?"تعذر تجهيز وصف إنجليزي دقيق للصورة. أعد المحاولة أو اكتب الوصف بالإنجليزية.":"Could not prepare a valid English image description. Retry or describe it in English."});return;}
    imagePrompt=english;
+  }
+  const reference=req.body?.reference;
+  if(reference&&typeof reference.data==="string"&&reference.data.trim()){
+   const refData=reference.data.trim();
+   const refMime=typeof reference.mimeType==="string"&&/^image\/(jpeg|png|webp)$/.test(reference.mimeType)?reference.mimeType:"image/jpeg";
+   if(refData.length>2_500_000){res.status(400).json({error:ar?"الصورة المرجعية أكبر من الحد المسموح.":"The reference image is too large."});return;}
+   const description=await describeReferenceImage(refData,refMime,binding);
+   if(!description){res.status(502).json({error:ar?"تعذر تحليل الصورة المرجعية حاليًا. أعد المحاولة أو أنشئ بدونها.":"Could not analyze the reference image right now. Retry or generate without it."});return;}
+   imagePrompt=(imagePrompt?imagePrompt+". ":"")+"Recreate the user's reference image as one single coherent scene, closely matching its subject, style, colors and composition. Reference image description: "+description.slice(0,1400)+". One image only: no collage, no grid, no watermark, no text or letters overlay.";
   }
   const raw=await binding.run("@cf/black-forest-labs/flux-1-schnell",{prompt:imagePrompt,steps:4});
   const image=parseGeneratedJpeg(raw);if(!image){res.status(502).json({error:ar?"لم تصل صورة JPEG صالحة. أعد المحاولة.":"The image service did not return a valid JPEG. Retry."});return;}
