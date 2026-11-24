@@ -1,0 +1,26 @@
+/* Organized page layout: breadcrumb, action row, KPI row, compact cards, kanban scroller */
+.page-crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;color:#8994ad;margin-bottom:8px}
+.page-crumbs a{color:#aab8d8;text-decoration:none}
+.page-crumbs strong{color:#e8ecfa;font-weight:650}
+.page-heading>div>.eyebrow,.dashboard-toolbar .eyebrow{display:none}
+.page-heading{margin-bottom:14px}
+.page-heading .page-title,.dashboard-toolbar .page-title{font-size:clamp(20px,5.6vw,26px);margin:0 0 4px}
+.page-heading .page-subtitle{margin:0;font-size:12px}
+.page-heading-actions{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+.page-heading-actions .button{flex:1 1 auto;justify-content:center}
+.page-kpi-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.page-kpi-row .dashboard-kpi{min-height:0;padding:12px 13px;border-radius:16px}
+.page-kpi-label{font-size:11px;color:#9aa6c2;line-height:1.3}
+.page-kpi-icon{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:rgba(139,157,220,.14);flex:none}
+.page-kpi-value{display:block;font-size:24px;line-height:1.1;margin-top:8px;font-weight:750}
+.page-kpi-foot{display:block;margin-top:4px;font-size:10px;color:#8994ad}
+.pipeline-kanban{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);gap:12px;align-items:start;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
+.pipeline-kanban>section{scroll-snap-align:start}
+.history-toolbar{padding:12px;gap:10px;border-radius:16px}
+@media(max-width:700px){
+  .page-kpi-row,.dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page-kpi-value{font-size:21px}
+  .pipeline-kanban{grid-auto-columns:78%}
+  .app-launcher-section,.panel{border-radius:16px}
+  .dashboard-toolbar-actions{flex-direction:row}
+}

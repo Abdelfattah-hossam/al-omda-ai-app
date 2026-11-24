@@ -43,3 +43,4 @@ createRoot(document.getElementById('root')!, {
 import './legacy-performance.css';
 
 import './agent-controls.css';
+import './pages-organized.css';
