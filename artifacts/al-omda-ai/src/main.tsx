@@ -18,12 +18,12 @@ import './guest-nudge.css';
 import './welcome-greeting.css';
 import './chat-legacy.css';
 
-// Cache the production app shell so AL OMDA Ai can open while the device is offline.
+// Cache the production app shell so Zahin can open while the device is offline.
 // API-backed actions still require a connection and are never cached.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     void navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch((error) => {
-      console.warn('AL OMDA Ai offline shell could not be registered.', error);
+      console.warn('Zahin offline shell could not be registered.', error);
     });
   });
 }

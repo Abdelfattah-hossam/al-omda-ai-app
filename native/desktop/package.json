@@ -1,6 +1,6 @@
 {
   "name": "al-omda-ai-desktop",
-  "productName": "AL OMDA Ai",
+  "productName": "Zahin",
   "version": "1.0.0",
   "private": true,
   "main": "main.cjs",
@@ -13,7 +13,7 @@
   },
   "build": {
     "appId": "ai.alomda.desktop",
-    "productName": "AL OMDA Ai",
+    "productName": "Zahin",
     "artifactName": "AL-OMDA-Ai-${os}-${arch}-${version}.${ext}",
     "files": [
       "main.cjs",
@@ -31,8 +31,8 @@
       "category": "public.app-category.productivity",
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Voice conversations in AL OMDA Ai",
-        "NSCameraUsageDescription": "Attach photos in AL OMDA Ai"
+        "NSMicrophoneUsageDescription": "Voice conversations in Zahin",
+        "NSCameraUsageDescription": "Attach photos in Zahin"
       }
     }
   }

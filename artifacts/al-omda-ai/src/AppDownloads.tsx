@@ -16,12 +16,12 @@ function DeviceIcon({device}:{device:string}) {
 export default function AppDownloads({isAr}:{isAr:boolean}) {
  const [iphoneOpen,setIphoneOpen]=useState(false);
  return <section className="app-downloads panel" aria-label={isAr?'تحميل التطبيق على جهازك':'Download the app'} data-testid="app-downloads">
-  <div className="app-downloads-heading"><h2>{isAr?'حمّل العمدة على جهازك':'Get AL OMDA Ai on your device'}</h2><span>{isAr?'تحميل مباشر':'Direct download'}</span></div>
+  <div className="app-downloads-heading"><h2>{isAr?'حمّل زاهن على جهازك':'Get Zahin on your device'}</h2><span>{isAr?'تحميل مباشر':'Direct download'}</span></div>
   <div className="app-downloads-devices">
    {APP_PACKAGES.map(item=><a key={item.id} className="app-downloads-device" href={ROOT+item.file} download data-testid={'download-'+item.id} aria-label={(isAr?'تحميل ':'Download ')+(isAr?item.ar:item.name)}><DeviceIcon device={item.id}/><strong>{isAr?item.ar:item.name}</strong><small dir="ltr">{item.size}</small></a>)}
    <button type="button" className="app-downloads-device" onClick={()=>setIphoneOpen(v=>!v)} aria-expanded={iphoneOpen} data-testid="install-iphone"><DeviceIcon device="iphone"/><strong>{isAr?'آيفون وiPad':'iPhone & iPad'}</strong><small>{isAr?'تثبيت من Safari':'Install from Safari'}</small></button>
   </div>
-  {iphoneOpen&&<div className="app-downloads-iphone" role="status"><strong>{isAr?'تثبيت الآيفون بدون ملف':'Install on iPhone, no file needed'}</strong><p>{isAr?'افتح موقع العمدة في Safari، اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية»، وفعّل «فتح كتطبيق ويب» إذا ظهر. لا يوجد ملف IPA أو إصدار App Store.':'Open AL OMDA Ai in Safari. Tap Share, then Add to Home Screen. Enable Open as Web App if shown. There is no IPA or App Store version.'}</p></div>}
+  {iphoneOpen&&<div className="app-downloads-iphone" role="status"><strong>{isAr?'تثبيت الآيفون بدون ملف':'Install on iPhone, no file needed'}</strong><p>{isAr?'افتح موقع زاهن في Safari، اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية»، وفعّل «فتح كتطبيق ويب» إذا ظهر. لا يوجد ملف IPA أو إصدار App Store.':'Open Zahin in Safari. Tap Share, then Add to Home Screen. Enable Open as Web App if shown. There is no IPA or App Store version.'}</p></div>}
   <p className="app-downloads-note">{isAr?'نسخ تجريبية تحتاج إنترنت. أندرويد بمفتاح اختبار، وويندوز وماك غير موقّعين. لم تُختبر هذه النسخ على أجهزة فعلية. لا تعطّل حماية الجهاز. على ويندوز فكّ الضغط كاملًا. على ماك اختر Apple Silicon أو Intel حسب معالجك.':'Preview builds require internet. Android is debug-signed; Windows and Mac are unsigned. These builds have not been tested on physical target devices. Do not disable device security. Extract the full Windows ZIP. Choose your Mac processor: Apple Silicon or Intel.'}</p>
  </section>;
 }

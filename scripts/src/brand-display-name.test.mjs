@@ -5,12 +5,13 @@ const root=new URL('../../artifacts/al-omda-ai/',import.meta.url);
 test('display name is exact in install metadata and brand assets',()=>{
  const html=readFileSync(new URL('index.html',root),'utf8');
  // Search titles may add an Arabic description while preserving the exact product name.
- assert.match(html,/<title>[^<]*AL OMDA Ai[^<]*<\/title>/);
- for(const key of ['og:title','twitter:title','apple-mobile-web-app-title','application-name']) assert.ok(html.includes(`${key}" content="AL OMDA Ai"`));
+ assert.match(html,/<title>[^<]*زاهن \| Zahin[^<]*<\/title>/);
+ for(const key of ['og:title','twitter:title','apple-mobile-web-app-title','application-name']) assert.ok(html.includes(`${key}" content="Zahin"`));
  const manifest=JSON.parse(readFileSync(new URL('public/manifest.webmanifest',root),'utf8'));
- assert.equal(manifest.name,'AL OMDA Ai');assert.equal(manifest.short_name,'AL OMDA Ai');assert.equal(manifest.id,'/');
+ assert.equal(manifest.name,'Zahin');assert.equal(manifest.short_name,'Zahin');assert.equal(manifest.id,'/');
+ // Legacy logo files stay in place until the new Zahin logo ships; none may carry Arabic old-name text.
  for(const name of readdirSync(new URL('public/brand/',root)).filter(x=>x.endsWith('.svg'))){
-  const s=readFileSync(new URL('public/brand/'+name,root),'utf8');assert.match(s,/AL OMDA Ai/);assert.ok(!/العمدة|العمده|Al OMDA AI/.test(s));
+  const s=readFileSync(new URL('public/brand/'+name,root),'utf8');assert.ok(!/العمدة|العمده|Al OMDA AI/.test(s),name);
  }
 });
 test('active UI and generated document branding avoid legacy spelling',()=>{
@@ -18,7 +19,7 @@ test('active UI and generated document branding avoid legacy spelling',()=>{
   let s=readFileSync(new URL(name,root),'utf8');
   // Legacy default profile names remain recognizable without rewriting saved account records.
   s=s.replace("'مستخدم العمدة', 'Al OMDA AI user'",'');
-  assert.ok(!/العمدة|العمده|Al OMDA AI|AL OMDA AI/.test(s),name);assert.ok(s.includes('AL OMDA Ai'),name);
+  assert.ok(!/العمدة|العمده|Al OMDA AI|AL OMDA AI/.test(s),name);assert.ok(s.includes('Zahin'),name);
  }
 });
 

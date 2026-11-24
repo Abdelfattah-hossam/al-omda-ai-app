@@ -49,14 +49,14 @@ function startRuntime(): void {
   });
   runtime = child;
   child.once("error", (error) => {
-    console.error("[AL OMDA Ai supervisor] Runtime start failed:", error.message);
+    console.error("[Zahin supervisor] Runtime start failed:", error.message);
     if (runtime === child) runtime = null;
     scheduleRestart();
   });
   child.once("exit", (code, signal) => {
     if (runtime === child) runtime = null;
     if (!stopping && !updating) {
-      console.warn("[AL OMDA Ai supervisor] Runtime exited:", code, signal || "");
+      console.warn("[Zahin supervisor] Runtime exited:", code, signal || "");
       scheduleRestart();
     }
   });
@@ -113,19 +113,19 @@ async function checkAndApplyUpdate(): Promise<void> {
     const status = await runCommand("git", ["status", "--porcelain", "--untracked-files=all"], 15000);
     const remote = await runCommand("git", ["remote", "get-url", "origin"], 15000);
     if (!/^https:\/\/github\.com\//i.test(remote)) {
-      console.info("[AL OMDA Ai supervisor] Auto-update skipped: origin must be an HTTPS GitHub remote.");
+      console.info("[Zahin supervisor] Auto-update skipped: origin must be an HTTPS GitHub remote.");
       return;
     }
     const originMain = await runCommand("git", ["ls-remote", "--heads", "origin", "main"], 30000);
     const advertisedMain = originMain.trim().split(/\s+/)[0] || "";
     if (!/^[a-f0-9]{40}$/i.test(advertisedMain)) {
-      console.info("[AL OMDA Ai supervisor] Auto-update skipped: could not verify the advertised origin/main commit.");
+      console.info("[Zahin supervisor] Auto-update skipped: could not verify the advertised origin/main commit.");
       return;
     }
     await runCommand("git", ["fetch", "--quiet", "origin", "main"], 120000);
     const fetchedMain = await runCommand("git", ["rev-parse", "refs/remotes/origin/main"], 15000);
     if (fetchedMain !== advertisedMain) {
-      console.info("[AL OMDA Ai supervisor] Auto-update skipped: origin/main changed during verification; retrying next interval.");
+      console.info("[Zahin supervisor] Auto-update skipped: origin/main changed during verification; retrying next interval.");
       return;
     }
     const behind = Number(await runCommand("git", ["rev-list", "--count", "HEAD..origin/main"], 15000));
@@ -138,7 +138,7 @@ async function checkAndApplyUpdate(): Promise<void> {
       activeRuns: activeRuns === null ? 1 : activeRuns,
     });
     if (!decision.apply) {
-      console.info("[AL OMDA Ai supervisor] Auto-update deferred:", decision.reason);
+      console.info("[Zahin supervisor] Auto-update deferred:", decision.reason);
       return;
     }
 
@@ -150,11 +150,11 @@ async function checkAndApplyUpdate(): Promise<void> {
       await runPnpm(["install", "--frozen-lockfile"]);
       await runPnpm(["build"]);
       restartAttempts = 0;
-      console.info("[AL OMDA Ai supervisor] Updated successfully to", await runCommand("git", ["rev-parse", "--short", "HEAD"], 15000));
+      console.info("[Zahin supervisor] Updated successfully to", await runCommand("git", ["rev-parse", "--short", "HEAD"], 15000));
     } catch (error) {
-      console.error("[AL OMDA Ai supervisor] Update failed; rolling back:", error instanceof Error ? error.message : error);
+      console.error("[Zahin supervisor] Update failed; rolling back:", error instanceof Error ? error.message : error);
       await runCommand("git", ["reset", "--hard", previousCommit], 30000).catch((rollbackError) => {
-        console.error("[AL OMDA Ai supervisor] Rollback failed:", rollbackError instanceof Error ? rollbackError.message : rollbackError);
+        console.error("[Zahin supervisor] Rollback failed:", rollbackError instanceof Error ? rollbackError.message : rollbackError);
       });
       await runPnpm(["install", "--frozen-lockfile"]).catch(() => undefined);
     } finally {
@@ -162,7 +162,7 @@ async function checkAndApplyUpdate(): Promise<void> {
       startRuntime();
     }
   } catch (error) {
-    console.warn("[AL OMDA Ai supervisor] Update check failed:", error instanceof Error ? error.message : error);
+    console.warn("[Zahin supervisor] Update check failed:", error instanceof Error ? error.message : error);
   } finally {
     updateInProgress = false;
   }
@@ -181,9 +181,9 @@ async function shutdown(): Promise<void> {
 process.once("SIGINT", () => { void shutdown(); });
 process.once("SIGTERM", () => { void shutdown(); });
 
-console.info("[AL OMDA Ai supervisor] Starting local Agent runtime. Crash recovery is enabled.");
-if (autoUpdate) console.info("[AL OMDA Ai supervisor] Safe auto-update is enabled; interval:", intervalHours, "hours.");
-else console.info("[AL OMDA Ai supervisor] Auto-update is disabled. Set OMDA_AGENT_AUTO_UPDATE=true to enable it.");
+console.info("[Zahin supervisor] Starting local Agent runtime. Crash recovery is enabled.");
+if (autoUpdate) console.info("[Zahin supervisor] Safe auto-update is enabled; interval:", intervalHours, "hours.");
+else console.info("[Zahin supervisor] Auto-update is disabled. Set OMDA_AGENT_AUTO_UPDATE=true to enable it.");
 startRuntime();
 if (autoUpdate) {
   initialUpdateTimer = setTimeout(() => { void checkAndApplyUpdate(); }, 120000);

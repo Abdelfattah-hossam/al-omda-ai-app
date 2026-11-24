@@ -72,7 +72,7 @@ test("parseSlideXml extracts positioned title, bullets and footer with styles", 
   const footer = slide.shapes.find((shape) => shape.name === "Footer");
   assert.ok(footer);
   assert.equal(footer.paragraphs[0].align, "ctr");
-  assert.equal(footer.paragraphs[0].runs[0].text, "AL OMDA Ai  •  1");
+  assert.equal(footer.paragraphs[0].runs[0].text, "Zahin  •  1");
 });
 
 test("parseSlideXml unescapes XML entities and skips empty shapes", async () => {

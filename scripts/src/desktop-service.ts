@@ -10,7 +10,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const platform = process.platform;
 const home = homedir();
 const label = "ai.alomda.agent";
-const taskName = "AL OMDA AI Agent";
+const taskName = "Zahin Agent";
 const appOrigin = "https://al-omda-ai-app.abdelfattahhossam1.workers.dev";
 
 function paths() {
@@ -93,7 +93,7 @@ async function install(): Promise<void> {
   } else {
     throw new Error("Desktop companion auto-start is supported on Windows, macOS, and Linux only.");
   }
-  console.log("AL OMDA Ai Agent service installed and started for the current user.");
+  console.log("Zahin Agent service installed and started for the current user.");
   console.log("Workspace:", environment.OMDA_AGENT_WORKSPACE);
   console.log("Local token saved privately at:", envFile);
   console.log("Terminal execution remains disabled. Edit the environment file to configure local model providers, then restart the service.");
@@ -111,7 +111,7 @@ async function uninstall(): Promise<void> {
     await run("schtasks.exe", ["/Delete", "/TN", taskName, "/F"]).catch(() => undefined);
     await rm(locations.service, { force: true });
   } else throw new Error("Unsupported platform.");
-  console.log("AL OMDA Ai Agent auto-start removed. The local token and environment file were preserved:", envFile);
+  console.log("Zahin Agent auto-start removed. The local token and environment file were preserved:", envFile);
 }
 async function status(): Promise<void> {
   if (platform === "linux") await run("systemctl", ["--user", "status", "al-omda-agent.service", "--no-pager"]);

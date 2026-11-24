@@ -140,7 +140,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
   const labels = {
     start: ar ? "محادثة صوتية مباشرة" : "Live voice conversation",
     stop: ar ? "إنهاء المحادثة" : "End voice chat",
-    connecting: ar ? "جارٍ الاتصال بـ AL OMDA Ai..." : "Connecting to AL OMDA Ai...",
+    connecting: ar ? "جارٍ الاتصال بـ Zahin..." : "Connecting to Zahin...",
     listening: ar ? "الميكروفون جاهز، اتكلم الآن" : "Microphone ready. Speak now",
     unavailable: ar ? "المحادثة الصوتية غير متاحة حاليًا." : "Live voice is unavailable right now.",
   };
@@ -315,7 +315,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
               outputAudioTranscription: {},
               realtimeInputConfig: { automaticActivityDetection: { disabled: true },activityHandling:"START_OF_ACTIVITY_INTERRUPTS" },
               systemInstruction: {
-                parts: [{ text: `You are AL OMDA Ai, a warm Egyptian conversational assistant. Understand informal Arabic, short replies, typos and all Arabic dialects. Mirror the dialect the user actually speaks, including Egyptian, Gulf, Levantine, Maghrebi, Sudanese, Iraqi or Hejazi. Use easy clear Arabic if unclear, and Egyptian as this user's default when there is no stronger cue. Never force one dialect on another. Use short replies, usually one or two sentences, with one useful next move. If a terse message is ambiguous, ask one short clarification in the same dialect. Never claim an action or file exists unless it was actually produced by a tool. Do not exaggerate slang or repeat greetings. Avoid robotic service phrases, lectures, and theatrical delivery. Match the user's language if they switch to English. Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; prioritize that language for input transcription. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
+                parts: [{ text: `You are Zahin, a warm Egyptian conversational assistant. Understand informal Arabic, short replies, typos and all Arabic dialects. Mirror the dialect the user actually speaks, including Egyptian, Gulf, Levantine, Maghrebi, Sudanese, Iraqi or Hejazi. Use easy clear Arabic if unclear, and Egyptian as this user's default when there is no stronger cue. Never force one dialect on another. Use short replies, usually one or two sentences, with one useful next move. If a terse message is ambiguous, ask one short clarification in the same dialect. Never claim an action or file exists unless it was actually produced by a tool. Do not exaggerate slang or repeat greetings. Avoid robotic service phrases, lectures, and theatrical delivery. Match the user's language if they switch to English. Only transcribe actual intelligible speech. Never infer words from silence or background noise. The interface language is ${ar ? 'Arabic (Egyptian)' : 'English'}; prioritize that language for input transcription. Keep the conversation conversational and concise. You may be interrupted; stop speaking when the user starts talking.` }]
               }
             }
           }));
@@ -441,7 +441,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             socket.send(JSON.stringify({ realtimeInput: { activityEnd: {} } }));
             speechActiveRef.current = false;
             silenceFramesRef.current = 0;
-            if(validTurnRef.current){setThinking(true);setStatus(ar ? "جاري تجهيز رد AL OMDA Ai..." : "Preparing AL OMDA Ai's reply...");}
+            if(validTurnRef.current){setThinking(true);setStatus(ar ? "جاري تجهيز رد Zahin..." : "Preparing Zahin's reply...");}
             else resumeListening();
           }
         }
@@ -452,7 +452,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
       captureTimerRef.current=window.setTimeout(()=>{
         if(isCurrentSession()&&peakInputRef.current<.0015){
           const track=stream.getAudioTracks()[0];
-          setStatus(context.state!=="running"?(ar?'Safari أوقف مسار الصوت. أنهِ المحادثة وابدأ مرة أخرى.':'Safari paused audio. End the chat and start again.'):track?.muted?(ar?'Safari يرسل مسار ميكروفون مكتومًا. أغلق أي مكالمة أو تطبيق يستخدم الميكروفون ثم أعد البدء.':'Safari reports a muted microphone track. End other calls or microphone apps and start again.'):peakInputRef.current===0?(ar?'وصلت إطارات صامتة من الميكروفون، وليس خطأ في الاتصال بـ AL OMDA Ai. أنهِ المحادثة وأغلق أي مكالمة أخرى ثم أعد البدء.':'The microphone is supplying silent frames, not a connection error. End this chat and other calls, then start again.'):(ar?'صوت الميكروفون ضعيف جدًا. قرّب الهاتف وتحدث بصوت أعلى.':'Microphone audio is very quiet. Move closer and speak louder.'));
+          setStatus(context.state!=="running"?(ar?'Safari أوقف مسار الصوت. أنهِ المحادثة وابدأ مرة أخرى.':'Safari paused audio. End the chat and start again.'):track?.muted?(ar?'Safari يرسل مسار ميكروفون مكتومًا. أغلق أي مكالمة أو تطبيق يستخدم الميكروفون ثم أعد البدء.':'Safari reports a muted microphone track. End other calls or microphone apps and start again.'):peakInputRef.current===0?(ar?'وصلت إطارات صامتة من الميكروفون، وليس خطأ في الاتصال بـ Zahin. أنهِ المحادثة وأغلق أي مكالمة أخرى ثم أعد البدء.':'The microphone is supplying silent frames, not a connection error. End this chat and other calls, then start again.'):(ar?'صوت الميكروفون ضعيف جدًا. قرّب الهاتف وتحدث بصوت أعلى.':'Microphone audio is very quiet. Move closer and speak louder.'));
           setMicDiagnostic((ar?'عينات: ':'Frames: ')+inputFramesRef.current+' · '+(ar?'أعلى مستوى: ':'Peak: ')+peakInputRef.current.toFixed(5));
         }
       },8000);
@@ -490,7 +490,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
           speechActiveRef.current = false;
           silenceFramesRef.current = 0;
           assistantTranscriptRef.current += outputText;
-          if (mountedRef.current) setStatus(ar ? "وصل رد AL OMDA Ai..." : "AL OMDA Ai's reply arrived...");
+          if (mountedRef.current) setStatus(ar ? "وصل رد Zahin..." : "Zahin's reply arrived...");
         }
         const parts = serverContent.modelTurn?.parts;
         if (Array.isArray(parts)) {
@@ -536,7 +536,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             player.start(startAt);
             nextPlayTimeRef.current = startAt + buffer.duration;
             receivedAudioChunks++;setVoiceSource('Gemini Live · Aoede');
-            if (mountedRef.current) { setThinking(false);setStatus(ar ? "AL OMDA Ai بيتكلم..." : "AL OMDA Ai is speaking..."); setSpeaking(true); }
+            if (mountedRef.current) { setThinking(false);setStatus(ar ? "Zahin بيتكلم..." : "Zahin is speaking..."); setSpeaking(true); }
           }
         }
         if (serverContent.turnComplete && !assistantTurnCompleteRef.current) {
@@ -562,7 +562,7 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
             } else if (mountedRef.current) {
               assistantResponseActiveRef.current = pendingPcmPlaybackRef.current > 0;
               setStatus(pendingPcmPlaybackRef.current > 0
-                ? (ar ? "استنى لحد ما AL OMDA Ai يخلص كلامه..." : "Please wait until AL OMDA Ai finishes speaking...")
+                ? (ar ? "استنى لحد ما Zahin يخلص كلامه..." : "Please wait until Zahin finishes speaking...")
                 : (ar ? "اتكلم تاني لما تحب..." : "Speak again whenever you are ready..."));
             }
           } else if (mountedRef.current) {
@@ -605,17 +605,17 @@ export default function GeminiLiveVoice({ language, disabled, onTranscript,initi
   },[ar]);
 
   return <div ref={visualRef} className="omda-live-voice" data-state={connecting?"connecting":speaking?"speaking":thinking?"thinking":active?"listening":"idle"} data-active={active} data-speaking={speaking} data-connecting={connecting}>
-    <span className="voice-mode-kicker">{ar?"AL OMDA Ai · مساعدك الصوتي":"AL OMDA Ai · VOICE ASSISTANT"}</span>
-    <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "AL OMDA Ai يتحدث" : "AL OMDA Ai is speaking") : active ? labels.listening : labels.start}>
+    <span className="voice-mode-kicker">{ar?"Zahin · مساعدك الصوتي":"Zahin · VOICE ASSISTANT"}</span>
+    <div className="omda-voice-orb-wrap" role="img" aria-label={speaking ? (ar ? "Zahin يتحدث" : "Zahin is speaking") : active ? labels.listening : labels.start}>
       <svg className="omda-voice-orb" viewBox="0 0 160 160" aria-hidden="true"><defs><radialGradient id="voiceOrbFill" cx="30%" cy="23%" r="85%"><stop offset="0" stopColor="#f3d9ff"/><stop offset=".32" stopColor="#c99af5"/><stop offset=".7" stopColor="#8989e3"/><stop offset="1" stopColor="#69c7ed"/></radialGradient></defs><circle cx="80" cy="80" r="69" fill="url(#voiceOrbFill)"/><ellipse cx="80" cy="80" rx="56" ry="26" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-30 80 80)"/><ellipse cx="80" cy="80" rx="27" ry="62" fill="none" stroke="#f1e4ff" strokeOpacity=".55" strokeWidth="1.2" transform="rotate(-28 80 80)"/><circle cx="80" cy="80" r="69" fill="none" stroke="#e9caff" strokeOpacity=".5"/></svg>
     </div>
     <div className="voice-live-wave" aria-hidden="true">{Array.from({length:28},(_,i)=><i className="voice-wave-bar" key={i}/>)}</div>
-    <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "AL OMDA Ai بيتكلم..." : "AL OMDA Ai is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع AL OMDA Ai" : "Start a voice conversation with AL OMDA Ai")}</strong>
+    <strong className="omda-voice-status" role="status">{connecting ? labels.connecting : speaking ? (ar ? "Zahin بيتكلم..." : "Zahin is speaking...") : active ? status || labels.listening : status || (ar ? "ابدأ محادثة صوتية مع Zahin" : "Start a voice conversation with Zahin")}</strong>
     {retryAvailable&&!active&&!connecting&&<button type="button" className="ai-chat-live-test" onClick={()=>void start()} disabled={disabled}>{ar?'إعادة المحاولة':'Retry connection'}</button>}
     <small className="voice-privacy-note">{ar?'الاستماع يبدأ تلقائيًا بعد إذنك. تقدر تقاطع الرد بكلام واضح، ويتوقف الميكروفون عند مغادرة التطبيق. سماعة بميكروفون تقلل الصدى.':'Listening starts automatically after permission. Clear speech can interrupt replies. Capture stops when the app is hidden. A headset reduces speaker echo.'}</small>
     <button type="button" className="ai-chat-live-test" disabled={speaking||thinking||connecting||heardSpeech&&turnArmed} onClick={()=>{
       turnArmedRef.current=false;setTurnArmed(false);validTurnRef.current=false;assistantResponseActiveRef.current=true;setSpeaking(true);
-      freeSpeechCancelRef.current=playFreeSpeech(ar?'إزيك! أنا AL OMDA Ai، معاك. قولّي تحب نعمل إيه؟':'Hi! I am AL OMDA Ai. What would you like to do?',ar?'ar-EG':'en-US',{
+      freeSpeechCancelRef.current=playFreeSpeech(ar?'إزيك! أنا Zahin، معاك. قولّي تحب نعمل إيه؟':'Hi! I am Zahin. What would you like to do?',ar?'ar-EG':'en-US',{
         context:contextRef.current??undefined,output:outputAnalyserRef.current??undefined,
         onSource:source=>setVoiceSource(source==='free'?'Free voice · Fish':'Device fallback'),
         onDone:()=>{freeSpeechCancelRef.current=null;if(!mountedRef.current)return;assistantResponseActiveRef.current=false;setSpeaking(false);resumeListening();},

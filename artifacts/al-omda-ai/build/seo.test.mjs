@@ -4,15 +4,15 @@ import {readFileSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const html=readFileSync(root+'index.html','utf8');
-const origin='https://al-omda-ai.pages.dev/';
+const origin='https://zahin.pages.dev/';
 test('home exposes the site name, canonical, verification and crawlable copy without JavaScript',()=>{
  assert.match(html,/<html lang="ar" dir="rtl">/);
  assert.ok(html.includes('<link rel="canonical" href="'+origin+'"'));
  assert.match(html,/name="google-site-verification"/);
- assert.match(html,/<h1>العمدة \| AL OMDA Ai<\/h1>/);
+ assert.match(html,/<h1>زاهن \| Zahin<\/h1>/);
  assert.match(html,/href="\/about\/"/);
  const data=JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
- assert.equal(data['@type'],'WebSite');assert.equal(data.name,'AL OMDA Ai');assert.equal(data.url,origin);assert.ok(data.alternateName.includes('العمدة'));
+ assert.equal(data['@type'],'WebSite');assert.equal(data.name,'Zahin');assert.equal(data.url,origin);assert.ok(data.alternateName.includes('زاهن'));
 });
 test('sitemap lists only public pages that exist and robots advertises it',()=>{
  const sitemap=readFileSync(root+'public/sitemap.xml','utf8');

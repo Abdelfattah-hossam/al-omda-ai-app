@@ -16,7 +16,7 @@ test('speech is free-first, labelled fallback, cancellable, and exact words',()=
  assert.ok(api.includes('fish-audio/s2.1-pro-free:free'));
  assert.ok(api.includes('Read only the supplied words'));
  assert.ok(voice.includes('Device fallback'));
- assert.ok(voice.includes('إزيك! أنا AL OMDA Ai، معاك. قولّي تحب نعمل إيه؟'));
+ assert.ok(voice.includes('إزيك! أنا Zahin، معاك. قولّي تحب نعمل إيه؟'));
 });
 test('device fallback ranks Egyptian and enhanced voices, not array order',async()=>{
  const {preferredDeviceVoice}=await import('../../artifacts/al-omda-ai/src/lib/free-speech.ts');

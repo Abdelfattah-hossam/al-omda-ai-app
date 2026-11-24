@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
   CookieManager.getInstance().setAcceptCookie(true);CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
   web.setWebViewClient(new WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest req){String u=req.getUrl().toString();if(internal(u))return false;external(u);return true;}
-   @Override public void onReceivedError(WebView view,WebResourceRequest req,WebResourceError error){if(req.isForMainFrame())new AlertDialog.Builder(MainActivity.this).setTitle("AL OMDA Ai").setMessage("تعذر الاتصال. التطبيق يحتاج إنترنت. أعد المحاولة.").setPositiveButton("إعادة المحاولة",(d,w)->web.loadUrl(ORIGIN)).setNegativeButton("إغلاق",(d,w)->finish()).show();}
+   @Override public void onReceivedError(WebView view,WebResourceRequest req,WebResourceError error){if(req.isForMainFrame())new AlertDialog.Builder(MainActivity.this).setTitle("Zahin").setMessage("تعذر الاتصال. التطبيق يحتاج إنترنت. أعد المحاولة.").setPositiveButton("إعادة المحاولة",(d,w)->web.loadUrl(ORIGIN)).setNegativeButton("إغلاق",(d,w)->finish()).show();}
   });
   web.setWebChromeClient(new WebChromeClient(){
    @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> callback,FileChooserParams params){if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;try{Intent i=params.createIntent();i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,41);return true;}catch(Exception e){fileCallback=null;return false;}}
