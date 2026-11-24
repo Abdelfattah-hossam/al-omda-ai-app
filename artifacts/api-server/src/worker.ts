@@ -19,7 +19,7 @@ export default {
     const ua = request.headers.get('user-agent') || '';
     const native = /Electron\/|; wv\)|ALOMDA-Legacy/i.test(ua);
     if(url.hostname==='al-omda-ai-app.abdelfattahhossam1.workers.dev' && !url.pathname.startsWith('/api/') && !native){
-      return Promise.resolve(Response.redirect('https://zahin.pages.dev'+url.pathname+url.search,301));
+      return Promise.resolve(Response.redirect('https://munjizly.pages.dev'+url.pathname+url.search,301));
     }
     if(!url.pathname.startsWith('/api/') && env?.ASSETS) return env.ASSETS.fetch(request);
     setWorkersAiBinding(env?.AI);

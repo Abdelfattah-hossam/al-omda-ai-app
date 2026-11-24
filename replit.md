@@ -1,4 +1,4 @@
-# Zahin
+# Munjizly
 
 Arabic-first AI agent marketplace and task workspace. The current MVP is a local browser preview with per-step plan approvals; it does not connect to an AI provider or execute external actions.
 

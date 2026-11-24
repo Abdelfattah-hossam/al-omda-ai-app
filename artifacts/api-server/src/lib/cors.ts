@@ -4,8 +4,9 @@ import cors, { type CorsOptions } from "cors";
 // server uses port 5173; localhost and 127.0.0.1 are distinct browser origins.
 // Cross-origin cookie access is intentionally not enabled.
 const ALLOWED_ORIGINS = new Set([
+  "https://munjizly.pages.dev",
+  // Legacy public hosts: kept so in-flight sessions and stale installs keep working during the renames.
   "https://zahin.pages.dev",
-  // Legacy public host: kept so in-flight sessions and stale installs keep working during the rename.
   "https://al-omda-ai.pages.dev",
   "https://al-omda-ai-app.abdelfattahhossam1.workers.dev",
   "http://localhost:5173",

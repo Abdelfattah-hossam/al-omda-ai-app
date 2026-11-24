@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Zahin"
+title = "Munjizly"
 description = "An Arabic-first AI agent marketplace where people can discover specialized agents, review proposed task plans, and explicitly approve each step before execution."
 version = "1.0.0"
 id = "artifacts/al-omda-ai"

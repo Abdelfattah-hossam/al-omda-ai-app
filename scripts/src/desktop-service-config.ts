@@ -13,7 +13,7 @@ function psQuote(value: string): string {
 export function buildSystemdUserService(options: { repoRoot: string; path: string; environment: ServiceEnvironment }): string {
   const env = Object.entries(options.environment).map(([key, value]) => "Environment=" + systemdQuote(key + "=" + value)).join("\n");
   return [
-    "[Unit]", "Description=Zahin Local Agent", "After=network-online.target", "",
+    "[Unit]", "Description=Munjizly Local Agent", "After=network-online.target", "",
     "[Service]", "Type=simple", "WorkingDirectory=" + systemdQuote(options.repoRoot),
     "Environment=" + systemdQuote("PATH=" + (options.path || "/usr/local/bin:/usr/bin:/bin")),
     env, "ExecStart=/usr/bin/env pnpm --filter @workspace/scripts agent:supervisor",

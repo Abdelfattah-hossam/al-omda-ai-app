@@ -50,12 +50,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           node artifacts/al-omda-ai/build/prepare-pages.mjs
-          # Canonical Zahin project (created on first deploy) and the legacy
-          # project, whose worker 301-redirects pages to zahin.pages.dev while
-          # keeping its /api proxy alive for stale clients.
-          pnpm dlx wrangler@4.161.0 pages project create zahin --production-branch main || true
-          pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name zahin --branch main
+          # Canonical Munjizly project (created on first deploy) and the legacy
+          # projects, whose worker 301-redirects pages to munjizly.pages.dev while
+          # keeping their /api proxy alive for stale clients.
+          pnpm dlx wrangler@4.161.0 pages project create munjizly --production-branch main || true
+          pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name munjizly --branch main
           PAGES_HOST_MODE=legacy node artifacts/al-omda-ai/build/prepare-pages.mjs
+          pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name zahin --branch main
           pnpm dlx wrangler@4.161.0 pages deploy artifacts/al-omda-ai/dist/public --project-name al-omda-ai --branch main
 
       - name: Deploy Worker and static assets

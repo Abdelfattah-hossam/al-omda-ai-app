@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Zahin",
-  "short_name": "Zahin",
+  "name": "Munjizly",
+  "short_name": "Munjizly",
   "description": "مساعدك الذكي ومساحة عملك",
   "lang": "ar",
   "dir": "rtl",
@@ -12,19 +12,19 @@
   "theme_color": "#100e19",
   "icons": [
     {
-      "src": "/brand/zahin-icon-192.png?v=zahin1",
+      "src": "/brand/munjizly-icon-192.png?v=munjizly1",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/brand/zahin-icon-512.png?v=zahin1",
+      "src": "/brand/munjizly-icon-512.png?v=munjizly1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/brand/zahin-maskable-512.png?v=zahin1",
+      "src": "/brand/munjizly-maskable-512.png?v=munjizly1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

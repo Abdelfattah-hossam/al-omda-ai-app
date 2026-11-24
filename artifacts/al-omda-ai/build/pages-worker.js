@@ -1,7 +1,7 @@
 const BACKEND='https://al-omda-ai-app.abdelfattahhossam1.workers.dev';
-const CANONICAL='https://zahin.pages.dev';
-const LEGACY_PUBLIC='https://al-omda-ai.pages.dev';
-const ALLOWED_ORIGINS=[CANONICAL,LEGACY_PUBLIC];
+const CANONICAL='https://munjizly.pages.dev';
+const LEGACY_HOSTS=new Set(['zahin.pages.dev','al-omda-ai.pages.dev']);
+const ALLOWED_ORIGINS=[CANONICAL,'https://zahin.pages.dev','https://al-omda-ai.pages.dev'];
 export default {
  async fetch(request,env){
   const url=new URL(request.url);
@@ -21,8 +21,8 @@ export default {
    if(location?.startsWith(BACKEND+'/'))output.set('location',CANONICAL+location.slice(BACKEND.length));
    return new Response(response.body,{status:response.status,statusText:response.statusText,headers:output});
   }
-  // Legacy public host keeps serving the API proxy above but every page moves to the canonical address.
-  if(url.host===new URL(LEGACY_PUBLIC).host)return Response.redirect(CANONICAL+url.pathname+url.search,301);
+  // Legacy public hosts keep serving the API proxy above but every page moves to the canonical address.
+  if(LEGACY_HOSTS.has(url.host))return Response.redirect(CANONICAL+url.pathname+url.search,301);
   return env.ASSETS.fetch(request);
  }
 };

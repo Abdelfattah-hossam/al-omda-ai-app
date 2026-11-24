@@ -5,11 +5,11 @@ const root=new URL('../../artifacts/al-omda-ai/',import.meta.url);
 test('display name is exact in install metadata and brand assets',()=>{
  const html=readFileSync(new URL('index.html',root),'utf8');
  // Search titles may add an Arabic description while preserving the exact product name.
- assert.match(html,/<title>[^<]*زاهن \| Zahin[^<]*<\/title>/);
- for(const key of ['og:title','twitter:title','apple-mobile-web-app-title','application-name']) assert.ok(html.includes(`${key}" content="Zahin"`));
+ assert.match(html,/<title>[^<]*مُنجِزلي \| Munjizly[^<]*<\/title>/);
+ for(const key of ['og:title','twitter:title','apple-mobile-web-app-title','application-name']) assert.ok(html.includes(`${key}" content="Munjizly"`));
  const manifest=JSON.parse(readFileSync(new URL('public/manifest.webmanifest',root),'utf8'));
- assert.equal(manifest.name,'Zahin');assert.equal(manifest.short_name,'Zahin');assert.equal(manifest.id,'/');
- // Legacy logo files stay in place until the new Zahin logo ships; none may carry Arabic old-name text.
+ assert.equal(manifest.name,'Munjizly');assert.equal(manifest.short_name,'Munjizly');assert.equal(manifest.id,'/');
+ // Legacy logo files stay in place until the new Munjizly logo ships; none may carry Arabic old-name text.
  for(const name of readdirSync(new URL('public/brand/',root)).filter(x=>x.endsWith('.svg'))){
   const s=readFileSync(new URL('public/brand/'+name,root),'utf8');assert.ok(!/العمدة|العمده|Al OMDA AI/.test(s),name);
  }
@@ -19,7 +19,7 @@ test('active UI and generated document branding avoid legacy spelling',()=>{
   let s=readFileSync(new URL(name,root),'utf8');
   // Legacy default profile names remain recognizable without rewriting saved account records.
   s=s.replace("'مستخدم العمدة', 'Al OMDA AI user'",'');
-  assert.ok(!/العمدة|العمده|Al OMDA AI|AL OMDA AI/.test(s),name);assert.ok(s.includes('Zahin'),name);
+  assert.ok(!/العمدة|العمده|Al OMDA AI|AL OMDA AI/.test(s),name);assert.ok(s.includes('Munjizly'),name);
  }
 });
 

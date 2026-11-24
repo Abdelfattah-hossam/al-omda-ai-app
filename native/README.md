@@ -1,4 +1,4 @@
-# Zahin desktop and Android preview builds
+# Munjizly desktop and Android preview builds
 
 These packages open the hosted application over HTTPS. They need internet. They do not include offline AI, a background OS-control agent, or new external integrations.
 

@@ -42,7 +42,7 @@ test("service environment serializer keeps only safe single-line values", () => 
 });
 
 test("Windows scheduled task restarts a crashed agent and runs as the signed-in user", () => {
-  const result = buildWindowsTaskRegistration({ taskName: "Zahin Agent", launcherPath: "C:\\Users\\O'Neil\\Al Omda\\start-agent.ps1" });
+  const result = buildWindowsTaskRegistration({ taskName: "Munjizly Agent", launcherPath: "C:\\Users\\O'Neil\\Al Omda\\start-agent.ps1" });
   assert.match(result, /-RestartCount 5/);
   assert.match(result, /-RestartInterval \(New-TimeSpan -Minutes 1\)/);
   assert.match(result, /-ExecutionTimeLimit \(\[TimeSpan\]::Zero\)/);

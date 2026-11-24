@@ -3,8 +3,8 @@ import { strict as assert } from "node:assert";
 import { buildBingCompatibleSearchUrl, parseBingCompatibleSearchPayload, requestBingCompatibleSearch } from "./web-search.js";
 
 test("builds a bounded Bing-compatible HTTPS search URL", () => {
-  const url = buildBingCompatibleSearchUrl("https://search.example/v7.0/search", "  Zahin  ", 50, "en-US", "Moderate");
-  assert.equal(url.searchParams.get("q"), "Zahin");
+  const url = buildBingCompatibleSearchUrl("https://search.example/v7.0/search", "  Munjizly  ", 50, "en-US", "Moderate");
+  assert.equal(url.searchParams.get("q"), "Munjizly");
   assert.equal(url.searchParams.get("count"), "10");
   assert.equal(url.searchParams.get("mkt"), "en-US");
   assert.equal(url.searchParams.get("safeSearch"), "Moderate");

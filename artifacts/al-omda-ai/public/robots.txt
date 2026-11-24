@@ -4,4 +4,4 @@ Disallow: /api/
 Disallow: /forgot-password
 Disallow: /reset-password
 
-Sitemap: https://zahin.pages.dev/sitemap.xml
+Sitemap: https://munjizly.pages.dev/sitemap.xml

@@ -7,7 +7,7 @@ const css = readFileSync('../artifacts/al-omda-ai/src/index.css', 'utf8');
 const chat = readFileSync('../artifacts/al-omda-ai/src/AIChat.tsx', 'utf8');
 const voice = readFileSync('../artifacts/al-omda-ai/src/GeminiLiveVoice.tsx', 'utf8');
 
-test('Zahin orb renders the brand mark as native animated SVG', () => {
+test('Munjizly orb renders the brand mark as native animated SVG', () => {
   assert.ok(orb.includes('className="zahin-orb-ring"'));
   assert.ok(orb.includes('className="zahin-orb-spark"'));
   assert.ok(orb.includes('className="zahin-orb-dot"'));
@@ -19,7 +19,7 @@ test('Zahin orb renders the brand mark as native animated SVG', () => {
   assert.ok(!/العمدة|العمده|Al OMDA AI|AL OMDA Ai/.test(orb));
 });
 
-test('Zahin orb reacts to conversation state and input', () => {
+test('Munjizly orb reacts to conversation state and input', () => {
   assert.ok(orb.includes('idle: "14s"'));
   assert.ok(orb.includes('thinking: "3.4s"'));
   assert.ok(orb.includes('speaking: "6.5s"'));
@@ -29,7 +29,7 @@ test('Zahin orb reacts to conversation state and input', () => {
   assert.ok(css.includes('.zahin-orb-interactive:active{transform:scale(1.08)}'));
 });
 
-test('Zahin orb honors prefers-reduced-motion for CSS and SMIL animation', () => {
+test('Munjizly orb honors prefers-reduced-motion for CSS and SMIL animation', () => {
   assert.ok(orb.includes('window.matchMedia("(prefers-reduced-motion: reduce)")'));
   assert.ok(orb.includes('svg.pauseAnimations()'));
   assert.ok(css.includes('@media(prefers-reduced-motion:reduce){.zahin-orb,.zahin-orb *{animation:none!important;transition:none!important}}'));

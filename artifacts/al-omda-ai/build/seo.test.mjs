@@ -4,15 +4,15 @@ import {readFileSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const html=readFileSync(root+'index.html','utf8');
-const origin='https://zahin.pages.dev/';
+const origin='https://munjizly.pages.dev/';
 test('home exposes the site name, canonical, verification and crawlable copy without JavaScript',()=>{
  assert.match(html,/<html lang="ar" dir="rtl">/);
  assert.ok(html.includes('<link rel="canonical" href="'+origin+'"'));
  assert.match(html,/name="google-site-verification"/);
- assert.match(html,/<h1>زاهن \| Zahin<\/h1>/);
+ assert.match(html,/<h1>مُنجِزلي \| Munjizly<\/h1>/);
  assert.match(html,/href="\/about\/"/);
  const data=JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
- assert.equal(data['@type'],'WebSite');assert.equal(data.name,'Zahin');assert.equal(data.url,origin);assert.ok(data.alternateName.includes('زاهن'));
+ assert.equal(data['@type'],'WebSite');assert.equal(data.name,'Munjizly');assert.equal(data.url,origin);assert.ok(data.alternateName.includes('مُنجِزلي'));
 });
 test('sitemap lists only public pages that exist and robots advertises it',()=>{
  const sitemap=readFileSync(root+'public/sitemap.xml','utf8');
@@ -24,5 +24,5 @@ test('sitemap lists only public pages that exist and robots advertises it',()=>{
 test('public about page is bilingual, links to app and downloads, and retains brand',()=>{
  const about=readFileSync(root+'public/about/index.html','utf8');
  assert.match(about,/lang="en" dir="ltr"/);assert.match(about,/href="\/"/);assert.match(about,/href="\/download\/"/);assert.match(about,/#100e19/);
- assert.ok(existsSync(root+'public/favicon.ico'));assert.ok(existsSync(root+'public/brand/zahin-icon-192.png'));
+ assert.ok(existsSync(root+'public/favicon.ico'));assert.ok(existsSync(root+'public/brand/munjizly-icon-192.png'));
 });

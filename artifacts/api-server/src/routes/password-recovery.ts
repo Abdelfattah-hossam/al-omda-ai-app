@@ -2,8 +2,8 @@ import {Router,type IRouter}from 'express';
 import {randomBytes,createHash}from 'node:crypto';
 import {supabaseFetch,requireSameOrigin,readSupabaseJson,reportSupabaseError,SupabaseHttpError,resolveSession,clearSessionCookies}from '../lib/supabase';
 const router:IRouter=Router();
-const CANONICAL='https://zahin.pages.dev';
-const PUBLIC_HOSTS=new Set(['zahin.pages.dev','al-omda-ai.pages.dev']);
+const CANONICAL='https://munjizly.pages.dev';
+const PUBLIC_HOSTS=new Set(['munjizly.pages.dev','zahin.pages.dev','al-omda-ai.pages.dev']);
 function recoveryOrigin(req:{get(name:string):string|undefined}){const host=req.get('x-forwarded-host')?.split(',')[0]?.trim();return host&&PUBLIC_HOSTS.has(host)?CANONICAL:'https://al-omda-ai-app.abdelfattahhossam1.workers.dev';}
 const verifierCookie='omda_recovery_verifier',accessCookie='omda_recovery_access',cooldownCookie='omda_recovery_wait';
 const cookie={httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax' as const,path:'/api/auth',maxAge:15*60*1000};

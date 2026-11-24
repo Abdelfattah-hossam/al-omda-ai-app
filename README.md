@@ -1,8 +1,8 @@
-# Zahin
+# Munjizly
 
 **An Arabic-first, open-source AI workspace evolving into a tool-using agent platform.**
 
-Zahin combines an AI chat workspace, user-owned project tracking, and a separate local runtime foundation for tools that must run on the user's computer.
+Munjizly combines an AI chat workspace, user-owned project tracking, and a separate local runtime foundation for tools that must run on the user's computer.
 
 > Status: active development / experimental agent runtime. The current web app is not yet a full autonomous coding or desktop agent. See the implementation boundaries below.
 

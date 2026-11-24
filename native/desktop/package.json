@@ -1,6 +1,6 @@
 {
   "name": "al-omda-ai-desktop",
-  "productName": "Zahin",
+  "productName": "Munjizly",
   "version": "1.0.0",
   "private": true,
   "main": "main.cjs",
@@ -13,7 +13,7 @@
   },
   "build": {
     "appId": "ai.alomda.desktop",
-    "productName": "Zahin",
+    "productName": "Munjizly",
     "artifactName": "AL-OMDA-Ai-${os}-${arch}-${version}.${ext}",
     "files": [
       "main.cjs",
@@ -31,8 +31,8 @@
       "category": "public.app-category.productivity",
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Voice conversations in Zahin",
-        "NSCameraUsageDescription": "Attach photos in Zahin"
+        "NSMicrophoneUsageDescription": "Voice conversations in Munjizly",
+        "NSCameraUsageDescription": "Attach photos in Munjizly"
       }
     }
   }
