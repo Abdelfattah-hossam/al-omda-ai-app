@@ -9,6 +9,7 @@ export default function TurnstileBox() {
   const ref = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [interactive, setInteractive] = useState(false);
   const [powReady, setPowReady] = useState(false);
   useEffect(() => {
     let widget = '';
@@ -27,12 +28,18 @@ export default function TurnstileBox() {
       setFailed(true);
       onPowReady(() => { if (!dead) setPowReady(true); });
     };
+    registerTurnstileBox(1);
+    // Huawei Browser (no Google services) cannot run Turnstile: go straight to the built-in check.
+    if (/HuaweiBrowser|HMSCore/i.test(navigator.userAgent)) { giveUp('huawei-ua'); return () => { registerTurnstileBox(-1); dead = true; }; }
     void loadTurnstile().then((t) => {
       if (dead || !ref.current) return;
       api = t;
       widget = t.render(ref.current, {
         sitekey: TURNSTILE_SITE_KEY,
         theme: 'dark',
+        appearance: 'interaction-only',
+        'before-interactive-callback': () => setInteractive(true),
+        'after-interactive-callback': () => setInteractive(false),
         callback: (token: string) => { if (hang) clearTimeout(hang); setVerified(true); setTurnstileToken(key, token); },
         'expired-callback': () => { setTurnstileToken(key, null); armHang(); },
         'unsupported-callback': () => { setTurnstileToken(key, null); giveUp('unsupported'); },
@@ -53,7 +60,6 @@ export default function TurnstileBox() {
       });
       armHang();
     }).catch(() => giveUp('script-load'));
-    registerTurnstileBox(1);
     window.addEventListener('turnstile-reset', reset);
     return () => { registerTurnstileBox(-1); dead = true; if (hang) clearTimeout(hang); window.removeEventListener('turnstile-reset', reset); setTurnstileToken(key, null); if (api && widget) { try { api.remove(widget); } catch { /* ignore */ } } };
   }, []);
@@ -66,5 +72,5 @@ export default function TurnstileBox() {
     </div>
   ) : null;
   if (failed) return <div data-testid="turnstile-box">{note}</div>;
-  return <div data-testid="turnstile-box"><div ref={ref} style={{ minHeight: 65, display: 'flex', justifyContent: 'center' }} />{note}</div>;
+  return <div data-testid="turnstile-box"><div ref={ref} style={interactive ? { minHeight: 65, display: 'flex', justifyContent: 'center' } : { height: 0, overflow: 'hidden', display: 'flex', justifyContent: 'center' }} />{note}</div>;
 }
