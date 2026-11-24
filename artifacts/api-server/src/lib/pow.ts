@@ -3,7 +3,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 // In-house proof-of-work challenge used when Cloudflare Turnstile cannot run on a
 // browser. Challenges are stateless (HMAC-signed), expire, and are single-use via the
 // caller-supplied `once` check.
-export const POW_BITS = 19;
+export const POW_BITS = 18;
 const TTL_MS = 10 * 60 * 1000;
 
 function key(): string {
