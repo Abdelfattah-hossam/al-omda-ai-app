@@ -11,7 +11,6 @@ app.disable("x-powered-by");
 app.use(cookieParser());
 app.use(securityHeaders);
 app.use(authBurstGuard);
-app.use(turnstileGuard);
 // Structured request log: method, route, status, duration and user id only.
 // Never log bodies, query strings, cookies or tokens. The user id is read from
 // the access-token payload for log correlation only and is never trusted.
@@ -30,6 +29,8 @@ app.use((req, res, next) => {
 
 app.use(apiCors);
 app.use(express.json({ limit: "7mb" }));
+// Runs after the JSON parser so the fallback path can rate-limit per account.
+app.use(turnstileGuard);
 app.use(express.urlencoded({ extended: false, limit: "64kb", parameterLimit: 100 }));
 
 app.use("/api", router);
