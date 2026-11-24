@@ -1923,6 +1923,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         <div><div className="eyebrow">{isAr?'مساحة العمل':'WORKSPACE'}</div><h1 className="page-title">{t('dashboard')}</h1><p className="page-subtitle">{hasGreetingName ? `${t('hello')} ${greetingName}` : (isAr?'مرحباً بك':'Welcome')} · {isAr?'نظرة عامة على نشاط AL OMDA Ai':'Your AL OMDA Ai activity at a glance'}</p></div>
         <div className="dashboard-toolbar-actions"><Link href={navigationHref("/ai")} className="button button-primary"><Bot size={15}/>{isAr?'ابدأ محادثة':'Start chat'}</Link><Link href={focusedHref("/workbench","request-input")} className="button button-quiet" data-testid="button-new-request"><Plus size={15}/>{t('newRequest')}</Link></div>
       </div>
+      <p className="section-meta"><a href="/about/">{isAr?'عن تطبيق العمدة · AL OMDA Ai':'About AL OMDA Ai · العمدة'}</a></p>
       <AppDownloads isAr={isAr}/>
       <section className="app-launcher-section home-app-directory" id="home-app-directory" aria-labelledby="app-launcher-title">
         <div className="app-launcher-heading">

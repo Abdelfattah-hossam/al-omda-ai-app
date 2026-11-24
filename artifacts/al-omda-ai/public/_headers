@@ -5,3 +5,10 @@
   Permissions-Policy: camera=(), microphone=(self), geolocation=(), payment=()
   Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
   Strict-Transport-Security: max-age=31536000
+
+/api/*
+  X-Robots-Tag: noindex, nofollow
+/forgot-password
+  X-Robots-Tag: noindex, nofollow
+/reset-password
+  X-Robots-Tag: noindex, nofollow
