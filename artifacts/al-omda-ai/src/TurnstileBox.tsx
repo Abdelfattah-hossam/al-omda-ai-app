@@ -53,16 +53,7 @@ export default function TurnstileBox() {
     window.addEventListener('turnstile-reset', reset);
     return () => { dead = true; if (hang) clearTimeout(hang); window.removeEventListener('turnstile-reset', reset); setTurnstileToken(key, null); if (api && widget) { try { api.remove(widget); } catch { /* ignore */ } } };
   }, []);
-  if (failed) {
-    return (
-      <div data-testid="turnstile-box" style={{ minHeight: 65, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <p style={{ margin: 0, fontSize: 12, opacity: 0.65, textAlign: 'center', lineHeight: 1.7 }}>
-          تعذّر عرض التحقق الأمني على هذا المتصفح، يمكنك المتابعة مباشرة.
-          <br />
-          Security check unavailable on this browser; you can continue.
-        </p>
-      </div>
-    );
-  }
+  // On a browser where the widget cannot run, a proof-of-work check runs silently instead.
+  if (failed) return <div data-testid="turnstile-box" />;
   return <div ref={ref} data-testid="turnstile-box" style={{ minHeight: 65, display: 'flex', justifyContent: 'center' }} />;
 }

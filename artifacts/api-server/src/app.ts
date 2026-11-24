@@ -4,6 +4,7 @@ import router from "./routes";
 import { securityHeaders, authBurstGuard } from "./lib/security";
 import { turnstileGuard } from "./lib/turnstile";
 import { apiCors } from "./lib/cors";
+import { issuePow } from "./lib/pow";
 
 const app: Express = express();
 app.set("trust proxy", 1);
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 });
 
 app.use(apiCors);
+app.get("/api/auth/pow-challenge", (_req, res) => { res.set("cache-control", "no-store"); res.json(issuePow()); });
 app.use(express.json({ limit: "7mb" }));
 // Runs after the JSON parser so the fallback path can rate-limit per account.
 app.use(turnstileGuard);

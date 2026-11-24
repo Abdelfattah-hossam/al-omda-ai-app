@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { supabaseFetch } from './supabase';
+import { verifyPow } from './pow';
 
 // Cloudflare Turnstile verification for abuse-prone, unauthenticated endpoints.
 // The secret key is read only from the TURNSTILE_SECRET_KEY secret and is never logged.
@@ -63,6 +64,23 @@ export function turnstileGuard(req: Request, res: Response, next: NextFunction):
     // narrow fallback that is rate-limited per IP and per account in a shared
     // table, with lockout when any window is exceeded. Verified clients keep
     // sending tokens and never touch this path.
+    const powHeader = req.get('x-pow')?.trim() ?? '';
+    if (!token && powHeader) {
+      // Proof-of-work challenge for browsers where Turnstile cannot render. The
+      // challenge is signed, expires and is single-use; per-IP/account bounds still apply.
+      const nonce = verifyPow(powHeader.slice(0, 200));
+      if (!nonce) { res.status(403).json({ error: 'فشل التحقق الأمني. حدّث الصفحة وحاول مرة أخرى. / Security check failed. Refresh and try again.' }); return; }
+      const ip = req.get('cf-connecting-ip') || req.ip || 'unknown';
+      const body = req.body as { email?: unknown } | undefined;
+      const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
+      void (async () => {
+        let ok = false;
+        try { ok = (await limiter(`pow:${nonce}`, 900, 1)) && (await fallbackAllowed(ip, email)); } catch { ok = false; }
+        if (ok) { next(); return; }
+        res.status(429).json({ error: 'تجاوزت حد المحاولات من هذا المتصفح. حاول لاحقًا. / Too many attempts from this browser. Try later.' });
+      })();
+      return;
+    }
     const clientError = req.get('x-turnstile-client-error')?.trim() ?? '';
     if (!token && CLIENT_ERROR_RE.test(clientError)) {
       const ip = req.get('cf-connecting-ip') || req.ip || 'unknown';
