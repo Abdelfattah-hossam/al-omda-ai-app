@@ -38,7 +38,7 @@ export default function TurnstileBox() {
         sitekey: TURNSTILE_SITE_KEY,
         theme: 'dark',
         appearance: 'interaction-only',
-        'before-interactive-callback': () => setInteractive(true),
+        'before-interactive-callback': () => { if (hang) clearTimeout(hang); setInteractive(true); },
         'after-interactive-callback': () => setInteractive(false),
         callback: (token: string) => { if (hang) clearTimeout(hang); setVerified(true); setTurnstileToken(key, token); },
         'expired-callback': () => { setTurnstileToken(key, null); armHang(); },
