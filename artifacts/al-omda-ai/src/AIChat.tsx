@@ -1561,13 +1561,14 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       <div className="ai-chat-history-caption"><span>{ar ? "المحادثات السابقة" : "Recent conversations"}</span><button type="button" onClick={()=>setShowConversationList(v=>!v)}>{showConversationList ? (ar ? "إخفاء" : "Hide") : (ar ? "عرض الكل" : "View all")}</button></div>
       <div className="ai-chat-sidebar-history">
         {conversations.length === 0 && <p>{ar ? "لا توجد محادثات محفوظة بعد" : "No saved conversations yet"}</p>}
-        {conversations.slice(0,showConversationList ? 40 : 12).map((item)=><div className={"ai-chat-sidebar-history-item" + (item.id===activeConversationId ? " active" : "")} key={item.id}>
+        {[...conversations].sort((a,b)=>Number(pinnedConversationIds.includes(b.id))-Number(pinnedConversationIds.includes(a.id))).slice(0,showConversationList ? 40 : 12).map((item)=><div className={"ai-chat-sidebar-history-item" + (item.id===activeConversationId ? " active" : "") + (pinnedConversationIds.includes(item.id) ? " pinned" : "")} key={item.id}>
           <button type="button" onClick={()=>{setChatSidebarOpen(false);void loadConversation(item.id);}} disabled={loading || historyLoading}><MessageSquareText size={14}/><span>{item.title}</span></button>
+          <button type="button" className={"ai-chat-sidebar-history-pin" + (pinnedConversationIds.includes(item.id) ? " pinned" : "")} onClick={()=>togglePinnedConversation(item.id)} aria-label={pinnedConversationIds.includes(item.id)?(ar?"إلغاء التثبيت":"Unpin"):(ar?"تثبيت المحادثة":"Pin conversation")}><Pin size={13}/></button>
           <button type="button" className="ai-chat-sidebar-history-delete" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={13}/></button>
         </div>)}
       </div>
       <button type="button" className="ai-chat-usage-card" onClick={()=>{setChatSidebarOpen(false);openSettings();}}>
-        <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong>{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
+        <span><span>{ar ? "المتبقي اليوم" : "Remaining today"}</span><strong dir="ltr">{usage ? `${usage.remaining} / ${usage.limit}` : "—"}</strong></span>
         <span className="ai-chat-usage-track"><i style={{width:usage ? `${Math.max(0,Math.min(100,usage.remaining/Math.max(1,usage.limit)*100))}%` : "0%"}}/></span>
       </button>
       <div className="ai-chat-sidebar-account"><span className="ai-chat-account-avatar" aria-hidden="true">{Array.from(displayName?.trim() || (ar ? "ع" : "A"))[0]}</span><span><strong>{displayName?.trim() || (ar ? "حساب Munjizly" : "Munjizly account")}</strong><small>{signedIn ? (ar ? "متصل" : "Signed in") : (ar ? "غير مسجل الدخول" : "Not signed in")}</small></span><button type="button" onClick={()=>{setChatSidebarOpen(false);setLocation("/profile?focus=profile-account-card");}} aria-label={ar ? "الملف الشخصي" : "Profile"}><Settings2 size={16}/></button></div>
@@ -1764,7 +1765,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         <section className="ai-chat-settings-modal" role="dialog" aria-modal="true" aria-label={ar ? "إعدادات Munjizly" : "Munjizly settings"}>
           <header><strong><Settings2 size={16}/>{ar ? "إعدادات Munjizly" : "Munjizly settings"}</strong><button type="button" onClick={()=>setShowSettingsModal(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={17}/></button></header>
           <div className="ai-chat-settings-body">
-            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span>{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
+            <section className="ai-chat-settings-section"><div className="ai-chat-settings-section-title"><strong>{ar ? "استهلاك الرصيد اليومي" : "Daily allowance"}</strong><span dir="ltr">{usage ? usage.remaining + " / " + usage.limit : "—"}</span></div>
               <div className="ai-chat-settings-stats"><div><small>{ar ? "المتبقي اليوم" : "Remaining"}</small><strong>{usage?.remaining ?? "—"}</strong></div><div><small>{ar ? "المستخدم" : "Used"}</small><strong>{usage?.used ?? "—"}</strong></div><div><small>{ar ? "الحد اليومي" : "Daily limit"}</small><strong>{usage?.limit ?? "—"}</strong></div></div>
               <div className="ai-chat-settings-progress"><i style={{width:percent + "%"}}/></div>
               {usage?.resetAt && <small className="muted">{copy.reset} {new Date(usage.resetAt).toLocaleTimeString(ar ? "ar-EG" : "en-US",{hour:"2-digit",minute:"2-digit",timeZone:"UTC",timeZoneName:"short"})}</small>}
