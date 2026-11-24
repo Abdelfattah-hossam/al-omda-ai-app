@@ -1440,8 +1440,8 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   };
 
   const handleLiveTranscript = (role: "user" | "assistant", text: string) => {
-    // Arabic UI: a user transcript with no Arabic letters is a speech-recognition misfire (foreign words from noise), so keep it out of the chat.
-    if (ar && role === "user" && !/[\u0600-\u06FF]/.test(text) && /[A-Za-z]/.test(text)) return;
+    // Arabic UI: a user transcript with no Arabic letters in any script (Latin, Japanese, Chinese, Cyrillic...) is a speech-recognition misfire, so keep it out of the chat.
+    if (ar && role === "user" && !/[\u0600-\u06FF]/.test(text)) return;
     setMessages((current) => {
       const next = [...current, { role, content: text } as ChatMessage].slice(-100);
       void saveHistory(next);
