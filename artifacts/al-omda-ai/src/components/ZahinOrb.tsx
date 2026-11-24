@@ -30,7 +30,7 @@ export function ZahinOrb({ state = "idle", interactive = false, className = "" }
   }, []);
 
   return (
-    <svg ref={ref} className={"zahin-orb" + (interactive ? " zahin-orb-interactive" : "") + (className ? " " + className : "")} data-state={state} viewBox="0 0 800 800" aria-hidden="true" focusable="false">
+    <svg ref={ref} className={"zahin-orb" + (interactive ? " zahin-orb-interactive" : "") + (className ? " " + className : "")} data-state={state} viewBox="70 110 660 660" aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id={uid + "Grad"} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#c9acff" />
