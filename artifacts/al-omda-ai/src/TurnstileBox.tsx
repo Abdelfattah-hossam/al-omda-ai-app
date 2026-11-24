@@ -14,6 +14,10 @@ export default function TurnstileBox() {
     let retried = false;
     const key = 'w' + Math.random().toString(36).slice(2);
     let api: Awaited<ReturnType<typeof loadTurnstile>> | null = null;
+    let hang: ReturnType<typeof setTimeout> | undefined;
+    // Some old browsers (e.g. Huawei Browser) never fire the error callback:
+    // the widget just hangs. If no token arrives in time, treat it as failed.
+    const armHang = () => { if (hang) clearTimeout(hang); hang = setTimeout(() => giveUp('hang-timeout'), 20000); };
     const reset = () => { if (api && widget) { try { api.reset(widget); } catch { /* ignore */ } } };
     const giveUp = (code: string) => {
       if (dead) return;
@@ -26,8 +30,10 @@ export default function TurnstileBox() {
       widget = t.render(ref.current, {
         sitekey: TURNSTILE_SITE_KEY,
         theme: 'dark',
-        callback: (token: string) => setTurnstileToken(key, token),
-        'expired-callback': () => setTurnstileToken(key, null),
+        callback: (token: string) => { if (hang) clearTimeout(hang); setTurnstileToken(key, token); },
+        'expired-callback': () => { setTurnstileToken(key, null); armHang(); },
+        'unsupported-callback': () => { setTurnstileToken(key, null); giveUp('unsupported'); },
+        'timeout-callback': () => { setTurnstileToken(key, null); armHang(); },
         'error-callback': (code: string) => {
           setTurnstileToken(key, null);
           if (!retried) {
@@ -42,9 +48,10 @@ export default function TurnstileBox() {
           }
         },
       });
+      armHang();
     }).catch(() => giveUp('script-load'));
     window.addEventListener('turnstile-reset', reset);
-    return () => { dead = true; window.removeEventListener('turnstile-reset', reset); setTurnstileToken(key, null); if (api && widget) { try { api.remove(widget); } catch { /* ignore */ } } };
+    return () => { dead = true; if (hang) clearTimeout(hang); window.removeEventListener('turnstile-reset', reset); setTurnstileToken(key, null); if (api && widget) { try { api.remove(widget); } catch { /* ignore */ } } };
   }, []);
   if (failed) {
     return (
