@@ -60,7 +60,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
         if (projectId) params.set("projectId", projectId);
         params.set('offset','0');
         const response=await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin',signal:controller.signal});
-        const data=await response.json();
+        const data=await response.json().catch(()=>{throw new Error(ar?'تعذر الاتصال بخدمة الملفات الآن. حاول مرة أخرى بعد قليل.':'The file service is not reachable right now. Please try again shortly.');});
         if(!response.ok)throw new Error(typeof data?.error==='string'?data.error:(ar?'تعذر تحميل الملفات.':'Could not load files.'));
         if(!Array.isArray(data))throw new Error('Invalid file list.');
         if(!cancelled){setAssets(data);setNextOffset(data.length===WORKSPACE_ASSET_PAGE_SIZE?data.length:null);}
@@ -80,7 +80,7 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
     const generation=listGeneration.current;setLoadingMore(true);setError('');
     try{
       const params=new URLSearchParams({offset:String(nextOffset)});if(projectId)params.set('projectId',projectId);
-      const r=await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin'});const data=await r.json();
+      const r=await fetch('/api/storage/assets?'+params.toString(),{credentials:'same-origin'});const data=await r.json().catch(()=>{throw new Error(ar?'تعذر الاتصال بخدمة الملفات الآن. حاول مرة أخرى بعد قليل.':'The file service is not reachable right now. Please try again shortly.');});
       if(!r.ok||!Array.isArray(data))throw new Error(ar?'تعذر تحميل المزيد من الملفات. أعد المحاولة.':'Could not load more files. Try again.');
       if(generation!==listGeneration.current)return;
       setAssets(previous=>Array.from(new Map([...previous,...data].map(item=>[item.path,item])).values()));
