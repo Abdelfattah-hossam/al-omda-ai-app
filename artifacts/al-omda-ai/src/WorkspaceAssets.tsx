@@ -200,13 +200,14 @@ export default function WorkspaceAssets({ language, projects }: { language: Lang
   return <>
   <div className="page-enter" id="assets-list">
     <div className="page-heading">
-      <div><div className="eyebrow">{ar ? "مساحة العمل" : "WORKSPACE ASSETS"}</div><h1 className="page-title">{ar ? "الأصول والملفات" : "Assets & files"}</h1><p className="page-subtitle">{ar ? "ملفاتك الخاصة محفوظة بأمان ويمكن تنزيلها أو حذفها من هنا." : "Your private files are securely stored and can be downloaded or deleted here."}</p></div>
+      <div><nav className="page-crumbs"><a href="/">Munjizly</a><span aria-hidden="true">›</span><span>{ar ? "مساحة العمل" : "Workspace"}</span><span aria-hidden="true">›</span><strong>{ar ? "الأصول والملفات" : "Assets & files"}</strong></nav><div className="eyebrow">{ar ? "مساحة العمل" : "WORKSPACE ASSETS"}</div><h1 className="page-title">{ar ? "الأصول والملفات" : "Assets & files"}</h1><p className="page-subtitle">{ar ? "ملفاتك الخاصة محفوظة بأمان ويمكن تنزيلها أو حذفها من هنا." : "Your private files are securely stored and can be downloaded or deleted here."}</p></div>
       <label className="button button-primary" style={{cursor:uploading?"wait":"pointer",opacity:uploading ? 0.65 : 1}}>
         {uploading ? <LoaderCircle size={14} className="animate-spin"/> : <Upload size={14}/>}
         {uploading ? (ar ? "جارٍ الرفع..." : "Uploading...") : (ar ? "رفع ملفات" : "Upload files")}
         <input type="file" multiple hidden disabled={uploading} accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,.json,.html,.xml,.zip,.png,.jpg,.jpeg,.webp,.gif,.mp4,.webm" onChange={uploadFiles}/>
       </label>
     </div>
+    <div className="stats-grid dashboard-kpis page-kpi-row">{[{l:ar?"عدد الملفات":"Files",v:String(assets.length)+(nextOffset!==null?"+":"")},{l:ar?"الحجم الإجمالي":"Total size",v:fileSize(assets.reduce((n,a)=>n+(a.size||0),0),ar)},{l:ar?"الحد الأقصى للملف":"Max per file",v:"25 MB"}].map(k=><div key={k.l} className="panel dashboard-kpi cyan"><div className="stat-card-top"><span className="page-kpi-label">{k.l}</span></div><strong className="page-kpi-value" dir="ltr">{k.v}</strong></div>)}</div>
     <section className="panel panel-pad">
       <div className="section-head">
         <div><h2 className="section-title">{ar ? "ملفات المشروع" : "Project files"}</h2><p className="page-subtitle" style={{marginTop:5}}>{ar ? "الملفات خاصة بحسابك ولا تُتاح للعامة." : "Files are private to your account and are not publicly accessible."}</p></div>

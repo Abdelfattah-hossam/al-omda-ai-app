@@ -1729,7 +1729,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
     };
     return <div className="page-enter">
       {pageHeading(isAr?'منصة Munjizly':'Munjizly PLATFORM',isAr?info.ar:info.en,isActiveUsersPage?(isAr?'لوحة تحليلات المستخدمين النشطين.':'Active users analytics dashboard.'):(isAr?'حالة تكامل المنصة ومصادر البيانات.':'Platform integration status and data sources.'))}
-      {isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+      {isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:0}}>
         <div className="section-head"><h2 className="section-title">{isAr?'المستخدمون النشطون':'Active Users'}</h2><button type="button" className="button button-secondary" onClick={exportActiveUsers} disabled={authLoading}><Download size={15}/>{isAr?'تصدير':'Export'}</button></div>
         <div className="global-user-metrics">
           <div className="global-user-metric"><span>{isAr?'المستخدمون النشطون خلال آخر 30 يومًا':'Active users · last 30 days'}</span><strong>{authLoading || authUser ? (liveUserAnalytics ? liveUserAnalytics.active_users_30d.toLocaleString() : '—') : '23,214'}</strong><small>{authLoading || authUser ? (liveUserAnalytics ? (isAr?'بيانات حقيقية من تسجيلات الدخول':'Live sign-in analytics') : (liveUserAnalyticsError || (authLoading ? (isAr?'جارٍ التحقق من الحساب…':'Checking account…') : (isAr?'جارٍ تحميل البيانات الحقيقية…':'Loading live analytics…')))) : (isAr?'بيانات عرض للزوار':'Sample preview for guests')}</small></div>
@@ -1737,8 +1737,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>
         <p className="page-subtitle" style={{marginTop:14}}>{authUser ? (liveUserAnalytics ? (isAr?'البيانات محسوبة من تسجيلات الدخول خلال آخر 30 يومًا مقارنة بالـ30 يومًا السابقة.':'Figures are calculated from sign-ins in the last 30 days versus the previous 30 days.') : (liveUserAnalyticsError ? (isAr?'تعذر تحميل التحليلات الحقيقية حاليًا؛ لن يتم استبدالها بأرقام تجريبية.':'Live analytics are currently unavailable; sample figures are not substituted for signed-in users.') : (isAr?'جارٍ تحميل التحليلات الحقيقية…':'Loading live analytics…'))) : (isAr?'أنت تشاهد معاينة الزوار التجريبية. سجّل الدخول لعرض الأرقام الحقيقية من قاعدة البيانات.':'You are viewing the guest sample preview. Sign in to see real database analytics.')}</p>
       </section>}
-      {path==='/finance/payment-gateways'&&<div className="finance-gateway-stats">{[(isAr?'بوابات متصلة':'Connected gateways'),(isAr?'المعاملات':'Transactions'),(isAr?'نسبة نجاح الدفع':'Payment success rate')].map((label,i)=><div className="finance-gateway-stat" key={label}><CreditCard size={22}/><strong>{i===0?'0':'—'}</strong><span>{label}</span><small className="page-subtitle">{isAr?'لا يوجد مصدر دفع موثق':'No verified payment source'}</small></div>)}</div>}
-      {!isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:16,maxWidth:900}}>
+      {path==='/finance/payment-gateways'&&kpiRow([(isAr?'بوابات متصلة':'Connected gateways'),(isAr?'المعاملات':'Transactions'),(isAr?'نسبة نجاح الدفع':'Payment success rate')].map((label,i)=>({label,value:i===0?'0':'—',icon:CreditCard,tone:['cyan','teal','violet'][i],foot:isAr?'لا يوجد مصدر دفع موثق':'No verified payment source'})))}
+      {!isActiveUsersPage && <section className="panel panel-pad" style={{marginTop:0}}>
         <div className="section-head"><h2 className="section-title">{isAr?info.sourceAr:info.sourceEn}</h2><span className="status-chip">{isAr?'غير مربوط':'Not connected'}</span></div>
         <p className="page-subtitle" style={{marginTop:12,lineHeight:1.8}}>{isAr?info.detailAr:info.detailEn}</p>
         <div className="notice-bar" style={{marginTop:16}}><ShieldCheck size={16}/><span>{isAr?'حماية من البيانات الوهمية: لن يعرض Munjizly أرقامًا أو سجلات أو مواقع غير موجودة في مصدر متصل.':'Grounded data only: Munjizly will not display invented figures, records, or locations without a connected source.'}</span></div>
@@ -2277,6 +2277,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
 
   const agentsPage = () => <div className="page-enter agent-marketplace-page">
     {pageHeading(t('marketplace'),t('marketplace'),t('marketplaceSub'))}
+    {kpiRow([{label:isAr?'التخصصات':'Specialties',value:specialties.length,icon:Compass,tone:'cyan'},{label:isAr?'كل المهام':'All tasks',value:tasks.filter(x=>!x.demo).length,icon:BriefcaseBusiness,tone:'violet'},{label:isAr?'تحتاج متابعة':'Needs review',value:tasks.filter(x=>!x.demo&&(x.status==='review'||x.status==='paused')).length,icon:Activity,tone:'pink'},{label:isAr?'معتمدة':'Approved',value:tasks.filter(x=>!x.demo&&x.status==='approved').length,icon:BadgeCheck,tone:'teal'}])}
     <details className="panel panel-pad agent-guide-panel">
       <summary className="profile-accordion-summary"><div className="section-head"><div><span className="eyebrow">{isAr?'دليل الاستخدام':'GETTING STARTED'}</span><h2 className="section-title">{isAr?'تشغيل الوكلاء خطوة بخطوة':'How to use and run agents'}</h2><p className="section-meta">{isAr?'اختر الطريقة المناسبة: تخصص جاهز داخل مساحة العمل، أو وكيل محلي يتصل بمشروعك على الكمبيوتر.':'Choose a ready-made specialty in the workbench, or connect the local runtime to a project on your computer.'}</p></div><Bot size={20}/></div></summary>
       <div className="agent-guide-steps">
@@ -2496,7 +2497,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     };
     return <div className="page-enter">
       {pageHeading(isAr?"التخصصات المهنية":"PROFESSIONAL SPECIALTIES",isAr?info.ar:info.en,isAr?info.subtitleAr:info.subtitleEn)}
-      <section className="panel panel-pad" style={{marginTop:16,maxWidth:980}}>
+      {kpiRow([{label:isAr?'مهام هذا التخصص':'Tasks in this specialty',value:tasks.filter(x=>!x.demo&&x.specialty===info.workbenchSpecialty).length,icon:BriefcaseBusiness,tone:'cyan'},{label:isAr?'تحتاج متابعة':'Needs review',value:tasks.filter(x=>!x.demo&&x.specialty===info.workbenchSpecialty&&(x.status==='review'||x.status==='paused')).length,icon:Activity,tone:'violet'},{label:isAr?'معتمدة':'Approved',value:tasks.filter(x=>!x.demo&&x.specialty===info.workbenchSpecialty&&x.status==='approved').length,icon:BadgeCheck,tone:'teal'}])}
+      <section className="panel panel-pad" style={{marginTop:0}}>
         <div className="section-head" style={{alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <span className="agent-icon"><Icon size={24}/></span>
