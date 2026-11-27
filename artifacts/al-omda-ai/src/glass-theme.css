@@ -15,9 +15,17 @@
   .app-shell:not([data-chat-active="true"])::before{
     background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#b79aef) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#b79aef) 14%,transparent),transparent 65%)!important;
   }
-  .app-shell:not([data-chat-active="true"]) :is(.sidebar,.topbar,.mobile-nav,.app-curtain,.app-launcher,.curtain-panel){
+  .app-shell:not([data-chat-active="true"]) :is(.sidebar,.app-curtain,.app-launcher,.curtain-panel){
     background:color-mix(in srgb,var(--omda-design-panel,#242231) 52%,transparent)!important;
     -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+    border-color:var(--munjizly-glass-line)!important;
+    box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
+  }
+  /* Top bar and bottom nav must stay readable over scrolled content, even
+     where backdrop-filter is unavailable (older iOS, Reduce Transparency). */
+  .app-shell:not([data-chat-active="true"]) :is(.topbar,.mobile-nav){
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 88%,transparent)!important;
+    -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
   }
@@ -51,12 +59,12 @@
     background:transparent!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-sidebar{
-    background:color-mix(in srgb,#101014 42%,transparent)!important;
+    background:color-mix(in srgb,#101014 92%,transparent)!important;
     -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
     border-inline-end-color:rgba(255,255,255,.08)!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{
-    background:color-mix(in srgb,#0b0b0e 34%,transparent)!important;
+    background:color-mix(in srgb,#0b0b0e 88%,transparent)!important;
     -webkit-backdrop-filter:blur(20px) saturate(150%)!important;backdrop-filter:blur(20px) saturate(150%)!important;
     border-bottom-color:rgba(255,255,255,.07)!important;
   }
@@ -72,7 +80,7 @@
     -webkit-backdrop-filter:blur(16px) saturate(140%)!important;backdrop-filter:blur(16px) saturate(140%)!important;
   }
   .app-shell[data-chat-active="true"] .ai-composer-tools{
-    background:rgba(23,23,26,.62)!important;
+    background:rgba(23,23,26,.82)!important;
     -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
     border-color:rgba(255,255,255,.12)!important;
   }
@@ -92,6 +100,29 @@
     -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
     border-color:rgba(255,255,255,.09)!important;
   }
+  /* Glass bubbles: assistant reads as a rounded glass card, user stays a tinted pill. */
+  .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.assistant{
+    background:linear-gradient(150deg,rgba(255,255,255,.075),rgba(255,255,255,.03))!important;
+    -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid rgba(255,255,255,.1)!important;
+    border-radius:18px!important;
+    padding:12px 14px!important;
+    box-shadow:0 10px 28px rgba(3,2,8,.28)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{
+    background:color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#b79aef)) 22%,rgba(20,16,28,.62))!important;
+    -webkit-backdrop-filter:blur(12px) saturate(140%);backdrop-filter:blur(12px) saturate(140%);
+    border:1px solid color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#b79aef)) 40%,transparent)!important;
+    border-radius:20px!important;
+    box-shadow:0 8px 22px rgba(3,2,8,.26)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-actions{
+    gap:4px!important;margin-top:6px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action{
+    width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:7px!important;
+    border-radius:9px!important;background:rgba(255,255,255,.06)!important;color:#cbb8e4!important;
+  }
   .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal){
     background:rgba(15,13,20,.62)!important;
     -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
@@ -101,6 +132,66 @@
     background:rgba(255,255,255,.05)!important;
     border-color:rgba(255,255,255,.08)!important;
   }
+
+  /* Mobile drawer polish: compact tool tiles and tidy history rows. */
+  .app-shell[data-chat-active="true"] .ai-chat-tool-list button{
+    flex-direction:row!important;align-items:center!important;min-height:46px!important;
+    padding:8px 10px!important;gap:9px!important;border-radius:13px!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-item>button:first-child{
+    padding:7px 9px!important;min-height:38px!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-sidebar-history-pin,.ai-chat-sidebar-history-delete){
+    width:28px!important;height:28px!important;min-width:28px!important;flex:none!important;
+    display:inline-grid!important;place-items:center!important;padding:0!important;
+    border-radius:8px!important;color:#8f96a8!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin:not(.pinned){
+    opacity:.45!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned{
+    color:#c5a4f2!important;
+  }
+
+  /* Theme picker menu (glass). */
+  .app-shell .theme-menu{
+    background:color-mix(in srgb,var(--omda-design-panel,#1a1723) 82%,transparent)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+    border-color:var(--munjizly-glass-line)!important;
+  }
+
+  /* Glass style variants from the theme picker (data-glass on .app-shell). */
+  .app-shell[data-glass="clear"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
+    background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.015))!important;
+  }
+  .app-shell[data-glass="clear"]:not([data-chat-active="true"]) :is(.topbar,.mobile-nav){
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 76%,transparent)!important;
+  }
+  .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 88%,transparent)!important;
+  }
+  .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.topbar,.mobile-nav,.sidebar,.app-curtain,.app-launcher,.curtain-panel){
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 97%,transparent)!important;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
 }
 
+
+
+  /* User-picked chat bubble + icon colors */
+  .app-shell[data-bubble="violet"]{--chat-bubble:#a78bfa}
+  .app-shell[data-bubble="blue"]{--chat-bubble:#78a9ff}
+  .app-shell[data-bubble="cyan"]{--chat-bubble:#67d8ef}
+  .app-shell[data-bubble="teal"]{--chat-bubble:#62d6c2}
+  .app-shell[data-bubble="pink"]{--chat-bubble:#f29ac7}
+  .app-shell[data-bubble="amber"]{--chat-bubble:#e9c27b}
+  .app-shell[data-icon-color="violet"]{--icon-accent:#a78bfa}
+  .app-shell[data-icon-color="blue"]{--icon-accent:#78a9ff}
+  .app-shell[data-icon-color="cyan"]{--icon-accent:#67d8ef}
+  .app-shell[data-icon-color="teal"]{--icon-accent:#62d6c2}
+  .app-shell[data-icon-color="pink"]{--icon-accent:#f29ac7}
+  .app-shell[data-icon-color="amber"]{--icon-accent:#e9c27b}
+  .app-shell:is([data-icon-color="violet"],[data-icon-color="blue"],[data-icon-color="cyan"],[data-icon-color="teal"],[data-icon-color="pink"],[data-icon-color="amber"]) :is(.nav-link svg,.mobile-nav a svg,.page-kpi-icon svg,.stat-card-top svg,.dashboard-kpi-icon svg,.specialty-icon svg,.profile-heading-icon svg,.agent-symbol svg){
+    color:var(--icon-accent)!important;
+  }
 }

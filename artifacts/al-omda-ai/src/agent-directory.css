@@ -405,3 +405,88 @@
     scroll-margin-top: 180px;
   }
 }
+
+
+/* Compact two-column agent cards on phones; expanded card takes the full row. */
+@media (max-width: 650px) {
+  .market-grid.directory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+  .directory-card {
+    padding: 13px;
+    border-radius: 15px;
+  }
+  .directory-card-head {
+    gap: 8px;
+  }
+  .directory-card .agent-symbol {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .directory-card .agent-symbol svg {
+    width: 18px;
+    height: 18px;
+  }
+  .directory-state {
+    padding: 4px 7px;
+    font-size: 9px;
+    gap: 4px;
+  }
+  .directory-card h3 {
+    font-size: 14px;
+    margin: 10px 0 4px;
+  }
+  .directory-card > p {
+    font-size: 10px;
+    line-height: 1.6;
+    min-height: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .directory-card-metrics {
+    gap: 6px;
+    margin: 10px 0;
+  }
+  .directory-card-metrics > div {
+    padding: 8px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+  .directory-card-metrics strong {
+    font-size: 16px;
+  }
+  .directory-card-metrics span {
+    font-size: 8px;
+  }
+  .directory-approval > div:first-child {
+    font-size: 9px;
+  }
+  .directory-track {
+    height: 5px;
+    margin: 7px 0;
+  }
+  .directory-approval small {
+    font-size: 8px;
+    line-height: 1.5;
+  }
+  .directory-card .agent-footer {
+    padding-top: 10px;
+    gap: 7px;
+  }
+  .directory-card .agent-footer .button {
+    min-height: 38px;
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+  .directory-card:has(.directory-details:not([hidden])) {
+    grid-column: 1 / -1;
+  }
+  .directory-details {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+}

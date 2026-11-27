@@ -2189,7 +2189,7 @@ body:has(.ai-chat-page){
 .specialty-chart-track>span[data-tone="1"]{background:linear-gradient(to top,#28d5b0,#78e8ce)}
 .specialty-chart-track>span[data-tone="2"]{background:linear-gradient(to top,#a78bfa,#d1a7ff)}
 .specialty-chart-track>span[data-tone="3"]{background:linear-gradient(to top,#e879b3,#ffb0ce)}
-.specialty-chart-col small{font-size:8px;color:#8994ad;text-align:center;line-height:1.3;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.specialty-chart-col small{font-size:8px;color:#8994ad;text-align:center;line-height:1.3;max-width:100%;min-height:2.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 
 .dashboard-history-panel{padding:18px 18px 8px;min-width:0}
 .dashboard-history-panel .dashboard-section-heading{margin-bottom:14px}
@@ -9662,7 +9662,7 @@ body:has(.ai-chat-page){
     scroll-padding-bottom:20px;
   }
   .app-shell:not([data-chat-active="true"]) .content-wrap {
-    padding-bottom:28px!important;
+    padding-bottom:calc(150px + env(safe-area-inset-bottom))!important;
   }
   .app-shell:not([data-chat-active="true"]) .topbar {
     background:#121012!important;
@@ -9781,3 +9781,109 @@ body:has(.ai-chat-page){
 /* Chat list: breathing room under the header so the first message is not crowded (iPhone) */
 body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-top:22px!important;scroll-padding-top:22px}
 @media (max-width:480px){body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-top:20px!important}}
+
+
+/* Mobile task table: fit the viewport instead of clipping columns (<=650px). */
+@media(max-width:650px){
+ .app-shell .dashboard-table-wrap{margin-inline:0!important}
+ .app-shell .dashboard-task-table{min-width:0!important}
+ .app-shell .dashboard-task-table th,.app-shell .dashboard-task-table td{white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.55!important;padding:10px 7px!important}
+ .app-shell .dashboard-task-name{max-width:150px}
+ .app-shell .dashboard-task-name strong{overflow-wrap:anywhere;white-space:normal!important}
+}
+
+/* Theme picker menu (base; glass enhancement lives in glass-theme.css). */
+.app-shell .theme-menu{position:absolute;top:calc(100% + 8px);inset-inline-end:10px;z-index:120;width:min(330px,calc(100vw - 24px));max-height:calc(100dvh - 130px);overflow:auto;display:grid;gap:13px;padding:15px;border:1px solid #2b303b;border-radius:17px;background:#171a21;box-shadow:0 22px 55px rgba(0,0,0,.52)}
+.app-shell .theme-menu-section{display:grid;gap:8px}
+.app-shell .theme-menu-label{font-size:10px;color:#98a1b5;letter-spacing:.02em}
+.app-shell .theme-preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.app-shell .theme-preset{display:grid;gap:7px;padding:9px;border:1px solid #2b303b;border-radius:13px;background:#1b1e26;color:#e8eaf2;font:inherit;font-size:11px;cursor:pointer;text-align:start}
+.app-shell .theme-preset.active{border-color:var(--profile-accent,#78a9ff);box-shadow:inset 0 0 0 1px var(--profile-accent,#78a9ff)}
+.app-shell .theme-preset-preview{height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.13)}
+.app-shell .theme-swatch-row{display:flex;flex-wrap:wrap;gap:8px}
+.app-shell .theme-swatch{width:30px;height:30px;border-radius:99px;border:2px solid rgba(255,255,255,.14);cursor:pointer;padding:0;flex:none}
+.app-shell .theme-swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--profile-accent,#78a9ff)}
+.app-shell .theme-swatch.wall{width:46px;border-radius:11px}
+.app-shell .theme-glass-chip{padding:8px 12px;border:1px solid #2b303b;border-radius:99px;background:#1b1e26;color:#dfe3ee;font:inherit;font-size:11px;cursor:pointer}
+.app-shell .theme-glass-chip.active{border-color:var(--profile-accent,#78a9ff);background:color-mix(in srgb,var(--profile-accent,#78a9ff) 18%,#1b1e26)}
+
+/* ---------- Ambient background effects (theme picker) ---------- */
+@keyframes omda-effect-drift {
+  from { transform:translate3d(0,0,0); }
+  to { transform:translate3d(-3%,2.5%,0); }
+}
+@keyframes omda-effect-pan {
+  from { background-position:0 0,0 0; }
+  to { background-position:0 240px,0 240px; }
+}
+@keyframes omda-effect-aurora {
+  0%,100% { transform:translate3d(-2%,0,0) rotate(-2deg); }
+  50% { transform:translate3d(2%,2%,0) rotate(2deg); }
+}
+.app-shell::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+}
+.app-shell[data-effect="stars"]::after,
+.app-shell:not([data-effect])::after{
+  opacity:.42;
+  background-image:
+    radial-gradient(circle at 18% 28%,rgba(197,167,239,.75) 0 1px,transparent 2px),
+    radial-gradient(circle at 72% 76%,rgba(152,101,224,.6) 0 1px,transparent 2px),
+    radial-gradient(circle at 91% 17%,rgba(197,167,239,.55) 0 1px,transparent 2px);
+  background-size:310px 310px,370px 370px,430px 430px;
+  animation:omda-reference-stars 58s linear infinite;
+}
+.app-shell[data-effect="none"]::after{ display:none; }
+.app-shell[data-effect="planets"]::after{
+  opacity:.5;
+  background-image:
+    radial-gradient(circle at 78% 18%,color-mix(in srgb,var(--profile-accent,#a78bfa) 34%,transparent) 0 60px,transparent 62px),
+    radial-gradient(circle at 78% 18%,transparent 64px,color-mix(in srgb,var(--profile-accent,#a78bfa) 18%,transparent) 66px 70px,transparent 72px),
+    radial-gradient(circle at 16% 74%,color-mix(in srgb,var(--profile-accent,#a78bfa) 22%,transparent) 0 42px,transparent 44px),
+    radial-gradient(circle at 60% 88%,rgba(197,167,239,.16) 0 26px,transparent 28px);
+  animation:omda-effect-drift 46s ease-in-out infinite alternate;
+}
+.app-shell[data-effect="aurora"]::after{
+  opacity:.5;
+  filter:blur(60px);
+  background-image:
+    radial-gradient(60% 38% at 20% 8%,color-mix(in srgb,var(--profile-accent,#a78bfa) 30%,transparent),transparent 70%),
+    radial-gradient(52% 34% at 82% 22%,rgba(103,216,239,.22),transparent 70%),
+    radial-gradient(48% 30% at 55% 90%,rgba(98,214,194,.18),transparent 70%);
+  animation:omda-effect-aurora 26s ease-in-out infinite;
+}
+.app-shell[data-effect="grid"]::after{
+  opacity:.35;
+  background-image:
+    repeating-linear-gradient(to bottom,color-mix(in srgb,var(--profile-accent,#a78bfa) 20%,transparent) 0 1px,transparent 1px 56px),
+    repeating-linear-gradient(to right,color-mix(in srgb,var(--profile-accent,#a78bfa) 14%,transparent) 0 1px,transparent 1px 56px);
+  animation:omda-effect-pan 24s linear infinite;
+}
+.app-shell[data-effect="waves"]::after{
+  opacity:.4;
+  background-image:
+    radial-gradient(120% 60% at 50% 108%,color-mix(in srgb,var(--profile-accent,#a78bfa) 24%,transparent),transparent 60%),
+    radial-gradient(120% 60% at 50% 118%,rgba(103,216,239,.14),transparent 60%);
+  animation:omda-effect-drift 32s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce){
+  .app-shell::after{ animation:none!important; }
+}
+
+/* ---------- Subtle Munjizly logo watermark (theme picker) ---------- */
+.app-bg-mark{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:url('/brand/munjizly-mark-white.svg') no-repeat center 18%/min(52vw,360px);
+}
+.app-shell[data-logo="on"] .app-bg-mark{
+  display:block;
+  opacity:.05;
+}

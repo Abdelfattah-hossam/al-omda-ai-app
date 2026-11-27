@@ -576,12 +576,12 @@ const starterTasks: Task[] = [
   { id:'demo-research', title:'مراجعة تجربة صفحة التسجيل', request:'مراجعة تجربة التسجيل الحالية وتحديد أسئلة البحث التي تساعد على تحسينها.', specialty:'research', status:'paused', createdAt:'2025-02-17T14:05:00.000Z', demo:true, steps:[{id:'s1',text:'تحديد الأسئلة والافتراضات التي تحتاج تحققاً',state:'approved'},{id:'s2',text:'اقتراح محاور مراجعة تجربة المستخدم',state:'pending'},{id:'s3',text:'تلخيص النتائج المتوقعة للمراجعة',state:'pending'}] },
 ];
 
-function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; accent:string; compact:boolean; wallpaper:string; reduceMotion:boolean } {
+function readInitial(): { language:Language; tasks:Task[]; name:string; org:string; accent:string; compact:boolean; wallpaper:string; reduceMotion:boolean; theme:string; glass:string; bubble:string; iconColor:string; effect:string; logo:string } {
   try {
     const stored = localStorage.getItem(STORE_KEY);
-    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم Munjizly', org:'مشروعك', accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false }, ...JSON.parse(stored) };
+    if (stored) return { ...{ language:'ar' as Language, tasks:starterTasks, name:'مستخدم Munjizly', org:'مشروعك', accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false, theme:'night-glass', glass:'frost', bubble:'accent', iconColor:'accent', effect:'stars', logo:'off' }, ...JSON.parse(stored) };
   } catch { /* use seeded local preview */ }
-  return { language:'ar', tasks:starterTasks, name:'مستخدم Munjizly', org:'مشروعك', accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false };
+  return { language:'ar', tasks:starterTasks, name:'مستخدم Munjizly', org:'مشروعك', accent:'blue', compact:false, wallpaper:'midnight', reduceMotion:false, theme:'night-glass', glass:'frost', bubble:'accent', iconColor:'accent', effect:'stars', logo:'off' };
 }
 const apiRequestOptions = { credentials:'same-origin' as const };
 function readApiError(error:unknown, fallback:string):string {
@@ -871,6 +871,7 @@ function App() {
   const [profileSaving,setProfileSaving] = useState(false);
   const profileSavingRef=useRef(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [themeMenuOpen,setThemeMenuOpen]=useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<'checking'|'unconfigured'|'configured'|'offline'>('checking');
   const [authLoading, setAuthLoading] = useState(true);
@@ -2911,6 +2912,47 @@ pnpm --filter @workspace/scripts agent:runtime`;
     {id:'sunset',name:isAr?'غروب':'Sunset',background:'linear-gradient(135deg,#24151a,#49302d 55%,#1c2432)'},
     {id:'graphite',name:isAr?'جرافيت':'Graphite',background:'linear-gradient(135deg,#111315,#292d32 55%,#171b20)'},
   ];
+  const glassOptions = [
+    {id:'frost',name:isAr?'زجاج مصنفر':'Frosted glass'},
+    {id:'clear',name:isAr?'زجاج شفاف':'Clear glass'},
+    {id:'solid',name:isAr?'سادة':'Solid'},
+  ];
+  const themePresets = [
+    {id:'night-glass',name:isAr?'زجاج الليل':'Night glass',accent:'violet',wallpaper:'midnight',glass:'frost',preview:'linear-gradient(135deg,#0c0a12,#171326 55%,#241a3a)'},
+    {id:'ocean-glass',name:isAr?'زجاج المحيط':'Ocean glass',accent:'cyan',wallpaper:'ocean',glass:'frost',preview:'linear-gradient(135deg,#061c2b,#0d4052 55%,#10243d)'},
+    {id:'aurora-glass',name:isAr?'زجاج الشفق':'Aurora glass',accent:'teal',wallpaper:'aurora',glass:'clear',preview:'linear-gradient(135deg,#10152c,#26334a 48%,#183d3b)'},
+    {id:'sunset-glass',name:isAr?'زجاج الغروب':'Sunset glass',accent:'amber',wallpaper:'sunset',glass:'frost',preview:'linear-gradient(135deg,#24151a,#49302d 55%,#1c2432)'},
+    {id:'forest-glass',name:isAr?'زجاج الغابة':'Forest glass',accent:'lime',wallpaper:'forest',glass:'solid',preview:'linear-gradient(135deg,#0b1b17,#1c3930 55%,#15242a)'},
+    {id:'graphite-glass',name:isAr?'جرافيت صلب':'Solid graphite',accent:'blue',wallpaper:'graphite',glass:'solid',preview:'linear-gradient(135deg,#111315,#292d32 55%,#171b20)'},
+  ];
+  const bubbleColorOptions = [
+    {id:'accent',name:isAr?'حسب السمة':'Theme accent',color:'linear-gradient(135deg,#a78bfa,#67d8ef,#f29ac7)'},
+    {id:'violet',name:isAr?'بنفسجي':'Violet',color:'#a78bfa'},
+    {id:'blue',name:isAr?'أزرق':'Blue',color:'#78a9ff'},
+    {id:'cyan',name:isAr?'سماوي':'Cyan',color:'#67d8ef'},
+    {id:'teal',name:isAr?'فيروزي':'Teal',color:'#62d6c2'},
+    {id:'pink',name:isAr?'وردي':'Pink',color:'#f29ac7'},
+    {id:'amber',name:isAr?'ذهبي':'Amber',color:'#e9c27b'},
+  ];
+  const iconColorOptions = bubbleColorOptions;
+  const effectOptions = [
+    {id:'stars',name:isAr?'نجوم':'Stars'},
+    {id:'planets',name:isAr?'كواكب':'Planets'},
+    {id:'aurora',name:isAr?'شفق':'Aurora'},
+    {id:'grid',name:isAr?'شبكة':'Grid'},
+    {id:'waves',name:isAr?'أمواج':'Waves'},
+    {id:'none',name:isAr?'بدون':'Off'},
+  ];
+  const appearanceControls = <>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'السمات الجاهزة':'Theme presets'}</span><div className="theme-preset-grid">{themePresets.map(preset=><button type="button" key={preset.id} className={'theme-preset'+(saved.theme===preset.id?' active':'')} onClick={()=>setSaved(prev=>({...prev,theme:preset.id,accent:preset.accent,wallpaper:preset.wallpaper,glass:preset.glass,logo:'on'}))}><span className="theme-preset-preview" style={{background:preset.preview}}/><span>{preset.name}</span></button>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'لون التمييز':'Accent color'}</span><div className="theme-swatch-row">{accentOptions.map(option=><button type="button" key={option.id} className={'theme-swatch'+(saved.accent===option.id?' active':'')} style={{background:option.color}} aria-label={option.name} title={option.name} onClick={()=>setSaved(prev=>({...prev,accent:option.id}))}/>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'الخلفية':'Wallpaper'}</span><div className="theme-swatch-row">{wallpaperOptions.map(option=><button type="button" key={option.id} className={'theme-swatch wall'+(saved.wallpaper===option.id?' active':'')} style={{background:option.background}} aria-label={option.name} title={option.name} onClick={()=>setSaved(prev=>({...prev,wallpaper:option.id}))}/>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'نمط الزجاج':'Glass style'}</span><div className="theme-swatch-row">{glassOptions.map(option=><button type="button" key={option.id} className={'theme-glass-chip'+(saved.glass===option.id?' active':'')} onClick={()=>setSaved(prev=>({...prev,glass:option.id}))}>{option.name}</button>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'لون فقاعات المحادثة':'Chat bubble color'}</span><div className="theme-swatch-row">{bubbleColorOptions.map(option=><button type="button" key={option.id} className={'theme-swatch'+(saved.bubble===option.id?' active':'')} style={{background:option.color}} aria-label={option.name} title={option.name} onClick={()=>setSaved(prev=>({...prev,bubble:option.id}))}/>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'لون الأيقونات':'Icon color'}</span><div className="theme-swatch-row">{iconColorOptions.map(option=><button type="button" key={option.id} className={'theme-swatch'+(saved.iconColor===option.id?' active':'')} style={{background:option.color}} aria-label={option.name} title={option.name} onClick={()=>setSaved(prev=>({...prev,iconColor:option.id}))}/>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'مؤثرات الخلفية':'Background effects'}</span><div className="theme-swatch-row">{effectOptions.map(option=><button type="button" key={option.id} className={'theme-glass-chip'+(saved.effect===option.id?' active':'')} onClick={()=>setSaved(prev=>({...prev,effect:option.id}))}>{option.name}</button>)}</div></div>
+    <div className="theme-menu-section"><span className="theme-menu-label">{isAr?'شعار Munjizly في الخلفية':'Munjizly logo in background'}</span><div className="theme-swatch-row"><button type="button" role="switch" aria-checked={saved.logo==='on'} className={"toggle "+(saved.logo==='on'?"on":"")} onClick={()=>setSaved(prev=>({...prev,logo:prev.logo==='on'?'off':'on'}))} aria-label={isAr?'شعار Munjizly في الخلفية':'Munjizly logo in background'}/></div></div>
+  </>;
   const profilePage = () => <div ref={profilePageRef} className="page-enter profile-settings-page">
     {pageHeading(t('profile'),isAr?'مركز حسابك':'Your account center',isAr?'بياناتك الشخصية وإعدادات التطبيق والتحكم في تجربتك كلها في مكان واحد.':'Your personal details, app preferences, and account controls in one place.')}
     <section className="profile-welcome" aria-label={isAr?'ملخص الحساب':'Account overview'}>
@@ -2970,6 +3012,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
           <summary className="profile-accordion-summary"><div className="profile-section-heading"><div><span className="eyebrow">{isAr?'إعدادات التطبيق':'APP SETTINGS'}</span><h2>{isAr?'تفضيلات التطبيق':'Application preferences'}</h2><p>{isAr?'إعدادات اللغة وتقليل الحركة.':'Your language and reduced-motion preferences.'}</p></div><span className="profile-heading-icon" aria-hidden="true"><Settings2 size={18}/></span></div></summary>
           <div className="setting-row"><div><strong>{t('language')}</strong><small>{t('languageDesc')}</small></div><button className="button button-quiet button-small" onClick={toggleLanguage}>{isAr?'العربية':'English'} <ChevronDown size={12}/></button></div>
           <div className="setting-row"><div><strong>{isAr?"تقليل الحركة والمؤثرات":"Reduce motion"}</strong><small>{isAr?"إيقاف حركات الخلفيات والوميض والانتقالات لتجربة أهدأ.":"Reduce animated backgrounds, button glow, and transitions."}</small></div><button type="button" role="switch" aria-checked={Boolean(saved.reduceMotion)} className={"toggle "+(saved.reduceMotion?"on":"")} onClick={()=>setSaved((prev)=>({...prev,reduceMotion:!prev.reduceMotion}))} aria-label={isAr?"تقليل الحركة":"Reduce motion"}/></div>
+          <div className="setting-row" style={{alignItems:'flex-start'}}><div><strong>{isAr?'سمات المظهر':'Appearance themes'}</strong><small>{isAr?'سمات زجاجية جاهزة، مع إمكانية اختيار اللون والخلفية ونمط الزجاج كل على حدة.':'Ready glass themes, with separate accent, wallpaper, and glass style choices.'}</small></div></div>
+          {appearanceControls}
         </details>
 
       
@@ -3090,7 +3134,8 @@ pnpm --filter @workspace/scripts agent:runtime`;
     return () => window.clearTimeout(timer);
   }, []);
 
-  return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+  return <div className="app-shell" data-chat-active={path === "/ai" || path === "/ai/usage" ? "true" : "false"} data-accent={saved.accent} data-wallpaper={saved.wallpaper} data-glass={saved.glass||'frost'} data-bubble={saved.bubble||'accent'} data-icon-color={saved.iconColor||'accent'} data-effect={saved.effect||'stars'} data-logo={saved.logo||'off'} data-density={saved.compact?"compact":"comfortable"} data-reduced-motion={saved.reduceMotion?"true":"false"} dir={isAr?'rtl':'ltr'}>
+    <div className="app-bg-mark" aria-hidden="true"/>
     <NetworkStatus ar={isAr}/>
     {welcomeGreeting==='shown'&&<WelcomeGreeting isAr={isAr} name={hasGreetingName?greetingName:''} onClose={()=>setWelcomeGreeting('dismissed')}/>}
     {mediaStudioOpen&&<Suspense fallback={null}><MediaStudio ar={isAr} onClose={()=>setMediaStudioOpen(false)}/></Suspense>}
@@ -3132,6 +3177,7 @@ pnpm --filter @workspace/scripts agent:runtime`;
         </div>}
         <button type="button" className="icon-button mobile-header-actions-toggle" aria-label={isAr?"إجراءات الصفحة":"Page actions"} aria-expanded={headerActionsOpen} aria-controls="workspace-header-actions" onClick={()=>setHeaderActionsOpen(value=>!value)}><Settings2 size={18}/></button>
         <div id="workspace-header-actions" className="top-actions" data-open={headerActionsOpen?"true":"false"} onClick={(event)=>{if((event.target as HTMLElement).closest("button,a"))setHeaderActionsOpen(false);}}>
+          <button type="button" className="icon-button" onClick={(event)=>{event.stopPropagation();setThemeMenuOpen(value=>!value);}} aria-label={isAr?'سمات المظهر':'Appearance themes'} title={isAr?'سمات المظهر':'Appearance themes'} aria-expanded={themeMenuOpen} data-testid="button-theme-menu"><Palette size={16}/></button>
           {showWorkspaceHeader && <button type="button" className="icon-button" onClick={()=>{setCommandQuery('');setCommandPaletteOpen(true);}} aria-label={isAr?'بحث شامل':'Open global search'} title={isAr?'بحث شامل':'Global search'} data-testid="button-command-palette"><Search size={16}/></button>}
           <button type="button" className="icon-button" onClick={()=>setPageHelpOpen(value=>!value)} aria-label={isAr?"مساعدة الصفحة":"Page help"} title={isAr?"مساعدة الصفحة":"Page help"} aria-expanded={pageHelpOpen} data-testid="button-page-help"><CircleHelp size={16}/></button>
           {showWorkspaceHeader && <div className="topbar-quick-actions">
@@ -3140,7 +3186,12 @@ pnpm --filter @workspace/scripts agent:runtime`;
           </div>}
           <button type="button" className="lang-button" onClick={toggleLanguage} data-testid="button-language" aria-label={isAr?'تغيير لغة الواجهة إلى الإنجليزية':'Switch interface language to Arabic'}><Languages size={15} strokeWidth={1.8}/><span>{t('languageSwitch')}</span></button>
           <Link href={focusedHref("/profile","profile-account-card")} className="icon-button" aria-label={t('profile')} data-testid="link-profile"><UserRound size={16}/></Link>
-        </div></header>
+        </div>
+        {themeMenuOpen && <div className="theme-menu" role="dialog" aria-label={isAr?'سمات المظهر':'Appearance themes'} onClick={(event)=>event.stopPropagation()}>
+          <div className="theme-menu-section" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><span className="theme-menu-label" style={{fontSize:12,color:'#e8eaf2'}}>{isAr?'سمات المظهر':'Appearance themes'}</span><button type="button" className="icon-button" onClick={()=>setThemeMenuOpen(false)} aria-label={isAr?'إغلاق':'Close'}><X size={15}/></button></div>
+          {appearanceControls}
+        </div>}
+      </header>
       {pageHelpOpen && <section className="panel panel-pad" role="region" aria-label={isAr?"مساعدة الصفحة الحالية":"Current page help"} style={{position:"fixed",top:"calc(64px + env(safe-area-inset-top))",left:16,right:16,zIndex:95,margin:"0 auto",maxWidth:560,maxHeight:"calc(100dvh - 150px)",overflow:"auto",display:"grid",gap:8,boxShadow:"0 18px 50px rgba(0,0,0,.4)"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><strong>{isAr?"كيف تستخدم هذه الصفحة؟":"How to use this page"}</strong><button type="button" className="icon-button" onClick={()=>setPageHelpOpen(false)} aria-label={isAr?"إغلاق المساعدة":"Close help"}><X size={15}/></button></div><p style={{margin:0,lineHeight:1.8,color:"var(--text-secondary)"}}>{getPageGuidance(path,isAr)}</p></section>}
       <div className="content-wrap">{path!=='/ai'&&(sharedContent.announcement||sharedContent.help_text||sharedContent.support_email)&&<aside className="panel" style={{margin:'12px 20px',padding:14,display:'grid',gap:8,overflowWrap:'anywhere'}}>{sharedContent.announcement&&<p dir="auto">{sharedContent.announcement}</p>}{sharedContent.help_text&&<small dir="auto">{sharedContent.help_text}</small>}{sharedContent.support_email&&<small dir="auto">{isAr?'الدعم: ':'Support: '}{sharedContent.support_email}</small>}</aside>}<Suspense fallback={<div className="panel panel-pad plan-empty" style={{margin:20}}><span className="section-meta">{isAr?'جارٍ تحميل الصفحة…':'Loading page…'}</span></div>}>{shouldSkipRouteTransition ? page : <div key={path} className="route-page-transition">{page}</div>}</Suspense></div>
     </main>
