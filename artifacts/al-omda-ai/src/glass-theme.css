@@ -37,7 +37,7 @@
     background:transparent!important;
   }
   .app-shell[data-chat-active="true"]::before{
-    background:radial-gradient(1100px 560px at 88% -12%,color-mix(in srgb,var(--profile-accent,#b79aef) 30%,transparent),transparent 62%),radial-gradient(920px 660px at -12% 112%,color-mix(in srgb,var(--profile-accent,#b79aef) 18%,transparent),transparent 58%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,#171326 55%,#0f1420))!important;
+    background:radial-gradient(1300px 820px at 85% -12%,color-mix(in srgb,var(--profile-accent,#b79aef) 48%,transparent),transparent 66%),radial-gradient(1050px 780px at -14% 112%,color-mix(in srgb,var(--profile-accent,#b79aef) 34%,transparent),transparent 62%),linear-gradient(155deg,color-mix(in srgb,var(--profile-accent,#b79aef) 12%,transparent),transparent 42%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,#171326 55%,#0f1420))!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-page,
   .app-shell[data-chat-active="true"] .ai-chat-main,
@@ -47,12 +47,12 @@
     background:transparent!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-sidebar{
-    background:color-mix(in srgb,#101014 55%,transparent)!important;
+    background:color-mix(in srgb,#101014 42%,transparent)!important;
     -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
     border-inline-end-color:rgba(255,255,255,.08)!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{
-    background:color-mix(in srgb,#0b0b0e 45%,transparent)!important;
+    background:color-mix(in srgb,#0b0b0e 34%,transparent)!important;
     -webkit-backdrop-filter:blur(20px) saturate(150%)!important;backdrop-filter:blur(20px) saturate(150%)!important;
     border-bottom-color:rgba(255,255,255,.07)!important;
   }
@@ -64,7 +64,7 @@
     border-color:rgba(255,255,255,.12)!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-modal-backdrop{
-    background:rgba(7,5,12,.55)!important;
+    background:rgba(7,5,12,.45)!important;
     -webkit-backdrop-filter:blur(16px) saturate(140%)!important;backdrop-filter:blur(16px) saturate(140%)!important;
   }
   .app-shell[data-chat-active="true"] .ai-composer-tools{
