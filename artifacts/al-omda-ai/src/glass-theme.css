@@ -12,8 +12,12 @@
 @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))){
 
   /* ---------- workspace pages (everything except chat) ---------- */
+  /* Paint the chosen wallpaper under the accent glow. This rule sits in an
+     early cascade layer with !important, which beats the unlayered wallpaper
+     rules in index.css — without the wallpaper in this same declaration the
+     picker looked dead: every swatch kept the same accent-only glow. */
   .app-shell:not([data-chat-active="true"])::before{
-    background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#b79aef) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#b79aef) 14%,transparent),transparent 65%)!important;
+    background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#b79aef) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#b79aef) 14%,transparent),transparent 65%),var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.sidebar,.app-curtain,.app-launcher,.curtain-panel){
     background:color-mix(in srgb,var(--omda-design-panel,#242231) 52%,transparent)!important;

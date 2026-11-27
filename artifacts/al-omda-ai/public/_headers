@@ -7,6 +7,14 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Cross-Origin-Opener-Policy: same-origin-allow-popups
 
+# The update channel itself must never be served stale, or phones keep old builds.
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+/asset-manifest.json
+  Cache-Control: no-cache, no-store, must-revalidate
+/manifest.webmanifest
+  Cache-Control: no-cache, must-revalidate
+
 /api/*
   X-Robots-Tag: noindex, nofollow
 /forgot-password

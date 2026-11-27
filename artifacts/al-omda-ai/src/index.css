@@ -9817,8 +9817,8 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
   to { background-position:0 240px,0 240px; }
 }
 @keyframes omda-effect-aurora {
-  0%,100% { transform:translate3d(-2%,0,0) rotate(-2deg); }
-  50% { transform:translate3d(2%,2%,0) rotate(2deg); }
+  0%,100% { transform:translate3d(-2%,-1%,0); }
+  50% { transform:translate3d(2%,1%,0); }
 }
 .app-shell::after{
   content:"";
@@ -9856,16 +9856,22 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
   animation:omda-effect-drift 46s ease-in-out infinite alternate;
 }
 .app-shell[data-effect="aurora"]::after{
-  opacity:.5;
-  filter:blur(60px);
+  /* No filter:blur() here. Real iPhones can drop a full-screen, blurred,
+     animated fixed layer entirely (GPU compositing limit), which made شفق
+     invisible on device while desktop and emulators rendered it. Wider,
+     softer gradients give the same diffused look without a filter layer.
+     The layer is oversized (inset:-12%) and only translates, never rotates,
+     so its edges never come into view as seams. */
+  inset:-12%;
+  opacity:.6;
   background-image:
-    radial-gradient(60% 38% at 20% 8%,rgba(167,139,250,.30),transparent 70%),
-    radial-gradient(52% 34% at 82% 22%,rgba(103,216,239,.22),transparent 70%),
-    radial-gradient(48% 30% at 55% 90%,rgba(98,214,194,.18),transparent 70%);
+    radial-gradient(78% 56% at 16% 4%,rgba(167,139,250,.22),transparent 72%),
+    radial-gradient(68% 50% at 86% 20%,rgba(103,216,239,.16),transparent 72%),
+    radial-gradient(72% 50% at 55% 98%,rgba(98,214,194,.13),transparent 72%);
   background-image:
-    radial-gradient(60% 38% at 20% 8%,color-mix(in srgb,var(--profile-accent,#a78bfa) 30%,transparent),transparent 70%),
-    radial-gradient(52% 34% at 82% 22%,rgba(103,216,239,.22),transparent 70%),
-    radial-gradient(48% 30% at 55% 90%,rgba(98,214,194,.18),transparent 70%);
+    radial-gradient(78% 56% at 16% 4%,color-mix(in srgb,var(--profile-accent,#a78bfa) 22%,transparent),transparent 72%),
+    radial-gradient(68% 50% at 86% 20%,rgba(103,216,239,.16),transparent 72%),
+    radial-gradient(72% 50% at 55% 98%,rgba(98,214,194,.13),transparent 72%);
   animation:omda-effect-aurora 26s ease-in-out infinite;
 }
 .app-shell[data-effect="grid"]::after{

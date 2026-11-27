@@ -24,9 +24,28 @@ import './chat-legacy.css';
 // API-backed actions still require a connection and are never cached.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch((error) => {
-      console.warn('Munjizly offline shell could not be registered.', error);
+    // A phone often keeps the app open for days; without this it keeps running
+    // the old bundle forever and fixes never reach it. When a new worker takes
+    // control, reload once onto the fresh assets. The first-ever registration
+    // must not reload: there was no previous controller.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
     });
+    void navigator.serviceWorker.register('/service-worker.js', { scope: '/', updateViaCache: 'none' })
+      .then((registration) => {
+        void registration.update();
+        // Re-check when the user returns to an already-open app.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') void registration.update();
+        });
+      })
+      .catch((error) => {
+        console.warn('Munjizly offline shell could not be registered.', error);
+      });
   });
 }
 
