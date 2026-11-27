@@ -9840,6 +9840,14 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
 .app-shell[data-effect="none"]::after{ display:none; }
 .app-shell[data-effect="planets"]::after{
   opacity:.5;
+  /* Plain-rgba fallback for browsers without color-mix (iOS Safari < 16.2):
+     an unsupported color-mix invalidates the whole declaration, which used
+     to leave this layer empty, so the picker looked broken on those phones. */
+  background-image:
+    radial-gradient(circle at 78% 18%,rgba(167,139,250,.34) 0 60px,transparent 62px),
+    radial-gradient(circle at 78% 18%,transparent 64px,rgba(167,139,250,.18) 66px 70px,transparent 72px),
+    radial-gradient(circle at 16% 74%,rgba(167,139,250,.22) 0 42px,transparent 44px),
+    radial-gradient(circle at 60% 88%,rgba(197,167,239,.16) 0 26px,transparent 28px);
   background-image:
     radial-gradient(circle at 78% 18%,color-mix(in srgb,var(--profile-accent,#a78bfa) 34%,transparent) 0 60px,transparent 62px),
     radial-gradient(circle at 78% 18%,transparent 64px,color-mix(in srgb,var(--profile-accent,#a78bfa) 18%,transparent) 66px 70px,transparent 72px),
@@ -9851,6 +9859,10 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
   opacity:.5;
   filter:blur(60px);
   background-image:
+    radial-gradient(60% 38% at 20% 8%,rgba(167,139,250,.30),transparent 70%),
+    radial-gradient(52% 34% at 82% 22%,rgba(103,216,239,.22),transparent 70%),
+    radial-gradient(48% 30% at 55% 90%,rgba(98,214,194,.18),transparent 70%);
+  background-image:
     radial-gradient(60% 38% at 20% 8%,color-mix(in srgb,var(--profile-accent,#a78bfa) 30%,transparent),transparent 70%),
     radial-gradient(52% 34% at 82% 22%,rgba(103,216,239,.22),transparent 70%),
     radial-gradient(48% 30% at 55% 90%,rgba(98,214,194,.18),transparent 70%);
@@ -9859,12 +9871,18 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
 .app-shell[data-effect="grid"]::after{
   opacity:.35;
   background-image:
+    repeating-linear-gradient(to bottom,rgba(167,139,250,.20) 0 1px,transparent 1px 56px),
+    repeating-linear-gradient(to right,rgba(167,139,250,.14) 0 1px,transparent 1px 56px);
+  background-image:
     repeating-linear-gradient(to bottom,color-mix(in srgb,var(--profile-accent,#a78bfa) 20%,transparent) 0 1px,transparent 1px 56px),
     repeating-linear-gradient(to right,color-mix(in srgb,var(--profile-accent,#a78bfa) 14%,transparent) 0 1px,transparent 1px 56px);
   animation:omda-effect-pan 24s linear infinite;
 }
 .app-shell[data-effect="waves"]::after{
   opacity:.4;
+  background-image:
+    radial-gradient(120% 60% at 50% 108%,rgba(167,139,250,.24),transparent 60%),
+    radial-gradient(120% 60% at 50% 118%,rgba(103,216,239,.14),transparent 60%);
   background-image:
     radial-gradient(120% 60% at 50% 108%,color-mix(in srgb,var(--profile-accent,#a78bfa) 24%,transparent),transparent 60%),
     radial-gradient(120% 60% at 50% 118%,rgba(103,216,239,.14),transparent 60%);
@@ -9922,3 +9940,101 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
 .app-shell[data-accent="pink"]{--user-accent:#f29ac7;--user-accent-light:#f9c9e0;--user-glow:242,154,199}
 .app-shell[data-accent="amber"]{--user-accent:#a97ce8;--user-accent-light:#d2bcf5;--user-glow:169,124,232}
 .app-shell[data-accent="lime"]{--user-accent:#b7df8a;--user-accent-light:#d9efbe;--user-glow:183,223,138}
+
+/* ---------- iPhone readability batch (Nov 27) ---------- */
+
+/* Appearance picker: reliable taps on real touch devices. */
+.app-shell .theme-swatch,
+.app-shell .theme-glass-chip,
+.app-shell .toggle{
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+@media (max-width:650px){
+  .app-shell .theme-swatch{width:34px;height:34px}
+  .app-shell .theme-swatch.wall{width:50px;height:34px}
+  .app-shell .theme-glass-chip{padding:10px 14px;font-size:12px}
+}
+
+/* Topbar metric chips: never wrap a label mid-word; scroll sideways instead. */
+.app-shell .topbar-metric,
+.app-shell .topbar-metric strong,
+.app-shell .topbar-metric small{
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:keep-all!important;
+}
+@media (max-width:760px){
+  .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics{
+    flex-wrap:nowrap!important;
+    justify-content:flex-start!important;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar>.topbar-workspace-metrics::-webkit-scrollbar{display:none}
+}
+
+/* Home task log: stacked cards on phones instead of a squeezed 5-column table.
+   The earlier phone rule (min-width:0 + white-space:normal on cells) wrapped
+   task names letter by letter. Cards keep every field readable. */
+@media (max-width:650px){
+  .app-shell .dashboard-task-table thead{
+    position:absolute!important;
+    width:1px!important;height:1px!important;
+    overflow:hidden!important;
+    clip-path:inset(50%)!important;
+    white-space:nowrap!important;
+  }
+  .app-shell .dashboard-task-table,
+  .app-shell .dashboard-task-table tbody,
+  .app-shell .dashboard-task-table tr,
+  .app-shell .dashboard-task-table td{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  .app-shell .dashboard-task-table tr{
+    margin:0 0 10px!important;
+    padding:12px 14px!important;
+    border:1px solid rgba(205,220,248,.16)!important;
+    border-radius:14px!important;
+    background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07)!important;
+  }
+  .app-shell .dashboard-task-table td{
+    border:0!important;
+    padding:0!important;
+    text-align:start!important;
+    font-size:12px!important;
+  }
+  .app-shell .dashboard-task-table td[data-label]{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    padding-block:5px!important;
+  }
+  .app-shell .dashboard-task-table td[data-label]::before{
+    content:attr(data-label);
+    color:#8792ac;
+    font-size:10px;
+    font-weight:700;
+    flex:none;
+  }
+  .app-shell .dashboard-task-table .dashboard-task-name{
+    max-width:none!important;
+    padding-bottom:9px!important;
+    margin-bottom:3px!important;
+    border-bottom:1px solid rgba(139,157,220,.14)!important;
+  }
+  .app-shell .dashboard-task-table .dashboard-task-name strong{
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-size:13px!important;
+    line-height:1.55!important;
+    overflow-wrap:anywhere;
+  }
+  .app-shell .dashboard-task-table .dashboard-task-name .task-icon{width:30px;height:30px}
+  .app-shell .dashboard-task-table .dashboard-progress-cell>span{width:70px}
+}
