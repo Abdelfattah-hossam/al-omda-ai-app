@@ -3161,7 +3161,7 @@ body:has(.ai-chat-page){
  border-color:rgba(218,230,255,.27)!important;
 }
 
-.app-shell button:not(:disabled),
+.app-shell button:not(:disabled):not(.theme-swatch),
 .app-shell .button,
 .app-shell .icon-button,
 .app-shell .lang-button,
@@ -3180,7 +3180,7 @@ body:has(.ai-chat-page){
  border-color:rgba(var(--omda-glow,120,160,255),.42)!important;
 }
 
-.app-shell button:not(:disabled):hover,
+.app-shell button:not(:disabled):not(.theme-swatch):hover,
 .app-shell .button:hover,
 .app-shell .icon-button:hover,
 .app-shell .lang-button:hover{
@@ -9805,7 +9805,7 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
 .app-shell .theme-swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--profile-accent,#78a9ff)}
 .app-shell .theme-swatch.wall{width:46px;border-radius:11px}
 .app-shell .theme-glass-chip{padding:8px 12px;border:1px solid #2b303b;border-radius:99px;background:#1b1e26;color:#dfe3ee;font:inherit;font-size:11px;cursor:pointer}
-.app-shell .theme-glass-chip.active{border-color:var(--profile-accent,#78a9ff);background:color-mix(in srgb,var(--profile-accent,#78a9ff) 18%,#1b1e26)}
+.app-shell .theme-glass-chip.active{border-color:var(--profile-accent,#78a9ff);background:#2c3140;background:color-mix(in srgb,var(--profile-accent,#78a9ff) 18%,#1b1e26)}
 
 /* ---------- Ambient background effects (theme picker) ---------- */
 @keyframes omda-effect-drift {

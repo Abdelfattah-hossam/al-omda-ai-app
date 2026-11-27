@@ -21,13 +21,28 @@
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
   }
-  /* Top bar and bottom nav must stay readable over scrolled content, even
-     where backdrop-filter is unavailable (older iOS, Reduce Transparency). */
-  .app-shell:not([data-chat-active="true"]) :is(.topbar,.mobile-nav){
+  /* Top bar: transparent glass over scrolled content. The blur keeps it
+     readable; older browsers without backdrop-filter keep the solid fallback
+     surface from the base theme. */
+  .app-shell:not([data-chat-active="true"]) .topbar{
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 55%,transparent)!important;
+    -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
+    border-color:var(--munjizly-glass-line)!important;
+    box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
+  }
+  /* Bottom nav must stay readable over scrolled content, even where
+     backdrop-filter is unavailable (older iOS, Reduce Transparency). */
+  .app-shell:not([data-chat-active="true"]) .mobile-nav{
     background:color-mix(in srgb,var(--omda-design-panel,#242231) 88%,transparent)!important;
     -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
+  }
+  /* Shared header on the chat route gets the same transparent glass treatment. */
+  .app-shell[data-chat-active="true"] .main-area .topbar{
+    background:color-mix(in srgb,#111014 55%,transparent)!important;
+    background-image:none!important;
+    -webkit-backdrop-filter:blur(24px) saturate(150%)!important;backdrop-filter:blur(24px) saturate(150%)!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
     background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.03))!important;
@@ -164,7 +179,10 @@
   .app-shell[data-glass="clear"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
     background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.015))!important;
   }
-  .app-shell[data-glass="clear"]:not([data-chat-active="true"]) :is(.topbar,.mobile-nav){
+  .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .topbar{
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 38%,transparent)!important;
+  }
+  .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .mobile-nav{
     background:color-mix(in srgb,var(--omda-design-panel,#242231) 76%,transparent)!important;
   }
   .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
