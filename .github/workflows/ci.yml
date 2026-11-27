@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    # Cost cut (Nov 27, 2026): skip CI on pushes that only touch docs/notes. Pull requests
+    # still always run CI. To undo, delete the paths-ignore block.
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "deploy-status/**"
+      - "LICENSE"
   pull_request:
     branches:
       - main
