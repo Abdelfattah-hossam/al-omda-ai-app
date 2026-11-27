@@ -7,7 +7,7 @@
 
 @layer munjizly-glass {
 
-.app-shell{--munjizly-glass-line:rgba(255,255,255,.11);--munjizly-glass-shadow:0 18px 48px rgba(3,2,8,.42)}
+.app-shell{--munjizly-glass-line:rgba(255,255,255,.11);--munjizly-glass-shadow:0 18px 48px rgba(3,2,8,.42);--munjizly-glass-panel:color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))}
 
 @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))){
 
@@ -20,7 +20,7 @@
     background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#78a9ff) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#78a9ff) 14%,transparent),transparent 65%),var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.sidebar,.app-curtain,.app-launcher,.curtain-panel){
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 52%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 52%,transparent)!important;
     -webkit-backdrop-filter:blur(22px) saturate(150%)!important;backdrop-filter:blur(22px) saturate(150%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
@@ -29,15 +29,15 @@
      readable; older browsers without backdrop-filter keep the solid fallback
      surface from the base theme. */
   .app-shell:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 55%,transparent)!important;
-    -webkit-backdrop-filter:blur(24px) saturate(150%)!important;backdrop-filter:blur(24px) saturate(150%)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 48%,transparent)!important;
+    -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
   }
   /* Bottom nav must stay readable over scrolled content, even where
      backdrop-filter is unavailable (older iOS, Reduce Transparency). */
   .app-shell:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 46%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 46%,transparent)!important;
     -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
@@ -184,16 +184,16 @@
     background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.015))!important;
   }
   .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 38%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 38%,transparent)!important;
   }
   .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 34%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 34%,transparent)!important;
   }
   .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 88%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 88%,transparent)!important;
   }
   .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.topbar,.mobile-nav,.sidebar,.app-curtain,.app-launcher,.curtain-panel){
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 97%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 97%,transparent)!important;
     -webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important;
   }
 }
@@ -223,12 +223,12 @@
 @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))){
   /* Top bar and bottom dock: enough tint that scrolled text never shows through as clutter. */
   .app-shell:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 74%,transparent)!important;
-    -webkit-backdrop-filter:blur(26px) saturate(160%)!important;backdrop-filter:blur(26px) saturate(160%)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 48%,transparent)!important;
+    -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
     isolation:isolate;
   }
   .app-shell:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 46%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 46%,transparent)!important;
     -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
   }
   /* More top-level surfaces that were still solid. */
@@ -245,6 +245,18 @@
     background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;
     border:1px solid var(--munjizly-glass-line)!important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07)!important;
+  }
+  /* Top bar metrics: rounded glass chips tinted by the chosen accent, so they
+     match the glass surfaces instead of reading as hard square boxes. */
+  .app-shell:not([data-chat-active="true"]) .topbar-metric{
+    border-radius:14px!important;
+    padding:7px 12px!important;
+    background:color-mix(in srgb,var(--profile-accent,#78a9ff) 16%,rgba(255,255,255,.045))!important;
+    border:1px solid color-mix(in srgb,var(--profile-accent,#78a9ff) 40%,transparent)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.09)!important;
+  }
+  .app-shell:not([data-chat-active="true"]) .topbar-metric strong{
+    color:color-mix(in srgb,var(--profile-accent,#78a9ff) 62%,rgb(238,238,238))!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.filter-pill.active,.history-filter-chip.active,.theme-glass-chip.active){
     background:color-mix(in srgb,var(--profile-accent,#78a9ff) 26%,rgba(255,255,255,.05))!important;
