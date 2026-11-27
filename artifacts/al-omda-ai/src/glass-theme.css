@@ -33,18 +33,39 @@
   }
 
   /* ---------- chat ---------- */
-  .app-shell[data-chat-active="true"] .ai-chat-page{
-    background:radial-gradient(1100px 520px at 86% -12%,rgba(197,164,242,.10),transparent 62%),radial-gradient(880px 620px at -12% 112%,rgba(120,169,255,.08),transparent 58%),#0b0b0b!important;
+  .app-shell[data-chat-active="true"]{
+    background:transparent!important;
+  }
+  .app-shell[data-chat-active="true"]::before{
+    background:radial-gradient(1100px 560px at 88% -12%,color-mix(in srgb,var(--profile-accent,#b79aef) 30%,transparent),transparent 62%),radial-gradient(920px 660px at -12% 112%,color-mix(in srgb,var(--profile-accent,#b79aef) 18%,transparent),transparent 58%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,#171326 55%,#0f1420))!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-page,
+  .app-shell[data-chat-active="true"] .ai-chat-main,
+  .app-shell[data-chat-active="true"] .ai-chat-composer,
+  .app-shell[data-chat-active="true"] .ai-chat-messages,
+  .app-shell[data-chat-active="true"] .ai-chat-welcome{
+    background:transparent!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-sidebar{
-    background:rgba(18,18,21,.58)!important;
+    background:color-mix(in srgb,#101014 55%,transparent)!important;
     -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
     border-inline-end-color:rgba(255,255,255,.08)!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{
-    background:rgba(11,11,12,.55)!important;
-    -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+    background:color-mix(in srgb,#0b0b0e 45%,transparent)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(150%)!important;backdrop-filter:blur(20px) saturate(150%)!important;
     border-bottom-color:rgba(255,255,255,.07)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-tool-list button:hover,.ai-chat-sidebar-history-item:hover,.ai-chat-sidebar-history-item.active,.ai-chat-new-button:hover){
+    background:rgba(255,255,255,.07)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-new-button{
+    background:rgba(255,255,255,.05)!important;
+    border-color:rgba(255,255,255,.12)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-modal-backdrop{
+    background:rgba(7,5,12,.55)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(140%)!important;backdrop-filter:blur(16px) saturate(140%)!important;
   }
   .app-shell[data-chat-active="true"] .ai-composer-tools{
     background:rgba(23,23,26,.62)!important;
@@ -68,7 +89,7 @@
     border-color:rgba(255,255,255,.09)!important;
   }
   .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal){
-    background:rgba(14,13,17,.72)!important;
+    background:rgba(15,13,20,.62)!important;
     -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
     border-color:rgba(255,255,255,.12)!important;
   }
