@@ -36,7 +36,8 @@
   .app-shell[data-chat-active="true"]{
     background:transparent!important;
   }
-  .app-shell[data-chat-active="true"]>.main-area{
+  .app-shell[data-chat-active="true"]>.main-area,
+  .app-shell[data-chat-active="true"] .content-wrap{
     background:transparent!important;
   }
   .app-shell[data-chat-active="true"]::before{
