@@ -9887,3 +9887,12 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
   display:block;
   opacity:.05;
 }
+
+/* Compact two-column agent directory on phones — must outrank the single-column
+   marketplace override (same !important tier, higher specificity). */
+@media (max-width: 650px) {
+  .app-shell:not([data-chat-active="true"]) .market-grid.directory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+}
