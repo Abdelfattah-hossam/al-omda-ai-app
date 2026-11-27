@@ -262,7 +262,7 @@
   }
   /* Top bar metrics: rounded glass chips tinted by the chosen accent, so they
      match the glass surfaces instead of reading as hard square boxes. */
-  .app-shell:not([data-chat-active="true"]) .topbar-metric{
+  .app-shell:not([data-chat-active="true"]) .topbar-workspace-metrics .topbar-metric{
     border-radius:14px!important;
     padding:7px 12px!important;
     background:color-mix(in srgb,var(--profile-accent,#78a9ff) 16%,rgba(255,255,255,.045))!important;
