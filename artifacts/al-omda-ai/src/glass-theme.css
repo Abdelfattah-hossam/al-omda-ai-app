@@ -36,6 +36,9 @@
   .app-shell[data-chat-active="true"]{
     background:transparent!important;
   }
+  .app-shell[data-chat-active="true"]>.main-area{
+    background:transparent!important;
+  }
   .app-shell[data-chat-active="true"]::before{
     background:radial-gradient(1300px 820px at 85% -12%,color-mix(in srgb,var(--profile-accent,#b79aef) 48%,transparent),transparent 66%),radial-gradient(1050px 780px at -14% 112%,color-mix(in srgb,var(--profile-accent,#b79aef) 34%,transparent),transparent 62%),linear-gradient(155deg,color-mix(in srgb,var(--profile-accent,#b79aef) 12%,transparent),transparent 42%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,#171326 55%,#0f1420))!important;
   }
