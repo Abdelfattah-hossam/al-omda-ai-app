@@ -142,10 +142,24 @@
     width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:7px!important;
     border-radius:9px!important;background:rgba(255,255,255,.06)!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 33%,rgb(216,216,216))!important;
   }
+  /* Chat modals (settings, code canvas, live voice): accent-tinted glass over the
+     dimmed page instead of solid charcoal panels. */
   .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal){
-    background:rgba(15,13,20,.62)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 58%,transparent)!important;
     -webkit-backdrop-filter:blur(26px) saturate(150%)!important;backdrop-filter:blur(26px) saturate(150%)!important;
-    border-color:rgba(255,255,255,.12)!important;
+    border-color:var(--munjizly-glass-line)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal)>header{
+    background:rgba(255,255,255,.05)!important;
+    border-bottom-color:var(--munjizly-glass-line)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-settings-modal>footer{
+    background:rgba(255,255,255,.05)!important;
+    border-top-color:var(--munjizly-glass-line)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-settings-section,.ai-chat-settings-stats>div,.ai-chat-settings-progress){
+    background:rgba(255,255,255,.05)!important;
+    border-color:var(--munjizly-glass-line)!important;
   }
   .app-shell[data-chat-active="true"] :is(.ai-chat-usage-card,.ai-chat-tool-list button){
     background:rgba(255,255,255,.05)!important;
@@ -174,7 +188,7 @@
 
   /* Theme picker menu (glass). */
   .app-shell .theme-menu{
-    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(13,13,13))) 82%,transparent)!important;
+    background:color-mix(in srgb,var(--munjizly-glass-panel,color-mix(in srgb,var(--profile-accent,#78a9ff) 13%,rgb(13,14,20))) 82%,transparent)!important;
     -webkit-backdrop-filter:blur(22px) saturate(150%)!important;backdrop-filter:blur(22px) saturate(150%)!important;
     border-color:var(--munjizly-glass-line)!important;
   }
