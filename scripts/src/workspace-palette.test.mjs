@@ -11,7 +11,7 @@ test('reference palette is scoped away from chat on every selector',()=>{
  assert.ok(count>25);
 });
 test('palette is color only and preserves semantic status colors',()=>{
- assert.ok(css.includes('--omda-accent:var(--user-accent,#b79aef)!important'));
+ assert.ok(css.includes('--omda-accent:var(--user-accent,#78a9ff)!important'));
  assert.ok(css.includes('.status-chip.completed'));
  assert.ok(css.includes('.status-chip.stopped'));
  assert.doesNotMatch(css,/(?:^|[;{\s])(?:height|width|position|display|overflow|padding|margin|scroll-behavior|touch-action)\s*:/);
