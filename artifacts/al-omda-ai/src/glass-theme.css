@@ -1,0 +1,81 @@
+/* Munjizly glass theme — translucent, blurred surfaces over the existing palettes.
+   All seven accent colors and all seven wallpapers stay available; surfaces pick up
+   the active accent through the existing CSS variables. This file is imported FIRST
+   and wrapped in @layer munjizly-glass so its !important enhancements win over the
+   theme layers. Every glass rule lives inside @supports (backdrop-filter), so older
+   browsers (Huawei Browser) keep the existing solid surfaces as the fallback. */
+
+@layer munjizly-glass {
+
+.app-shell{--munjizly-glass-line:rgba(255,255,255,.11);--munjizly-glass-shadow:0 18px 48px rgba(3,2,8,.42)}
+
+@supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))){
+
+  /* ---------- workspace pages (everything except chat) ---------- */
+  .app-shell:not([data-chat-active="true"])::before{
+    background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#b79aef) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#b79aef) 14%,transparent),transparent 65%)!important;
+  }
+  .app-shell:not([data-chat-active="true"]) :is(.sidebar,.topbar,.mobile-nav,.app-curtain,.app-launcher,.curtain-panel){
+    background:color-mix(in srgb,var(--omda-design-panel,#242231) 52%,transparent)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+    border-color:var(--munjizly-glass-line)!important;
+    box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
+  }
+  .app-shell:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
+    background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.03))!important;
+    -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+    border-color:var(--munjizly-glass-line)!important;
+    box-shadow:var(--munjizly-glass-shadow),inset 0 1px 0 rgba(255,255,255,.09)!important;
+  }
+  .app-shell:not([data-chat-active="true"]) :is(.field,.dashboard-table-wrap,.home-directory-search){
+    background:rgba(255,255,255,.05)!important;
+    border-color:var(--munjizly-glass-line)!important;
+  }
+
+  /* ---------- chat ---------- */
+  .app-shell[data-chat-active="true"] .ai-chat-page{
+    background:radial-gradient(1100px 520px at 86% -12%,rgba(197,164,242,.10),transparent 62%),radial-gradient(880px 620px at -12% 112%,rgba(120,169,255,.08),transparent 58%),#0b0b0b!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-sidebar{
+    background:rgba(18,18,21,.58)!important;
+    -webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);
+    border-inline-end-color:rgba(255,255,255,.08)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-main>.ai-chat-topbar{
+    background:rgba(11,11,12,.55)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(150%);backdrop-filter:blur(20px) saturate(150%);
+    border-bottom-color:rgba(255,255,255,.07)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-composer-tools{
+    background:rgba(23,23,26,.62)!important;
+    -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+    border-color:rgba(255,255,255,.12)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-top-menu,.ai-chat-model-menu){
+    background:rgba(17,17,20,.74)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+    border-color:rgba(255,255,255,.10)!important;
+    box-shadow:0 22px 55px rgba(0,0,0,.5)!important;
+  }
+  .app-shell[data-chat-active="true"] .ai-chat-quick-grid button{
+    background:rgba(255,255,255,.045)!important;
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border-color:rgba(255,255,255,.09)!important;
+  }
+  .app-shell[data-chat-active="true"] .chat-message{
+    background:rgba(255,255,255,.05)!important;
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border-color:rgba(255,255,255,.09)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal){
+    background:rgba(14,13,17,.72)!important;
+    -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+    border-color:rgba(255,255,255,.12)!important;
+  }
+  .app-shell[data-chat-active="true"] :is(.ai-chat-usage-card,.ai-chat-tool-list button){
+    background:rgba(255,255,255,.05)!important;
+    border-color:rgba(255,255,255,.08)!important;
+  }
+}
+
+}

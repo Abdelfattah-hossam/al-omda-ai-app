@@ -7,6 +7,7 @@ import App from './App';
 import PasswordRecovery from './PasswordRecovery';
 import { ErrorBoundary } from '@/components/error-boundary';
 
+import './glass-theme.css';
 import './index.css';
 import './voice-experience.css';
 import './chat-palette.css';
