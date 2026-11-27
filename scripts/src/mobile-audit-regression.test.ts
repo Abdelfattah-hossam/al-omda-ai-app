@@ -72,5 +72,5 @@ test("studio escapes transformed ancestors and retains dark lavender controls", 
  assert.ok(studio.includes('return createPortal('));
  assert.ok(studio.includes('</section></div>,document.body)'));
  assert.ok(css.includes('flex:0 1 980px;min-width:0;max-width:100%;overflow-x:hidden;'));
- assert.ok(css.includes('.media-studio .button-primary{background:linear-gradient(135deg,#b58feb,#854cd5)'));
+ assert.ok(css.includes('.media-studio .button-primary{background:linear-gradient(135deg,color-mix(in srgb,var(--user-accent,#78a9ff)'));
 });
