@@ -8,16 +8,16 @@
   --omda-design-line:#4a435e!important;
   --omda-design-text:#f1eff9!important;
   --omda-design-muted:#b9b3ca!important;
-  --omda-design-gold:#b79aef!important;
-  --omda-design-gold-light:#e0d2ff!important;
-  --profile-accent:#b79aef!important;
-  --omda-reference-accent:#b79aef!important;
+  --omda-design-gold:var(--user-accent,#b79aef)!important;
+  --omda-design-gold-light:var(--user-accent-light,#e0d2ff)!important;
+  --profile-accent:var(--user-accent,#b79aef)!important;
+  --omda-reference-accent:var(--user-accent,#b79aef)!important;
   --omda-reference-surface:#242231!important;
   --omda-reference-soft:#302c42!important;
   --omda-reference-line:#4a435e!important;
-  --omda-glow:183,154,239!important;
-  --omda-accent:#b79aef!important;
-  --omda-accent-2:#d2c3fa!important;
+  --omda-glow:var(--user-glow,183,154,239)!important;
+  --omda-accent:var(--user-accent,#b79aef)!important;
+  --omda-accent-2:var(--user-accent-light,#d2c3fa)!important;
   --background:250 27% 9%!important;
   --foreground:252 45% 96%!important;
   --border:256 17% 32%!important;
@@ -93,7 +93,7 @@
 .app-shell:not([data-chat-active="true"]) .directory-mini {background:#302c42!important;}
 .app-shell:not([data-chat-active="true"]) .dashboard-kpi:after {background:radial-gradient(circle,#a17ad144,transparent 72%)!important;}
 .app-shell:not([data-chat-active="true"]) :is(a,button):focus-visible {outline-color:#d5bcff!important;box-shadow:0 0 0 4px #b79aef33!important;}
-.app-shell:not([data-chat-active="true"]) :is(.agent-directory,.directory-overview) {--omda-accent:#b79aef!important;--text:#f1eff9!important;--text-muted:#b9b3ca!important;--panel:#242231!important;color:#f1eff9!important;}
+.app-shell:not([data-chat-active="true"]) :is(.agent-directory,.directory-overview) {--omda-accent:var(--user-accent,#b79aef)!important;--text:#f1eff9!important;--text-muted:#b9b3ca!important;--panel:#242231!important;color:#f1eff9!important;}
 
 .app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,.app-launcher-section,.app-launcher-tile,.profile-feature-link,.profile-welcome,.profile-welcome-stats>div,.workbench-flow-step,.agent-guide-panel,.curtain-launcher-item) {background:linear-gradient(145deg,#302b41,#211f2c)!important;border-color:#514767!important;box-shadow:0 8px 28px #09071133!important;color:#f1eff9!important;}
 .app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics>div,.app-launcher-count,.workbench-flow-step>span,.sidebar-search,.history-filter-chip) {background:#302c42!important;color:#d9c9f8!important;border-color:#645079!important;}
