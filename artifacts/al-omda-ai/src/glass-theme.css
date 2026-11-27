@@ -17,10 +17,10 @@
      rules in index.css — without the wallpaper in this same declaration the
      picker looked dead: every swatch kept the same accent-only glow. */
   .app-shell:not([data-chat-active="true"])::before{
-    background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#b79aef) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#b79aef) 14%,transparent),transparent 65%),var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important;
+    background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--profile-accent,#78a9ff) 26%,transparent),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--profile-accent,#78a9ff) 14%,transparent),transparent 65%),var(--app-wallpaper,linear-gradient(135deg,#080b12,#151b2a 55%,#101923))!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.sidebar,.app-curtain,.app-launcher,.curtain-panel){
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 52%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 52%,transparent)!important;
     -webkit-backdrop-filter:blur(22px) saturate(150%)!important;backdrop-filter:blur(22px) saturate(150%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
@@ -29,7 +29,7 @@
      readable; older browsers without backdrop-filter keep the solid fallback
      surface from the base theme. */
   .app-shell:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 55%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 55%,transparent)!important;
     -webkit-backdrop-filter:blur(24px) saturate(150%)!important;backdrop-filter:blur(24px) saturate(150%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
@@ -37,8 +37,8 @@
   /* Bottom nav must stay readable over scrolled content, even where
      backdrop-filter is unavailable (older iOS, Reduce Transparency). */
   .app-shell:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 88%,transparent)!important;
-    -webkit-backdrop-filter:blur(24px) saturate(150%)!important;backdrop-filter:blur(24px) saturate(150%)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 46%,transparent)!important;
+    -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
     border-color:var(--munjizly-glass-line)!important;
     box-shadow:0 12px 36px rgba(6,4,12,.38)!important;
   }
@@ -68,7 +68,7 @@
     background:transparent!important;
   }
   .app-shell[data-chat-active="true"]::before{
-    background:radial-gradient(1300px 820px at 85% -12%,color-mix(in srgb,var(--profile-accent,#b79aef) 48%,transparent),transparent 66%),radial-gradient(1050px 780px at -14% 112%,color-mix(in srgb,var(--profile-accent,#b79aef) 34%,transparent),transparent 62%),linear-gradient(155deg,color-mix(in srgb,var(--profile-accent,#b79aef) 12%,transparent),transparent 42%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,#171326 55%,#0f1420))!important;
+    background:radial-gradient(1300px 820px at 85% -12%,color-mix(in srgb,var(--profile-accent,#78a9ff) 48%,transparent),transparent 66%),radial-gradient(1050px 780px at -14% 112%,color-mix(in srgb,var(--profile-accent,#78a9ff) 34%,transparent),transparent 62%),linear-gradient(155deg,color-mix(in srgb,var(--profile-accent,#78a9ff) 12%,transparent),transparent 42%),var(--app-wallpaper,linear-gradient(135deg,#0c0a12,color-mix(in srgb,var(--user-accent,#78a9ff) 14%,rgb(1,1,1)) 55%,#0f1420))!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-page,
   .app-shell[data-chat-active="true"] .ai-chat-main,
@@ -129,9 +129,9 @@
     box-shadow:0 10px 28px rgba(3,2,8,.28)!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-main .chat-message.user{
-    background:color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#b79aef)) 22%,rgba(20,16,28,.62))!important;
+    background:color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#78a9ff)) 22%,rgba(20,16,28,.62))!important;
     -webkit-backdrop-filter:blur(12px) saturate(140%)!important;backdrop-filter:blur(12px) saturate(140%)!important;
-    border:1px solid color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#b79aef)) 40%,transparent)!important;
+    border:1px solid color-mix(in srgb,var(--chat-bubble,var(--profile-accent,#78a9ff)) 40%,transparent)!important;
     border-radius:20px!important;
     box-shadow:0 8px 22px rgba(3,2,8,.26)!important;
   }
@@ -140,7 +140,7 @@
   }
   .app-shell[data-chat-active="true"] .ai-chat-main .chat-message .ai-message-action{
     width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;padding:7px!important;
-    border-radius:9px!important;background:rgba(255,255,255,.06)!important;color:#cbb8e4!important;
+    border-radius:9px!important;background:rgba(255,255,255,.06)!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 33%,rgb(216,216,216))!important;
   }
   .app-shell[data-chat-active="true"] :is(.ai-chat-settings-modal,.ai-chat-canvas-modal,.ai-chat-live-modal){
     background:rgba(15,13,20,.62)!important;
@@ -169,12 +169,12 @@
     opacity:.45!important;
   }
   .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned{
-    color:#c5a4f2!important;
+    color:color-mix(in srgb,var(--user-accent,#78a9ff) 58%,rgb(228,228,228))!important;
   }
 
   /* Theme picker menu (glass). */
   .app-shell .theme-menu{
-    background:color-mix(in srgb,var(--omda-design-panel,#1a1723) 82%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(13,13,13))) 82%,transparent)!important;
     -webkit-backdrop-filter:blur(22px) saturate(150%)!important;backdrop-filter:blur(22px) saturate(150%)!important;
     border-color:var(--munjizly-glass-line)!important;
   }
@@ -184,16 +184,16 @@
     background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.015))!important;
   }
   .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 38%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 38%,transparent)!important;
   }
   .app-shell[data-glass="clear"]:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 76%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 34%,transparent)!important;
   }
   .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*){
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 88%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 88%,transparent)!important;
   }
   .app-shell[data-glass="solid"]:not([data-chat-active="true"]) :is(.topbar,.mobile-nav,.sidebar,.app-curtain,.app-launcher,.curtain-panel){
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 97%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 97%,transparent)!important;
     -webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important;
   }
 }
@@ -201,17 +201,17 @@
 
 
   /* User-picked chat bubble + icon colors */
-  .app-shell[data-bubble="violet"]{--chat-bubble:#a78bfa}
+  .app-shell[data-bubble="violet"]{--chat-bubble:color-mix(in srgb,var(--user-accent,#78a9ff) 82%,rgb(204,204,204))}
   .app-shell[data-bubble="blue"]{--chat-bubble:#78a9ff}
   .app-shell[data-bubble="cyan"]{--chat-bubble:#67d8ef}
   .app-shell[data-bubble="teal"]{--chat-bubble:#62d6c2}
-  .app-shell[data-bubble="pink"]{--chat-bubble:#f29ac7}
+  .app-shell[data-bubble="pink"]{--chat-bubble:color-mix(in srgb,var(--user-accent,#78a9ff) 65%,rgb(230,230,230))}
   .app-shell[data-bubble="amber"]{--chat-bubble:#e9c27b}
-  .app-shell[data-icon-color="violet"]{--icon-accent:#a78bfa}
+  .app-shell[data-icon-color="violet"]{--icon-accent:color-mix(in srgb,var(--user-accent,#78a9ff) 82%,rgb(204,204,204))}
   .app-shell[data-icon-color="blue"]{--icon-accent:#78a9ff}
   .app-shell[data-icon-color="cyan"]{--icon-accent:#67d8ef}
   .app-shell[data-icon-color="teal"]{--icon-accent:#62d6c2}
-  .app-shell[data-icon-color="pink"]{--icon-accent:#f29ac7}
+  .app-shell[data-icon-color="pink"]{--icon-accent:color-mix(in srgb,var(--user-accent,#78a9ff) 65%,rgb(230,230,230))}
   .app-shell[data-icon-color="amber"]{--icon-accent:#e9c27b}
   .app-shell:is([data-icon-color="violet"],[data-icon-color="blue"],[data-icon-color="cyan"],[data-icon-color="teal"],[data-icon-color="pink"],[data-icon-color="amber"]) :is(.nav-link svg,.mobile-nav a svg,.page-kpi-icon svg,.stat-card-top svg,.dashboard-kpi-icon svg,.specialty-icon svg,.profile-heading-icon svg,.agent-symbol svg){
     color:var(--icon-accent)!important;
@@ -223,13 +223,13 @@
 @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))){
   /* Top bar and bottom dock: enough tint that scrolled text never shows through as clutter. */
   .app-shell:not([data-chat-active="true"]) .topbar{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 74%,transparent)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 74%,transparent)!important;
     -webkit-backdrop-filter:blur(26px) saturate(160%)!important;backdrop-filter:blur(26px) saturate(160%)!important;
     isolation:isolate;
   }
   .app-shell:not([data-chat-active="true"]) .mobile-nav{
-    background:color-mix(in srgb,var(--omda-design-panel,#242231) 78%,transparent)!important;
-    -webkit-backdrop-filter:blur(26px) saturate(160%)!important;backdrop-filter:blur(26px) saturate(160%)!important;
+    background:color-mix(in srgb,var(--omda-design-panel,color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))) 46%,transparent)!important;
+    -webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important;
   }
   /* More top-level surfaces that were still solid. */
   .app-shell:not([data-chat-active="true"]) :is(.profile-welcome,.app-launcher-section,.home-app-directory,.dashboard-pulse,.directory-overview,.marketplace-intro,.history-toolbar,.app-downloads,.dashboard-analytics-grid,.hosted-connections,.agent-guide-panel,.agent-advanced-tools,.profile-usage-card,.account-signed-in,.theme-menu-section){
@@ -247,8 +247,8 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07)!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.filter-pill.active,.history-filter-chip.active,.theme-glass-chip.active){
-    background:color-mix(in srgb,var(--profile-accent,#b79aef) 26%,rgba(255,255,255,.05))!important;
-    border-color:color-mix(in srgb,var(--profile-accent,#b79aef) 60%,transparent)!important;
+    background:color-mix(in srgb,var(--profile-accent,#78a9ff) 26%,rgba(255,255,255,.05))!important;
+    border-color:color-mix(in srgb,var(--profile-accent,#78a9ff) 60%,transparent)!important;
   }
   .app-shell:not([data-chat-active="true"]) :is(.button-quiet,.button-small:not(.button-primary):not(.button-danger),.icon-button,.lang-button){
     background:rgba(255,255,255,.07)!important;

@@ -1,18 +1,18 @@
 /* Account page layout, isolated from chat and workspace geometry. */
 .profile-settings-page{max-width:1160px!important;margin-inline:auto!important}
 .profile-settings-page .page-heading{margin-bottom:22px}
-.profile-settings-page .profile-welcome{display:flex!important;align-items:center!important;justify-content:space-between;gap:24px;padding:28px!important;border-radius:24px!important;background:radial-gradient(ellipse at 100% 0%,#47355d 0%,transparent 65%),linear-gradient(120deg,#292337,#201e2c)!important;border:1px solid #514460!important;box-shadow:none!important;margin-bottom:16px!important}
+.profile-settings-page .profile-welcome{display:flex!important;align-items:center!important;justify-content:space-between;gap:24px;padding:28px!important;border-radius:24px!important;background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(26,26,26)) 0%,transparent 65%),linear-gradient(120deg,color-mix(in srgb,var(--user-accent,#78a9ff) 15%,rgb(20,20,20)),color-mix(in srgb,var(--user-accent,#78a9ff) 10%,rgb(18,18,18)))!important;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 21%,rgb(56,56,56))!important;box-shadow:none!important;margin-bottom:16px!important}
 .profile-settings-page .profile-welcome-identity{display:flex;align-items:center;gap:18px;min-width:0}
-.profile-settings-page .profile-welcome-avatar{width:72px!important;height:72px!important;flex:none;border-radius:24px!important;background:#b79aef!important;color:#21192f!important;border:3px solid #d9c5fa!important;font-size:29px!important;display:grid;place-items:center;overflow:hidden}
+.profile-settings-page .profile-welcome-avatar{width:72px!important;height:72px!important;flex:none;border-radius:24px!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 63%,rgb(210,210,210))!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(7,7,7))!important;border:3px solid color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(247,247,247))!important;font-size:29px!important;display:grid;place-items:center;overflow:hidden}
 .profile-welcome-avatar img{width:100%;height:100%;object-fit:cover}
 .profile-settings-page .profile-welcome-copy h2{font-size:clamp(21px,2vw,29px)!important;line-height:1.45;margin:7px 0!important;overflow-wrap:anywhere}
 .profile-settings-page .profile-welcome-copy p{font-size:12px!important;max-width:400px;line-height:1.8!important}
 .profile-settings-page .profile-welcome-stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;min-width:250px}
 .profile-settings-page .profile-welcome-stats>div{border:0!important;background:none!important;padding:8px!important;text-align:center}
-.profile-settings-page .profile-welcome-stats strong{font-size:25px!important;color:#e5dbfc!important}
+.profile-settings-page .profile-welcome-stats strong{font-size:25px!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(250,250,250))!important}
 .profile-section-nav{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0 22px}
-.profile-section-nav button{padding:9px 14px;border:1px solid #4a435e;background:#242131;color:#dbd0ed;border-radius:12px;font:inherit;font-size:12px;cursor:pointer}
-.profile-section-nav button:hover{background:#393047}.profile-section-nav button:focus-visible{outline:2px solid #d2b5ff;outline-offset:3px}
+.profile-section-nav button{padding:9px 14px;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53));background:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(20,20,20));color:color-mix(in srgb,var(--user-accent,#78a9ff) 21%,rgb(232,232,232));border-radius:12px;font:inherit;font-size:12px;cursor:pointer}
+.profile-section-nav button:hover{background:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(33,33,33))}.profile-section-nav button:focus-visible{outline:2px solid color-mix(in srgb,var(--user-accent,#78a9ff) 55%,rgb(255,255,255));outline-offset:3px}
 .profile-settings-page .profile-settings-layout{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:start!important}
 .profile-settings-page .profile-settings-layout>*{grid-column:auto!important;order:initial!important;height:auto!important;min-width:0!important;margin:0!important;}
 .profile-settings-page .profile-settings-layout>#profile-personal{grid-column:1!important;grid-row:1!important}
@@ -21,32 +21,32 @@
 .profile-settings-page .profile-settings-layout>.profile-settings-side{grid-column:1/-1!important;grid-row:3!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important}
 .profile-settings-page .profile-settings-side>*{grid-column:auto!important;order:initial!important;height:auto!important}
 .profile-settings-page .profile-settings-side>.profile-features-card{grid-row:2!important}
-.profile-settings-page :is(.panel,.profile-accordion){padding:24px!important;border-radius:22px!important;box-shadow:none!important;background:#242131!important;border:1px solid #4a435e!important}
+.profile-settings-page :is(.panel,.profile-accordion){padding:24px!important;border-radius:22px!important;box-shadow:none!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(20,20,20))!important;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53))!important}
 .profile-settings-page :is(section,details)[id]{scroll-margin-block-start:110px}
 .profile-settings-page .profile-section-heading{margin-bottom:20px!important}
-.profile-settings-page .profile-section-heading>svg{padding:10px;box-sizing:content-box;border-radius:13px;background:#373044;color:#c6aaf1;flex:none}
+.profile-settings-page .profile-section-heading>svg{padding:10px;box-sizing:content-box;border-radius:13px;background:color-mix(in srgb,var(--user-accent,#78a9ff) 15%,rgb(35,35,35));color:color-mix(in srgb,var(--user-accent,#78a9ff) 53%,rgb(227,227,227));flex:none}
 .profile-settings-page .profile-section-heading h2{font-size:19px!important;margin:6px 0!important}
-.profile-settings-page .profile-section-heading p{font-size:12px!important;color:#b9b3ca!important;line-height:1.8}
-.profile-settings-page .profile-summary{margin:0 0 20px!important;padding:14px!important;border-radius:14px!important;background:#1b1826!important;border:0!important}
+.profile-settings-page .profile-section-heading p{font-size:12px!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;line-height:1.8}
+.profile-settings-page .profile-summary{margin:0 0 20px!important;padding:14px!important;border-radius:14px!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 10%,rgb(12,12,12))!important;border:0!important}
 .profile-settings-page .profile-summary h2{font-size:16px!important;overflow-wrap:anywhere}
 .profile-settings-page .profile-summary span,.profile-settings-page .account-email{overflow-wrap:anywhere;word-break:break-word}
 .profile-settings-page .profile-fields-grid{display:grid!important;grid-template-columns:1fr!important;gap:16px!important}
 .profile-settings-page .profile-actions-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:20px}
 .profile-settings-page .profile-actions-row .button{white-space:normal;text-align:center;line-height:1.6}
-.profile-settings-page .account-hint{display:block;font-size:11px;line-height:1.9;margin-top:12px;color:#b9b3ca}
+.profile-settings-page .account-hint{display:block;font-size:11px;line-height:1.9;margin-top:12px;color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))}
 .profile-settings-page .profile-account-first .account-form{display:grid!important;grid-template-columns:1fr!important}
-.profile-settings-page .profile-account-first .account-signed-in{padding:16px!important;background:#1b1826!important;border-radius:14px!important}
+.profile-settings-page .profile-account-first .account-signed-in{padding:16px!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 10%,rgb(12,12,12))!important;border-radius:14px!important}
 .profile-settings-page .profile-account-first .account-signed-in .button-danger{margin-top:14px}
 .profile-settings-page .setting-row{gap:16px;min-width:0}.profile-settings-page .setting-row>div{min-width:0}.profile-settings-page .setting-row small{line-height:1.9}
-.profile-settings-page .profile-allowance{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:20px 0 14px}.profile-settings-page .profile-allowance strong{font-size:38px;color:#dcc9ff}.profile-allowance span{font-size:12px;color:#b9b3ca}
-.profile-usage-track{height:7px;border-radius:7px;background:#171420;overflow:hidden}.profile-usage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9978d4,#d9c6fa)}
+.profile-settings-page .profile-allowance{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin:20px 0 14px}.profile-settings-page .profile-allowance strong{font-size:38px;color:color-mix(in srgb,var(--user-accent,#78a9ff) 40%,rgb(255,255,255))}.profile-allowance span{font-size:12px;color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))}
+.profile-usage-track{height:7px;border-radius:7px;background:color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(10,10,10));overflow:hidden}.profile-usage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--user-accent,#78a9ff) 68%,rgb(120,120,120)),color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(247,247,247)))}
 .profile-settings-page .profile-feature-grid{display:grid!important;grid-template-columns:1fr!important;gap:9px!important}
 .profile-settings-page .profile-feature-link{border-radius:13px!important;padding:14px!important}
 @media(max-width:760px){
  .profile-settings-page .profile-welcome{flex-direction:column!important;align-items:stretch!important;padding:20px!important;gap:18px!important}
  .profile-settings-page .profile-welcome-avatar{width:54px!important;height:54px!important;border-radius:18px!important;font-size:23px!important}
  .profile-settings-page .profile-welcome-identity{align-items:flex-start;gap:12px}
- .profile-settings-page .profile-welcome-stats{min-width:0!important;gap:7px!important;border-top:1px solid #514460;padding-top:12px}
+ .profile-settings-page .profile-welcome-stats{min-width:0!important;gap:7px!important;border-top:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 21%,rgb(56,56,56));padding-top:12px}
  .profile-settings-page .profile-welcome-stats>div{padding:4px!important}.profile-settings-page .profile-welcome-stats span{font-size:10px!important}
  .profile-settings-page .profile-settings-layout{grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
  .profile-settings-page .profile-settings-layout>#profile-personal{grid-column:1!important;grid-row:1!important}
@@ -62,7 +62,7 @@
 .profile-settings-page .profile-welcome-identity{flex-direction:row!important;direction:inherit!important;text-align:start!important}
 .profile-settings-page .profile-welcome-copy{text-align:start!important}
 .profile-settings-page .profile-welcome-stats>div{box-shadow:none!important}
-.profile-settings-page .profile-account-first .account-mode-button.is-active{color:#e5dbfc!important;background:#3a2e4f!important}
+.profile-settings-page .profile-account-first .account-mode-button.is-active{color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(250,250,250))!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(22,22,22))!important}
 
 /* Physical-iPhone follow-up: no floating content obstruction, explicit disclosure. */
 .profile-settings-page .profile-accordion-summary{display:flex!important;align-items:flex-start!important;gap:12px!important;padding:0!important;list-style:none!important}
@@ -108,11 +108,11 @@
 .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link {transform:none!important;gap:3px!important;}
 .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-icon {
  display:grid!important;place-items:center!important;flex:none!important;width:28px!important;height:28px!important;
- padding:0!important;border:1px solid #514767!important;border-radius:8px!important;background:#302c42!important;
+ padding:0!important;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55))!important;border-radius:8px!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;
  font-size:inherit!important;line-height:1!important;
 }
 .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link.active .mobile-nav-icon {
- background:#594175!important;border-color:#9472c3!important;box-shadow:inset 0 1px 0 #e3d1ff1a!important;
+ background:color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(33,33,33))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 60%,rgb(109,109,109))!important;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--user-accent,#78a9ff) 34%,rgba(255,255,255,0.10))!important;
 }
 .app-shell:not([data-chat-active="true"]) .mobile-nav .mobile-nav-link>span:not(.mobile-nav-icon) {
  min-height:12px!important;display:block!important;line-height:12px!important;white-space:nowrap!important;
@@ -120,22 +120,22 @@
 }
 
 /* Keep Safari autofill readable without disabling useful autofill metadata. */
-.profile-settings-page input.field {color-scheme:dark;caret-color:#c9acff;scroll-margin-block:96px;}
+.profile-settings-page input.field {color-scheme:dark;caret-color:color-mix(in srgb,var(--user-accent,#78a9ff) 61%,rgb(254,254,254));scroll-margin-block:96px;}
 .profile-settings-page input.field:-webkit-autofill,
 .profile-settings-page input.field:-webkit-autofill:hover,
 .profile-settings-page input.field:-webkit-autofill:focus {
- -webkit-text-fill-color:#eee7f7!important;
- -webkit-box-shadow:0 0 0 1000px #1a1729 inset!important;
- box-shadow:0 0 0 1000px #1a1729 inset!important;
- caret-color:#c9acff!important;
+ -webkit-text-fill-color:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(246,246,246))!important;
+ -webkit-box-shadow:0 0 0 1000px color-mix(in srgb,var(--user-accent,#78a9ff) 13%,rgb(7,7,7)) inset!important;
+ box-shadow:0 0 0 1000px color-mix(in srgb,var(--user-accent,#78a9ff) 13%,rgb(7,7,7)) inset!important;
+ caret-color:color-mix(in srgb,var(--user-accent,#78a9ff) 61%,rgb(254,254,254))!important;
 }
-.profile-settings-page input.field:autofill {background:#1a1729!important;color:#eee7f7!important;}
+.profile-settings-page input.field:autofill {background:color-mix(in srgb,var(--user-accent,#78a9ff) 13%,rgb(7,7,7))!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(246,246,246))!important;}
 @media(max-width:800px){
  /* Keep the existing app viewport intact while Safari owns keyboard sizing. */
  .app-shell[data-profile-keyboard="true"]>.mobile-nav,
  .app-shell[data-profile-keyboard="true"]>.guest-nudge {display:none!important;}
  .app-shell[data-profile-keyboard="true"] .content-wrap:has(.profile-settings-page) {padding-bottom:calc(var(--profile-keyboard-inset,0px) + 120px)!important;scroll-padding-bottom:calc(var(--profile-keyboard-inset,0px) + 100px)!important;}
- .app-shell[data-profile-keyboard="true"] .profile-main-card>.profile-actions-row {position:fixed!important;z-index:150;inset-inline:12px;bottom:calc(var(--profile-keyboard-inset,0px) + 12px);display:flex;justify-content:flex-start;gap:10px;padding:10px 12px;margin:0!important;background:#242033!important;border:1px solid #625075!important;border-radius:14px;box-shadow:0 4px 24px #0008;}
+ .app-shell[data-profile-keyboard="true"] .profile-main-card>.profile-actions-row {position:fixed!important;z-index:150;inset-inline:12px;bottom:calc(var(--profile-keyboard-inset,0px) + 12px);display:flex;justify-content:flex-start;gap:10px;padding:10px 12px;margin:0!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 14%,rgb(16,16,16))!important;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 27%,rgb(67,67,67))!important;border-radius:14px;box-shadow:0 4px 24px #0008;}
  .app-shell[data-profile-keyboard="true"] .profile-main-card>.profile-actions-row>.button {min-height:44px;}
  .app-shell[data-profile-keyboard="true"] .topbar {position:relative!important;}
  .profile-settings-page .profile-actions-row {scroll-margin-block:96px 24px;}

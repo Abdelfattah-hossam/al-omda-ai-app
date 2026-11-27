@@ -28,8 +28,8 @@
  .app-shell:not([data-chat-active="true"]) .topbar-metric small {font-size:10px!important;line-height:1.5!important;}
  .app-shell:not([data-chat-active="true"]) .topbar>.top-actions {
   display:none!important;grid-column:1/-1!important;grid-row:3!important;
-  margin:0!important;padding:10px!important;background:#24202f;
-  border:1px solid #514767;border-radius:14px;gap:10px!important;
+  margin:0!important;padding:10px!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(20,20,20));
+  border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55));border-radius:14px;gap:10px!important;
  }
  .app-shell:not([data-chat-active="true"]) .topbar>.top-actions[data-open="true"] {
   display:flex!important;justify-content:space-around!important;flex-wrap:wrap;
@@ -40,7 +40,7 @@
    to all four viewport edges rather than ending a dvh-tall clipping box early. */
 @media(max-width:760px) {
  html:has(.app-shell:not([data-chat-active="true"])),
- body:has(.app-shell:not([data-chat-active="true"])) {background:#12101c!important;}
+ body:has(.app-shell:not([data-chat-active="true"])) {background:color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(5,5,5))!important;}
  body .app-shell:not([data-chat-active="true"]) {
   position:fixed!important;inset:0!important;width:100%!important;
   height:auto!important;min-height:0!important;

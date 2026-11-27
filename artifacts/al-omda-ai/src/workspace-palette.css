@@ -2,110 +2,110 @@
    Important layer beats legacy unlayered gold styles without changing geometry. */
 @layer omda-workspace-palette {
 .app-shell:not([data-chat-active="true"]) {
-  --omda-design-bg:#12101c!important;
-  --omda-design-panel:#242231!important;
-  --omda-design-panel-raised:#302c42!important;
-  --omda-design-line:#4a435e!important;
+  --omda-design-bg:color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(5,5,5))!important;
+  --omda-design-panel:color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))!important;
+  --omda-design-panel-raised:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;
+  --omda-design-line:color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53))!important;
   --omda-design-text:#f1eff9!important;
-  --omda-design-muted:#b9b3ca!important;
-  --omda-design-gold:var(--user-accent,#b79aef)!important;
-  --omda-design-gold-light:var(--user-accent-light,#e0d2ff)!important;
-  --profile-accent:var(--user-accent,#b79aef)!important;
-  --omda-reference-accent:var(--user-accent,#b79aef)!important;
-  --omda-reference-surface:#242231!important;
-  --omda-reference-soft:#302c42!important;
-  --omda-reference-line:#4a435e!important;
-  --omda-glow:var(--user-glow,183,154,239)!important;
-  --omda-accent:var(--user-accent,#b79aef)!important;
-  --omda-accent-2:var(--user-accent-light,#d2c3fa)!important;
-  --background:250 27% 9%!important;
-  --foreground:252 45% 96%!important;
-  --border:256 17% 32%!important;
-  --card:248 18% 16%!important;
-  --card-foreground:252 45% 96%!important;
-  --primary:260 73% 77%!important;
-  --primary-foreground:250 27% 9%!important;
-  --ring:260 73% 77%!important;
-  --muted-foreground:258 17% 75%!important;
+  --omda-design-muted:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;
+  --omda-design-gold:var(--user-accent,#78a9ff)!important;
+  --omda-design-gold-light:var(--user-accent-light,#c2daff)!important;
+  --profile-accent:var(--user-accent,#78a9ff)!important;
+  --omda-reference-accent:var(--user-accent,#78a9ff)!important;
+  --omda-reference-surface:color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))!important;
+  --omda-reference-soft:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;
+  --omda-reference-line:color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53))!important;
+  --omda-glow:var(--user-glow,120,169,255)!important;
+  --omda-accent:var(--user-accent,#78a9ff)!important;
+  --omda-accent-2:var(--user-accent-light,#c2daff)!important;
+  --background:222 27% 9%!important;
+  --foreground:222 45% 96%!important;
+  --border:220 17% 32%!important;
+  --card:220 18% 16%!important;
+  --card-foreground:222 45% 96%!important;
+  --primary:217 100% 74%!important;
+  --primary-foreground:222 27% 9%!important;
+  --ring:217 100% 74%!important;
+  --muted-foreground:220 17% 75%!important;
   color:#f1eff9!important;
-  background:#12101c!important;
+  background:color-mix(in srgb,var(--user-accent,#78a9ff) 9%,rgb(5,5,5))!important;
 }
 /* These pinned reference backgrounds must yield to the appearance picker:
    the shell always carries data-wallpaper/data-effect, so an unpinned rule
    here would win over every user choice and make the picker look dead. */
 .app-shell:not([data-chat-active="true"]):not([data-wallpaper])::before {
-  background:radial-gradient(ellipse at 12% 0%,#33244e80,transparent 60%),radial-gradient(ellipse at 90% 90%,#29204466,transparent 65%)!important;
+  background:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--user-accent,#78a9ff) 31%,rgba(0,0,0,0.50)),transparent 60%),radial-gradient(ellipse at 90% 90%,color-mix(in srgb,var(--user-accent,#78a9ff) 27%,rgba(0,0,0,0.40)),transparent 65%)!important;
 }
 .app-shell:not([data-chat-active="true"]):not([data-effect])::after {
-  background-image:radial-gradient(circle at 18% 28%,#d8c8fb88 0 1px,transparent 2px),radial-gradient(circle at 72% 76%,#a78bca77 0 1px,transparent 2px)!important;
+  background-image:radial-gradient(circle at 18% 28%,color-mix(in srgb,var(--user-accent,#78a9ff) 38%,rgba(247,247,247,0.53)) 0 1px,transparent 2px),radial-gradient(circle at 72% 76%,color-mix(in srgb,var(--user-accent,#78a9ff) 47%,rgba(159,159,159,0.47)) 0 1px,transparent 2px)!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.sidebar,.topbar,.mobile-nav,.app-curtain,.app-launcher,.curtain-panel) {
-  background:#1b1828!important;
-  border-color:#4a435e!important;
+  background:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(10,10,10))!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53))!important;
   box-shadow:0 12px 36px #09071155!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.panel,.dashboard-hero,.stat-card,.dashboard-kpi,.dashboard-chart-card,.dashboard-history-panel,.agent-card,.request-card,.plan-card,.plan-empty,.history-item,.profile-main-card,.profile-account-profile-card,.profile-setting-card,.profile-features-card,.task-detail-card,.workbench-step,.specialty-row,.notice-bar,.notice,.control-note,.developer-console,.profile-settings-side>*) {
   color:#f1eff9!important;
-  background:linear-gradient(145deg,#302b41,#211f2c)!important;
-  border-color:#4a435e!important;
-  box-shadow:0 12px 32px #09071144,inset 0 1px 0 #d4bcff0d!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(27,27,27)),color-mix(in srgb,var(--user-accent,#78a9ff) 10%,rgb(21,21,21)))!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 20%,rgb(53,53,53))!important;
+  box-shadow:0 12px 32px #09071144,inset 0 1px 0 color-mix(in srgb,var(--user-accent,#78a9ff) 50%,rgba(255,255,255,0.05))!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.dashboard-hero:after,.notice-bar:after,.notice:after,.control-note:after) {
-  border-color:#8573a9!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 40%,rgb(111,111,111))!important;
   box-shadow:none!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.page-title,.section-title,.section-head h2,.hero-copy h2,.profile-section-heading h2,.directory-section-head h2,.directory-card h3,.directory-card-metrics strong,.directory-empty h3,.task-main strong,.brand-name) {color:#f1eff9!important;}
-.app-shell:not([data-chat-active="true"]) :is(.brand-sub,.nav-caption,.crumb,.page-subtitle,.stat-label,.stat-foot,.eyebrow,.section-meta,.task-main small,.agent-tag,.specialty-row small,.hero-copy p,.directory-section-head p,.directory-card>p,.directory-card-metrics span,.directory-details>p,.directory-details li span,.directory-mini small,.directory-approval small,.directory-filter-row>span,.control-note p,.dashboard-card-subtitle) {color:#b9b3ca!important;}
+.app-shell:not([data-chat-active="true"]) :is(.brand-sub,.nav-caption,.crumb,.page-subtitle,.stat-label,.stat-foot,.eyebrow,.section-meta,.task-main small,.agent-tag,.specialty-row small,.hero-copy p,.directory-section-head p,.directory-card>p,.directory-card-metrics span,.directory-details>p,.directory-details li span,.directory-mini small,.directory-approval small,.directory-filter-row>span,.control-note p,.dashboard-card-subtitle) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;}
 .app-shell:not([data-chat-active="true"]) :is(.button-primary,.brand-mark,.mobile-chat-launcher) {
-  color:#191124!important;
-  background:linear-gradient(135deg,var(--user-accent-light,#d9c8ff),var(--user-accent,#b79aef))!important;
-  border-color:var(--user-accent,#c3a9f6)!important;
-  box-shadow:0 4px 18px #9b70df22!important;
+  color:color-mix(in srgb,var(--user-accent,#78a9ff) 14%,rgb(1,1,1))!important;
+  background:linear-gradient(135deg,var(--user-accent-light,#c2daff),var(--user-accent,#78a9ff))!important;
+  border-color:var(--user-accent,#78a9ff)!important;
+  box-shadow:0 4px 18px color-mix(in srgb,var(--user-accent,#78a9ff) 82%,rgba(80,80,80,0.13))!important;
   filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.button-primary:hover,.mobile-chat-launcher:hover) {background:var(--user-accent-light,#e2d5ff)!important;color:#191124!important;}
+.app-shell:not([data-chat-active="true"]) :is(.button-primary:hover,.mobile-chat-launcher:hover) {background:var(--user-accent-light,#c2daff)!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 14%,rgb(1,1,1))!important;}
 .app-shell:not([data-chat-active="true"]) :is(.button-quiet,.icon-button,.lang-button,.filter-pill,.select-specialty,.step-edit,.text-button,.directory-search,.directory-select,.directory-mini,.directory-card-metrics>div) {
-  color:#ded4f2!important;
-  background:#302c42!important;
-  border-color:#514767!important;
+  color:color-mix(in srgb,var(--user-accent,#78a9ff) 22%,rgb(238,238,238))!important;
+  background:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55))!important;
   box-shadow:none!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.nav-link,.mobile-nav .mobile-nav-link,.mobile-nav a) {color:#b9b3ca!important;}
+.app-shell:not([data-chat-active="true"]) :is(.nav-link,.mobile-nav .mobile-nav-link,.mobile-nav a) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;}
 .app-shell:not([data-chat-active="true"]) :is(.nav-link.active,.nav-link:hover,.mobile-nav .mobile-nav-link.active,.filter-pill.active,.select-specialty.selected,.button-quiet:hover,.icon-button:hover,.lang-button:hover) {
-  color:#e8dbff!important;
-  background:#47365f!important;
-  border-color:#9472c3!important;
-  box-shadow:inset 0 1px 0 #e3d1ff1a!important;
+  color:color-mix(in srgb,var(--user-accent,#78a9ff) 27%,rgb(255,255,255))!important;
+  background:color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(26,26,26))!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 60%,rgb(109,109,109))!important;
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--user-accent,#78a9ff) 34%,rgba(255,255,255,0.10))!important;
   text-shadow:none!important;
 }
 .app-shell:not([data-chat-active="true"]) :is(.task-icon,.specialty-icon,.agent-symbol,.hero-side,.profile-avatar,.empty-mark,.dashboard-kpi-icon,.step-number,.avatar) {
-  color:#ddcbff!important;
-  background:linear-gradient(145deg,#594175,#302a43)!important;
-  border-color:#6e568d!important;
+  color:color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(255,255,255))!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(33,33,33)),color-mix(in srgb,var(--user-accent,#78a9ff) 19%,rgb(23,23,23)))!important;
+  border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 41%,rgb(65,65,65))!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.stat-value,.directory-approval strong,.directory-total,.directory-mini>span:not(.agent-symbol),.directory-details li svg) {color:#d6c3ff!important;-webkit-text-fill-color:#d6c3ff!important;}
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select,.directory-select option,.developer-code,.task-result-markdown pre) {background:#1b1828!important;color:#f1eff9!important;border-color:#514767!important;}
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select)::placeholder {color:#b0a5c2!important;}
-.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select):focus {border-color:#cbb1ff!important;box-shadow:0 0 0 3px #b79aef22!important;}
-.app-shell:not([data-chat-active="true"]) :is(.directory-track,.specialty-chart-track,.pipeline-track,.activity-chart-grid) {background:#443c56!important;}
-.app-shell:not([data-chat-active="true"]) :is(.directory-track>span,.specialty-chart-track>span,.dashboard-progress-cell i,.toggle.on) {background:linear-gradient(90deg,#9770d1,#d6c3ff)!important;}
-.app-shell:not([data-chat-active="true"]) :is(.directory-state.attention,.status-chip,.status-chip.review,.status-chip.paused,.step-current) {color:#e1d2fb!important;background:#49365d!important;border-color:#7d609b!important;}
+.app-shell:not([data-chat-active="true"]) :is(.stat-value,.directory-approval strong,.directory-total,.directory-mini>span:not(.agent-symbol),.directory-details li svg) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 44%,rgb(253,253,253))!important;-webkit-text-fill-color:color-mix(in srgb,var(--user-accent,#78a9ff) 44%,rgb(253,253,253))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select,.directory-select option,.developer-code,.task-result-markdown pre) {background:color-mix(in srgb,var(--user-accent,#78a9ff) 12%,rgb(10,10,10))!important;color:#f1eff9!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select)::placeholder {color:color-mix(in srgb,var(--user-accent,#78a9ff) 21%,rgb(178,178,178))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.field,input,textarea,select):focus {border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 58%,rgb(253,253,253))!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--user-accent,#78a9ff) 63%,rgba(210,210,210,0.13))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.directory-track,.specialty-chart-track,.pipeline-track,.activity-chart-grid) {background:color-mix(in srgb,var(--user-accent,#78a9ff) 19%,rgb(45,45,45))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.directory-track>span,.specialty-chart-track>span,.dashboard-progress-cell i,.toggle.on) {background:linear-gradient(90deg,color-mix(in srgb,var(--user-accent,#78a9ff) 72%,rgb(96,96,96)),color-mix(in srgb,var(--user-accent,#78a9ff) 44%,rgb(253,253,253)))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.directory-state.attention,.status-chip,.status-chip.review,.status-chip.paused,.step-current) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(249,249,249))!important;background:color-mix(in srgb,var(--user-accent,#78a9ff) 29%,rgb(29,29,29))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 44%,rgb(82,82,82))!important;}
 .app-shell:not([data-chat-active="true"]) :is(.status-chip.completed,.step-number.approved) {color:#a7e8cd!important;background:#183d33!important;border-color:#38745c!important;}
 .app-shell:not([data-chat-active="true"]) :is(.status-chip.stopped,.step-number.rejected,.button-danger) {color:#ffb9bc!important;background:#4d2635!important;border-color:#925269!important;}
-.app-shell:not([data-chat-active="true"]) :is(.directory-total,.directory-details,.directory-details li+li,.directory-mini,.agent-footer,.plan-step,.profile-summary) {border-color:#514767!important;}
-.app-shell:not([data-chat-active="true"]) .directory-mini {background:#302c42!important;}
-.app-shell:not([data-chat-active="true"]) .dashboard-kpi:after {background:radial-gradient(circle,#a17ad144,transparent 72%)!important;}
-.app-shell:not([data-chat-active="true"]) :is(a,button):focus-visible {outline-color:#d5bcff!important;box-shadow:0 0 0 4px #b79aef33!important;}
-.app-shell:not([data-chat-active="true"]) :is(.agent-directory,.directory-overview) {--omda-accent:var(--user-accent,#b79aef)!important;--text:#f1eff9!important;--text-muted:#b9b3ca!important;--panel:#242231!important;color:#f1eff9!important;}
+.app-shell:not([data-chat-active="true"]) :is(.directory-total,.directory-details,.directory-details li+li,.directory-mini,.agent-footer,.plan-step,.profile-summary) {border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55))!important;}
+.app-shell:not([data-chat-active="true"]) .directory-mini {background:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;}
+.app-shell:not([data-chat-active="true"]) .dashboard-kpi:after {background:radial-gradient(circle,color-mix(in srgb,var(--user-accent,#78a9ff) 64%,rgba(133,133,133,0.27)),transparent 72%)!important;}
+.app-shell:not([data-chat-active="true"]) :is(a,button):focus-visible {outline-color:color-mix(in srgb,var(--user-accent,#78a9ff) 50%,rgb(255,255,255))!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--user-accent,#78a9ff) 63%,rgba(210,210,210,0.20))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.agent-directory,.directory-overview) {--omda-accent:var(--user-accent,#78a9ff)!important;--text:#f1eff9!important;--text-muted:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;--panel:color-mix(in srgb,var(--user-accent,#78a9ff) 11%,rgb(22,22,22))!important;color:#f1eff9!important;}
 
-.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,.app-launcher-section,.app-launcher-tile,.profile-feature-link,.profile-welcome,.profile-welcome-stats>div,.workbench-flow-step,.agent-guide-panel,.curtain-launcher-item) {background:linear-gradient(145deg,#302b41,#211f2c)!important;border-color:#514767!important;box-shadow:0 8px 28px #09071133!important;color:#f1eff9!important;}
-.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics>div,.app-launcher-count,.workbench-flow-step>span,.sidebar-search,.history-filter-chip) {background:#302c42!important;color:#d9c9f8!important;border-color:#645079!important;}
-.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics strong,.app-launcher-icon,.app-launcher-arrow,.app-launcher-group-title strong,.app-launcher-group-title span,.workbench-flow-step[data-stage="current"]>span,.sidebar-search svg,.sidebar-workspace-state,.curtain-launcher-item svg) {color:#d9c9f8!important;background-color:transparent!important;border-color:#6e568d!important;}
-.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics span,.workbench-flow-step small,.app-launcher-copy small,.app-launcher-heading p,.workbench-context p,.profile-welcome-copy p) {color:#b9b3ca!important;}
-.app-shell:not([data-chat-active="true"]) :is(.workbench-flow-step[data-stage="current"],.app-launcher-tile:hover,.history-filter-chip.active) {background:#49365d!important;border-color:#9472c3!important;}
+.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse,.marketplace-intro,.workbench-context,.task-detail-overview,.app-launcher-section,.app-launcher-tile,.profile-feature-link,.profile-welcome,.profile-welcome-stats>div,.workbench-flow-step,.agent-guide-panel,.curtain-launcher-item) {background:linear-gradient(145deg,color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(27,27,27)),color-mix(in srgb,var(--user-accent,#78a9ff) 10%,rgb(21,21,21)))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 24%,rgb(55,55,55))!important;box-shadow:0 8px 28px #09071133!important;color:#f1eff9!important;}
+.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics>div,.app-launcher-count,.workbench-flow-step>span,.sidebar-search,.history-filter-chip) {background:color-mix(in srgb,var(--user-accent,#78a9ff) 16%,rgb(28,28,28))!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 35%,rgb(244,244,244))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(65,65,65))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics strong,.app-launcher-icon,.app-launcher-arrow,.app-launcher-group-title strong,.app-launcher-group-title span,.workbench-flow-step[data-stage="current"]>span,.sidebar-search svg,.sidebar-workspace-state,.curtain-launcher-item svg) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 35%,rgb(244,244,244))!important;background-color:transparent!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 41%,rgb(65,65,65))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.dashboard-pulse-metrics span,.workbench-flow-step small,.app-launcher-copy small,.app-launcher-heading p,.workbench-context p,.profile-welcome-copy p) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 17%,rgb(190,190,190))!important;}
+.app-shell:not([data-chat-active="true"]) :is(.workbench-flow-step[data-stage="current"],.app-launcher-tile:hover,.history-filter-chip.active) {background:color-mix(in srgb,var(--user-accent,#78a9ff) 29%,rgb(29,29,29))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 60%,rgb(109,109,109))!important;}
 
-.app-shell:not([data-chat-active="true"]) :is(.nav-link svg,.control-note>svg,.workbench-context-icon,.profile-section-heading>svg,.sidebar-search kbd) {color:#ccb7ec!important;border-color:#645079!important;}
-.app-shell:not([data-chat-active="true"]) .eyebrow:before {background:#b79aef!important;}
+.app-shell:not([data-chat-active="true"]) :is(.nav-link svg,.control-note>svg,.workbench-context-icon,.profile-section-heading>svg,.sidebar-search kbd) {color:color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(225,225,225))!important;border-color:color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(65,65,65))!important;}
+.app-shell:not([data-chat-active="true"]) .eyebrow:before {background:color-mix(in srgb,var(--user-accent,#78a9ff) 63%,rgb(210,210,210))!important;}
 
 /* SVGs are glyphs, not card surfaces. Safari can paint a ghost tile otherwise. */
 .app-shell:not([data-chat-active="true"]) :is(.mobile-nav svg,.profile-settings-page svg,.profile-section-heading>svg,.setting-row>svg,.dashboard-kpi-icon>svg,.task-icon>svg,.specialty-icon>svg,.empty-mark>svg) {
@@ -117,8 +117,8 @@
 
 /* Equal wrapper surfaces, not SVG paint boxes. Active links keep one baseline. */
 .app-shell:not([data-chat-active="true"]) :is(.profile-heading-icon,.profile-settings-page .profile-accordion-summary::after) {
- background:#373044!important;border:1px solid #645079!important;color:#ccb7ec!important;
- box-shadow:inset 0 1px 0 #e3d1ff12!important;filter:none!important;
+ background:color-mix(in srgb,var(--user-accent,#78a9ff) 15%,rgb(35,35,35))!important;border:1px solid color-mix(in srgb,var(--user-accent,#78a9ff) 30%,rgb(65,65,65))!important;color:color-mix(in srgb,var(--user-accent,#78a9ff) 39%,rgb(225,225,225))!important;
+ box-shadow:inset 0 1px 0 color-mix(in srgb,var(--user-accent,#78a9ff) 34%,rgba(255,255,255,0.07))!important;filter:none!important;
 }
 
 }

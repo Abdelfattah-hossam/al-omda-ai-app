@@ -35,7 +35,7 @@
  cursor:pointer;
  touch-action:manipulation;
 }
-.app-shell>.welcome-greeting>.welcome-greeting-close:hover { color:#e5ddf0; background:#1a1e25; }
+.app-shell>.welcome-greeting>.welcome-greeting-close:hover { color:color-mix(in srgb,var(--user-accent,#78a9ff) 14%,rgb(238,238,238)); background:#1a1e25; }
 @keyframes welcome-greeting-in { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
 .app-shell[data-reduced-motion="true"]>.welcome-greeting { animation:none; }
 @media(max-width:800px) {
