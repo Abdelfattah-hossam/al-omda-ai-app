@@ -55,12 +55,12 @@
 .app-shell:not([data-chat-active="true"]) :is(.brand-sub,.nav-caption,.crumb,.page-subtitle,.stat-label,.stat-foot,.eyebrow,.section-meta,.task-main small,.agent-tag,.specialty-row small,.hero-copy p,.directory-section-head p,.directory-card>p,.directory-card-metrics span,.directory-details>p,.directory-details li span,.directory-mini small,.directory-approval small,.directory-filter-row>span,.control-note p,.dashboard-card-subtitle) {color:#b9b3ca!important;}
 .app-shell:not([data-chat-active="true"]) :is(.button-primary,.brand-mark,.mobile-chat-launcher) {
   color:#191124!important;
-  background:linear-gradient(135deg,#d9c8ff,#b79aef)!important;
-  border-color:#c3a9f6!important;
+  background:linear-gradient(135deg,var(--user-accent-light,#d9c8ff),var(--user-accent,#b79aef))!important;
+  border-color:var(--user-accent,#c3a9f6)!important;
   box-shadow:0 4px 18px #9b70df22!important;
   filter:none!important;
 }
-.app-shell:not([data-chat-active="true"]) :is(.button-primary:hover,.mobile-chat-launcher:hover) {background:#e2d5ff!important;color:#191124!important;}
+.app-shell:not([data-chat-active="true"]) :is(.button-primary:hover,.mobile-chat-launcher:hover) {background:var(--user-accent-light,#e2d5ff)!important;color:#191124!important;}
 .app-shell:not([data-chat-active="true"]) :is(.button-quiet,.icon-button,.lang-button,.filter-pill,.select-specialty,.step-edit,.text-button,.directory-search,.directory-select,.directory-mini,.directory-card-metrics>div) {
   color:#ded4f2!important;
   background:#302c42!important;
