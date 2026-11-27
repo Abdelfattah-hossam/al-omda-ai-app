@@ -9896,3 +9896,20 @@ body .app-shell[data-chat-active="true"] .ai-chat-main .chat-messages{padding-to
     gap: 10px;
   }
 }
+
+/* User-picked accent must beat the reference design layers, which hard-set
+   --profile-accent after the base mappings (non-chat shell and chat page). */
+.app-shell:not([data-chat-active="true"])[data-accent="blue"]{--profile-accent:#78a9ff;--active-glow:rgba(120,169,255,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="violet"]{--profile-accent:#a78bfa;--active-glow:rgba(167,139,250,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="cyan"]{--profile-accent:#67d8ef;--active-glow:rgba(103,216,239,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="teal"]{--profile-accent:#62d6c2;--active-glow:rgba(98,214,194,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="pink"]{--profile-accent:#f29ac7;--active-glow:rgba(242,154,199,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="amber"]{--profile-accent:#a97ce8;--active-glow:rgba(169,124,232,.28)}
+.app-shell:not([data-chat-active="true"])[data-accent="lime"]{--profile-accent:#b7df8a;--active-glow:rgba(183,223,138,.28)}
+.app-shell[data-chat-active="true"][data-accent="blue"] .ai-chat-page{--profile-accent:#78a9ff;--active-glow:rgba(120,169,255,.28)}
+.app-shell[data-chat-active="true"][data-accent="violet"] .ai-chat-page{--profile-accent:#a78bfa;--active-glow:rgba(167,139,250,.28)}
+.app-shell[data-chat-active="true"][data-accent="cyan"] .ai-chat-page{--profile-accent:#67d8ef;--active-glow:rgba(103,216,239,.28)}
+.app-shell[data-chat-active="true"][data-accent="teal"] .ai-chat-page{--profile-accent:#62d6c2;--active-glow:rgba(98,214,194,.28)}
+.app-shell[data-chat-active="true"][data-accent="pink"] .ai-chat-page{--profile-accent:#f29ac7;--active-glow:rgba(242,154,199,.28)}
+.app-shell[data-chat-active="true"][data-accent="amber"] .ai-chat-page{--profile-accent:#a97ce8;--active-glow:rgba(169,124,232,.28)}
+.app-shell[data-chat-active="true"][data-accent="lime"] .ai-chat-page{--profile-accent:#b7df8a;--active-glow:rgba(183,223,138,.28)}
