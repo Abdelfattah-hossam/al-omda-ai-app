@@ -193,3 +193,10 @@ body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin:hover{back
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin:focus-visible{opacity:1!important;outline:2px solid #c5a4f2!important;outline-offset:1px!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned{opacity:1!important;color:#c5a4f2!important;background:rgba(197,164,242,.13)!important;border-color:rgba(197,164,242,.34)!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-pin.pinned>svg{fill:currentColor!important;}
+
+/* Mixed Arabic/English replies: each block picks its own direction; labels keep the body size. */
+.ai-chat-markdown :is(p,li,h1,h2,h3,h4,blockquote){unicode-bidi:plaintext;text-align:start}
+body .app-shell[data-chat-active="true"] .chat-message .ai-chat-markdown strong,
+body .app-shell[data-chat-active="true"] .chat-message.assistant .ai-chat-markdown strong{display:inline!important;font-size:inherit!important;font-family:inherit!important;letter-spacing:normal!important;text-transform:none!important;margin:0!important;line-height:inherit!important;font-weight:700!important;color:inherit!important}
+body .app-shell[data-chat-active="true"] .chat-message .ai-chat-markdown li{font-size:15px!important;line-height:1.75!important}
+body .app-shell[data-chat-active="true"] .chat-message .ai-chat-markdown li>p{display:inline;margin:0!important}

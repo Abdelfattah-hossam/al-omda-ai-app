@@ -1,5 +1,5 @@
 import {HOSTED_PROVIDER_KEY} from './HostedConnections';
-import { useEffect, useLayoutEffect, useRef, useState, memo, lazy, Suspense, type FormEvent, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, memo, lazy, Suspense, type FormEvent, type CSSProperties, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { isValidZipArchive, validateOoxmlPackage } from "./lib/ooxml-validation";
@@ -187,12 +187,25 @@ type Usage = {
 type MemoryGraphNode = { id: string; node_type: string; label: string; source?: string; confidence?: number };
 type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
 
-const MessageContent=memo(function MessageContent({ content }: { content: string }) {
+// Models sometimes print a tool-call or image-prompt payload as plain text. Cut it before display.
+export function stripLeakedPayload(text: string): string {
+  let out = text;
+  const leak = out.search(/(^|\n)[^\n]*\b(?:prompt|image_prompt|tool_call|function_call)"\s*:/i);
+  if (leak > 0) out = out.slice(0, leak);
+  else if (leak === 0) out = out.replace(/^[^\n]*\b(?:prompt|image_prompt|tool_call|function_call)"\s*:[\s\S]*$/i, "");
+  out = out.replace(/\{\s*"(?:language|prompt|tool|tool_name|name|arguments|action)"\s*:[^{}]*\}\s*$/i, "");
+  return out.replace(/\s+$/, "") || text;
+}
+
+const MessageContent=memo(function MessageContent({ content: rawContent }: { content: string }) {
+  const content = stripLeakedPayload(rawContent);
+  const auto = (Tag: "p" | "li" | "h1" | "h2" | "h3" | "h4" | "blockquote") => ({ children }: { children?: ReactNode }) => <Tag dir="auto">{children}</Tag>;
   return <div className="ai-chat-markdown">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
         a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer noopener">{children}</a>,
+        p: auto("p"), li: auto("li"), h1: auto("h1"), h2: auto("h2"), h3: auto("h3"), h4: auto("h4"), blockquote: auto("blockquote"),
         pre: ({ children }) => <>{children}</>,
         code: ({ className, children }) => {
           if (!/language-/.test(className || "")) return <code className="ai-chat-inline-code">{children}</code>;
