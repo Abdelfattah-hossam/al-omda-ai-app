@@ -58,7 +58,7 @@ body .app-shell[data-chat-active="true"] .ai-chat-quick-grid button:hover{backgr
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid button>svg{width:12px!important;height:14px!important;min-width:12px!important;margin-top:2px!important;padding:0!important;border:0!important;background:transparent!important;border-radius:0!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid button span{display:flex!important;flex-direction:column!important;gap:4px!important;min-width:0!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid :is(strong,svg){color:inherit!important;}
-body .app-shell[data-chat-active="true"] .ai-chat-history-caption button,body .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-delete{border:0!important;background:transparent!important;color:#9ca3af!important;box-shadow:none!important;}
+body .app-shell[data-chat-active="true"] .ai-chat-history-caption button,body .app-shell[data-chat-active="true"] :is(.ai-chat-sidebar-history-delete,.ai-chat-sidebar-history-rename){border:0!important;background:transparent!important;color:#9ca3af!important;box-shadow:none!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid strong{font-size:12px!important;line-height:16px!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid small{font-size:11px!important;line-height:16px!important;color:#9ca3af!important;}
 body .app-shell[data-chat-active="true"] .ai-chat-quick-grid button:nth-child(1){color:#60a5fa!important;}

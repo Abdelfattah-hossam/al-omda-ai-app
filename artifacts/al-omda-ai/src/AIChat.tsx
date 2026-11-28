@@ -1602,6 +1602,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         {[...conversations].sort((a,b)=>Number(pinnedConversationIds.includes(b.id))-Number(pinnedConversationIds.includes(a.id))).slice(0,showConversationList ? 40 : 12).map((item)=><div className={"ai-chat-sidebar-history-item" + (item.id===activeConversationId ? " active" : "") + (pinnedConversationIds.includes(item.id) ? " pinned" : "")} key={item.id}>
           <button type="button" onClick={()=>{setChatSidebarOpen(false);void loadConversation(item.id);}} disabled={loading || historyLoading}><MessageSquareText size={14}/><span>{item.title}</span></button>
           <button type="button" className={"ai-chat-sidebar-history-pin" + (pinnedConversationIds.includes(item.id) ? " pinned" : "")} onClick={()=>togglePinnedConversation(item.id)} aria-label={pinnedConversationIds.includes(item.id)?(ar?"إلغاء التثبيت":"Unpin"):(ar?"تثبيت المحادثة":"Pin conversation")}><Pin size={13}/></button>
+          <button type="button" className="ai-chat-sidebar-history-rename" onClick={()=>void renameConversation(item)} disabled={loading || historyLoading} aria-label={ar ? "إعادة تسمية المحادثة" : "Rename conversation"}><Pencil size={13}/></button>
           <button type="button" className="ai-chat-sidebar-history-delete" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={13}/></button>
         </div>)}
       </div>
@@ -1637,7 +1638,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
         {onToggleLanguage && <button type="button" onClick={()=>{onToggleLanguage();setShowChatMenu(false);}}>{ar ? "English · تغيير اللغة" : "العربية · Change language"}</button>}
         {onPageHelp && <button type="button" onClick={()=>{onPageHelp();setShowChatMenu(false);}}>{ar ? "مساعدة الصفحة" : "Page help"}</button>}
         <button type="button" onClick={()=>{setShowRoutingInfo(v=>!v);setShowChatMenu(false)}}><Bot size={16}/>{ar ? "التوجيه التلقائي" : "Auto routing"}</button>
-        <button type="button" onClick={()=>{setShowConversationList(v=>!v);setShowChatMenu(false)}}><History size={16}/>{ar ? "المحادثات السابقة" : "Conversation history"}</button>
+        <button type="button" onClick={()=>{setShowConversationList(true);setShowChatMenu(false);if(window.matchMedia('(min-width:768px)').matches)setDesktopSidebarCollapsed(false);else setChatSidebarOpen(true);}}><History size={16}/>{ar ? "المحادثات السابقة" : "Conversation history"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);void createConversation()}} disabled={loading || historyLoading}><Plus size={16}/>{ar ? "محادثة جديدة" : "New chat"}</button>
         <button type="button" onClick={()=>{setShowChatMenu(false);openSettings()}}><Settings2 size={16}/>{ar ? "الاستخدام والذاكرة" : "Usage & memory"}</button>
         <button type="button" onClick={()=>{setAgentMode(value=>!value);setShowChatMenu(false);}} aria-pressed={agentMode}><Bot size={16}/>{ar ? (agentMode ? "إيقاف وضع الوكيل المحلي" : "تشغيل وضع الوكيل المحلي") : (agentMode ? "Disable local Agent mode" : "Enable local Agent mode")}</button>
@@ -1659,14 +1660,6 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       <p className="account-copy">{copy.login}</p>
       <button type="button" className="ai-chat-auth-gate-button" onClick={()=>setLocation("/profile?focus=profile-account-card")}>{ar?"تسجيل الدخول أو إنشاء حساب":"Sign in or create an account"}</button>
     </section> : <>
-      {showConversationList && <section className="panel ai-conversations-panel">
-        <div className="section-head"><h2 className="section-title">{ar ? "محادثاتك" : "Your conversations"}</h2><button type="button" className="icon-button" onClick={()=>setShowConversationList(false)} aria-label={ar ? "إغلاق" : "Close"}><X size={15}/></button></div>
-        {conversations.length === 0 && <p className="muted">{ar ? "لا توجد محادثات محفوظة بعد." : "No saved conversations yet."}</p>}
-        {[...conversations].sort((a,b)=>Number(pinnedConversationIds.includes(b.id))-Number(pinnedConversationIds.includes(a.id))).map((item)=><div className={"ai-conversation-item " + (item.id===activeConversationId ? "active" : "")} key={item.id}>
-          <button type="button" className="ai-conversation-open" onClick={()=>void loadConversation(item.id)} disabled={loading || historyLoading}><MessageSquareText size={15}/><span>{item.title}</span></button>
-          <button type="button" className="icon-button" onClick={()=>togglePinnedConversation(item.id)} aria-label={pinnedConversationIds.includes(item.id)?(ar?"إلغاء التثبيت":"Unpin"):(ar?"تثبيت":"Pin")}><Pin size={14}/></button><button type="button" className="icon-button" onClick={()=>void renameConversation(item)} disabled={loading || historyLoading} aria-label={ar ? "إعادة تسمية المحادثة" : "Rename conversation"}><Pencil size={14}/></button><button type="button" className="icon-button" onClick={()=>void deleteConversation(item.id)} disabled={loading || historyLoading} aria-label={ar ? "حذف المحادثة" : "Delete conversation"}><Trash2 size={14}/></button>
-        </div>)}
-      </section>}
       <section className="panel panel-pad">
         <div className="section-head"><h2 className="section-title">{ar ? "المحادثة" : "Conversation"}</h2><span className="muted">{messages.length} {ar ? "رسالة" : "messages"}</span></div>
         {historyLoading && <small className="muted" style={{display:"block",marginBottom:8}}>{copy.historyLoading}</small>}

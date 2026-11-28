@@ -174,7 +174,7 @@
   .app-shell[data-chat-active="true"] .ai-chat-sidebar-history-item>button:first-child{
     padding:7px 9px!important;min-height:38px!important;
   }
-  .app-shell[data-chat-active="true"] :is(.ai-chat-sidebar-history-pin,.ai-chat-sidebar-history-delete){
+  .app-shell[data-chat-active="true"] :is(.ai-chat-sidebar-history-pin,.ai-chat-sidebar-history-delete,.ai-chat-sidebar-history-rename){
     width:28px!important;height:28px!important;min-width:28px!important;flex:none!important;
     display:inline-grid!important;place-items:center!important;padding:0!important;
     border-radius:8px!important;color:#8f96a8!important;
