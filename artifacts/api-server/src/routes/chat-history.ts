@@ -16,7 +16,7 @@ type SavedAppData = { title: string; html: string };
 type SavedToolFailure = { callId?: string; tool: string; message: string };
 type SavedPendingCall = { id: string; tool: string; arguments: Record<string, unknown> };
 type SavedAgentPending = { sessionId: string; calls: SavedPendingCall[] };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: SavedAgentPending; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; imageThumb?: string; agentPending?: SavedAgentPending; toolExecutionStatus?: "with_warnings" | "no_tool_errors"; toolFailures?: SavedToolFailure[]; documentData?: SavedWordDocument; spreadsheetData?: SavedSpreadsheet; presentationData?: SavedPresentation; sourceData?: SavedSourceData; appData?: SavedAppData; taskId?: string; taskTitle?: string };
 
 router.get("/ai/history", async (req, res): Promise<void> => {
   try {
@@ -115,7 +115,8 @@ export function validateMessages(raw: unknown): ChatMessage[] | null {
     if (!item || !["user", "assistant"].includes(item.role) || typeof item.content !== "string" || !item.content.trim() || item.content.length > 8000) return null;
     total += item.content.length;
     if (total > 200000) return null;
-    const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };    if (item.agentPending !== undefined) {
+    const saved: ChatMessage = { role: item.role, content: item.content, ...(typeof item.provider === "string" ? { provider: item.provider.slice(0, 80) } : {}) };    if (typeof item.imageThumb === "string" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(item.imageThumb) && item.imageThumb.length <= 60000) saved.imageThumb = item.imageThumb;
+    if (item.agentPending !== undefined) {
       const pending = item.agentPending;
       if (!pending || typeof pending !== "object" || Array.isArray(pending) ||
         typeof pending.sessionId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(pending.sessionId) ||

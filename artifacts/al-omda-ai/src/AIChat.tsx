@@ -26,7 +26,7 @@ type WordDocumentData = { title: string; paragraphs: string[]; columns: string[]
 type SpreadsheetData = { title: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string>; sheets?: Array<{ name: string; columns: string[]; rows: Array<Array<string | number | boolean>>; formulas?: Record<string,string> }> };
 type PresentationData = { title: string; slides: Array<{ title: string; bullets: string[]; notes?: string }> };
 type SourceData = { title: string; name: string; language: string; code: string };
-type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
+type ChatMessage = { role: "user" | "assistant"; content: string; provider?: string; agentPending?: { sessionId: string; calls: Array<{ id: string; tool: string; arguments: Record<string, unknown> }> }; attachment?: { name: string; url: string }; imageThumb?: string; documentData?: WordDocumentData; spreadsheetData?: SpreadsheetData; presentationData?: PresentationData; sourceData?: SourceData; appData?: { title: string; html: string }; taskId?: string; taskTitle?: string; toolExecutionStatus?: string; toolFailures?: Array<{ callId?: string; tool: string; message: string }> };
 
 function createRequestedSourceArtifact(request: string, reply: string): SourceData | null {
   if (!/(?:ملف|تحميل|احفظ|حفظ|نزّل|تنزيل|download|save|export|source\s*file|file\s+for)/i.test(request)) return null;
@@ -188,6 +188,30 @@ type MemoryGraphNode = { id: string; node_type: string; label: string; source?: 
 type MemoryGraphEdge = { id: string; source_node_id: string; target_node_id: string; relation: string };
 
 // Models sometimes print a tool-call or image-prompt payload as plain text. Cut it before display.
+export function makeImageThumb(dataUrl: string, maxSide = 480): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+          canvas.height = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { resolve(""); return; }
+          ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          let out = canvas.toDataURL("image/jpeg", 0.72);
+          if (out.length > 60000) out = canvas.toDataURL("image/jpeg", 0.45);
+          resolve(out.length <= 60000 ? out : "");
+        } catch { resolve(""); }
+      };
+      img.onerror = () => resolve("");
+      img.src = dataUrl;
+    } catch { resolve(""); }
+  });
+}
 export function stripLeakedPayload(text: string): string {
   let out = text;
   const leak = out.search(/(^|\n)[^\n]*\b(?:prompt|image_prompt|tool_call|function_call)"\s*:/i);
@@ -488,7 +512,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
   const saveHistory = async (items: ChatMessage[], conversationId = activeConversationId) => {
     if (!conversationId) return false;
     try {
-      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, agentPending, documentData, spreadsheetData, presentationData, sourceData, appData, taskId, taskTitle, toolExecutionStatus, toolFailures }) => ({ role, content, ...(provider ? { provider } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(sourceData ? { sourceData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}), ...(toolExecutionStatus ? { toolExecutionStatus } : {}), ...(toolFailures ? { toolFailures } : {}) })) }) });
+      const response = await fetch("/api/ai/conversations/" + encodeURIComponent(conversationId), { method: "PUT", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: items.slice(-100).map(({ role, content, provider, imageThumb, agentPending, documentData, spreadsheetData, presentationData, sourceData, appData, taskId, taskTitle, toolExecutionStatus, toolFailures }) => ({ role, content, ...(provider ? { provider } : {}), ...(imageThumb ? { imageThumb } : {}), ...(agentPending ? { agentPending } : {}), ...(documentData ? { documentData } : {}), ...(spreadsheetData ? { spreadsheetData } : {}), ...(presentationData ? { presentationData } : {}), ...(sourceData ? { sourceData } : {}), ...(appData ? { appData } : {}), ...(taskId ? { taskId } : {}), ...(taskTitle ? { taskTitle } : {}), ...(toolExecutionStatus ? { toolExecutionStatus } : {}), ...(toolFailures ? { toolFailures } : {}) })) }) });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || (ar ? "تعذر حفظ المحادثة." : "Could not save conversation."));
       if (data.conversation) {
@@ -1145,9 +1169,10 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
       // If the previous attempt failed after its user turn was persisted,
       // retry that same draft without appending a duplicate user bubble.
       const lastMessage = messages[messages.length - 1];
+      const imageThumb = imageForRequest ? await makeImageThumb(imageForRequest.preview) : "";
       const next = lastMessage?.role === "user" && lastMessage.content === visibleText
         ? [...messages]
-        : [...messages, { role: "user" as const, content: visibleText }];
+        : [...messages, { role: "user" as const, content: visibleText, ...(imageThumb ? { imageThumb } : {}) }];
       // Keep the draft and attachment in the composer until the request and
       // conversation save both succeed. A network/provider failure must not eat user input.
       shouldAutoScrollRef.current = true;
@@ -1659,6 +1684,7 @@ export default function AIChatPage({ language, signedIn, openSettingsInitially, 
           </div>}
           {messages.map((message,index)=><div className={`chat-message ${message.role}`} key={index}>
             <strong>{message.role === "user" ? (ar ? "أنت" : "You") : "Munjizly"}</strong>
+            {message.imageThumb && message.imageThumb.startsWith("data:image/") && <img src={message.imageThumb} alt={ar ? "الصورة المرسلة" : "Sent image"} className="chat-sent-image" style={{display:"block",maxWidth:"min(260px,100%)",maxHeight:260,borderRadius:12,marginBottom:6,objectFit:"cover"}}/>}
             <MessageContent content={message.content} />
             {message.toolFailures?.length ? <div role="status" style={{display:"grid",gap:6,width:"100%",padding:10,marginTop:8,border:"1px solid rgba(134,80,210,.4)",borderRadius:10,background:"rgba(134,80,210,.07)"}}>
               <strong style={{fontSize:12}}>{ar ? "تنبيه: بعض الأدوات لم تكتمل" : "Some tools did not complete"}</strong>
